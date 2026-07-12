@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XTB TERMINAL — CFD</title>
+<link rel="stylesheet" href="css/terminal.css">
+</head>
+<body>
+
+<!-- ═══════════════ LOGIN OVERLAY ═══════════════ -->
+<div id="login-overlay">
+  <div id="login-box">
+    <div class="login-brand">XTB&nbsp;<span>TERMINAL</span></div>
+    <div class="login-sub">PROFESSIONAL CFD WORKSTATION — UNOFFICIAL</div>
+    <form id="login-form" autocomplete="off">
+      <label>SERVEUR</label>
+      <div class="mode-row">
+        <label class="mode-opt"><input type="radio" name="mode" value="demo" checked> DÉMO</label>
+        <label class="mode-opt"><input type="radio" name="mode" value="real"> RÉEL</label>
+        <label class="mode-opt"><input type="radio" name="mode" value="sim"> SIMULATION</label>
+      </div>
+      <div id="cred-fields">
+        <label for="login-id">IDENTIFIANT (N° DE COMPTE)</label>
+        <input id="login-id" type="text" inputmode="numeric" placeholder="ex: 12345678">
+        <label for="login-pw">MOT DE PASSE</label>
+        <input id="login-pw" type="password" placeholder="mot de passe xStation">
+      </div>
+      <button id="login-btn" type="submit">CONNEXION &lt;GO&gt;</button>
+      <div id="login-error"></div>
+    </form>
+    <div class="login-note">
+      Vos identifiants sont envoyés <b>uniquement</b> au serveur officiel XTB
+      (wss://ws.xtb.com) via l'API publique xAPI. Aucun serveur tiers.
+      Testez d'abord en DÉMO. Les CFD sont des instruments complexes présentant
+      un risque élevé de perte rapide en capital.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ TERMINAL ═══════════════ -->
+<div id="terminal" class="hidden">
+
+  <header id="topbar">
+    <div id="brand">XTB<span>TERMINAL</span><em id="conn-mode"></em></div>
+    <div id="acct-bar">
+      <div class="acct-cell"><label>BAL</label><span id="a-bal">—</span></div>
+      <div class="acct-cell"><label>EQUITY</label><span id="a-eq">—</span></div>
+      <div class="acct-cell"><label>MARGIN</label><span id="a-mg">—</span></div>
+      <div class="acct-cell"><label>FREE</label><span id="a-free">—</span></div>
+      <div class="acct-cell"><label>LEVEL</label><span id="a-lvl">—</span></div>
+      <div class="acct-cell"><label>OPEN P/L</label><span id="a-pl">—</span></div>
+    </div>
+    <div id="clock"><span id="clock-utc"></span><span id="clock-loc"></span></div>
+    <button id="btn-logout" title="Déconnexion">LOGOUT</button>
+  </header>
+
+  <div id="softkeys">
+    <button data-cmd="HELP">F1 HELP</button>
+    <button data-cmd="QM">F2 QUOTE</button>
+    <button data-cmd="GP">F3 GRAPH</button>
+    <button data-cmd="NEWS">F4 NEWS</button>
+    <button data-cmd="CAL">F5 ECO</button>
+    <button data-cmd="TA">F6 TA</button>
+    <button data-cmd="AI-FOCUS">F7 AI</button>
+    <button data-cmd="ALERT LIST">F8 ALRT</button>
+    <button data-cmd="POS">F9 POS</button>
+    <button data-cmd="HIST">F10 HIST</button>
+  </div>
+
+  <main id="grid">
+
+    <section id="panel-watch" class="panel">
+      <div class="panel-hd">MARKET MONITOR <span class="hd-hint">clic = graphe</span></div>
+      <table id="watch-table">
+        <thead><tr><th>SYM</th><th>BID</th><th>ASK</th><th>SPRD</th><th>%CHG</th><th>±</th></tr></thead>
+        <tbody id="watch-body"></tbody>
+      </table>
+    </section>
+
+    <section id="panel-chart" class="panel">
+      <div class="panel-hd">
+        <span id="chart-title">GP — <b id="chart-sym">—</b></span>
+        <span id="chart-last"></span>
+        <span id="chart-tools">
+          <span id="type-btns">
+            <button data-t="candle" class="on" title="Chandeliers">CNDL</button>
+            <button data-t="line" title="Ligne">LINE</button>
+          </span>
+          <span id="ind-btns">
+            <button data-i="sma" class="on" title="SMA 20/50">SMA</button>
+            <button data-i="bb" title="Bollinger 20,2">BB</button>
+            <button data-i="vol" class="on" title="Volume">VOL</button>
+            <button data-i="rsi" title="RSI 14">RSI</button>
+            <button data-i="macd" title="MACD 12,26,9">MACD</button>
+          </span>
+          <span id="period-btns">
+            <button data-p="1">M1</button><button data-p="5">M5</button>
+            <button data-p="15">M15</button><button data-p="30">M30</button>
+            <button data-p="60" class="on">H1</button><button data-p="240">H4</button>
+            <button data-p="1440">D1</button><button data-p="10080">W1</button>
+          </span>
+        </span>
+      </div>
+      <div id="chart-wrap"><canvas id="chart"></canvas><div id="chart-ohlc"></div></div>
+      <div id="chart-help" class="dim">molette = zoom · glisser = déplacer · double-clic = réinitialiser</div>
+    </section>
+
+    <section id="panel-side">
+
+      <div class="panel" id="panel-quote">
+        <div class="panel-hd">QUOTE MONITOR</div>
+        <div id="quote">
+          <div id="q-sym">—</div>
+          <div id="q-prices">
+            <div class="q-cell"><label>BID</label><span id="q-bid">—</span></div>
+            <div class="q-cell"><label>ASK</label><span id="q-ask">—</span></div>
+            <div class="q-cell"><label>%CHG</label><span id="q-chg">—</span></div>
+          </div>
+          <div id="q-range">
+            <span>DAY LO <b id="q-lo">—</b></span>
+            <span>DAY HI <b id="q-hi">—</b></span>
+            <span>SPRD <b id="q-sprd">—</b></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-ticket">
+        <div class="panel-hd">ORDER TICKET</div>
+        <div id="ticket">
+          <div class="t-row"><label>SYM</label><input id="t-sym" type="text" value="">
+            <label>VOL</label><input id="t-vol" type="text" value="0.10"></div>
+          <div class="t-row"><label>SL</label><input id="t-sl" type="text" placeholder="—">
+            <label>TP</label><input id="t-tp" type="text" placeholder="—"></div>
+          <div class="t-btns">
+            <button id="t-sell" class="btn-sell">SELL<span id="t-bid">—</span></button>
+            <button id="t-buy" class="btn-buy">BUY<span id="t-ask">—</span></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-tabs">
+        <div class="panel-hd tabs-hd">
+          <button class="tab-btn on" data-tab="news">NEWS</button>
+          <button class="tab-btn" data-tab="cal">ECO CAL</button>
+          <button class="tab-btn" data-tab="ai">AI ANALYST</button>
+        </div>
+        <div id="tab-news" class="tab-pane"><div id="news-list"></div></div>
+        <div id="tab-cal" class="tab-pane hidden">
+          <table id="cal-table">
+            <thead><tr><th>HEURE</th><th>PAYS</th><th>ÉVÉNEMENT</th><th>PRÉC</th><th>PRÉV</th><th>ACT</th></tr></thead>
+            <tbody id="cal-body"></tbody>
+          </table>
+        </div>
+        <div id="tab-ai" class="tab-pane hidden">
+          <div id="ai-ta"></div>
+          <div id="ai-chat"></div>
+          <div id="ai-input-row">
+            <input id="ai-input" type="text" placeholder="Question à l'IA… (Entrée)">
+            <button id="ai-key-btn" title="Configurer la clé API Anthropic">🔑</button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <section id="panel-bottom" class="panel">
+      <div class="panel-hd tabs-hd">
+        <button class="tab-btn on" data-btab="pos">POSITIONS <span id="pos-count"></span></button>
+        <button class="tab-btn" data-btab="hist">HISTORIQUE</button>
+        <button class="tab-btn" data-btab="alerts">ALERTES <span id="alert-count"></span></button>
+      </div>
+      <div id="btab-pos" class="tab-pane">
+        <table id="pos-table">
+          <thead><tr>
+            <th>ORDER</th><th>SYM</th><th>SIDE</th><th>VOL</th><th>OPEN</th>
+            <th>CUR</th><th>SL</th><th>TP</th><th>P/L</th><th></th>
+          </tr></thead>
+          <tbody id="pos-body"></tbody>
+        </table>
+      </div>
+      <div id="btab-hist" class="tab-pane hidden">
+        <table id="hist-table">
+          <thead><tr>
+            <th>CLOSE TIME</th><th>SYM</th><th>SIDE</th><th>VOL</th>
+            <th>OPEN</th><th>CLOSE</th><th>P/L</th>
+          </tr></thead>
+          <tbody id="hist-body"></tbody>
+        </table>
+      </div>
+      <div id="btab-alerts" class="tab-pane hidden">
+        <table id="alert-table">
+          <thead><tr><th>#</th><th>SYM</th><th>CONDITION</th><th>ÉTAT</th><th></th></tr></thead>
+          <tbody id="alert-body"></tbody>
+        </table>
+        <div class="dim" style="padding:4px 8px">Créer : <code>ALERT GOLD &gt; 2700</code> dans la ligne de commande.</div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer id="cmdbar">
+    <span id="cmd-prompt">&gt;</span>
+    <input id="cmd" type="text" spellcheck="false"
+      placeholder="EURUSD GP H1 · GOLD DES · TA · AI analyse le marché · BUY US500 0.1 · ALERT GOLD > 2700 · HELP  —  puis <GO>">
+    <span id="cmd-go">&lt;GO&gt;</span>
+  </footer>
+  <div id="statusbar">
+    <span id="status-msg">PRÊT</span>
+    <span id="status-right"><span id="st-latency"></span><span id="st-alerts"></span><span id="st-ai"></span></span>
+  </div>
+
+</div>
+
+<!-- ═══════════════ MODAL & TOASTS ═══════════════ -->
+<div id="modal-overlay" class="hidden">
+  <div id="modal">
+    <div id="modal-hd"><span id="modal-title"></span><button id="modal-x">✕</button></div>
+    <div id="modal-body"></div>
+    <div id="modal-btns"></div>
+  </div>
+</div>
+<div id="toasts"></div>
+
+<script src="js/xapi.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/indicators.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
