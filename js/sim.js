@@ -31,10 +31,21 @@ const SIM_NEWS = [
   'CHINA UNVEILS FRESH STIMULUS; COMMODITIES BID',
 ];
 
+const SIM_CALENDAR = [
+  { country: 'US', title: 'CPI YoY',                 impact: '3', period: 'Jun', previous: '2.4%',  forecast: '2.5%',  offsetH: 3 },
+  { country: 'EU', title: 'ECB Rate Decision',       impact: '3', period: '',    previous: '2.00%', forecast: '2.00%', offsetH: 7 },
+  { country: 'US', title: 'Initial Jobless Claims',  impact: '2', period: 'Wk',  previous: '224K',  forecast: '230K',  offsetH: 20 },
+  { country: 'DE', title: 'Ifo Business Climate',    impact: '2', period: 'Jul', previous: '88.4',  forecast: '88.9',  offsetH: 26 },
+  { country: 'GB', title: 'Retail Sales MoM',        impact: '2', period: 'Jun', previous: '-0.3%', forecast: '0.2%',  offsetH: 31 },
+  { country: 'US', title: 'FOMC Member Speech',      impact: '1', period: '',    previous: '',      forecast: '',      offsetH: 45 },
+];
+
 class SimClient {
   constructor() {
     this.mode = 'sim';
     this.sessionId = 'SIM';
+    this.latency = 1;
+    this._closed = [];
     this._handlers = new Map();
     this._timers = [];
     this.onDisconnect = null;
@@ -183,8 +194,14 @@ class SimClient {
       const i = this._trades.findIndex(t => t.order === info.order);
       if (i < 0) throw new Error('SE199: position introuvable');
       const t = this._trades[i];
-      this._balance += this._profitOf(t);
+      const profit = this._profitOf(t);
+      this._balance += profit;
       this._trades.splice(i, 1);
+      this._closed.unshift(Object.assign({}, t, {
+        closed: true, profit,
+        close_price: t.cmd === XAPI_CMD.BUY ? this._bid(t.symbol) : this._ask(t.symbol),
+        close_time: Date.now(),
+      }));
       this._emit('trade', Object.assign({}, t, { closed: true, state: 'Deleted' }));
       this._emitBalance();
       return { order: t.order };
@@ -192,6 +209,16 @@ class SimClient {
     throw new Error('Type de transaction non géré en simulation');
   }
   async tradeStatus(order) { return { order, requestStatus: 3, message: null }; } // 3 = ACCEPTED
+
+  async getCalendar() {
+    const now = Date.now();
+    return SIM_CALENDAR.map((e, i) => ({
+      country: e.country, title: e.title + ' (simulation)', impact: e.impact,
+      period: e.period, previous: e.previous, forecast: e.forecast, current: '',
+      time: now + e.offsetH * 3600e3, key: 'simcal' + i,
+    }));
+  }
+  async getTradesHistory() { return this._closed.map(t => Object.assign({}, t)); }
 
   call(cmd) { return Promise.reject(new Error(cmd + ': non disponible en simulation')); }
   close() { this._timers.forEach(clearInterval); this._timers = []; }

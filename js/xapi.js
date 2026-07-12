@@ -89,7 +89,11 @@ class XApiClient {
   async login(userId, password) {
     const r = await this.call('login', { userId, password, appName: 'xtb-terminal-web' });
     this.sessionId = r.streamSessionId;
-    this._timers.push(setInterval(() => this.call('ping').catch(() => {}), 10000));
+    this.latency = null;
+    this._timers.push(setInterval(() => {
+      const t0 = Date.now();
+      this.call('ping').then(() => { this.latency = Date.now() - t0; }).catch(() => {});
+    }, 10000));
     return this.sessionId;
   }
 
@@ -136,6 +140,8 @@ class XApiClient {
   }
   tradeTransaction(info)   { return this.call('tradeTransaction', { tradeTransInfo: info }).then(r => r.returnData); }
   tradeStatus(order)       { return this.call('tradeTransactionStatus', { order }).then(r => r.returnData); }
+  getCalendar()            { return this.call('getCalendar').then(r => r.returnData); }
+  getTradesHistory(sinceMs){ return this.call('getTradesHistory', { start: sinceMs, end: 0 }).then(r => r.returnData); }
 
   _clearTimers() { this._timers.forEach(clearInterval); this._timers = []; }
 
