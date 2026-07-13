@@ -379,3 +379,26 @@ td.dim { color:var(--dim); }
   #panel-side { flex-direction:row; }
   #panel-side .panel { flex:1; }
 }
+
+/* ═══════════ MOBILE : panneaux empilés ═══════════ */
+@media (max-width:760px) {
+  html, body { overflow:auto; height:auto; }
+  #terminal { height:auto; min-height:100vh; }
+  #topbar { flex-wrap:wrap; flex-basis:auto; padding:5px 8px; row-gap:4px; }
+  #clock { display:none; }
+  #acct-bar { order:3; flex-basis:100%; flex-wrap:wrap; gap:10px; }
+  #softkeys { flex-basis:auto; }
+  #grid { display:flex; flex-direction:column; }
+  #panel-watch { flex:0 0 auto; max-height:250px; }
+  #panel-chart { flex:0 0 auto; height:330px; }
+  #panel-chart .panel-hd { position:static; }
+  #panel-side { flex-direction:column; }
+  #panel-tabs { flex:0 0 auto; height:300px; }
+  #panel-bottom { flex:0 0 auto; max-height:230px; }
+  #cmdbar, #statusbar { position:sticky; bottom:0; }
+  #cmdbar { bottom:20px; z-index:10; }
+  #statusbar { z-index:10; }
+  #q-prices { flex-wrap:wrap; row-gap:4px; }
+  #modal { max-height:88vh; }
+  #login-box { padding:20px 18px 14px; }
+}
