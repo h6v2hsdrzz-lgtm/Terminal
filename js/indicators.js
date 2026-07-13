@@ -84,6 +84,45 @@ const TA = {
     return { mid, up, lo };
   },
 
+  atr(candles, p = 14) {
+    const out = new Array(candles.length).fill(null);
+    let prev = null, acc = 0;
+    for (let i = 0; i < candles.length; i++) {
+      const c = candles[i];
+      const tr = i === 0 ? c.h - c.l
+        : Math.max(c.h - c.l, Math.abs(c.h - candles[i - 1].c), Math.abs(c.l - candles[i - 1].c));
+      if (i < p) { acc += tr; if (i === p - 1) { prev = acc / p; out[i] = prev; } }
+      else { prev = (prev * (p - 1) + tr) / p; out[i] = prev; }
+    }
+    return out;
+  },
+
+  /* VWAP par session (réinitialisé chaque jour UTC) */
+  vwap(candles) {
+    const out = new Array(candles.length).fill(null);
+    let pv = 0, vv = 0, day = null;
+    for (let i = 0; i < candles.length; i++) {
+      const c = candles[i];
+      const d = Math.floor(c.t / 86400000);
+      if (d !== day) { day = d; pv = 0; vv = 0; }
+      const typ = (c.h + c.l + c.c) / 3;
+      pv += typ * (c.v || 1); vv += (c.v || 1);
+      out[i] = pv / vv;
+    }
+    return out;
+  },
+
+  heikinAshi(candles) {
+    const out = [];
+    for (let i = 0; i < candles.length; i++) {
+      const c = candles[i];
+      const haC = (c.o + c.h + c.l + c.c) / 4;
+      const haO = i === 0 ? (c.o + c.c) / 2 : (out[i - 1].o + out[i - 1].c) / 2;
+      out.push({ t: c.t, o: haO, c: haC, h: Math.max(c.h, haO, haC), l: Math.min(c.l, haO, haC), v: c.v });
+    }
+    return out;
+  },
+
   /* niveaux : plus haut/bas récents + pivot classique */
   levels(candles, lookback = 60) {
     const seg = candles.slice(-lookback);
