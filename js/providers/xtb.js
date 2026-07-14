@@ -66,6 +66,11 @@ class XTBProvider {
     return this.client.getChart(symbol, tfMin, Date.now() - lookback);
   }
 
+  async getCandlesBefore(symbol, tfMin, beforeTs) {
+    const span = tfMin * 60000 * 120;
+    return this.client.getChartRange(symbol, tfMin, beforeTs - span, beforeTs - 1).catch(() => []);
+  }
+
   async searchSymbols() { return []; } // xAPI n'a pas de recherche légère ; ADD SYMBOLE direct
 
   async getStats(symbol) {

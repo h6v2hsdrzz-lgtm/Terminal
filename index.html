@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Terminal — Trading Workstation</title>
 <link rel="stylesheet" href="css/terminal.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="docs/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#10141a">
 </head>
 <body>
 
@@ -105,15 +108,25 @@
             <button data-i="ema" class="on" title="EMA 20 / 50 / 200">EMA</button>
             <button data-i="bb" title="Bollinger 20, 2σ">BB</button>
             <button data-i="vwap" title="VWAP session">VWAP</button>
+            <button data-i="st" title="SuperTrend 10, 3">ST</button>
+            <button data-i="ichi" title="Ichimoku 9 26 52">Ichi</button>
             <button data-i="vol" class="on" title="Volume">Vol</button>
             <button data-i="rsi" title="RSI 14">RSI</button>
+            <button data-i="stoch" title="Stochastique 14 3 3">Stoch</button>
             <button data-i="macd" title="MACD 12 26 9">MACD</button>
+          </span>
+          <span class="ctl-group" id="draw-btns">
+            <button data-d="h" title="Ligne horizontale (1 clic)">─</button>
+            <button data-d="trend" title="Ligne de tendance (2 clics)">╱</button>
+            <button data-d="fib" title="Retracement de Fibonacci (2 clics)">Fib</button>
+            <button id="btn-clear-draw" title="Effacer les dessins de cet instrument">⌫</button>
           </span>
           <span class="ctl-group">
             <button id="btn-log" title="Échelle logarithmique">Log</button>
             <button id="btn-fit" title="Ajuster la vue">⤢</button>
             <button id="btn-alert-here" title="Alerte au dernier prix">🔔+</button>
           </span>
+          <span id="candle-countdown" title="Temps restant sur la bougie"></span>
         </div>
       </div>
       <div id="chart"><div id="chart-legend"></div></div>
@@ -127,6 +140,11 @@
             <label>Qté</label><input id="t-qty" type="text" value="">
             <label>SL</label><input id="t-sl" type="text" placeholder="—">
             <label>TP</label><input id="t-tp" type="text" placeholder="—">
+          </div>
+          <div class="t-row">
+            <label>Risque</label><input id="t-risk" type="text" placeholder="1" style="max-width:52px">
+            <label>%</label>
+            <button id="t-calc" title="Calcule la quantité pour risquer ce % du capital entre le prix et le SL">Calculer la qté</button>
           </div>
           <div class="t-btns">
             <button id="t-sell" class="btn-sell"><span class="t-side">Vendre</span><span id="t-bid">—</span></button>
@@ -144,6 +162,7 @@
         </div>
         <div id="tab-book" class="tab-pane">
           <div id="book"></div>
+          <canvas id="depth" height="80"></canvas>
           <div class="pane-subhd">Transactions</div>
           <div id="tape"></div>
         </div>
@@ -169,6 +188,7 @@
       <div class="panel-hd tabs-hd">
         <button class="tab-btn on" data-btab="pos">Positions <span id="pos-count"></span></button>
         <button class="tab-btn" data-btab="hist">Historique</button>
+        <button class="tab-btn" data-btab="screen">Screener</button>
         <button class="tab-btn" data-btab="alerts">Alertes <span id="alert-count"></span></button>
       </div>
       <div id="btab-pos" class="tab-pane">
@@ -188,6 +208,17 @@
             <th>Entrée</th><th>Sortie</th><th>P/L</th><th>Motif</th>
           </tr></thead>
           <tbody id="hist-body"></tbody>
+        </table>
+      </div>
+      <div id="btab-screen" class="tab-pane hidden">
+        <div id="screen-bar">
+          <button class="scr-btn on" data-s="gainers">Hausses</button>
+          <button class="scr-btn" data-s="losers">Baisses</button>
+          <button class="scr-btn" data-s="volume">Volume</button>
+        </div>
+        <table id="screen-table">
+          <thead><tr><th>Symbole</th><th>Dernier</th><th>24h %</th><th>Volume 24h $</th><th></th></tr></thead>
+          <tbody id="screen-body"></tbody>
         </table>
       </div>
       <div id="btab-alerts" class="tab-pane hidden">

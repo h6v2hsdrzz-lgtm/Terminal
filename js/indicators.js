@@ -123,6 +123,80 @@ const TA = {
     return out;
   },
 
+  /* Stochastique %K/%D (14,3,3) */
+  stoch(candles, kP = 14, kS = 3, dP = 3) {
+    const raw = new Array(candles.length).fill(null);
+    for (let i = kP - 1; i < candles.length; i++) {
+      let hi = -Infinity, lo = Infinity;
+      for (let j = i - kP + 1; j <= i; j++) {
+        if (candles[j].h > hi) hi = candles[j].h;
+        if (candles[j].l < lo) lo = candles[j].l;
+      }
+      raw[i] = hi === lo ? 50 : (candles[i].c - lo) / (hi - lo) * 100;
+    }
+    const smooth = (arr, p) => {
+      const out = new Array(arr.length).fill(null);
+      for (let i = 0; i < arr.length; i++) {
+        let s = 0, n = 0;
+        for (let j = Math.max(0, i - p + 1); j <= i; j++) if (arr[j] != null) { s += arr[j]; n++; }
+        if (n === p) out[i] = s / p;
+      }
+      return out;
+    };
+    const k = smooth(raw, kS);
+    return { k, d: smooth(k, dP) };
+  },
+
+  /* SuperTrend (10, 3) — retourne la ligne et la direction (1 haussier / -1) */
+  supertrend(candles, p = 10, mult = 3) {
+    const atr = this.atr(candles, p);
+    const n = candles.length;
+    const line = new Array(n).fill(null);
+    const dir = new Array(n).fill(null);
+    let ub = null, lb = null, d = 1;
+    for (let i = 0; i < n; i++) {
+      if (atr[i] == null) continue;
+      const mid = (candles[i].h + candles[i].l) / 2;
+      let bub = mid + mult * atr[i];
+      let blb = mid - mult * atr[i];
+      if (ub != null) {
+        bub = (bub < ub || candles[i - 1].c > ub) ? bub : ub;
+        blb = (blb > lb || candles[i - 1].c < lb) ? blb : lb;
+      }
+      if (ub != null) {
+        if (d === 1 && candles[i].c < blb) d = -1;
+        else if (d === -1 && candles[i].c > bub) d = 1;
+      }
+      ub = bub; lb = blb;
+      dir[i] = d;
+      line[i] = d === 1 ? blb : bub;
+    }
+    return { line, dir };
+  },
+
+  /* Ichimoku (9, 26, 52) — senkou non décalés (décalage géré à l'affichage) */
+  ichimoku(candles, pT = 9, pK = 26, pB = 52) {
+    const mid = (i, p) => {
+      if (i < p - 1) return null;
+      let hi = -Infinity, lo = Infinity;
+      for (let j = i - p + 1; j <= i; j++) {
+        if (candles[j].h > hi) hi = candles[j].h;
+        if (candles[j].l < lo) lo = candles[j].l;
+      }
+      return (hi + lo) / 2;
+    };
+    const n = candles.length;
+    const tenkan = new Array(n).fill(null), kijun = new Array(n).fill(null);
+    const senkouA = new Array(n).fill(null), senkouB = new Array(n).fill(null);
+    for (let i = 0; i < n; i++) {
+      tenkan[i] = mid(i, pT);
+      kijun[i] = mid(i, pK);
+      if (tenkan[i] != null && kijun[i] != null) senkouA[i] = (tenkan[i] + kijun[i]) / 2;
+      senkouB[i] = mid(i, pB);
+    }
+    return { tenkan, kijun, senkouA, senkouB, shift: pK };
+  },
+
   /* niveaux : plus haut/bas récents + pivot classique */
   levels(candles, lookback = 60) {
     const seg = candles.slice(-lookback);

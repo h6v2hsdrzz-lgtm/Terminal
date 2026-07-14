@@ -7,6 +7,8 @@
 
 const $ = (id) => document.getElementById(id);
 const ALERT_STORE = 'terminal-alerts';
+const DRAW_STORE = 'terminal-drawings';
+const WS_STORE = 'terminal-workspace-';
 const TF_NAMES = { 1: '1m', 5: '5m', 15: '15m', 30: '30m', 60: '1H', 240: '4H', 1440: '1D', 10080: '1W' };
 function tfName(tf) { return TF_NAMES[tf] || tf + 'min'; }
 
@@ -26,7 +28,50 @@ const state = {
   cmdHistory: [],
   cmdIdx: -1,
   tapeBuf: [],
+  screenSort: 'gainers',
 };
+
+/* ─────────────── persistance de l'espace de travail ─────────────── */
+
+function saveWorkspace() {
+  if (!state.provider) return;
+  try {
+    localStorage.setItem(WS_STORE + state.provider.id, JSON.stringify({
+      watchlist: state.watchlist, selected: state.selected, tf: state.tf,
+      chartOpts: state.chart ? state.chart.opts : null,
+    }));
+  } catch {}
+}
+function loadWorkspace() {
+  try { return JSON.parse(localStorage.getItem(WS_STORE + state.provider.id)); } catch { return null; }
+}
+
+function loadDrawings(symbol) {
+  try {
+    const all = JSON.parse(localStorage.getItem(DRAW_STORE)) || {};
+    return all[symbol] || [];
+  } catch { return []; }
+}
+function saveDrawings(symbol, drawings) {
+  try {
+    const all = JSON.parse(localStorage.getItem(DRAW_STORE)) || {};
+    if (drawings && drawings.length) all[symbol] = drawings; else delete all[symbol];
+    localStorage.setItem(DRAW_STORE, JSON.stringify(all));
+  } catch {}
+}
+
+/* bip d'alerte (WebAudio, sans fichier) */
+function beep() {
+  try {
+    const ctx = beep.ctx || (beep.ctx = new (window.AudioContext || window.webkitAudioContext)());
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value = 880; g.gain.value = 0.08;
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+    o.stop(ctx.currentTime + 0.4);
+  } catch {}
+}
 
 /* ─────────────── helpers ─────────────── */
 
@@ -155,15 +200,32 @@ async function startTerminal() {
   $('t-qty').value = state.provider.defaultQty;
   $('a-extra-label').textContent = state.account instanceof PaperAccount ? 'Trades clos' : 'Marge';
 
-  state.chart = new TerminalChart($('chart'), $('chart-legend'));
+  state.chart = new TerminalChart($('chart'), $('chart-legend'), {
+    onNeedHistory: async (oldestTs) => {
+      if (!state.provider.getCandlesBefore) return;
+      try {
+        const older = await state.provider.getCandlesBefore(state.selected, state.tf, oldestTs);
+        if (older.length) state.chart.prependCandles(older);
+      } catch {}
+    },
+    onDrawingsChanged: (drawings) => saveDrawings(state.selected, drawings),
+    onToolDone: () => document.querySelectorAll('#draw-btns button').forEach((b) => b.classList.remove('on')),
+  });
   loadAlerts();
   startClock();
   bindUI();
   wireProvider();
   setStatus('Chargement des marchés…');
 
-  for (const s of state.provider.defaultWatchlist) addSymbol(s, { silent: true });
-  await selectSymbol(state.provider.defaultWatchlist[0]);
+  // restaure l'espace de travail sauvegardé (watchlist, instrument, TF, indicateurs)
+  const ws = loadWorkspace();
+  const wl = (ws && ws.watchlist && ws.watchlist.length) ? ws.watchlist : state.provider.defaultWatchlist;
+  if (ws && ws.tf) state.tf = ws.tf;
+  if (ws && ws.chartOpts) Object.assign(state.chart.opts, ws.chartOpts, { log: false });
+  syncIndButtons();
+  document.querySelectorAll('#type-btns button').forEach((b) => b.classList.toggle('on', b.dataset.t === state.chart.opts.type));
+  for (const s of wl) addSymbol(s, { silent: true });
+  await selectSymbol((ws && ws.selected && wl.includes(ws.selected)) ? ws.selected : wl[0]);
 
   renderAccount();
   renderPositions();
@@ -192,6 +254,19 @@ function wireProvider() {
   setInterval(() => { renderAccount(); refreshPosPl(); }, 2000);
   // stats instrument périodiques
   setInterval(() => { if (state.selected) loadStats(state.selected, true); }, 30000);
+  // profondeur de marché (si onglet Carnet visible)
+  setInterval(() => { if (!$('tab-book').classList.contains('hidden')) loadDepth(); }, 5000);
+  // compte à rebours de la bougie en cours
+  setInterval(() => {
+    const el = $('candle-countdown');
+    if (!state.chart || !state.chart.candles.length) { el.textContent = ''; return; }
+    const step = state.tf * 60000;
+    const last = state.chart.candles[state.chart.candles.length - 1];
+    const rem = Math.max(0, last.t + step - Date.now());
+    const s = Math.floor(rem / 1000);
+    const hh = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60;
+    el.textContent = '⏳ ' + (hh ? `${hh}:${pd(mm)}:${pd(ss)}` : `${mm}:${pd(ss)}`);
+  }, 1000);
 }
 
 /* ─────────────── ticks ─────────────── */
@@ -244,7 +319,7 @@ async function addSymbol(symbol, opts = {}) {
     state.watchlist.push(symbol);
     renderWatchRow(symbol);
     state.provider.subscribe(symbol);
-    if (!opts.silent) setStatus(symbol + ' ajouté', 'ok');
+    if (!opts.silent) { setStatus(symbol + ' ajouté', 'ok'); saveWorkspace(); }
     return true;
   } catch (ex) {
     if (!opts.silent) setStatus(`${symbol}: ${ex.message}`, 'err');
@@ -260,6 +335,7 @@ function removeSymbol(symbol) {
   const row = $('w-' + cssId(symbol));
   if (row) row.remove();
   setStatus(symbol + ' retiré', 'ok');
+  saveWorkspace();
 }
 
 function renderWatchRow(symbol) {
@@ -355,7 +431,7 @@ async function selectSymbol(symbol, tf) {
     setStatus(`Chargement ${symbol} ${tfName(state.tf)}…`);
     const candles = await state.provider.getCandles(symbol, state.tf, 300);
     if (state.selected !== symbol) return;
-    state.chart.setData(symbol, state.tf, info.digits, candles);
+    state.chart.setData(symbol, state.tf, info.digits, candles, loadDrawings(symbol));
     drawPositionLines();
     drawAlertLines();
     refreshTA();
@@ -364,6 +440,80 @@ async function selectSymbol(symbol, tf) {
     setStatus(`${symbol}: ${ex.message}`, 'err');
   }
   loadStats(symbol);
+  saveWorkspace();
+}
+
+/* ─────────────── screener ─────────────── */
+
+async function loadScreener() {
+  const body = $('screen-body');
+  if (!state.provider.topMovers) {
+    body.innerHTML = '<tr><td colspan="5" class="muted">Screener disponible avec la source OKX.</td></tr>';
+    return;
+  }
+  body.innerHTML = '<tr><td colspan="5" class="muted">Chargement…</td></tr>';
+  try {
+    let rows = await state.provider.topMovers();
+    if (state.screenSort === 'gainers') rows.sort((a, b) => b.chg - a.chg);
+    else if (state.screenSort === 'losers') rows.sort((a, b) => a.chg - b.chg);
+    else rows.sort((a, b) => b.volCcy24h - a.volCcy24h);
+    body.innerHTML = '';
+    for (const r of rows.slice(0, 25)) {
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        `<td class="sym">${escHtml(r.symbol)}</td>` +
+        `<td class="num">${r.last}</td>` +
+        `<td class="num ${r.chg >= 0 ? 'up' : 'dn'}">${(r.chg >= 0 ? '+' : '') + r.chg.toFixed(2)}%</td>` +
+        `<td class="num">${fmtCompact(r.volCcy24h)}</td>` +
+        `<td><button class="btn-close-pos">Ouvrir</button></td>`;
+      tr.onclick = () => addSymbol(r.symbol, { silent: true }).then((ok) => ok && selectSymbol(r.symbol));
+      body.appendChild(tr);
+    }
+  } catch (ex) {
+    body.innerHTML = `<tr><td colspan="5" class="dn">${escHtml(ex.message)}</td></tr>`;
+  }
+}
+
+/* ─────────────── profondeur de marché ─────────────── */
+
+async function loadDepth() {
+  const cv = $('depth');
+  if (!state.provider.getDepth || !state.selected) { cv.style.display = 'none'; return; }
+  try {
+    const d = await state.provider.getDepth(state.selected, 50);
+    cv.style.display = 'block';
+    const dpr = window.devicePixelRatio || 1;
+    const w = cv.clientWidth || 280, h = 80;
+    cv.width = w * dpr; cv.height = h * dpr;
+    const cx = cv.getContext('2d');
+    cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cx.clearRect(0, 0, w, h);
+    // cumuls
+    let accB = 0; const bids = d.bids.map(([p, q]) => [p, accB += q]);
+    let accA = 0; const asks = d.asks.map(([p, q]) => [p, accA += q]);
+    const pMin = bids.length ? bids[bids.length - 1][0] : 0;
+    const pMax = asks.length ? asks[asks.length - 1][0] : 1;
+    const qMax = Math.max(accB, accA, 1e-9);
+    const x = (p) => (p - pMin) / (pMax - pMin) * w;
+    const y = (q) => h - q / qMax * (h - 8);
+    const area = (pts, color, fill) => {
+      if (!pts.length) return;
+      cx.beginPath();
+      cx.moveTo(x(pts[0][0]), h);
+      for (const [p, q] of pts) cx.lineTo(x(p), y(q));
+      cx.lineTo(x(pts[pts.length - 1][0]), h);
+      cx.closePath();
+      cx.fillStyle = fill; cx.fill();
+      cx.beginPath();
+      for (let i = 0; i < pts.length; i++) {
+        const [p, q] = pts[i];
+        i ? cx.lineTo(x(p), y(q)) : cx.moveTo(x(p), y(q));
+      }
+      cx.strokeStyle = color; cx.lineWidth = 1.2; cx.stroke();
+    };
+    area(bids, '#2ebd85', 'rgba(46,189,133,.12)');
+    area(asks, '#f6465d', 'rgba(246,70,93,.12)');
+  } catch { /* silencieux */ }
 }
 
 /* ─────────────── carnet & tape ─────────────── */
@@ -718,6 +868,7 @@ function checkAlerts(symbol, price) {
       saveAlerts(); renderAlerts(); drawAlertLines();
       const msg = `${symbol} ${a.op} ${a.price} — dernier ${price}`;
       toast('Alerte déclenchée', msg);
+      beep();
       setStatus('Alerte : ' + msg, 'warn');
       if ('Notification' in window && Notification.permission === 'granted') {
         try { new Notification('Terminal — alerte', { body: msg }); } catch {}
@@ -762,11 +913,13 @@ function showSideTab(name) {
   for (const t of ['book', 'stats', 'news', 'ai']) $('tab-' + t).classList.toggle('hidden', t !== name);
   if (name === 'ai') refreshTA();
   if (name === 'stats' && state.selected) loadStats(state.selected);
+  if (name === 'book') loadDepth();
 }
 function showBottomTab(name) {
   document.querySelectorAll('#panel-bottom .tab-btn').forEach((b) => b.classList.toggle('on', b.dataset.btab === name));
-  for (const t of ['pos', 'hist', 'alerts']) $('btab-' + t).classList.toggle('hidden', t !== name);
+  for (const t of ['pos', 'hist', 'screen', 'alerts']) $('btab-' + t).classList.toggle('hidden', t !== name);
   if (name === 'hist') loadHistory();
+  if (name === 'screen') loadScreener();
 }
 
 /* ─────────────── IA ─────────────── */
@@ -842,10 +995,13 @@ const HELP_HTML = `<div class="help-grid">
   <code>ADD SOL-USDT</code> <span>ajoute à la watchlist · <code>DEL SOL-USDT</code> retire</span>
   <code>TA</code><span>analyse technique locale (onglet IA)</span>
   <code>AI ta question…</code><span>chat avec l'analyste IA · <code>KEY</code> configurer la clé</span>
-  <code>BOOK / STATS / NEWS</code><span>onglets du panneau latéral</span>
-  <code>IND RSI</code><span>bascule un indicateur : EMA BB VWAP VOL RSI MACD</span>
+  <code>BOOK / STATS / NEWS</code><span>onglets latéraux · <code>POS HIST SCREEN</code> onglets bas</span>
+  <code>IND RSI</code><span>indicateurs : EMA BB VWAP ST ICHI VOL RSI STOCH MACD</span>
+  <code>BTC-USDT-SWAP</code><span>contrats perpétuels (funding, open interest)</span>
   <code>RESET PAPER</code><span>réinitialise le compte paper à 100 000</span>
-</div>`;
+</div>
+<div class="m-warn">Graphique : boutons ─ ╱ Fib pour dessiner (persistant par instrument), molette = zoom,
+faites défiler vers la gauche pour charger plus d'historique. L'espace de travail est sauvegardé automatiquement.</div>`;
 
 function runCommand(raw) {
   const line = raw.trim();
@@ -901,10 +1057,10 @@ function runCommand(raw) {
     case 'HIST': showBottomTab('hist'); return;
     case 'IND': {
       const key = (tk[1] || '').toLowerCase();
-      if (['ema', 'bb', 'vwap', 'vol', 'rsi', 'macd'].includes(key)) {
-        state.chart.setOpt(key); syncIndButtons();
+      if (['ema', 'bb', 'vwap', 'st', 'ichi', 'vol', 'rsi', 'stoch', 'macd'].includes(key)) {
+        state.chart.setOpt(key); syncIndButtons(); saveWorkspace();
         setStatus(`${tk[1]} ${state.chart.opts[key] ? 'activé' : 'désactivé'}`, 'ok');
-      } else setStatus('IND EMA|BB|VWAP|VOL|RSI|MACD', 'err');
+      } else setStatus('IND EMA|BB|VWAP|ST|ICHI|VOL|RSI|STOCH|MACD', 'err');
       return;
     }
     case 'RESET':
@@ -951,11 +1107,47 @@ function bindUI() {
     b.onclick = () => {
       state.chart.setOpt('type', b.dataset.t);
       document.querySelectorAll('#type-btns button').forEach((x) => x.classList.toggle('on', x === b));
+      saveWorkspace();
     };
   });
   document.querySelectorAll('#ind-btns button').forEach((b) => {
-    b.onclick = () => { state.chart.setOpt(b.dataset.i); syncIndButtons(); };
+    b.onclick = () => { state.chart.setOpt(b.dataset.i); syncIndButtons(); saveWorkspace(); };
   });
+  document.querySelectorAll('#draw-btns button[data-d]').forEach((b) => {
+    b.onclick = () => {
+      const active = state.chart.setTool(b.dataset.d);
+      document.querySelectorAll('#draw-btns button').forEach((x) => x.classList.toggle('on', x === b && !!active));
+      setStatus(active
+        ? (active === 'h' ? 'Ligne horizontale : cliquez sur le graphique' : (active === 'trend' ? 'Tendance' : 'Fibonacci') + ' : cliquez 2 points sur le graphique')
+        : 'Outil désactivé', 'warn');
+    };
+  });
+  $('btn-clear-draw').onclick = () => { state.chart.clearDrawings(); setStatus('Dessins effacés pour ' + state.selected, 'ok'); };
+  document.querySelectorAll('.scr-btn').forEach((b) => {
+    b.onclick = () => {
+      state.screenSort = b.dataset.s;
+      document.querySelectorAll('.scr-btn').forEach((x) => x.classList.toggle('on', x === b));
+      loadScreener();
+    };
+  });
+  $('t-calc').onclick = () => {
+    const info = state.symbols.get(state.selected);
+    const sl = parseNum($('t-sl').value);
+    const riskPct = parseNum($('t-risk').value) || 1;
+    if (!info) return;
+    if (!sl) { setStatus('Renseignez d\'abord un SL pour calculer la taille', 'err'); return; }
+    const px = (info.bid + info.ask) / 2;
+    const dist = Math.abs(px - sl);
+    if (dist <= 0) { setStatus('SL égal au prix — distance nulle', 'err'); return; }
+    const equity = state.account.getSummary().equity || 0;
+    const riskAmt = equity * riskPct / 100;
+    const unit = info.contractSize || 1;         // CFD : valeur par lot ; crypto : 1
+    const qty = riskAmt / (dist * unit);
+    const step = info.lotSz || 0.0001;
+    const rounded = Math.max(step, Math.floor(qty / step) * step);
+    $('t-qty').value = String(+rounded.toFixed(8));
+    setStatus(`Qté calculée : risque ${riskPct}% (${fmtNum(riskAmt)}) / distance ${fmtPrice(dist, info.digits)}`, 'ok');
+  };
   $('btn-log').onclick = () => {
     state.chart.setOpt('log');
     $('btn-log').classList.toggle('on', state.chart.opts.log);
