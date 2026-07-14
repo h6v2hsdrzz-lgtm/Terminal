@@ -20,7 +20,8 @@ const state = {
   watchlist: [],
   selected: null,
   tf: 60,
-  chart: null,
+  charts: [],              // [{chart: TerminalChart, symbol, tf, el}]
+  activeIdx: 0,
   lastBook: null,
   lastStats: null,
   alerts: [],
@@ -31,6 +32,11 @@ const state = {
   screenSort: 'gainers',
 };
 
+/* state.chart = graphique de la cellule active (compatibilité interne) */
+Object.defineProperty(state, 'chart', {
+  get() { const c = state.charts[state.activeIdx]; return c ? c.chart : null; },
+});
+
 /* ─────────────── persistance de l'espace de travail ─────────────── */
 
 function saveWorkspace() {
@@ -38,7 +44,8 @@ function saveWorkspace() {
   try {
     localStorage.setItem(WS_STORE + state.provider.id, JSON.stringify({
       watchlist: state.watchlist, selected: state.selected, tf: state.tf,
-      chartOpts: state.chart ? state.chart.opts : null,
+      layout: state.charts.length,
+      cells: state.charts.map((c) => ({ symbol: c.symbol, tf: c.tf, opts: c.chart.opts })),
     }));
   } catch {}
 }
@@ -200,38 +207,149 @@ async function startTerminal() {
   $('t-qty').value = state.provider.defaultQty;
   $('a-extra-label').textContent = state.account instanceof PaperAccount ? 'Trades clos' : 'Marge';
 
-  state.chart = new TerminalChart($('chart'), $('chart-legend'), {
-    onNeedHistory: async (oldestTs) => {
-      if (!state.provider.getCandlesBefore) return;
-      try {
-        const older = await state.provider.getCandlesBefore(state.selected, state.tf, oldestTs);
-        if (older.length) state.chart.prependCandles(older);
-      } catch {}
-    },
-    onDrawingsChanged: (drawings) => saveDrawings(state.selected, drawings),
-    onToolDone: () => document.querySelectorAll('#draw-btns button').forEach((b) => b.classList.remove('on')),
-  });
   loadAlerts();
   startClock();
   bindUI();
   wireProvider();
   setStatus('Chargement des marchés…');
 
-  // restaure l'espace de travail sauvegardé (watchlist, instrument, TF, indicateurs)
+  // restaure l'espace de travail (watchlist, disposition, cellules, indicateurs)
   const ws = loadWorkspace();
   const wl = (ws && ws.watchlist && ws.watchlist.length) ? ws.watchlist : state.provider.defaultWatchlist;
   if (ws && ws.tf) state.tf = ws.tf;
-  if (ws && ws.chartOpts) Object.assign(state.chart.opts, ws.chartOpts, { log: false });
-  syncIndButtons();
-  document.querySelectorAll('#type-btns button').forEach((b) => b.classList.toggle('on', b.dataset.t === state.chart.opts.type));
   for (const s of wl) addSymbol(s, { silent: true });
-  await selectSymbol((ws && ws.selected && wl.includes(ws.selected)) ? ws.selected : wl[0]);
+  const layout = (ws && [1, 2, 4].includes(ws.layout)) ? ws.layout : 1;
+  const cells = (ws && ws.cells && ws.cells.length) ? ws.cells
+    : [{ symbol: (ws && ws.selected) || wl[0], tf: state.tf }];
+  await initCharts(layout, cells);
+  setActiveCell(0);
+  loadMarketStrip();
 
   renderAccount();
   renderPositions();
   loadNews();
   setStatus('Prêt — HELP pour la liste des commandes', 'ok');
   $('cmd').focus();
+}
+
+/* ─────────────── multi-graphiques ─────────────── */
+
+async function initCharts(n, cellsCfg) {
+  const grid = $('charts-grid');
+  for (const c of state.charts) { try { c.chart.chart.remove(); } catch {} }
+  state.charts = [];
+  state.activeIdx = 0;
+  grid.dataset.layout = String(n);
+  grid.innerHTML = '';
+  document.querySelectorAll('#layout-btns button').forEach((b) => b.classList.toggle('on', +b.dataset.l === n));
+  const wl = state.watchlist.length ? state.watchlist : state.provider.defaultWatchlist;
+  for (let i = 0; i < n; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'chart-cell' + (i === 0 ? ' active' : '');
+    cell.innerHTML = '<div class="cc-chart"></div><div class="cc-legend"></div><div class="cc-tag">—</div>';
+    grid.appendChild(cell);
+    const idx = i;
+    const tc = new TerminalChart(cell.querySelector('.cc-chart'), cell.querySelector('.cc-legend'), {
+      onNeedHistory: async (oldestTs) => {
+        const c = state.charts[idx];
+        if (!state.provider.getCandlesBefore || !c || !c.symbol) return;
+        try {
+          const older = await state.provider.getCandlesBefore(c.symbol, c.tf, oldestTs);
+          if (older.length) c.chart.prependCandles(older);
+        } catch {}
+      },
+      onDrawingsChanged: (drawings) => {
+        const c = state.charts[idx];
+        if (c && c.symbol) saveDrawings(c.symbol, drawings);
+      },
+      onToolDone: () => document.querySelectorAll('#draw-btns button').forEach((b) => b.classList.remove('on')),
+    });
+    cell.addEventListener('mousedown', () => { if (state.activeIdx !== idx) setActiveCell(idx); }, true);
+    state.charts.push({ chart: tc, symbol: null, tf: state.tf, el: cell });
+  }
+  const jobs = [];
+  for (let i = 0; i < n; i++) {
+    const cfg = (cellsCfg && cellsCfg[i]) || { symbol: wl[i % wl.length], tf: state.tf };
+    if (cfg.opts) Object.assign(state.charts[i].chart.opts, cfg.opts, { log: false });
+    state.charts[i].tf = cfg.tf || state.tf;
+    jobs.push(loadCell(i, cfg.symbol, cfg.tf || state.tf));
+  }
+  await Promise.all(jobs);
+}
+
+async function loadCell(i, symbol, tf) {
+  symbol = symbol.toUpperCase();
+  const c = state.charts[i];
+  if (!c) return false;
+  if (!state.symbols.has(symbol)) {
+    const ok = await addSymbol(symbol, { silent: true });
+    if (!ok) { setStatus(`${symbol}: instrument introuvable`, 'err'); return false; }
+  }
+  const info = state.symbols.get(symbol);
+  c.symbol = symbol;
+  if (tf) c.tf = tf;
+  c.el.querySelector('.cc-tag').textContent = `${symbol} · ${tfName(c.tf)}`;
+  try {
+    const candles = await state.provider.getCandles(symbol, c.tf, 300);
+    if (state.charts[i] !== c || c.symbol !== symbol) return false;
+    c.chart.setData(symbol, c.tf, info.digits, candles, loadDrawings(symbol));
+    drawPositionLines();
+    drawAlertLines();
+    if (i === state.activeIdx) { state.selected = symbol; state.tf = c.tf; refreshTA(); }
+    return true;
+  } catch (ex) {
+    setStatus(`${symbol}: ${ex.message}`, 'err');
+    return false;
+  }
+}
+
+function setActiveCell(i) {
+  const c = state.charts[i];
+  if (!c) return;
+  state.activeIdx = i;
+  state.charts.forEach((x, j) => x.el.classList.toggle('active', j === i));
+  if (!c.symbol) return;
+  state.selected = c.symbol;
+  state.tf = c.tf;
+  const info = state.symbols.get(c.symbol);
+  $('chart-sym').textContent = c.symbol;
+  if (info) updateHeader(info);
+  document.querySelectorAll('#watch-body tr').forEach((r) => r.classList.toggle('sel', r.id === 'w-' + cssId(c.symbol)));
+  document.querySelectorAll('#period-btns button').forEach((b) => b.classList.toggle('on', +b.dataset.p === c.tf));
+  syncIndButtons();
+  document.querySelectorAll('#type-btns button').forEach((b) => b.classList.toggle('on', b.dataset.t === c.chart.opts.type));
+  $('btn-log').classList.toggle('on', c.chart.opts.log);
+  $('book').innerHTML = ''; $('tape').innerHTML = ''; state.tapeBuf = [];
+  if (state.provider.focus) state.provider.focus(c.symbol);
+  loadStats(c.symbol, true);
+  refreshTA();
+}
+
+/* bandeau marché global */
+async function loadMarketStrip() {
+  const el = $('market-strip');
+  if (state.provider.id === 'xtb') { el.classList.add('hidden'); return; }
+  try {
+    let html;
+    if (state.provider.id === 'okx') {
+      const r = await fetch('https://api.coingecko.com/api/v3/global');
+      if (!r.ok) throw new Error('cg ' + r.status);
+      const g = (await r.json()).data;
+      const capChg = g.market_cap_change_percentage_24h_usd || 0;
+      html =
+        `<span>Cap. marché <b>${fmtCompact(g.total_market_cap.usd)} $</b> <b class="${capChg >= 0 ? 'up' : 'dn'}">${(capChg >= 0 ? '+' : '') + capChg.toFixed(2)}%</b></span>` +
+        `<span>Vol 24h <b>${fmtCompact(g.total_volume.usd)} $</b></span>` +
+        `<span>Dominance BTC <b>${g.market_cap_percentage.btc.toFixed(1)}%</b></span>` +
+        `<span>ETH <b>${g.market_cap_percentage.eth.toFixed(1)}%</b></span>` +
+        `<span>Cryptos actives <b>${(g.active_cryptocurrencies || 0).toLocaleString('fr-FR')}</b></span>`;
+    } else {
+      html = '<span>Cap. marché <b>3,42 T$</b> <b class="up">+0,84%</b></span>' +
+        '<span>Vol 24h <b>128 Md$</b></span><span>Dominance BTC <b>58,2%</b></span>' +
+        '<span>ETH <b>12,4%</b></span><span class="muted">(simulation)</span>';
+    }
+    el.innerHTML = html;
+    el.classList.remove('hidden');
+  } catch { el.classList.add('hidden'); }
 }
 
 function wireProvider() {
@@ -256,12 +374,13 @@ function wireProvider() {
   setInterval(() => { if (state.selected) loadStats(state.selected, true); }, 30000);
   // profondeur de marché (si onglet Carnet visible)
   setInterval(() => { if (!$('tab-book').classList.contains('hidden')) loadDepth(); }, 5000);
-  // compte à rebours de la bougie en cours
+  // compte à rebours de la bougie en cours (cellule active)
   setInterval(() => {
     const el = $('candle-countdown');
-    if (!state.chart || !state.chart.candles.length) { el.textContent = ''; return; }
-    const step = state.tf * 60000;
-    const last = state.chart.candles[state.chart.candles.length - 1];
+    const cell = state.charts[state.activeIdx];
+    if (!cell || !cell.chart.candles.length) { el.textContent = ''; return; }
+    const step = cell.tf * 60000;
+    const last = cell.chart.candles[cell.chart.candles.length - 1];
     const rem = Math.max(0, last.t + step - Date.now());
     const s = Math.floor(rem / 1000);
     const hh = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60;
@@ -287,10 +406,13 @@ function onTick(d) {
   state.account.tick(d.symbol, d.bid, d.ask);
   checkAlerts(d.symbol, d.last != null ? d.last : d.bid);
 
-  if (d.symbol === state.selected) {
-    updateHeader(info);
-    state.chart.tick(d.last != null ? d.last : d.bid, d.ts || Date.now());
+  const px = d.last != null ? d.last : d.bid;
+  const ts = d.ts || Date.now();
+  // alimente toutes les cellules qui affichent ce symbole
+  for (const c of state.charts) {
+    if (c.symbol === d.symbol) c.chart.tick(px, ts);
   }
+  if (d.symbol === state.selected) updateHeader(info);
 }
 
 function updateHeader(info) {
@@ -413,32 +535,26 @@ function bindSearch() {
 async function selectSymbol(symbol, tf) {
   symbol = symbol.toUpperCase();
   if (!state.symbols.has(symbol)) {
-    const ok = await addSymbol(symbol);
-    if (!ok) return;
+    const ok = await addSymbol(symbol, { silent: true });
+    if (!ok) { setStatus(`${symbol}: instrument introuvable`, 'err'); return; }
   }
+  const i = state.activeIdx;
+  const cell = state.charts[i];
+  const newTf = tf || (cell ? cell.tf : state.tf);
   state.selected = symbol;
-  if (tf) state.tf = tf;
+  state.tf = newTf;
   const info = state.symbols.get(symbol);
 
   document.querySelectorAll('#watch-body tr').forEach((r) => r.classList.toggle('sel', r.id === 'w-' + cssId(symbol)));
-  document.querySelectorAll('#period-btns button').forEach((b) => b.classList.toggle('on', +b.dataset.p === state.tf));
+  document.querySelectorAll('#period-btns button').forEach((b) => b.classList.toggle('on', +b.dataset.p === newTf));
   $('chart-sym').textContent = symbol;
   updateHeader(info);
   $('book').innerHTML = ''; $('tape').innerHTML = ''; state.tapeBuf = [];
   if (state.provider.focus) state.provider.focus(symbol);
 
-  try {
-    setStatus(`Chargement ${symbol} ${tfName(state.tf)}…`);
-    const candles = await state.provider.getCandles(symbol, state.tf, 300);
-    if (state.selected !== symbol) return;
-    state.chart.setData(symbol, state.tf, info.digits, candles, loadDrawings(symbol));
-    drawPositionLines();
-    drawAlertLines();
-    refreshTA();
-    setStatus(`${symbol} ${tfName(state.tf)} — ${candles.length} bougies`, 'ok');
-  } catch (ex) {
-    setStatus(`${symbol}: ${ex.message}`, 'err');
-  }
+  setStatus(`Chargement ${symbol} ${tfName(newTf)}…`);
+  const ok = await loadCell(i, symbol, newTf);
+  if (ok) setStatus(`${symbol} ${tfName(newTf)}`, 'ok');
   loadStats(symbol);
   saveWorkspace();
 }
@@ -1000,8 +1116,9 @@ const HELP_HTML = `<div class="help-grid">
   <code>BTC-USDT-SWAP</code><span>contrats perpétuels (funding, open interest)</span>
   <code>RESET PAPER</code><span>réinitialise le compte paper à 100 000</span>
 </div>
-<div class="m-warn">Graphique : boutons ─ ╱ Fib pour dessiner (persistant par instrument), molette = zoom,
-faites défiler vers la gauche pour charger plus d'historique. L'espace de travail est sauvegardé automatiquement.</div>`;
+<div class="m-warn">Disposition : boutons ▣ / ▣▣ / ▦ pour 1, 2 ou 4 graphiques ; cliquez une cellule pour l'activer,
+puis un symbole ou une unité de temps s'y applique. Dessins ─ ╱ Fib persistants par instrument,
+molette = zoom, défilement à gauche = plus d'historique. L'espace de travail (grille comprise) est sauvegardé.</div>`;
 
 function runCommand(raw) {
   const line = raw.trim();
@@ -1100,6 +1217,25 @@ function bindUI() {
     } else if (e.key === 'Escape') { cmd.value = ''; }
   });
 
+  document.querySelectorAll('#layout-btns button').forEach((b) => {
+    b.onclick = async () => {
+      const n = +b.dataset.l;
+      if (n === state.charts.length) return;
+      // conserve les cellules existantes, complète avec la watchlist
+      const wl = state.watchlist.length ? state.watchlist : state.provider.defaultWatchlist;
+      const cfg = [];
+      for (let i = 0; i < n; i++) {
+        const ex = state.charts[i];
+        cfg.push(ex && ex.symbol
+          ? { symbol: ex.symbol, tf: ex.tf, opts: ex.chart.opts }
+          : { symbol: wl[i % wl.length], tf: state.tf });
+      }
+      await initCharts(n, cfg);
+      setActiveCell(0);
+      saveWorkspace();
+      setStatus(n === 1 ? 'Graphique unique' : `${n} graphiques`, 'ok');
+    };
+  });
   document.querySelectorAll('#period-btns button').forEach((b) => {
     b.onclick = () => { if (state.selected) selectSymbol(state.selected, +b.dataset.p); };
   });

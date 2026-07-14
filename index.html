@@ -71,6 +71,8 @@
     <button id="btn-logout" title="Déconnexion">Quitter</button>
   </header>
 
+  <div id="market-strip" class="hidden"></div>
+
   <main id="grid">
 
     <section id="panel-watch" class="panel">
@@ -93,6 +95,11 @@
           <span id="chart-chg">—</span>
         </div>
         <div id="chart-controls">
+          <span class="ctl-group" id="layout-btns" title="Nombre de graphiques">
+            <button data-l="1" class="on">▣</button>
+            <button data-l="2">▣▣</button>
+            <button data-l="4">▦</button>
+          </span>
           <span class="ctl-group" id="period-btns">
             <button data-p="1">1m</button><button data-p="5">5m</button>
             <button data-p="15">15m</button><button data-p="30">30m</button>
@@ -129,7 +136,7 @@
           <span id="candle-countdown" title="Temps restant sur la bougie"></span>
         </div>
       </div>
-      <div id="chart"><div id="chart-legend"></div></div>
+      <div id="charts-grid" data-layout="1"></div>
     </section>
 
     <section id="panel-side">

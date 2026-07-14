@@ -17,11 +17,15 @@ directement aux API officielles.
 
 ## Fonctionnalités
 
-**Graphique** — moteur [TradingView Lightweight Charts™](https://github.com/tradingview/lightweight-charts)
-(open source, Apache-2.0) : chandeliers / Heikin-Ashi / ligne, volume,
-EMA 20-50-200, bandes de Bollinger, VWAP session, RSI 14 et MACD en
-sous-panneaux, échelle log, zoom/pan fluides, crosshair avec légende OHLC,
-lignes de prix pour les positions (entrée/SL/TP) et les alertes.
+**Graphiques** — moteur [TradingView Lightweight Charts™](https://github.com/tradingview/lightweight-charts)
+(open source, Apache-2.0), en **disposition 1 / 2 / 4 graphiques synchronisés**
+(chaque cellule son instrument et son unité de temps) : chandeliers /
+Heikin-Ashi / ligne, volume, EMA 20-50-200, Bollinger, VWAP session,
+**SuperTrend, Ichimoku**, RSI, **Stochastique** et MACD en sous-panneaux,
+échelle log, axe en heure locale, zoom/pan fluides, crosshair avec légende
+OHLC, lignes de prix positions (entrée/SL/TP) et alertes. **Outils de dessin**
+(horizontale, tendance, Fibonacci) persistés par instrument. Chargement
+infini de l'historique. Bandeau **marché global** (cap., dominance BTC/ETH).
 
 **Marché** — carnet d'ordres 5 niveaux avec barres de profondeur, flux des
 transactions, statistiques : variation/volumes 24h, **funding rate, open
