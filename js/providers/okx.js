@@ -39,11 +39,28 @@ class OKXProvider {
   }
 
   async connect() {
-    // liste des instruments SPOT pour la recherche + flux temps réel
-    const spot = await this._get('/api/v5/market/tickers?instType=SPOT');
-    this.allTickers = spot
-      .filter((t) => t.instId.endsWith('-USDT') || t.instId.endsWith('-USDC') || t.instId.endsWith('-EUR'))
-      .map((t) => ({ symbol: t.instId, last: +t.last, volCcy24h: +t.volCcy24h }))
+    // tout en 4 requêtes : instruments + tickers SPOT et SWAP (évite le
+    // rate-limit d'un appel par symbole au chargement de la watchlist)
+    const [instSpot, instSwap, tickSpot, tickSwap] = await Promise.all([
+      this._get('/api/v5/public/instruments?instType=SPOT'),
+      this._get('/api/v5/public/instruments?instType=SWAP').catch(() => []),
+      this._get('/api/v5/market/tickers?instType=SPOT'),
+      this._get('/api/v5/market/tickers?instType=SWAP').catch(() => []),
+    ]);
+    for (const i of [...instSpot, ...instSwap]) {
+      this.instruments.set(i.instId, {
+        tickSz: +i.tickSz, lotSz: +i.lotSz, minSz: +i.minSz,
+        digits: Math.max(0, Math.round(-Math.log10(+i.tickSz))),
+        base: i.baseCcy || (i.instId.split('-')[0]), quote: i.quoteCcy || 'USDT',
+        type: i.instType, ctVal: i.ctVal ? +i.ctVal : null,
+      });
+    }
+    this.tickerCache = new Map();
+    for (const t of [...tickSpot, ...tickSwap]) this.tickerCache.set(t.instId, t);
+    this._tickersAt = Date.now();
+    this.allTickers = [...tickSpot, ...tickSwap]
+      .filter((t) => /-(USDT|USDC|EUR)(-SWAP)?$/.test(t.instId))
+      .map((t) => ({ symbol: t.instId, last: +t.last, open24h: +t.open24h, volCcy24h: +t.volCcy24h }))
       .sort((a, b) => b.volCcy24h - a.volCcy24h);
     try {
       await this._openWS();
@@ -52,6 +69,29 @@ class OKXProvider {
       this.polling = true;
       this._startPolling();
     }
+  }
+
+  async refreshTickers() {
+    if (Date.now() - (this._tickersAt || 0) < 25000) return this.allTickers;
+    const [spot, swap] = await Promise.all([
+      this._get('/api/v5/market/tickers?instType=SPOT'),
+      this._get('/api/v5/market/tickers?instType=SWAP').catch(() => []),
+    ]);
+    for (const t of [...spot, ...swap]) this.tickerCache.set(t.instId, t);
+    this._tickersAt = Date.now();
+    this.allTickers = [...spot, ...swap]
+      .filter((t) => /-(USDT|USDC|EUR)(-SWAP)?$/.test(t.instId))
+      .map((t) => ({ symbol: t.instId, last: +t.last, open24h: +t.open24h, volCcy24h: +t.volCcy24h }))
+      .sort((a, b) => b.volCcy24h - a.volCcy24h);
+    return this.allTickers;
+  }
+
+  /* top movers parmi les paires liquides (vol > 1 M$) */
+  async topMovers() {
+    await this.refreshTickers().catch(() => {});
+    return this.allTickers
+      .filter((t) => t.volCcy24h > 1e6 && t.open24h > 0 && !t.symbol.endsWith('-SWAP'))
+      .map((t) => ({ symbol: t.symbol, last: t.last, chg: (t.last - t.open24h) / t.open24h * 100, volCcy24h: t.volCcy24h }));
   }
 
   _startPolling() {
@@ -163,22 +203,19 @@ class OKXProvider {
 
   async getSymbol(symbol) {
     symbol = symbol.toUpperCase();
-    let meta = this.instruments.get(symbol);
-    if (!meta) {
-      const d = await this._get(`/api/v5/public/instruments?instType=SPOT&instId=${symbol}`);
-      if (!d.length) throw new Error(`${symbol}: instrument OKX inconnu`);
-      const i = d[0];
-      meta = {
-        tickSz: +i.tickSz, lotSz: +i.lotSz, minSz: +i.minSz,
-        digits: Math.max(0, Math.round(-Math.log10(+i.tickSz))),
-        base: i.baseCcy, quote: i.quoteCcy,
-      };
-      this.instruments.set(symbol, meta);
+    const meta = this.instruments.get(symbol);
+    if (!meta) throw new Error(`${symbol}: instrument OKX inconnu (essayez la recherche)`);
+    // cache tickers du connect() : zéro appel REST pour la watchlist initiale
+    let t = this.tickerCache && this.tickerCache.get(symbol);
+    if (!t || Date.now() - (this._tickersAt || 0) > 60000) {
+      [t] = await this._get(`/api/v5/market/ticker?instId=${symbol}`);
     }
-    const [t] = await this._get(`/api/v5/market/ticker?instId=${symbol}`);
+    const isSwap = meta.type === 'SWAP';
     return {
-      symbol, description: `${meta.base} / ${meta.quote} — OKX Spot`,
+      symbol,
+      description: `${meta.base} / ${meta.quote} — OKX ${isSwap ? 'Perp' : 'Spot'}`,
       digits: meta.digits, lotSz: meta.lotSz, minSz: meta.minSz,
+      ctVal: meta.ctVal, isSwap,
       bid: +t.bidPx, ask: +t.askPx, last: +t.last,
       high24h: +t.high24h, low24h: +t.low24h, open24h: +t.open24h,
       vol24h: +t.vol24h, volCcy24h: +t.volCcy24h,
@@ -191,18 +228,37 @@ class OKXProvider {
     return d.reverse().map((c) => ({ t: +c[0], o: +c[1], h: +c[2], l: +c[3], c: +c[4], v: +c[5] }));
   }
 
+  /* pagination : bougies antérieures à beforeTs (scroll infini) */
+  async getCandlesBefore(symbol, tfMin, beforeTs) {
+    const bar = OKX_BARS[tfMin] || '1H';
+    const d = await this._get(`/api/v5/market/history-candles?instId=${symbol}&bar=${bar}&after=${beforeTs}&limit=100`);
+    return d.reverse().map((c) => ({ t: +c[0], o: +c[1], h: +c[2], l: +c[3], c: +c[4], v: +c[5] }));
+  }
+
+  /* profondeur de marché (50 niveaux) */
+  async getDepth(symbol, sz = 50) {
+    const [b] = await this._get(`/api/v5/market/books?instId=${symbol}&sz=${sz}`);
+    return {
+      bids: b.bids.map((x) => [+x[0], +x[1]]),
+      asks: b.asks.map((x) => [+x[0], +x[1]]),
+    };
+  }
+
   async searchSymbols(q) {
     q = q.toUpperCase();
     return this.allTickers
       .filter((t) => t.symbol.includes(q))
       .slice(0, 20)
-      .map((t) => ({ symbol: t.symbol, description: `vol 24h ${Math.round(t.volCcy24h).toLocaleString('fr-FR')} $` }));
+      .map((t) => ({
+        symbol: t.symbol,
+        description: `${t.symbol.endsWith('-SWAP') ? 'perp · ' : ''}vol 24h ${Math.round(t.volCcy24h).toLocaleString('fr-FR')} $`,
+      }));
   }
 
   /* statistiques avancées de l'instrument (dérivés + global) */
   async getStats(symbol) {
     const base = symbol.split('-')[0];
-    const swapId = `${base}-USDT-SWAP`;
+    const swapId = symbol.endsWith('-SWAP') ? symbol : `${base}-USDT-SWAP`;
     const out = {};
     const jobs = [
       this._get(`/api/v5/market/ticker?instId=${symbol}`).then(([t]) => {

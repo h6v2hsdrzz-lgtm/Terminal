@@ -110,7 +110,39 @@ class SimProvider {
       });
       p = o; t -= step;
     }
-    return rev.reverse();
+    const out = rev.reverse();
+    // mémorise l'ouverture la plus ancienne pour un scroll infini continu
+    this._anchor = this._anchor || {};
+    this._anchor[symbol + ':' + tfMin] = out.length ? out[0].o : p;
+    return out;
+  }
+
+  async getCandlesBefore(symbol, tfMin, beforeTs) {
+    const d = SIM_UNIVERSE[symbol.toUpperCase()];
+    if (!d) return [];
+    const step = tfMin * 60000;
+    const vol = d.price * (0.0012 + tfMin / 1440 * 0.008);
+    let t = beforeTs - step;
+    const key = symbol.toUpperCase() + ':' + tfMin;
+    let p = (this._anchor && this._anchor[key]) || d.price;
+    const rev = [];
+    for (let i = 0; i < 100; i++) {
+      const c = p;
+      const o = p + (Math.random() - 0.5) * 2 * vol;
+      rev.push({ t, o, c, h: Math.max(o, c) + Math.random() * vol * 0.5, l: Math.min(o, c) - Math.random() * vol * 0.5, v: 50 + Math.random() * 400 });
+      p = o; t -= step;
+    }
+    const out = rev.reverse();
+    this._anchor = this._anchor || {};
+    if (out.length) this._anchor[key] = out[0].o;
+    return out;
+  }
+
+  async topMovers() {
+    return Object.keys(SIM_UNIVERSE).map((s) => {
+      const st = this.state[s];
+      return { symbol: s, last: st.last, chg: (st.last - st.open24h) / st.open24h * 100, volCcy24h: st.last * 15000 };
+    });
   }
 
   async searchSymbols(q) {

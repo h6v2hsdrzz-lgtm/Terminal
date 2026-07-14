@@ -140,6 +140,16 @@ class XApiClient {
   }
   tradeTransaction(info)   { return this.call('tradeTransaction', { tradeTransInfo: info }).then(r => r.returnData); }
   tradeStatus(order)       { return this.call('tradeTransactionStatus', { order }).then(r => r.returnData); }
+  getChartRange(symbol, period, startMs, endMs) {
+    return this.call('getChartRangeRequest', { info: { symbol, period, start: startMs, end: endMs, ticks: 0 } })
+      .then(r => {
+        const d = r.returnData, k = Math.pow(10, d.digits);
+        return d.rateInfos.map(c => {
+          const o = c.open / k;
+          return { t: c.ctm, o, h: o + c.high / k, l: o + c.low / k, c: o + c.close / k, v: c.vol };
+        });
+      });
+  }
   getCalendar()            { return this.call('getCalendar').then(r => r.returnData); }
   getTradesHistory(sinceMs){ return this.call('getTradesHistory', { start: sinceMs, end: 0 }).then(r => r.returnData); }
 
