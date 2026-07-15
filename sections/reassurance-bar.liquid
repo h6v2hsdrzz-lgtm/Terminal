@@ -1,0 +1,56 @@
+<section class="reassurance">
+  <div class="container">
+    <div class="reassurance__grid">
+      {%- for block in section.blocks -%}
+        <div class="reassurance__item" {{ block.shopify_attributes }}>
+          {% render 'icon', name: block.settings.icon, size: 26 %}
+          <div>
+            <strong>{{ block.settings.title }}</strong>
+            {%- if block.settings.subtitle != blank -%}<span>{{ block.settings.subtitle }}</span>{%- endif -%}
+          </div>
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Barre de réassurance",
+  "tag": "section",
+  "settings": [
+    { "type": "paragraph", "content": "Adapte ces promesses à ta réalité (délais, seuil de livraison offerte, retours)." }
+  ],
+  "blocks": [
+    {
+      "type": "item",
+      "name": "Argument",
+      "settings": [
+        { "type": "select", "id": "icon", "label": "Icône", "default": "truck",
+          "options": [
+            { "value": "truck", "label": "Camion" }, { "value": "returns", "label": "Retour" },
+            { "value": "lock", "label": "Cadenas" }, { "value": "shield", "label": "Bouclier" },
+            { "value": "clock", "label": "Horloge" }, { "value": "snowflake", "label": "Flocon" },
+            { "value": "paw", "label": "Patte" }, { "value": "leaf", "label": "Feuille" },
+            { "value": "check-circle", "label": "Coche" }
+          ] },
+        { "type": "text", "id": "title", "label": "Titre", "default": "Livraison offerte" },
+        { "type": "text", "id": "subtitle", "label": "Sous-titre", "default": "dès 49€ d'achat" }
+      ]
+    }
+  ],
+  "max_blocks": 4,
+  "presets": [
+    {
+      "name": "Barre de réassurance",
+      "category": "Accueil",
+      "blocks": [
+        { "type": "item", "settings": { "icon": "truck", "title": "Livraison offerte", "subtitle": "dès 49€ d'achat" } },
+        { "type": "item", "settings": { "icon": "returns", "title": "14 jours", "subtitle": "pour changer d'avis" } },
+        { "type": "item", "settings": { "icon": "lock", "title": "Paiement sécurisé", "subtitle": "CB, Apple & Google Pay" } },
+        { "type": "item", "settings": { "icon": "clock", "title": "Expédié vite", "subtitle": "sous 24 à 48h ouvrées" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

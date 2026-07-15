@@ -1,0 +1,63 @@
+<section class="section {% if section.settings.background == 'alt' %}section--alt{% elsif section.settings.background == 'cool' %}section--cool{% endif %} anchor-offset" id="bienfaits">
+  <div class="container">
+    <div class="section__head reveal">
+      {%- if section.settings.eyebrow != blank -%}<span class="eyebrow">{% render 'icon', name: 'paw', size: 16 %}{{ section.settings.eyebrow }}</span>{%- endif -%}
+      <h2>{{ section.settings.title }}</h2>
+      {%- if section.settings.intro != blank -%}<p class="lede">{{ section.settings.intro }}</p>{%- endif -%}
+    </div>
+
+    <div class="benefits__grid">
+      {%- for block in section.blocks -%}
+        <div class="benefit reveal reveal--d{{ forloop.index0 | modulo: 3 | plus: 1 }}" {{ block.shopify_attributes }}>
+          <span class="benefit__icon">{% render 'icon', name: block.settings.icon, size: 30 %}</span>
+          <h3>{{ block.settings.title }}</h3>
+          <p>{{ block.settings.text }}</p>
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Bénéfices",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Sur-titre", "default": "Pourquoi tu vas l'adopter" },
+    { "type": "text", "id": "title", "label": "Titre", "default": "Fait pour ton chien, pensé pour toi." },
+    { "type": "textarea", "id": "intro", "label": "Intro" },
+    { "type": "select", "id": "background", "label": "Fond", "default": "default",
+      "options": [ { "value": "default", "label": "Sable" }, { "value": "alt", "label": "Sable alterné" }, { "value": "cool", "label": "Glacier clair" } ] }
+  ],
+  "blocks": [
+    {
+      "type": "benefit",
+      "name": "Bénéfice",
+      "settings": [
+        { "type": "select", "id": "icon", "label": "Icône", "default": "snowflake",
+          "options": [
+            { "value": "snowflake", "label": "Flocon" }, { "value": "droplet", "label": "Goutte" },
+            { "value": "leaf", "label": "Feuille" }, { "value": "paw", "label": "Patte" },
+            { "value": "shield", "label": "Bouclier" }, { "value": "heart", "label": "Cœur" },
+            { "value": "clock", "label": "Horloge" }, { "value": "check-circle", "label": "Coche" }
+          ] },
+        { "type": "text", "id": "title", "label": "Titre", "default": "Fraîcheur immédiate" },
+        { "type": "textarea", "id": "text", "label": "Texte", "default": "Une phrase courte et concrète." }
+      ]
+    }
+  ],
+  "max_blocks": 4,
+  "presets": [
+    {
+      "name": "Bénéfices",
+      "category": "Accueil",
+      "blocks": [
+        { "type": "benefit", "settings": { "icon": "snowflake", "title": "Fraîcheur immédiate", "text": "La sensation de frais monte en quelques minutes, sans préparation." } },
+        { "type": "benefit", "settings": { "icon": "droplet", "title": "Zéro contrainte", "text": "Pas d'eau, pas de prise, pas de frigo. Tu poses, il profite." } },
+        { "type": "benefit", "settings": { "icon": "leaf", "title": "Réutilisable", "text": "Il se recharge tout seul, saison après saison. Un geste malin et durable." } },
+        { "type": "benefit", "settings": { "icon": "paw", "title": "Toutes les tailles", "text": "Du petit chihuahua au grand berger : un format pour chaque gabarit." } }
+      ]
+    }
+  ]
+}
+{% endschema %}

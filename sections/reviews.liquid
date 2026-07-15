@@ -1,0 +1,70 @@
+<section class="section {% if section.settings.background == 'alt' %}section--alt{% elsif section.settings.background == 'cool' %}section--cool{% endif %} anchor-offset" id="avis">
+  <div class="container">
+    <div class="section__head reveal">
+      {%- if section.settings.eyebrow != blank -%}<span class="eyebrow">{% render 'icon', name: 'star', size: 16 %}{{ section.settings.eyebrow }}</span>{%- endif -%}
+      <h2>{{ section.settings.title }}</h2>
+      {%- if section.settings.summary_rating != blank and section.settings.summary_count != blank -%}
+        <p class="reviews__summary">
+          <span class="rating" aria-hidden="true">{% for i in (1..5) %}{% render 'icon', name: 'star', size: 18 %}{% endfor %}</span>
+          <span>{{ section.settings.summary_rating }}/5 · {{ section.settings.summary_count }} avis vérifiés</span>
+        </p>
+      {%- endif -%}
+    </div>
+
+    {%- if section.blocks.size > 0 -%}
+      <div class="reviews__grid">
+        {%- for block in section.blocks -%}
+          <figure class="review reveal reveal--d{{ forloop.index0 | modulo: 3 | plus: 1 }}" {{ block.shopify_attributes }}>
+            <span class="rating" aria-label="{{ 'accessibility.star_rating' | t: rating: block.settings.rating }}">
+              {%- for i in (1..5) -%}
+                {%- if i <= block.settings.rating -%}{% render 'icon', name: 'star', size: 17 %}{%- else -%}<span style="opacity:.22">{% render 'icon', name: 'star', size: 17 %}</span>{%- endif -%}
+              {%- endfor -%}
+            </span>
+            <blockquote class="review__text">{{ block.settings.text }}</blockquote>
+            <figcaption class="review__author">
+              <span class="review__avatar" aria-hidden="true">{{ block.settings.author | slice: 0 | upcase }}</span>
+              <span>
+                <span class="review__name">{{ block.settings.author }}</span>
+                {%- if block.settings.verified -%}
+                  <span class="review__meta">{% render 'icon', name: 'check-circle', size: 15 %}{{ 'reviews.verified' | t }}</span>
+                {%- endif -%}
+              </span>
+            </figcaption>
+          </figure>
+        {%- endfor -%}
+      </div>
+    {%- elsif request.design_mode -%}
+      <p class="form-note text-center">⭐️ Ajoute ici tes <strong>vrais</strong> avis clients (bloc « Avis »). Aucun avis n'est inventé — la section reste masquée sur le site tant qu'elle est vide.</p>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Avis clients",
+  "tag": "section",
+  "settings": [
+    { "type": "paragraph", "content": "N'ajoute que de VRAIS avis. Vide, la section est masquée côté boutique." },
+    { "type": "text", "id": "eyebrow", "label": "Sur-titre", "default": "Ils l'ont adopté" },
+    { "type": "text", "id": "title", "label": "Titre", "default": "Des chiens (et leurs humains) conquis" },
+    { "type": "header", "content": "Résumé (optionnel — uniquement si réel)" },
+    { "type": "text", "id": "summary_rating", "label": "Note moyenne", "info": "Ex. 4,9 — laisse vide si tu n'as pas de vraie moyenne." },
+    { "type": "text", "id": "summary_count", "label": "Nombre d'avis" },
+    { "type": "select", "id": "background", "label": "Fond", "default": "alt",
+      "options": [ { "value": "default", "label": "Sable" }, { "value": "alt", "label": "Sable alterné" }, { "value": "cool", "label": "Glacier clair" } ] }
+  ],
+  "blocks": [
+    {
+      "type": "review",
+      "name": "Avis",
+      "settings": [
+        { "type": "text", "id": "author", "label": "Prénom" },
+        { "type": "range", "id": "rating", "label": "Note", "min": 1, "max": 5, "step": 1, "default": 5 },
+        { "type": "textarea", "id": "text", "label": "Avis" },
+        { "type": "checkbox", "id": "verified", "label": "Achat vérifié", "default": true }
+      ]
+    }
+  ],
+  "presets": [ { "name": "Avis clients", "category": "Accueil" } ]
+}
+{% endschema %}

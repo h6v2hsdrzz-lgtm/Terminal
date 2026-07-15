@@ -1,0 +1,33 @@
+{%- comment -%}
+  Image responsive (srcset + lazy). Placeholder propre si aucune image.
+  Usage :
+    {% render 'image', image: section.settings.image, sizes: '(min-width:750px) 50vw, 100vw',
+       loading: 'lazy', class: '', alt: 'Un chien allongé…', fetchpriority: 'high', ratio: '4/5' %}
+{%- endcomment -%}
+{%- liquid
+  assign img = image
+  assign widths_list = widths | default: '400,600,800,1000,1300,1600,2000'
+  assign sizes_attr = sizes | default: '100vw'
+  assign loading_attr = loading | default: 'lazy'
+  assign fetch = fetchpriority | default: 'auto'
+  assign klass = class | default: ''
+  assign alt_text = alt | default: img.alt
+  assign placeholder_name = placeholder | default: 'image'
+-%}
+{%- if img != blank -%}
+  <img
+    src="{{ img | image_url: width: 1000 }}"
+    srcset="{% assign ws = widths_list | split: ',' %}{% for w in ws %}{{ img | image_url: width: w }} {{ w }}w{% unless forloop.last %}, {% endunless %}{% endfor %}"
+    sizes="{{ sizes_attr }}"
+    width="{{ img.width }}"
+    height="{{ img.height }}"
+    alt="{{ alt_text | escape }}"
+    loading="{{ loading_attr }}"
+    {% if fetch != 'auto' %}fetchpriority="{{ fetch }}"{% endif %}
+    decoding="async"
+    class="{{ klass }}">
+{%- else -%}
+  <div class="placeholder-svg {{ klass }}" role="img" aria-label="{{ alt_text | default: 'Visuel à ajouter' | escape }}">
+    {{ placeholder_name | placeholder_svg_tag: 'placeholder-svg__img' }}
+  </div>
+{%- endif -%}

@@ -1,0 +1,81 @@
+{%- liquid
+  assign has_image = false
+  if section.settings.image != blank
+    assign has_image = true
+  endif
+-%}
+<section class="hero anchor-offset {% if section.settings.layout == 'center' %}hero--center{% endif %} {% if has_image %}hero--has-image{% endif %}" id="accueil">
+  {%- if has_image -%}
+    <div class="hero__media">
+      {% render 'image', image: section.settings.image, sizes: '100vw', loading: 'eager', fetchpriority: 'high', alt: section.settings.image_alt %}
+    </div>
+    <div class="hero__overlay"></div>
+  {%- endif -%}
+
+  <div class="container">
+    <div class="hero__inner">
+      {%- if section.settings.eyebrow != blank -%}
+        <span class="eyebrow">{% render 'icon', name: 'snowflake', size: 16 %}{{ section.settings.eyebrow }}</span>
+      {%- endif -%}
+      <h1 class="hero__title">{{ section.settings.title }}</h1>
+      {%- if section.settings.subtitle != blank -%}
+        <p class="hero__sub">{{ section.settings.subtitle }}</p>
+      {%- endif -%}
+
+      <div class="hero__cta">
+        {%- if section.settings.cta_label != blank -%}
+          <a href="{{ section.settings.cta_link | default: '#' }}" class="btn btn--cta btn--lg">{{ section.settings.cta_label }}</a>
+        {%- endif -%}
+        {%- if section.settings.cta2_label != blank -%}
+          <a href="{{ section.settings.cta2_link | default: '#solution' }}" class="btn btn--ghost btn--lg">{{ section.settings.cta2_label }}</a>
+        {%- endif -%}
+      </div>
+
+      {%- if section.blocks.size > 0 -%}
+        <div class="hero__trust">
+          {%- for block in section.blocks -%}
+            <span {{ block.shopify_attributes }}>{% render 'icon', name: 'check-circle', size: 17 %}{{ block.settings.text }}</span>
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Hero",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Sur-titre", "default": "Sans eau · sans électricité · sans frigo" },
+    { "type": "textarea", "id": "title", "label": "Titre (H1)", "default": "Ton chien a chaud ? Offre-lui un coin de fraîcheur." },
+    { "type": "textarea", "id": "subtitle", "label": "Sous-titre", "default": "Le tapis rafraîchissant qui apaise ton chien dès qu'il s'allonge. Dehors il fait 30°, lui il souffle enfin. Tu le poses, c'est tout." },
+    { "type": "header", "content": "Boutons" },
+    { "type": "text", "id": "cta_label", "label": "Bouton principal", "default": "Je rafraîchis mon chien" },
+    { "type": "url", "id": "cta_link", "label": "Lien bouton principal" },
+    { "type": "text", "id": "cta2_label", "label": "Bouton secondaire", "default": "Comment ça marche" },
+    { "type": "url", "id": "cta2_link", "label": "Lien bouton secondaire" },
+    { "type": "header", "content": "Visuel de fond" },
+    { "type": "image_picker", "id": "image", "label": "Image plein écran", "info": "Le chien est le héros. Idéalement une photo lumineuse, chien détendu. Sans image : fond glacier." },
+    { "type": "text", "id": "image_alt", "label": "Texte alternatif de l'image", "default": "Un chien allongé, détendu, sur son tapis rafraîchissant" },
+    { "type": "header", "content": "Mise en page" },
+    { "type": "select", "id": "layout", "label": "Alignement du contenu", "default": "left",
+      "options": [ { "value": "left", "label": "À gauche" }, { "value": "center", "label": "Centré" } ] }
+  ],
+  "blocks": [
+    { "type": "point", "name": "Point de réassurance", "settings": [ { "type": "text", "id": "text", "label": "Texte" } ] }
+  ],
+  "max_blocks": 4,
+  "presets": [
+    {
+      "name": "Hero",
+      "category": "Accueil",
+      "blocks": [
+        { "type": "point", "settings": { "text": "Fraîcheur immédiate" } },
+        { "type": "point", "settings": { "text": "Zéro branchement" } },
+        { "type": "point", "settings": { "text": "Livré en 2 à 4 jours" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

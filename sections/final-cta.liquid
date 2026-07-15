@@ -1,0 +1,35 @@
+<section class="section final-cta anchor-offset" id="acheter">
+  <div class="container">
+    <div class="final-cta__card reveal">
+      <span class="final-cta__blob final-cta__blob--1" aria-hidden="true"></span>
+      <span class="final-cta__blob final-cta__blob--2" aria-hidden="true"></span>
+      {%- if section.settings.eyebrow != blank -%}<span class="eyebrow" style="color:#fff">{% render 'icon', name: 'snowflake', size: 16 %}{{ section.settings.eyebrow }}</span>{%- endif -%}
+      <h2>{{ section.settings.title }}</h2>
+      {%- if section.settings.subtitle != blank -%}<p class="lede">{{ section.settings.subtitle }}</p>{%- endif -%}
+      {%- if section.settings.cta_label != blank -%}
+        <p style="margin-top:1.6rem">
+          <a href="{{ section.settings.cta_link | default: '#' }}" class="btn btn--cta btn--lg">{{ section.settings.cta_label }}</a>
+        </p>
+      {%- endif -%}
+      {%- if section.settings.guarantee != blank -%}
+        <p class="final-cta__guarantee">{% render 'icon', name: 'shield', size: 18 %}{{ section.settings.guarantee }}</p>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "CTA final + garantie",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Sur-titre", "default": "C'est le moment" },
+    { "type": "textarea", "id": "title", "label": "Titre", "default": "Cet été, il va enfin pouvoir souffler." },
+    { "type": "textarea", "id": "subtitle", "label": "Sous-titre", "default": "Offre à ton chien le coin le plus frais de la maison. Il ne le quittera plus." },
+    { "type": "text", "id": "cta_label", "label": "Bouton", "default": "Je rafraîchis mon chien" },
+    { "type": "url", "id": "cta_link", "label": "Lien du bouton" },
+    { "type": "text", "id": "guarantee", "label": "Ligne de garantie", "default": "Satisfait ou remboursé pendant 14 jours — sans prise de tête." }
+  ],
+  "presets": [ { "name": "CTA final + garantie", "category": "Accueil" } ]
+}
+{% endschema %}

@@ -1,0 +1,57 @@
+{%- liquid
+  assign v = section.settings.video
+  assign portrait = section.settings.portrait
+-%}
+<section class="section {% if section.settings.background == 'alt' %}section--alt{% endif %}">
+  <div class="container">
+    {%- if section.settings.title != blank or section.settings.intro != blank -%}
+      <div class="section__head reveal">
+        {%- if section.settings.eyebrow != blank -%}<span class="eyebrow">{% render 'icon', name: 'play', size: 16 %}{{ section.settings.eyebrow }}</span>{%- endif -%}
+        {%- if section.settings.title != blank -%}<h2>{{ section.settings.title }}</h2>{%- endif -%}
+        {%- if section.settings.intro != blank -%}<p class="lede">{{ section.settings.intro }}</p>{%- endif -%}
+      </div>
+    {%- endif -%}
+
+    <div class="reveal">
+      <div class="video-demo__frame {% if portrait %}is-portrait{% endif %}">
+        {%- if v != blank -%}
+          <video controls preload="none" playsinline
+                 {% if section.settings.poster != blank %}poster="{{ section.settings.poster | image_url: width: 1280 }}"{% elsif v.preview_image %}poster="{{ v.preview_image | image_url: width: 1280 }}"{% endif %}>
+            {%- for s in v.sources -%}
+              <source src="{{ s.url }}" type="{{ s.mime_type }}">
+            {%- endfor -%}
+          </video>
+        {%- elsif section.settings.poster != blank -%}
+          {% render 'image', image: section.settings.poster, sizes: '100vw', alt: 'Aperçu de la démo' %}
+          <span class="video-demo__play" aria-hidden="true">{% render 'icon', name: 'play', size: 34 %}</span>
+        {%- else -%}
+          <div class="placeholder-svg" role="img" aria-label="Emplacement de la vidéo démo">{{ 'image' | placeholder_svg_tag }}</div>
+          {%- if request.design_mode -%}
+            <span class="video-demo__play" aria-hidden="true">{% render 'icon', name: 'play', size: 34 %}</span>
+          {%- endif -%}
+        {%- endif -%}
+      </div>
+      {%- if request.design_mode and v == blank -%}
+        <p class="form-note text-center" style="margin-top:.8rem">📹 Ajoute ici ta vidéo démo (upload natif Shopify) pour une perf optimale.</p>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Démo vidéo",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Sur-titre", "default": "En vrai, ça donne quoi" },
+    { "type": "text", "id": "title", "label": "Titre", "default": "15 secondes, et tu comprends tout." },
+    { "type": "textarea", "id": "intro", "label": "Intro", "default": "Le même moment que sur TikTok : un chien qui s'installe… et qui ne bouge plus." },
+    { "type": "video", "id": "video", "label": "Vidéo (upload natif)", "info": "Format MP4 recommandé. Chargée en lazy pour ne pas ralentir la page." },
+    { "type": "image_picker", "id": "poster", "label": "Image d'aperçu (poster)" },
+    { "type": "checkbox", "id": "portrait", "label": "Format vertical (9:16, style TikTok)", "default": false },
+    { "type": "select", "id": "background", "label": "Fond", "default": "default",
+      "options": [ { "value": "default", "label": "Sable" }, { "value": "alt", "label": "Sable alterné" } ] }
+  ],
+  "presets": [ { "name": "Démo vidéo", "category": "Accueil" } ]
+}
+{% endschema %}

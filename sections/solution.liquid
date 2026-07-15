@@ -1,0 +1,58 @@
+<section class="section {% if section.settings.background == 'cool' %}section--cool{% elsif section.settings.background == 'alt' %}section--alt{% endif %} anchor-offset" id="solution">
+  <div class="container">
+    <div class="section__head reveal">
+      {%- if section.settings.eyebrow != blank -%}<span class="eyebrow">{% render 'icon', name: 'snowflake', size: 16 %}{{ section.settings.eyebrow }}</span>{%- endif -%}
+      <h2>{{ section.settings.title }}</h2>
+      {%- if section.settings.intro != blank -%}<p class="lede">{{ section.settings.intro }}</p>{%- endif -%}
+    </div>
+
+    <div class="steps">
+      {%- for block in section.blocks -%}
+        <div class="step reveal reveal--d{{ forloop.index }}" {{ block.shopify_attributes }}>
+          <span class="step__num">{{ forloop.index }}</span>
+          <div class="step__icon">{% render 'icon', name: block.settings.icon, size: 34 %}</div>
+          <h3>{{ block.settings.title }}</h3>
+          <p>{{ block.settings.text }}</p>
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "La solution (3 points)",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Sur-titre", "default": "La solution, tout simplement" },
+    { "type": "text", "id": "title", "label": "Titre", "default": "Un tapis qui reste frais. Sans rien brancher." },
+    { "type": "textarea", "id": "intro", "label": "Intro", "default": "À l'intérieur, un gel qui absorbe la chaleur du corps et diffuse une sensation de fraîcheur. Il s'active tout seul au contact, et se « recharge » dès que ton chien se lève. Rien à faire." },
+    { "type": "select", "id": "background", "label": "Fond", "default": "cool",
+      "options": [ { "value": "default", "label": "Sable" }, { "value": "alt", "label": "Sable alterné" }, { "value": "cool", "label": "Glacier clair" } ] }
+  ],
+  "blocks": [
+    {
+      "type": "step",
+      "name": "Étape",
+      "settings": [
+        { "type": "select", "id": "icon", "label": "Icône", "default": "droplet",
+          "options": [ { "value": "droplet", "label": "Goutte" }, { "value": "paw", "label": "Patte" }, { "value": "snowflake", "label": "Flocon" }, { "value": "leaf", "label": "Feuille" }, { "value": "check-circle", "label": "Coche" }, { "value": "clock", "label": "Horloge" } ] },
+        { "type": "text", "id": "title", "label": "Titre", "default": "Tu le déroules" },
+        { "type": "textarea", "id": "text", "label": "Texte", "default": "Au sol, dans le panier, en voiture…" }
+      ]
+    }
+  ],
+  "max_blocks": 3,
+  "presets": [
+    {
+      "name": "La solution (3 points)",
+      "category": "Accueil",
+      "blocks": [
+        { "type": "step", "settings": { "icon": "droplet", "title": "Tu le déroules", "text": "Au sol, dans le panier, en voiture, sous la table… là où ton chien aime se poser." } },
+        { "type": "step", "settings": { "icon": "paw", "title": "Il s'installe", "text": "Le poids de ton chien active le gel. La fraîcheur monte en quelques minutes." } },
+        { "type": "step", "settings": { "icon": "snowflake", "title": "Ça rafraîchit tout seul", "text": "Ni eau, ni prise, ni frigo. Le tapis se recharge à l'air libre entre deux siestes." } }
+      ]
+    }
+  ]
+}
+{% endschema %}

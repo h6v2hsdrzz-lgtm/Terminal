@@ -1,4 +1,86 @@
 {
-  "sections": {},
-  "order": []
+  "sections": {
+    "hero": {
+      "type": "hero",
+      "settings": {
+        "cta_link": "/products/tapis-rafraichissant-chien",
+        "cta2_link": "#solution",
+        "layout": "left"
+      },
+      "blocks": {
+        "t1": { "type": "point", "settings": { "text": "Fraîcheur immédiate" } },
+        "t2": { "type": "point", "settings": { "text": "Zéro branchement" } },
+        "t3": { "type": "point", "settings": { "text": "Livré en 2 à 4 jours" } }
+      },
+      "block_order": ["t1", "t2", "t3"]
+    },
+    "reassurance": {
+      "type": "reassurance-bar",
+      "blocks": {
+        "r1": { "type": "item", "settings": { "icon": "truck", "title": "Livraison offerte", "subtitle": "dès 49€ d'achat" } },
+        "r2": { "type": "item", "settings": { "icon": "returns", "title": "14 jours", "subtitle": "pour changer d'avis" } },
+        "r3": { "type": "item", "settings": { "icon": "lock", "title": "Paiement sécurisé", "subtitle": "CB, Apple & Google Pay" } },
+        "r4": { "type": "item", "settings": { "icon": "clock", "title": "Expédié vite", "subtitle": "sous 24 à 48h ouvrées" } }
+      },
+      "block_order": ["r1", "r2", "r3", "r4"]
+    },
+    "problem": {
+      "type": "problem",
+      "settings": { "image_side": "left", "background": "default" },
+      "blocks": {
+        "p1": { "type": "point", "settings": { "icon": "droplet", "text": "Il halète sans jamais s'arrêter" } },
+        "p2": { "type": "point", "settings": { "icon": "sun", "text": "Il cherche sans cesse le sol le plus froid" } },
+        "p3": { "type": "point", "settings": { "icon": "heart", "text": "Il devient mou, sans entrain" } },
+        "p4": { "type": "point", "settings": { "icon": "clock", "text": "Il boit beaucoup et dort mal" } }
+      },
+      "block_order": ["p1", "p2", "p3", "p4"]
+    },
+    "solution": {
+      "type": "solution",
+      "settings": { "background": "cool" },
+      "blocks": {
+        "s1": { "type": "step", "settings": { "icon": "droplet", "title": "Tu le déroules", "text": "Au sol, dans le panier, en voiture, sous la table… là où ton chien aime se poser." } },
+        "s2": { "type": "step", "settings": { "icon": "paw", "title": "Il s'installe", "text": "Le poids de ton chien active le gel. La fraîcheur monte en quelques minutes." } },
+        "s3": { "type": "step", "settings": { "icon": "snowflake", "title": "Ça rafraîchit tout seul", "text": "Ni eau, ni prise, ni frigo. Le tapis se recharge à l'air libre entre deux siestes." } }
+      },
+      "block_order": ["s1", "s2", "s3"]
+    },
+    "video": {
+      "type": "video-demo",
+      "settings": { "background": "alt" }
+    },
+    "benefits": {
+      "type": "benefits",
+      "settings": { "background": "default" },
+      "blocks": {
+        "b1": { "type": "benefit", "settings": { "icon": "snowflake", "title": "Fraîcheur immédiate", "text": "La sensation de frais monte en quelques minutes, sans préparation." } },
+        "b2": { "type": "benefit", "settings": { "icon": "droplet", "title": "Zéro contrainte", "text": "Pas d'eau, pas de prise, pas de frigo. Tu poses, il profite." } },
+        "b3": { "type": "benefit", "settings": { "icon": "leaf", "title": "Réutilisable", "text": "Il se recharge tout seul, saison après saison. Un geste malin et durable." } },
+        "b4": { "type": "benefit", "settings": { "icon": "paw", "title": "Toutes les tailles", "text": "Du petit chihuahua au grand berger : un format pour chaque gabarit." } }
+      },
+      "block_order": ["b1", "b2", "b3", "b4"]
+    },
+    "reviews": {
+      "type": "reviews",
+      "settings": { "background": "alt" }
+    },
+    "faq": {
+      "type": "faq",
+      "settings": { "background": "default" },
+      "blocks": {
+        "f1": { "type": "qa", "settings": { "question": "Il faut le mettre au congélateur avant ?", "answer": "<p>Non, et c'est tout l'intérêt. Le gel s'active à la pression et au contact du corps. Tu le sors de l'emballage, tu le poses, c'est prêt.</p>" } },
+        "f2": { "type": "qa", "settings": { "question": "Combien de temps il reste frais ?", "answer": "<p>En général plusieurs heures d'affilée. Dès que ton chien se lève, le tapis se « recharge » tout seul à l'air ambiant en une trentaine de minutes.</p>" } },
+        "f3": { "type": "qa", "settings": { "question": "C'est sans danger s'il le mordille ?", "answer": "<p>Le tapis est conçu pour un usage animal. Comme pour tout accessoire, on déconseille de le laisser à un chien qui détruit tout : surveille les premières utilisations.</p>" } },
+        "f4": { "type": "qa", "settings": { "question": "Quelle taille choisir ?", "answer": "<p>Mesure ton chien couché, du museau à la base de la queue, et reporte-toi au guide des tailles sur la fiche produit. Dans le doute, prends au-dessus.</p>" } },
+        "f5": { "type": "qa", "settings": { "question": "Comment on le nettoie ?", "answer": "<p>Un coup d'éponge avec un peu de savon doux, puis on laisse sécher à plat. Pas de machine ni de sèche-linge.</p>" } },
+        "f6": { "type": "qa", "settings": { "question": "Livraison et retours ?", "answer": "<p>Expédition rapide et retours possibles sous 14 jours. Les détails sont sur nos pages Livraison et Remboursement.</p>" } }
+      },
+      "block_order": ["f1", "f2", "f3", "f4", "f5", "f6"]
+    },
+    "final_cta": {
+      "type": "final-cta",
+      "settings": { "cta_link": "/products/tapis-rafraichissant-chien" }
+    }
+  },
+  "order": ["hero", "reassurance", "problem", "solution", "video", "benefits", "reviews", "faq", "final_cta"]
 }

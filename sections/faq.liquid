@@ -1,0 +1,72 @@
+<section class="section {% if section.settings.background == 'alt' %}section--alt{% endif %} anchor-offset" id="faq">
+  <div class="container container--narrow">
+    <div class="section__head reveal">
+      {%- if section.settings.eyebrow != blank -%}<span class="eyebrow">{% render 'icon', name: 'check-circle', size: 16 %}{{ section.settings.eyebrow }}</span>{%- endif -%}
+      <h2>{{ section.settings.title }}</h2>
+    </div>
+
+    <div class="faq reveal">
+      {%- for block in section.blocks -%}
+        <details class="faq__item" {{ block.shopify_attributes }}>
+          <summary>{{ block.settings.question }}</summary>
+          <div class="faq__answer rte">{{ block.settings.answer }}</div>
+        </details>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{%- if section.blocks.size > 0 -%}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {%- for block in section.blocks -%}
+    {
+      "@type": "Question",
+      "name": {{ block.settings.question | json }},
+      "acceptedAnswer": { "@type": "Answer", "text": {{ block.settings.answer | strip_html | strip_newlines | json }} }
+    }{% unless forloop.last %},{% endunless %}
+    {%- endfor -%}
+  ]
+}
+</script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "FAQ",
+  "tag": "section",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Sur-titre", "default": "On répond à tout" },
+    { "type": "text", "id": "title", "label": "Titre", "default": "Les questions qu'on nous pose" },
+    { "type": "select", "id": "background", "label": "Fond", "default": "default",
+      "options": [ { "value": "default", "label": "Sable" }, { "value": "alt", "label": "Sable alterné" } ] }
+  ],
+  "blocks": [
+    {
+      "type": "qa",
+      "name": "Question / réponse",
+      "settings": [
+        { "type": "text", "id": "question", "label": "Question", "default": "Ma question ?" },
+        { "type": "richtext", "id": "answer", "label": "Réponse", "default": "<p>Ma réponse.</p>" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "FAQ",
+      "category": "Accueil",
+      "blocks": [
+        { "type": "qa", "settings": { "question": "Il faut le mettre au congélateur avant ?", "answer": "<p>Non, et c'est tout l'intérêt. Le gel s'active à la pression et au contact du corps. Tu le sors de l'emballage, tu le poses, c'est prêt.</p>" } },
+        { "type": "qa", "settings": { "question": "Combien de temps il reste frais ?", "answer": "<p>En général plusieurs heures d'affilée. Dès que ton chien se lève, le tapis se « recharge » tout seul à l'air ambiant en une trentaine de minutes.</p>" } },
+        { "type": "qa", "settings": { "question": "C'est sans danger s'il le mordille ?", "answer": "<p>Le tapis est conçu pour un usage animal. Comme pour tout accessoire, on déconseille de le laisser à un chien qui détruit tout : surveille les premières utilisations.</p>" } },
+        { "type": "qa", "settings": { "question": "Quelle taille choisir ?", "answer": "<p>Mesure ton chien couché, du museau à la base de la queue, et reporte-toi au guide des tailles sur la fiche produit. Dans le doute, prends au-dessus.</p>" } },
+        { "type": "qa", "settings": { "question": "Comment on le nettoie ?", "answer": "<p>Un coup d'éponge avec un peu de savon doux, puis on laisse sécher à plat. Pas de machine ni de sèche-linge.</p>" } },
+        { "type": "qa", "settings": { "question": "Livraison et retours ?", "answer": "<p>Expédition rapide et retours possibles sous 14 jours. Les détails sont sur nos pages Livraison et Remboursement.</p>" } }
+      ]
+    }
+  ]
+}
+{% endschema %}
