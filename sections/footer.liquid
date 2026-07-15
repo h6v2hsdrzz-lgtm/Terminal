@@ -1,0 +1,116 @@
+{%- liquid
+  assign current_year = 'now' | date: '%Y'
+  assign link_blocks = section.blocks | where: 'type', 'link'
+-%}
+<footer class="site-footer section--sm">
+  <div class="container">
+    <div class="site-footer__top">
+      <div class="site-footer__brand">
+        <a class="logo logo--footer" href="{{ routes.root_url }}" aria-label="{{ 'accessibility.logo_link' | t }}">
+          <svg width="30" height="30" viewBox="0 0 34 34" aria-hidden="true" focusable="false">
+            <path d="M17 3.2c0 0 8.4 8.6 8.4 14.2a8.4 8.4 0 0 1-16.8 0C8.6 11.8 17 3.2 17 3.2Z" fill="var(--color-accent)"/>
+            <g stroke="#fff" stroke-width="1.5" stroke-linecap="round">
+              <path d="M17 12.4v9.6"/><path d="M12.2 17.2h9.6"/><path d="M13.6 13.8l6.8 6.8"/><path d="M20.4 13.8l-6.8 6.8"/>
+            </g>
+          </svg>
+          <span class="logo__word">tapis tout <span class="f">f</span>rais</span>
+        </a>
+        {%- if section.settings.tagline != blank -%}
+          <p class="site-footer__tagline">{{ section.settings.tagline }}</p>
+        {%- endif -%}
+
+        {%- if section.settings.show_newsletter -%}
+          <div class="newsletter">
+            <p class="newsletter__title">{{ 'footer.newsletter_title' | t }}</p>
+            <p class="newsletter__text">{{ 'footer.newsletter_text' | t }}</p>
+            {%- form 'customer', class: 'newsletter__form' -%}
+              <input type="hidden" name="contact[tags]" value="newsletter">
+              <label class="visually-hidden" for="NewsletterEmail">{{ 'newsletter.label' | t }}</label>
+              <input id="NewsletterEmail" type="email" name="contact[email]" required
+                     placeholder="{{ 'footer.newsletter_placeholder' | t }}" autocomplete="email">
+              <button type="submit" class="btn btn--cta">{{ 'footer.newsletter_button' | t }}</button>
+              {%- if form.posted_successfully? -%}
+                <p class="newsletter__success" role="status">{{ 'footer.newsletter_success' | t }}</p>
+              {%- endif -%}
+            {%- endform -%}
+          </div>
+        {%- endif -%}
+      </div>
+
+      {%- if link_blocks.size > 0 -%}
+        <nav class="site-footer__nav" aria-label="Liens de pied de page">
+          {%- assign groups = 'primary,secondary' | split: ',' -%}
+          {%- for group in groups -%}
+            {%- assign count = 0 -%}
+            {%- for block in link_blocks -%}
+              {%- if block.settings.column == group and block.settings.label != blank -%}{%- assign count = count | plus: 1 -%}{%- endif -%}
+            {%- endfor -%}
+            {%- if count > 0 -%}
+              <div class="site-footer__col">
+                <p class="site-footer__col-title">{% if group == 'primary' %}{{ 'footer.nav_title' | t }}{% else %}{{ 'footer.legal_title' | t }}{% endif %}</p>
+                <ul>
+                  {%- for block in link_blocks -%}
+                    {%- if block.settings.column == group and block.settings.label != blank -%}
+                      <li {{ block.shopify_attributes }}><a href="{{ block.settings.url | default: '#' }}">{{ block.settings.label }}</a></li>
+                    {%- endif -%}
+                  {%- endfor -%}
+                </ul>
+              </div>
+            {%- endif -%}
+          {%- endfor -%}
+        </nav>
+      {%- endif -%}
+    </div>
+
+    <div class="site-footer__bottom">
+      <div class="site-footer__pay">
+        <span class="site-footer__secure">{% render 'icon', name: 'lock', size: 16 %} {{ 'footer.payment_secure' | t }}</span>
+        {%- if shop.enabled_payment_types.size > 0 -%}
+          <span class="payment-icons" aria-label="Moyens de paiement">
+            {%- for type in shop.enabled_payment_types limit: 6 -%}
+              {{ type | payment_type_svg_tag: class: 'payment-icons__icon' }}
+            {%- endfor -%}
+          </span>
+        {%- endif -%}
+      </div>
+      <p class="site-footer__copy">{{ 'footer.rights' | t: year: current_year, brand: shop.name }}</p>
+    </div>
+  </div>
+</footer>
+
+{% schema %}
+{
+  "name": "Pied de page",
+  "settings": [
+    { "type": "text", "id": "tagline", "label": "Accroche", "default": "Le tapis qui rafraîchit vraiment ton chien — sans électricité, sans eau, sans frigo." },
+    { "type": "header", "content": "Newsletter" },
+    { "type": "checkbox", "id": "show_newsletter", "label": "Afficher la newsletter", "default": true }
+  ],
+  "blocks": [
+    {
+      "type": "link",
+      "name": "Lien",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Libellé" },
+        { "type": "url", "id": "url", "label": "Lien" },
+        { "type": "select", "id": "column", "label": "Colonne", "default": "primary",
+          "options": [
+            { "value": "primary", "label": "Le nécessaire" },
+            { "value": "secondary", "label": "Infos & aides" }
+          ] }
+      ]
+    }
+  ],
+  "default": {
+    "blocks": [
+      { "type": "link", "settings": { "label": "Le tapis", "url": "/", "column": "primary" } },
+      { "type": "link", "settings": { "label": "Nous contacter", "url": "/pages/contact", "column": "primary" } },
+      { "type": "link", "settings": { "label": "Livraison", "url": "/pages/livraison", "column": "secondary" } },
+      { "type": "link", "settings": { "label": "Remboursement & rétractation", "url": "/pages/remboursement", "column": "secondary" } },
+      { "type": "link", "settings": { "label": "CGV", "url": "/pages/cgv", "column": "secondary" } },
+      { "type": "link", "settings": { "label": "Mentions légales", "url": "/pages/mentions-legales", "column": "secondary" } },
+      { "type": "link", "settings": { "label": "Confidentialité", "url": "/pages/confidentialite", "column": "secondary" } }
+    ]
+  }
+}
+{% endschema %}

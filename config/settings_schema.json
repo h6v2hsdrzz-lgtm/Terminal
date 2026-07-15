@@ -1,0 +1,65 @@
+[
+  {
+    "name": "theme_info",
+    "theme_name": "Mon tapis tout frais",
+    "theme_version": "1.0.0",
+    "theme_author": "Sur-mesure",
+    "theme_documentation_url": "",
+    "theme_support_url": ""
+  },
+  {
+    "name": "Couleurs",
+    "settings": [
+      { "type": "header", "content": "Base (sable / blanc cassé)" },
+      { "type": "color", "id": "color_background", "label": "Fond principal", "default": "#FAF7F0" },
+      { "type": "color", "id": "color_background_alt", "label": "Fond alterné", "default": "#F1E9DB" },
+      { "type": "color", "id": "color_cool_wash", "label": "Fond « cooling » (glacier très clair)", "default": "#E6F0F4" },
+      { "type": "color", "id": "color_surface", "label": "Surface / cartes", "default": "#FFFFFF" },
+      { "type": "color", "id": "color_text", "label": "Texte", "default": "#1C2B33" },
+      { "type": "header", "content": "Accent froid (glacier)" },
+      { "type": "color", "id": "color_accent", "label": "Glacier profond (liens, détails)", "default": "#1F6A86" },
+      { "type": "color", "id": "color_accent_soft", "label": "Glacier clair (décor)", "default": "#7FC0DB" },
+      { "type": "header", "content": "Bouton d'action (terracotta chaud)" },
+      { "type": "color", "id": "color_cta", "label": "Fond bouton", "default": "#B8502F" },
+      { "type": "color", "id": "color_cta_hover", "label": "Fond bouton (survol)", "default": "#9E4327" },
+      { "type": "color", "id": "color_cta_text", "label": "Texte bouton", "default": "#FFFFFF" }
+    ]
+  },
+  {
+    "name": "Typographie",
+    "settings": [
+      { "type": "paragraph", "content": "Titres = serif à caractère. Corps = sans-serif très lisible. Les polices sont servies par Shopify (non bloquantes)." },
+      { "type": "font_picker", "id": "font_heading", "label": "Police des titres", "default": "playfair_display_n4" },
+      { "type": "font_picker", "id": "font_body", "label": "Police du corps", "default": "assistant_n4" },
+      { "type": "range", "id": "heading_scale", "min": 90, "max": 130, "step": 5, "unit": "%", "label": "Échelle des titres", "default": 100 }
+    ]
+  },
+  {
+    "name": "Mise en page",
+    "settings": [
+      { "type": "range", "id": "page_width", "min": 1000, "max": 1400, "step": 20, "unit": "px", "label": "Largeur max du contenu", "default": 1200 }
+    ]
+  },
+  {
+    "name": "Commerce & livraison",
+    "settings": [
+      { "type": "header", "content": "Livraison offerte" },
+      { "type": "checkbox", "id": "free_shipping_enabled", "label": "Afficher la barre « livraison offerte »", "default": true },
+      { "type": "range", "id": "free_shipping_threshold", "min": 0, "max": 150, "step": 5, "unit": "€", "label": "Seuil livraison offerte", "default": 49 },
+      { "type": "header", "content": "Délai de livraison estimé (jours ouvrés)" },
+      { "type": "range", "id": "delivery_lead_min", "min": 1, "max": 14, "step": 1, "unit": "j", "label": "Délai minimum", "default": 2 },
+      { "type": "range", "id": "delivery_lead_max", "min": 1, "max": 21, "step": 1, "unit": "j", "label": "Délai maximum", "default": 5 }
+    ]
+  },
+  {
+    "name": "Marque & SEO",
+    "settings": [
+      { "type": "image_picker", "id": "favicon", "label": "Favicon de secours (PNG/JPG)", "info": "Un favicon SVG est déjà fourni ; cette image sert de secours pour les vieux navigateurs." },
+      { "type": "image_picker", "id": "share_image", "label": "Image de partage social par défaut (og:image)" },
+      { "type": "header", "content": "Réseaux (données structurées Organization)" },
+      { "type": "text", "id": "social_instagram", "label": "URL Instagram" },
+      { "type": "text", "id": "social_tiktok", "label": "URL TikTok" },
+      { "type": "text", "id": "social_facebook", "label": "URL Facebook" }
+    ]
+  }
+]

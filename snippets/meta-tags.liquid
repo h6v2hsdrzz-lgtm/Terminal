@@ -1,0 +1,54 @@
+{%- comment -%}
+  Balises <title>, meta description et Open Graph / Twitter, adaptées au template.
+  Le nom de marque affiché suit le nom de la boutique (shop.name) — renomme la
+  boutique dans Réglages → Général pour changer « Mon tapis tout frais » partout.
+{%- endcomment -%}
+{%- liquid
+  if template.name == 'index'
+    assign seo_title = shop.name
+    if page_title != blank and page_title != shop.name
+      assign seo_title = page_title
+    endif
+  elsif page_title != blank
+    assign seo_title = page_title | append: ' · ' | append: shop.name
+  else
+    assign seo_title = shop.name
+  endif
+
+  assign seo_desc = page_description | default: shop.description | default: shop.name
+
+  assign og_type = 'website'
+  if template.name == 'product'
+    assign og_type = 'product'
+  elsif template.name == 'article'
+    assign og_type = 'article'
+  endif
+
+  assign share_image = settings.share_image
+  if template.name == 'product' and product.featured_media
+    assign share_image = product.featured_media.preview_image
+  elsif page_image
+    assign share_image = page_image
+  endif
+-%}
+<title>{{ seo_title }}</title>
+<meta name="description" content="{{ seo_desc | strip_html | escape }}">
+
+<meta property="og:site_name" content="{{ shop.name | escape }}">
+<meta property="og:type" content="{{ og_type }}">
+<meta property="og:title" content="{{ seo_title | escape }}">
+<meta property="og:description" content="{{ seo_desc | strip_html | escape }}">
+<meta property="og:url" content="{{ canonical_url }}">
+{%- if share_image -%}
+  <meta property="og:image" content="https:{{ share_image | image_url: width: 1200 }}">
+  <meta property="og:image:width" content="1200">
+  <meta name="twitter:card" content="summary_large_image">
+{%- else -%}
+  <meta name="twitter:card" content="summary">
+{%- endif -%}
+<meta name="twitter:title" content="{{ seo_title | escape }}">
+<meta name="twitter:description" content="{{ seo_desc | strip_html | escape }}">
+{%- if template.name == 'product' -%}
+  <meta property="product:price:amount" content="{{ product.price | divided_by: 100.0 }}">
+  <meta property="product:price:currency" content="{{ cart.currency.iso_code }}">
+{%- endif -%}

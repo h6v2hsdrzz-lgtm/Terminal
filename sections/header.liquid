@@ -1,0 +1,80 @@
+{%- liquid
+  assign cart_count = cart.item_count
+-%}
+{%- if section.settings.show_announcement and section.settings.announcement_text != blank -%}
+  <div class="announcement">
+    <div class="container announcement__inner">
+      {% render 'icon', name: 'snowflake', size: 16 %}
+      <span>{{ section.settings.announcement_text }}</span>
+    </div>
+  </div>
+{%- endif -%}
+
+<header class="site-header" data-header>
+  <div class="container site-header__bar">
+    <a class="logo" href="{{ routes.root_url }}" aria-label="{{ 'accessibility.logo_link' | t }}">
+      <svg width="30" height="30" viewBox="0 0 34 34" aria-hidden="true" focusable="false">
+        <path d="M17 3.2c0 0 8.4 8.6 8.4 14.2a8.4 8.4 0 0 1-16.8 0C8.6 11.8 17 3.2 17 3.2Z" fill="var(--color-accent)"/>
+        <g stroke="#fff" stroke-width="1.5" stroke-linecap="round">
+          <path d="M17 12.4v9.6"/><path d="M12.2 17.2h9.6"/><path d="M13.6 13.8l6.8 6.8"/><path d="M20.4 13.8l-6.8 6.8"/>
+        </g>
+      </svg>
+      {%- if section.settings.logo_text != blank -%}
+        <span class="logo__word">{{ section.settings.logo_text }}</span>
+      {%- else -%}
+        <span class="logo__word">tapis tout <span class="f">f</span>rais</span>
+      {%- endif -%}
+    </a>
+
+    {%- if section.blocks.size > 0 -%}
+      <nav class="site-nav" aria-label="Navigation principale">
+        {%- for block in section.blocks -%}
+          {%- if block.type == 'link' and block.settings.label != blank -%}
+            <a href="{{ block.settings.url | default: '#' }}" {{ block.shopify_attributes }}>{{ block.settings.label }}</a>
+          {%- endif -%}
+        {%- endfor -%}
+      </nav>
+    {%- endif -%}
+
+    <div class="site-header__actions">
+      <a class="header-icon cart-bubble{% if cart_count == 0 %} is-empty{% endif %}"
+         href="{{ routes.cart_url }}"
+         data-cart-toggle data-cart-bubble data-count="{{ cart_count }}"
+         aria-label="{{ 'accessibility.open_cart' | t }}">
+        {% render 'icon', name: 'droplet', size: 23 %}
+        <span class="cart-bubble__count" aria-hidden="true"><span data-cart-bubble-count>{{ cart_count }}</span></span>
+      </a>
+    </div>
+  </div>
+</header>
+
+{% schema %}
+{
+  "name": "En-tête",
+  "settings": [
+    { "type": "text", "id": "logo_text", "label": "Texte du logo", "info": "Laisse vide pour afficher « tapis tout frais » avec le F stylisé." },
+    { "type": "header", "content": "Barre d'annonce" },
+    { "type": "checkbox", "id": "show_announcement", "label": "Afficher la barre d'annonce", "default": true },
+    { "type": "text", "id": "announcement_text", "label": "Texte", "default": "Livraison offerte dès 49€ · Expédié sous 24h 🐾" }
+  ],
+  "blocks": [
+    {
+      "type": "link",
+      "name": "Lien de navigation",
+      "settings": [
+        { "type": "text", "id": "label", "label": "Libellé" },
+        { "type": "url", "id": "url", "label": "Lien" }
+      ]
+    }
+  ],
+  "max_blocks": 5,
+  "default": {
+    "blocks": [
+      { "type": "link", "settings": { "label": "Le problème", "url": "#probleme" } },
+      { "type": "link", "settings": { "label": "Bienfaits", "url": "#bienfaits" } },
+      { "type": "link", "settings": { "label": "Avis", "url": "#avis" } },
+      { "type": "link", "settings": { "label": "FAQ", "url": "#faq" } }
+    ]
+  }
+}
+{% endschema %}

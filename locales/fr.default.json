@@ -1,0 +1,106 @@
+{
+  "general": {
+    "skip_to_content": "Aller au contenu",
+    "close": "Fermer",
+    "loading": "Chargement…",
+    "back_home": "Retour à l'accueil"
+  },
+  "accessibility": {
+    "logo_link": "Retour à l'accueil",
+    "open_menu": "Ouvrir le menu",
+    "close_menu": "Fermer le menu",
+    "open_cart": "Ouvrir le panier",
+    "close_cart": "Fermer le panier",
+    "cart_count": {
+      "one": "{{ count }} article dans le panier",
+      "other": "{{ count }} articles dans le panier"
+    },
+    "previous": "Précédent",
+    "next": "Suivant",
+    "star_rating": "Note de {{ rating }} sur 5",
+    "skip_gallery": "Passer la galerie",
+    "loading": "Chargement…"
+  },
+  "header": {
+    "cart": "Panier",
+    "menu": "Menu"
+  },
+  "footer": {
+    "rights": "© {{ year }} {{ brand }}. Tous droits réservés.",
+    "tagline": "Fait avec fraîcheur pour les chiens qui ont trop chaud.",
+    "newsletter_title": "Reste au frais",
+    "newsletter_text": "Nos conseils anti-canicule pour ton chien. Zéro spam, promis.",
+    "newsletter_placeholder": "Ton email",
+    "newsletter_button": "Je m'abonne",
+    "newsletter_success": "Merci ! On garde le contact au frais. 🧊",
+    "payment_secure": "Paiement 100 % sécurisé",
+    "nav_title": "Le nécessaire",
+    "legal_title": "Infos & aides"
+  },
+  "cart": {
+    "title": "Ton panier",
+    "empty": "Ton panier est encore tout frais… et tout vide.",
+    "empty_cta": "Découvrir le tapis",
+    "subtotal": "Sous-total",
+    "checkout": "Passer commande",
+    "remove": "Retirer",
+    "continue": "Continuer mes achats",
+    "free_shipping_progress_html": "Plus que <strong>{{ amount }}</strong> et la livraison est offerte 🚚",
+    "free_shipping_reached": "Livraison offerte débloquée ! 🎉",
+    "taxes_note": "Frais de livraison calculés à l'étape suivante.",
+    "upsell_title": "On complète la fraîcheur ?",
+    "add": "Ajouter",
+    "quantity": "Quantité",
+    "quantity_increase": "Augmenter la quantité",
+    "quantity_decrease": "Diminuer la quantité"
+  },
+  "products": {
+    "add_to_cart": "Ajouter au panier",
+    "sold_out": "Épuisé",
+    "unavailable": "Indisponible",
+    "on_sale": "Promo",
+    "save_amount": "Tu économises {{ amount }}",
+    "size": "Taille",
+    "color": "Couleur",
+    "size_guide": "Guide des tailles",
+    "quantity": "Quantité",
+    "in_stock": "En stock — prêt à partir",
+    "low_stock": "Bientôt en rupture",
+    "delivery_estimate_html": "Reçois-le entre le <strong>{{ min_date }}</strong> et le <strong>{{ max_date }}</strong>",
+    "sticky_add_html": "Ajouter · {{ price }}",
+    "choose_option": "Choisis une option",
+    "tab_description": "Description",
+    "tab_shipping": "Livraison & retours",
+    "tab_materials": "Matière & entretien",
+    "crosssell_title": "Ça va bien ensemble"
+  },
+  "size_guide": {
+    "title": "Quelle taille pour ton chien ?",
+    "intro": "Mesure ton chien couché, du museau à la base de la queue. Dans le doute, prends la taille au-dessus : il adorera s'étaler.",
+    "col_size": "Taille",
+    "col_dimensions": "Dimensions",
+    "col_dogs": "Gabarit indicatif",
+    "close": "Fermer le guide"
+  },
+  "faq": {
+    "title": "On répond à tout"
+  },
+  "reviews": {
+    "verified": "Achat vérifié"
+  },
+  "404": {
+    "title": "Cette page a filé se mettre au frais.",
+    "subtitle": "Elle a dû trouver un coin d'ombre. Reviens à la fraîche, tout est resté à l'accueil.",
+    "cta": "Retour à l'accueil"
+  },
+  "newsletter": {
+    "label": "Email"
+  },
+  "contact": {
+    "name": "Ton nom",
+    "email": "Ton email",
+    "message": "Ton message",
+    "send": "Envoyer",
+    "success": "Message reçu ! On te répond très vite. 🐾"
+  }
+}

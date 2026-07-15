@@ -1,0 +1,64 @@
+{%- comment -%}
+  Bibliothèque d'icônes SVG inline (zéro requête image).
+  Usage : {% render 'icon', name: 'truck', class: 'icon' %}
+  - name  : identifiant de l'icône (voir case ci-dessous)
+  - class : classes CSS additionnelles (optionnel)
+  - size  : taille en px (optionnel, défaut 24)
+  Les icônes héritent de la couleur via `currentColor` et sont décoratives (aria-hidden).
+{%- endcomment -%}
+{%- liquid
+  assign icon_size = size | default: 24
+  assign icon_class = class | default: 'icon'
+-%}
+<svg class="{{ icon_class }}" width="{{ icon_size }}" height="{{ icon_size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" role="presentation">
+  {%- case name -%}
+    {%- when 'truck' -%}
+      <path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h9A1.5 1.5 0 0 1 15 6.5V16H3z"/><path d="M15 9h3.6l2.4 3v4h-6z"/><circle cx="7" cy="18.5" r="1.6"/><circle cx="17.5" cy="18.5" r="1.6"/>
+    {%- when 'returns' -%}
+      <path d="M3 9a9 9 0 0 1 15-3.5L21 8"/><path d="M21 4v4h-4"/><path d="M21 15a9 9 0 0 1-15 3.5L3 16"/><path d="M3 20v-4h4"/>
+    {%- when 'lock' -%}
+      <rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>
+    {%- when 'shield' -%}
+      <path d="M12 3l7 3v5c0 4.5-3 8-7 9.5C8 19 5 15.5 5 11V6z"/><path d="M9.2 11.8l2 2 3.6-3.8"/>
+    {%- when 'snowflake' -%}
+      <path d="M12 3v18"/><path d="M3 12h18"/><path d="M5.6 5.6l12.8 12.8"/><path d="M18.4 5.6L5.6 18.4"/><path d="M12 6.5l-2 -2M12 6.5l2 -2M12 17.5l-2 2M12 17.5l2 2M6.5 12l-2-2M6.5 12l-2 2M17.5 12l2-2M17.5 12l2 2"/>
+    {%- when 'droplet' -%}
+      <path d="M12 3s6 6.5 6 10.5a6 6 0 0 1-12 0C6 9.5 12 3 12 3z"/><path d="M9.5 14.2a2.5 2.5 0 0 0 2.5 2.3"/>
+    {%- when 'paw' -%}
+      <circle cx="6.5" cy="11" r="1.7"/><circle cx="10" cy="7.5" r="1.7"/><circle cx="14" cy="7.5" r="1.7"/><circle cx="17.5" cy="11" r="1.7"/><path d="M8.5 15.5c1-1.6 2.2-2.4 3.5-2.4s2.5.8 3.5 2.4c1 1.6.4 3.4-1.4 3.6-1 .1-1.4-.4-2.1-.4s-1.1.5-2.1.4c-1.8-.2-2.4-2-1.4-3.6z"/>
+    {%- when 'sun' -%}
+      <circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/>
+    {%- when 'check' -%}
+      <path d="M4 12.5l5 5 11-11"/>
+    {%- when 'check-circle' -%}
+      <circle cx="12" cy="12" r="9"/><path d="M8 12.2l2.6 2.6L16.2 9"/>
+    {%- when 'star' -%}
+      <path d="M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8L3.5 9.7l5.9-.9z" fill="currentColor" stroke="none"/>
+    {%- when 'chevron-down' -%}
+      <path d="M5 9l7 7 7-7"/>
+    {%- when 'chevron-right' -%}
+      <path d="M9 5l7 7-7 7"/>
+    {%- when 'arrow-right' -%}
+      <path d="M4 12h15"/><path d="M13 6l6 6-6 6"/>
+    {%- when 'plus' -%}
+      <path d="M12 5v14M5 12h14"/>
+    {%- when 'minus' -%}
+      <path d="M5 12h14"/>
+    {%- when 'close' -%}
+      <path d="M6 6l12 12M18 6L6 18"/>
+    {%- when 'menu' -%}
+      <path d="M4 7h16M4 12h16M4 17h16"/>
+    {%- when 'play' -%}
+      <circle cx="12" cy="12" r="9"/><path d="M10 8.5l6 3.5-6 3.5z" fill="currentColor" stroke="none"/>
+    {%- when 'ruler' -%}
+      <rect x="3" y="8" width="18" height="8" rx="1.5" transform="rotate(-45 12 12)"/><path d="M9 9l1.2 1.2M11.5 6.5l1.8 1.8M6.5 11.5l1.8 1.8"/>
+    {%- when 'clock' -%}
+      <circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/>
+    {%- when 'leaf' -%}
+      <path d="M5 19C4 12 9 5 19 5c0 10-7 15-14 14z"/><path d="M5 19c3.5-4 6.5-6 10-7.5"/>
+    {%- when 'heart' -%}
+      <path d="M12 20s-7-4.4-7-9.2A3.8 3.8 0 0 1 12 8a3.8 3.8 0 0 1 7-2.2c0 4.8-7 9.2-7 9.2z"/>
+    {%- else -%}
+      <circle cx="12" cy="12" r="9"/>
+  {%- endcase -%}
+</svg>

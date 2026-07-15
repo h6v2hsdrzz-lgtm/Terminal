@@ -1,0 +1,23 @@
+{
+  "current": {
+    "color_background": "#FAF7F0",
+    "color_background_alt": "#F1E9DB",
+    "color_cool_wash": "#E6F0F4",
+    "color_surface": "#FFFFFF",
+    "color_text": "#1C2B33",
+    "color_accent": "#1F6A86",
+    "color_accent_soft": "#7FC0DB",
+    "color_cta": "#B8502F",
+    "color_cta_hover": "#9E4327",
+    "color_cta_text": "#FFFFFF",
+    "font_heading": "playfair_display_n4",
+    "font_body": "assistant_n4",
+    "heading_scale": 100,
+    "page_width": 1200,
+    "free_shipping_enabled": true,
+    "free_shipping_threshold": 49,
+    "delivery_lead_min": 2,
+    "delivery_lead_max": 5
+  },
+  "presets": {}
+}

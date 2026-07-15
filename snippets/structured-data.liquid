@@ -1,0 +1,65 @@
+{%- comment -%}
+  Données structurées JSON-LD.
+  Usage :
+    {% render 'structured-data', type: 'organization' %}
+    {% render 'structured-data', type: 'product', product: product %}
+  NB : aucune note/avis agrégé n'est émis tant qu'il n'existe pas de VRAIS avis
+  (pas de fausse donnée structurée). Voir README pour l'activer.
+{%- endcomment -%}
+{%- case type -%}
+{%- when 'organization' -%}
+  {%- liquid
+    assign socials = ''
+    if settings.social_instagram != blank
+      assign socials = socials | append: settings.social_instagram | append: '||'
+    endif
+    if settings.social_tiktok != blank
+      assign socials = socials | append: settings.social_tiktok | append: '||'
+    endif
+    if settings.social_facebook != blank
+      assign socials = socials | append: settings.social_facebook | append: '||'
+    endif
+    assign socials = socials | split: '||'
+  -%}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": {{ shop.name | json }},
+    "url": {{ shop.url | json }},
+    "logo": "https:{{ 'favicon.svg' | asset_url }}"
+    {%- if socials.size > 0 -%},
+    "sameAs": [{% for s in socials %}{{ s | json }}{% unless forloop.last %},{% endunless %}{% endfor %}]
+    {%- endif -%}
+  }
+  </script>
+{%- when 'product' -%}
+  {%- if product -%}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    "name": {{ product.title | json }},
+    "description": {{ product.description | strip_html | truncate: 500 | json }},
+    "url": {{ product.url | prepend: shop.url | json }},
+    {%- if product.featured_media -%}
+    "image": ["https:{{ product.featured_media | image_url: width: 1200 }}"],
+    {%- endif -%}
+    {%- if product.vendor != blank -%}
+    "brand": { "@type": "Brand", "name": {{ product.vendor | json }} },
+    {%- else -%}
+    "brand": { "@type": "Brand", "name": {{ shop.name | json }} },
+    {%- endif -%}
+    "offers": {
+      "@type": "AggregateOffer",
+      "priceCurrency": {{ cart.currency.iso_code | json }},
+      "lowPrice": {{ product.price_min | divided_by: 100.0 }},
+      "highPrice": {{ product.price_max | divided_by: 100.0 }},
+      "offerCount": {{ product.variants.size }},
+      "availability": "https://schema.org/{% if product.available %}InStock{% else %}OutOfStock{% endif %}",
+      "url": {{ product.url | prepend: shop.url | json }}
+    }
+  }
+  </script>
+  {%- endif -%}
+{%- endcase -%}
