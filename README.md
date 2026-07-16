@@ -91,9 +91,10 @@ js/providers/sim.js     simulation hors-ligne
 js/xapi.js              client bas niveau xAPI XTB
 js/ai.js                rapport TA + chat Claude (API Anthropic côté navigateur)
 js/app.js               orchestration
-pronostic/              hors-sujet assumé : moteur de prédiction de la finale
-                        de la Coupe du monde 2026 (Elo vivant, Dixon-Coles,
-                        Monte-Carlo minute par minute) — voir pronostic/README.md
+pronostic/              hors-sujet assumé : moteur de prédiction des dernières
+                        affiches de la Coupe du monde 2026 (Elo vivant,
+                        Dixon-Coles, Monte-Carlo minute par minute, évaluateur
+                        de combinés) — voir pronostic/README.md
 ```
 
 ## Avertissements

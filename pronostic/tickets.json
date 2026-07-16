@@ -1,0 +1,31 @@
+{
+  "_comment": "Les deux combinés réels posés le 16/07/2026 (captures Winamax). type resultat90 = marché 1X2 sur 90 minutes (un titre aux t.a.b. ne paie PAS) ; type buteurEtGagne = le joueur marque ET son équipe gagne (annulé si le joueur ne participe pas : cote ramenée à 1,00).",
+  "generatedOn": "2026-07-16",
+  "totalCashoutOffer": 237.80,
+  "tickets": [
+    {
+      "ref": "6GIUU93K",
+      "placedAt": "2026-07-16T00:15",
+      "stake": 189.71,
+      "totalOdds": 7.38,
+      "potentialWin": 1400.06,
+      "cashoutOffer": 150.88,
+      "legs": [
+        { "match": "petite", "type": "resultat90", "side": "a", "odds": 2.05, "label": "Résultat : France (France–Angleterre, sam. 23h)" },
+        { "match": "finale", "type": "resultat90", "side": "b", "odds": 3.60, "label": "Résultat : Argentine (Espagne–Argentine, dim. 21h)" }
+      ]
+    },
+    {
+      "ref": "6GIVMJZR",
+      "placedAt": "2026-07-16T00:37",
+      "stake": 100.00,
+      "totalOdds": 10.44,
+      "potentialWin": 1044.00,
+      "cashoutOffer": 86.92,
+      "legs": [
+        { "match": "petite", "type": "buteurEtGagne", "side": "a", "odds": 2.90, "label": "Mbappé buteur et la France gagne (sam. 23h)" },
+        { "match": "finale", "type": "resultat90", "side": "b", "odds": 3.60, "label": "Résultat : Argentine (dim. 21h)" }
+      ]
+    }
+  ]
+}

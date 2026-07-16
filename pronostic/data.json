@@ -5,6 +5,8 @@
     "venue": "New York New Jersey Stadium (MetLife), East Rutherford, États-Unis",
     "neutralGround": true,
     "generatedOn": "2026-07-16",
+    "outcomeLabel": "championne du monde",
+    "questionLabel": "QUI SOULÈVE LA COUPE ?",
     "notes": [
       "Première finale de Coupe du monde entre l'Espagne et l'Argentine.",
       "La Finalissima du 27 mars 2026 (Lusail) a été ANNULÉE (situation sécuritaire au Qatar) : aucune confrontation directe récente.",
@@ -20,7 +22,7 @@
   },
 
   "teams": {
-    "esp": {
+    "a": {
       "name": "Espagne",
       "shortName": "ESP",
       "eloSnapshot": 2177,
@@ -36,7 +38,7 @@
         "evidence": "Défaite aux t.a.b. en finale de Ligue des nations 2025 contre le Portugal ; tireurs techniques mais historique mitigé (Unai Simón : 3 arrêts vs Suisse Euro 2020)."
       }
     },
-    "arg": {
+    "b": {
       "name": "Argentine",
       "shortName": "ARG",
       "eloSnapshot": 2151,
@@ -46,6 +48,12 @@
       "extraTimeMinutesInTournament": 60,
       "lateSurge": 1.28,
       "lateSurgeEvidence": "Enzo Fernández 85e + Lautaro Martínez 90+3 (SF Angleterre), remontada contre l'Égypte, deux victoires en prolongation (Cap-Vert, Suisse). Pattern de fin de match le plus marqué du tournoi.",
+      "starScorer": {
+        "name": "Lionel Messi",
+        "goalShare": 0.42,
+        "playProbability": 1.0,
+        "evidence": "8 des 19 buts argentins du tournoi (meilleur buteur, à 39 ans), double passeur en demi-finale. Titularisation certaine en finale."
+      },
       "penalties": {
         "kickerConversion": 0.78,
         "gkSaveEdge": 0.05,
@@ -56,7 +64,7 @@
 
   "matches": {
     "_comment": "Parcours complet CM 2026. oppElo = estimation eloratings pré-match (champ estimated). aet = score final après prolongation. postSnapshot = joué après l'instantané Elo du 07/07 (sert à la mise à jour Elo « vivante »).",
-    "esp": [
+    "a": [
       { "stage": "Groupe H", "date": "2026-06-15", "opponent": "Cap-Vert",        "oppElo": 1608, "estimated": true, "gf": 0, "ga": 0, "aet": false, "postSnapshot": false, "note": "27 tirs à 6 : domination totale sans but." },
       { "stage": "Groupe H", "date": "2026-06-21", "opponent": "Arabie saoudite", "oppElo": 1640, "estimated": true, "gf": 4, "ga": 0, "aet": false, "postSnapshot": false },
       { "stage": "Groupe H", "date": "2026-06-26", "opponent": "Uruguay",         "oppElo": 1930, "estimated": true, "gf": 1, "ga": 0, "aet": false, "postSnapshot": false },
@@ -65,7 +73,7 @@
       { "stage": "Quart",    "date": "2026-07-10", "opponent": "Belgique",        "oppElo": 1988, "estimated": true, "gf": 2, "ga": 1, "aet": false, "postSnapshot": true,  "note": "Merino 88e. Seul but encaissé du tournoi (De Ketelaere)." },
       { "stage": "Demie",    "date": "2026-07-14", "opponent": "France",          "oppElo": 2088, "estimated": true, "gf": 2, "ga": 0, "aet": false, "postSnapshot": true,  "note": "Oyarzabal (pen. 22e), Pedro Porro (58e)." }
     ],
-    "arg": [
+    "b": [
       { "stage": "Groupe",   "date": "2026-06-16", "opponent": "Algérie",   "oppElo": 1786, "estimated": true, "gf": 3, "ga": 0, "aet": false, "postSnapshot": false },
       { "stage": "Groupe",   "date": "2026-06-22", "opponent": "Autriche",  "oppElo": 1904, "estimated": true, "gf": 2, "ga": 0, "aet": false, "postSnapshot": false },
       { "stage": "Groupe",   "date": "2026-06-27", "opponent": "Jordanie",  "oppElo": 1546, "estimated": true, "gf": 3, "ga": 1, "aet": false, "postSnapshot": false },
@@ -79,12 +87,13 @@
   "priors": {
     "_comment": "Hyperparamètres du modèle. Chaque valeur est documentée dans pronostic/README.md.",
     "baseGoalsPerMatch": 2.60,
-    "finalCaginess": 0.90,
+    "contextGoalMultiplier": 0.90,
+    "contextComment": "Prudence de finale : 4 des 8 dernières finales de CM étaient à 0-0 ou 1-1 après 90'.",
     "dixonColesRho": -0.10,
     "eloK": 60,
     "recencyHalfLifeMatches": 4,
     "formShrinkage": { "attack": 3.5, "defense": 5.0 },
-    "crowdEloBonusArg": 12,
+    "crowdEloBonusB": 12,
     "restDayEffectPerDay": 0.006,
     "extraTimeCarryPenaltyPer30Min": 0.008,
     "extraTimeIntensity": 0.85,
@@ -101,7 +110,7 @@
       "eloSigma": 30,
       "formSigmaLog": 0.06,
       "rhoSigma": 0.03,
-      "caginessSigma": 0.04,
+      "contextSigma": 0.04,
       "penaltySigma": 0.03
     }
   }

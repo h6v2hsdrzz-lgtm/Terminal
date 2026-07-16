@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "competition": "Petite finale (3e place) — Coupe du monde FIFA 2026",
+    "date": "2026-07-18",
+    "venue": "Hard Rock Stadium, Miami, États-Unis",
+    "neutralGround": true,
+    "generatedOn": "2026-07-16",
+    "outcomeLabel": "3e du Mondial",
+    "questionLabel": "QUI PREND LA 3e PLACE ?",
+    "notes": [
+      "Perdants des demi-finales : France (0-2 contre l'Espagne) et Angleterre (1-2 contre l'Argentine).",
+      "Les petites finales sont historiquement ouvertes : 3,4 buts de moyenne sur les cinq dernières (2-1, 2-0, 3-0, 3-2, 3-1) — d'où contextGoalMultiplier > 1.",
+      "Enjeu Soulier d'or : Mbappé et Messi sont à égalité à 8 buts — Mbappé joue AVANT la finale de Messi, forte incitation à jouer et à tirer chaque ballon.",
+      "Règlement supposé identique aux autres matchs à élimination directe : prolongation puis tirs au but.",
+      "Les Elo des deux équipes sont des estimations (pas d'instantané officiel publié pour ce niveau de détail), cohérentes avec les valeurs adverses utilisées dans data.json."
+    ],
+    "sources": {
+      "parcours": "Olympics.com (parcours anglais), FIFA.com, Yahoo/ESPN (parcours français), juin-juillet 2026",
+      "buteurs": "FOX Sports / Al Jazeera / FIFA — suivi des buts de Mbappé (8 buts : doublés Sénégal, Irak, Suède ; Paraguay, Maroc)",
+      "affiche": "Olympics.com — petite finale France-Angleterre le 18/07/2026 au Hard Rock Stadium (Miami)"
+    }
+  },
+
+  "teams": {
+    "a": {
+      "name": "France",
+      "shortName": "FRA",
+      "eloSnapshot": 2085,
+      "eloSnapshotDate": "2026-07-07",
+      "eloEstimated": true,
+      "fifaRank": 3,
+      "restDays": 4,
+      "extraTimeMinutesInTournament": 0,
+      "lateSurge": 1.10,
+      "lateSurgeEvidence": "Pas de pattern tardif marqué documenté ; valeur neutre.",
+      "starScorer": {
+        "name": "Kylian Mbappé",
+        "goalShare": 0.50,
+        "playProbability": 0.92,
+        "evidence": "8 des 16 buts français du tournoi. À égalité avec Messi (8) pour le Soulier d'or et joue la veille de la finale : très forte incitation à jouer. Résiduel : ménagement/pépin de dernière minute."
+      },
+      "penalties": {
+        "kickerConversion": 0.73,
+        "gkSaveEdge": 0.02,
+        "evidence": "Séance perdue en finale de CM 2022 (Coman, Tchouaméni) ; Mbappé fiable mais historique collectif moyen. Maignan correct sans être un spécialiste."
+      }
+    },
+    "b": {
+      "name": "Angleterre",
+      "shortName": "ENG",
+      "eloSnapshot": 2055,
+      "eloSnapshotDate": "2026-07-07",
+      "eloEstimated": true,
+      "fifaRank": 4,
+      "restDays": 3,
+      "extraTimeMinutesInTournament": 30,
+      "lateSurge": 1.10,
+      "lateSurgeEvidence": "Pas de pattern offensif tardif marqué (a plutôt CONCÉDÉ tard contre l'Argentine) ; valeur neutre.",
+      "penalties": {
+        "kickerConversion": 0.75,
+        "gkSaveEdge": 0.04,
+        "evidence": "Génération réconciliée avec les t.a.b. (Euro 2024 : 5/5 contre la Suisse) et Pickford parmi les meilleurs gardiens de séance au monde."
+      }
+    }
+  },
+
+  "matches": {
+    "_comment": "Parcours complet CM 2026. oppElo = estimation eloratings pré-match. postSnapshot = joué après le 07/07 (mise à jour Elo vivante).",
+    "a": [
+      { "stage": "Groupe I", "date": "2026-06-16", "opponent": "Sénégal",  "oppElo": 1720, "estimated": true, "gf": 3, "ga": 1, "aet": false, "postSnapshot": false, "note": "Doublé de Mbappé." },
+      { "stage": "Groupe I", "date": "2026-06-22", "opponent": "Irak",     "oppElo": 1500, "estimated": true, "gf": 3, "ga": 0, "aet": false, "postSnapshot": false, "note": "Doublé de Mbappé." },
+      { "stage": "Groupe I", "date": "2026-06-26", "opponent": "Norvège",  "oppElo": 1875, "estimated": true, "gf": 4, "ga": 1, "aet": false, "postSnapshot": false },
+      { "stage": "32e",      "date": "2026-06-30", "opponent": "Suède",    "oppElo": 1790, "estimated": true, "gf": 3, "ga": 0, "aet": false, "postSnapshot": false, "note": "Doublé de Mbappé." },
+      { "stage": "8e",       "date": "2026-07-04", "opponent": "Paraguay", "oppElo": 1770, "estimated": true, "gf": 1, "ga": 0, "aet": false, "postSnapshot": false, "note": "But de Mbappé (7e du tournoi)." },
+      { "stage": "Quart",    "date": "2026-07-09", "opponent": "Maroc",    "oppElo": 1940, "estimated": true, "gf": 2, "ga": 0, "aet": false, "postSnapshot": true,  "note": "Mbappé (8e but), 20 buts en 20 matchs de CM." },
+      { "stage": "Demie",    "date": "2026-07-14", "opponent": "Espagne",  "oppElo": 2192, "estimated": true, "gf": 0, "ga": 2, "aet": false, "postSnapshot": true,  "note": "Leçon tactique espagnole (Oyarzabal pen., Porro)." }
+    ],
+    "b": [
+      { "stage": "Groupe L", "date": "2026-06-16", "opponent": "Croatie",  "oppElo": 1920, "estimated": true, "gf": 4, "ga": 2, "aet": false, "postSnapshot": false },
+      { "stage": "Groupe L", "date": "2026-06-22", "opponent": "Ghana",    "oppElo": 1680, "estimated": true, "gf": 0, "ga": 0, "aet": false, "postSnapshot": false },
+      { "stage": "Groupe L", "date": "2026-06-27", "opponent": "Panama",   "oppElo": 1690, "estimated": true, "gf": 2, "ga": 0, "aet": false, "postSnapshot": false },
+      { "stage": "32e",      "date": "2026-07-01", "opponent": "RD Congo", "oppElo": 1610, "estimated": true, "gf": 2, "ga": 1, "aet": false, "postSnapshot": false },
+      { "stage": "8e",       "date": "2026-07-05", "opponent": "Mexique",  "oppElo": 1850, "estimated": true, "gf": 3, "ga": 2, "aet": false, "postSnapshot": false },
+      { "stage": "Quart",    "date": "2026-07-11", "opponent": "Norvège",  "oppElo": 1875, "estimated": true, "gf": 2, "ga": 1, "aet": true,  "postSnapshot": true,  "note": "Victoire en prolongation." },
+      { "stage": "Demie",    "date": "2026-07-15", "opponent": "Argentine","oppElo": 2173, "estimated": true, "gf": 1, "ga": 2, "aet": false, "postSnapshot": true,  "note": "Menait 1-0 (Gordon 55e), renversée aux 85e et 90+3." }
+    ]
+  },
+
+  "priors": {
+    "_comment": "Identiques à la finale sauf le contexte : petite finale ouverte (1,15) au lieu de finale fermée (0,90), pas de biais de public net à Miami.",
+    "baseGoalsPerMatch": 2.60,
+    "contextGoalMultiplier": 1.15,
+    "contextComment": "Matchs pour la 3e place historiquement ouverts (3,4 buts de moyenne sur les 5 derniers) ; 1,15 = compromis prudent entre 1,0 et le ratio empirique 1,3.",
+    "dixonColesRho": -0.10,
+    "eloK": 60,
+    "recencyHalfLifeMatches": 4,
+    "formShrinkage": { "attack": 3.5, "defense": 5.0 },
+    "crowdEloBonusB": 0,
+    "restDayEffectPerDay": 0.006,
+    "extraTimeCarryPenaltyPer30Min": 0.008,
+    "extraTimeIntensity": 0.85,
+    "extraTimeEtFatiguePer30Min": 0.035,
+    "stateEffects": {
+      "shellOneGoal": 0.92,
+      "shellTwoGoals": 0.86,
+      "chaseBase": 1.12,
+      "chaseRampStart": 60,
+      "chaseRampFull": 0.25,
+      "chaseTwoGoalsDamp": 0.92
+    },
+    "uncertainty": {
+      "eloSigma": 35,
+      "formSigmaLog": 0.07,
+      "rhoSigma": 0.03,
+      "contextSigma": 0.06,
+      "penaltySigma": 0.03
+    }
+  }
+}
