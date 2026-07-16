@@ -1,0 +1,108 @@
+{
+  "meta": {
+    "competition": "Finale de la Coupe du monde FIFA 2026",
+    "date": "2026-07-19",
+    "venue": "New York New Jersey Stadium (MetLife), East Rutherford, États-Unis",
+    "neutralGround": true,
+    "generatedOn": "2026-07-16",
+    "notes": [
+      "Première finale de Coupe du monde entre l'Espagne et l'Argentine.",
+      "La Finalissima du 27 mars 2026 (Lusail) a été ANNULÉE (situation sécuritaire au Qatar) : aucune confrontation directe récente.",
+      "Aucun joueur suspendu pour la finale. Romero et Paredes remis, Lamine Yamal à 100 % (Sports Mole, 15-16/07/2026).",
+      "Le public du MetLife est attendu majoritairement pro-argentin (constaté sur tout le tournoi aux États-Unis)."
+    ],
+    "sources": {
+      "elo": "footballratings.org / eloratings.net, instantané du 07/07/2026 : Espagne 2177 (n°1), Argentine 2151 (n°2)",
+      "parcours": "FIFA.com match centre, ESPN, Al Jazeera, NBC News (juin-juillet 2026)",
+      "equipes": "Sports Mole team news (15-16/07/2026)",
+      "finalissima": "Wikipedia — 2026 Finalissima (annulation le 15/03/2026)"
+    }
+  },
+
+  "teams": {
+    "esp": {
+      "name": "Espagne",
+      "shortName": "ESP",
+      "eloSnapshot": 2177,
+      "eloSnapshotDate": "2026-07-07",
+      "fifaRank": 1,
+      "restDays": 5,
+      "extraTimeMinutesInTournament": 0,
+      "lateSurge": 1.10,
+      "lateSurgeEvidence": "Merino 88e (QF Belgique) ; l'essentiel des buts marqués en gestion de match.",
+      "penalties": {
+        "kickerConversion": 0.74,
+        "gkSaveEdge": 0.02,
+        "evidence": "Défaite aux t.a.b. en finale de Ligue des nations 2025 contre le Portugal ; tireurs techniques mais historique mitigé (Unai Simón : 3 arrêts vs Suisse Euro 2020)."
+      }
+    },
+    "arg": {
+      "name": "Argentine",
+      "shortName": "ARG",
+      "eloSnapshot": 2151,
+      "eloSnapshotDate": "2026-07-07",
+      "fifaRank": 2,
+      "restDays": 4,
+      "extraTimeMinutesInTournament": 60,
+      "lateSurge": 1.28,
+      "lateSurgeEvidence": "Enzo Fernández 85e + Lautaro Martínez 90+3 (SF Angleterre), remontada contre l'Égypte, deux victoires en prolongation (Cap-Vert, Suisse). Pattern de fin de match le plus marqué du tournoi.",
+      "penalties": {
+        "kickerConversion": 0.78,
+        "gkSaveEdge": 0.05,
+        "evidence": "Séances gagnées : Pays-Bas + France (CM 2022), Équateur (Copa América 2024). Emiliano « Dibu » Martínez, meilleur gardien de séance de sa génération."
+      }
+    }
+  },
+
+  "matches": {
+    "_comment": "Parcours complet CM 2026. oppElo = estimation eloratings pré-match (champ estimated). aet = score final après prolongation. postSnapshot = joué après l'instantané Elo du 07/07 (sert à la mise à jour Elo « vivante »).",
+    "esp": [
+      { "stage": "Groupe H", "date": "2026-06-15", "opponent": "Cap-Vert",        "oppElo": 1608, "estimated": true, "gf": 0, "ga": 0, "aet": false, "postSnapshot": false, "note": "27 tirs à 6 : domination totale sans but." },
+      { "stage": "Groupe H", "date": "2026-06-21", "opponent": "Arabie saoudite", "oppElo": 1640, "estimated": true, "gf": 4, "ga": 0, "aet": false, "postSnapshot": false },
+      { "stage": "Groupe H", "date": "2026-06-26", "opponent": "Uruguay",         "oppElo": 1930, "estimated": true, "gf": 1, "ga": 0, "aet": false, "postSnapshot": false },
+      { "stage": "32e",      "date": "2026-07-01", "opponent": "Autriche",        "oppElo": 1904, "estimated": true, "gf": 3, "ga": 0, "aet": false, "postSnapshot": false },
+      { "stage": "8e",       "date": "2026-07-05", "opponent": "Portugal",        "oppElo": 2046, "estimated": true, "gf": 1, "ga": 0, "aet": false, "postSnapshot": false },
+      { "stage": "Quart",    "date": "2026-07-10", "opponent": "Belgique",        "oppElo": 1988, "estimated": true, "gf": 2, "ga": 1, "aet": false, "postSnapshot": true,  "note": "Merino 88e. Seul but encaissé du tournoi (De Ketelaere)." },
+      { "stage": "Demie",    "date": "2026-07-14", "opponent": "France",          "oppElo": 2088, "estimated": true, "gf": 2, "ga": 0, "aet": false, "postSnapshot": true,  "note": "Oyarzabal (pen. 22e), Pedro Porro (58e)." }
+    ],
+    "arg": [
+      { "stage": "Groupe",   "date": "2026-06-16", "opponent": "Algérie",   "oppElo": 1786, "estimated": true, "gf": 3, "ga": 0, "aet": false, "postSnapshot": false },
+      { "stage": "Groupe",   "date": "2026-06-22", "opponent": "Autriche",  "oppElo": 1904, "estimated": true, "gf": 2, "ga": 0, "aet": false, "postSnapshot": false },
+      { "stage": "Groupe",   "date": "2026-06-27", "opponent": "Jordanie",  "oppElo": 1546, "estimated": true, "gf": 3, "ga": 1, "aet": false, "postSnapshot": false },
+      { "stage": "32e",      "date": "2026-06-30", "opponent": "Cap-Vert",  "oppElo": 1608, "estimated": true, "gf": 3, "ga": 2, "aet": true,  "postSnapshot": false, "note": "Victoire arrachée en prolongation contre le débutant." },
+      { "stage": "8e",       "date": "2026-07-07", "opponent": "Égypte",    "oppElo": 1748, "estimated": true, "gf": 3, "ga": 2, "aet": false, "postSnapshot": true,  "note": "Remontada après avoir été mené." },
+      { "stage": "Quart",    "date": "2026-07-11", "opponent": "Suisse",    "oppElo": 1892, "estimated": true, "gf": 3, "ga": 1, "aet": true,  "postSnapshot": true },
+      { "stage": "Demie",    "date": "2026-07-15", "opponent": "Angleterre","oppElo": 2062, "estimated": true, "gf": 2, "ga": 1, "aet": false, "postSnapshot": true,  "note": "Mené 0-1 (Gordon 55e) ; Enzo 85e, Lautaro 90+3, doublé de passes de Messi (39 ans)." }
+    ]
+  },
+
+  "priors": {
+    "_comment": "Hyperparamètres du modèle. Chaque valeur est documentée dans pronostic/README.md.",
+    "baseGoalsPerMatch": 2.60,
+    "finalCaginess": 0.90,
+    "dixonColesRho": -0.10,
+    "eloK": 60,
+    "recencyHalfLifeMatches": 4,
+    "formShrinkage": { "attack": 3.5, "defense": 5.0 },
+    "crowdEloBonusArg": 12,
+    "restDayEffectPerDay": 0.006,
+    "extraTimeCarryPenaltyPer30Min": 0.008,
+    "extraTimeIntensity": 0.85,
+    "extraTimeEtFatiguePer30Min": 0.035,
+    "stateEffects": {
+      "shellOneGoal": 0.92,
+      "shellTwoGoals": 0.86,
+      "chaseBase": 1.12,
+      "chaseRampStart": 60,
+      "chaseRampFull": 0.25,
+      "chaseTwoGoalsDamp": 0.92
+    },
+    "uncertainty": {
+      "eloSigma": 30,
+      "formSigmaLog": 0.06,
+      "rhoSigma": 0.03,
+      "caginessSigma": 0.04,
+      "penaltySigma": 0.03
+    }
+  }
+}
