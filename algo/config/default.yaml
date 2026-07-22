@@ -1,0 +1,128 @@
+# ============================================================================
+# Configuration complète du backtest XAU/USD + XAG/USD.
+# AUCUN paramètre n'est en dur dans le code : tout se change ici.
+#
+# Honnêteté : les paramètres par défaut ci-dessous sont des valeurs
+# "manuel scolaire" choisies AVANT de voir les données. Ne les ajustez pas
+# pour embellir un backtest — c'est exactement ce que le module validation/
+# est chargé de détecter.
+# ============================================================================
+
+seed: 42
+
+data:
+  base_timeframe: "1h"          # timeframe des CSV bruts (15m accepté aussi)
+  timeframes: ["1h", "4h", "1d"]
+  # Bornes globales de l'étude (UTC). null = tout l'historique disponible.
+  start: "2019-01-01"
+  end: null
+  # Journée de trading CFD : la "journée" daily démarre à 22h UTC (17h New York).
+  session_day_offset_hours: -2
+  warmup_days: 120              # historique supplémentaire chargé avant chaque
+                                # fenêtre pour amorcer les indicateurs (EMA daily…)
+  assets:
+    XAUUSD:
+      csv: "data/raw/XAUUSD_1h.csv"
+      contract_size: 1.0        # $ de PnL pour 1.0 unité et 1.0$ de variation (1 unité = 1 oz)
+      min_size: 1.0             # taille mini (oz) — ~0.01 lot CFD or
+      size_step: 1.0
+    XAGUSD:
+      csv: "data/raw/XAGUSD_1h.csv"
+      contract_size: 1.0        # 1 unité = 1 oz d'argent
+      min_size: 50.0            # ~0.01 lot CFD argent = 50 oz
+      size_step: 50.0
+
+fetch:
+  source: "dukascopy"           # datafeed public, bougies BID + ASK → spread réel
+  symbols: ["XAUUSD", "XAGUSD"]
+  start: "2019-01-01"
+  end: null                     # null = aujourd'hui
+  out_dir: "data/raw"
+  price_scale: 1000.0           # prix stockés en millièmes dans les .bi5
+  pause_seconds: 0.15           # politesse entre requêtes
+
+strategy:
+  name: "trend_pullback"
+  params:
+    trend_timeframe: "1d"       # filtre de tendance sur le daily
+    trend_ema: 50               # EMA daily : tendance haussière si close > EMA
+    rsi_period: 14              # RSI 1h pour détecter le pullback
+    rsi_buy: 40.0               # long : RSI repasse AU-DESSUS de ce seuil (fin de repli)
+                                # short : miroir automatique (100 - rsi_buy)
+    atr_period: 14              # ATR 1h pour le stop
+    sl_atr_mult: 2.0            # SL = 2 x ATR
+    tp_rr: 3.0                  # R:R exigé — TP = 3 x distance de SL (>= 1:3)
+    max_bars_held: 120          # stop temps : ~1 semaine de bougies 1h (day/swing)
+    direction: "both"           # long | short | both
+
+engine:
+  initial_equity: 10000.0
+  risk_pct: 0.0075              # 0.75 % de l'equity risqué par trade
+  max_open_risk_pct: 0.015      # risque cumulé max toutes positions ouvertes
+  corr_risk_factor: 0.5         # or et argent sont corrélés : si une position est
+                                # déjà ouverte dans le même sens sur l'autre métal,
+                                # le risque de la nouvelle est multiplié par 0.5
+  max_leverage: 20.0            # plafond de notionnel / equity
+  intrabar_worst_case: true     # SL et TP touchés dans la même bougie => SL (pessimiste)
+  costs:
+    spread_mode: "from_data"    # from_data : spread bid/ask réel par bougie | fixed
+    pessimistic_spread_mult: 1.3  # majore le spread mesuré (news, rollover, nuit)
+    rollover_hour_utc: 21       # heure de facturation du swap
+    triple_swap_weekday: 2      # 0=lundi … 2=mercredi : swap x3 (convention métaux)
+    per_asset:
+      XAUUSD:
+        fixed_spread: 0.35      # $ — utilisé si spread_mode=fixed ou spread manquant
+        slippage: 0.10          # $ par exécution au marché / stop (pas sur TP limite)
+        swap_long: -0.60        # $ par unité et par nuit (négatif = coût)
+        swap_short: 0.05
+      XAGUSD:
+        fixed_spread: 0.030
+        slippage: 0.012
+        swap_long: -0.008
+        swap_short: 0.0005
+
+validation:
+  objective: "sharpe"           # critère de sélection dans les grid-searchs
+  min_trades: 30                # en dessous : score invalide (échantillon trop petit)
+  # Grille VOLONTAIREMENT petite : plus la grille est riche, plus on overfitte.
+  grid:
+    trend_ema: [30, 50, 100]
+    rsi_buy: [35.0, 40.0, 45.0]
+    sl_atr_mult: [1.5, 2.0, 2.5]
+  oos:
+    train_frac: 0.70            # split chronologique 70/30
+  walk_forward:
+    train_months: 36
+    test_months: 6
+    anchored: false             # fenêtre glissante (true = fenêtre croissante)
+  monte_carlo:
+    n_runs: 2000
+    ruin_drawdown: 0.30         # "ruine" = drawdown >= 30 %
+  noise:
+    n_runs: 100
+    atr_frac: 0.10              # bruit gaussien d'écart-type 0.10 x ATR par bougie
+  sensitivity:
+    metric: "sharpe"
+    pairs:                      # heatmaps 2D autour des paramètres choisis
+      - ["trend_ema", "rsi_buy"]
+      - ["sl_atr_mult", "tp_rr"]
+    ranges:
+      trend_ema: [20, 30, 40, 50, 70, 100, 140]
+      rsi_buy: [30.0, 35.0, 40.0, 45.0, 50.0]
+      sl_atr_mult: [1.0, 1.5, 2.0, 2.5, 3.0]
+      tp_rr: [1.5, 2.0, 2.5, 3.0, 4.0]
+
+report:
+  out_dir: "reports"
+  plotlyjs: "inline"            # inline = HTML autonome hors-ligne (plus lourd) | cdn
+  monthly_benchmark_pct: [5.0, 6.0]   # cible idéale de l'utilisateur — MESURÉE, jamais forcée
+  # Seuils de classification du verdict (étiquettes, pas cibles d'optimisation)
+  thresholds:
+    oos_sharpe_retention: 0.5   # Sharpe OOS >= 50 % du Sharpe IS
+    wfe_min: 0.5                # walk-forward efficiency minimum
+    wf_profitable_folds_min: 0.5
+    mc_ruin_prob_max: 0.05
+    mc_p5_total_return_min: -0.10
+    noise_profitable_frac_min: 0.6
+    noise_sharpe_retention: 0.5
+    sensitivity_plateau_min: 0.5
