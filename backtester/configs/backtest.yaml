@@ -1,0 +1,88 @@
+# Full pipeline config: data -> strategy -> costs -> validation -> report.
+# Every tunable lives here; the code has no hard-coded parameters.
+
+seed: 42
+
+data:
+  source: csv                # csv | ccxt
+  csv_path: data/samples/synthetic_15m.csv
+  symbol: XAG/USD
+  exchange: okx              # used when source: ccxt (e.g. symbol "ETH/USDT")
+  base_timeframe: 15min
+  extra_timeframes: [1h, 1D]
+  start: null                # e.g. "2024-02-01"
+  end: null
+  tz: UTC
+
+costs:
+  spread:
+    mode: pct                # pct (fraction of price) | abs (price units)
+    value: 0.0003            # ~3 bps typical XAG spot spread
+    pessimistic_mult: 1.5    # trade with a spread 50% worse than average
+  slippage_pct: 0.0001
+  commission_pct: 0.0005
+  funding_daily_pct: 0.0     # set >0 for perp funding (e.g. 0.0001 = 1 bp/day)
+
+risk:
+  initial_capital: 10000
+  risk_pct: 0.01             # 1% of equity risked per trade
+  max_leverage: 5
+  min_rr: 3.0                # reject entries whose effective R:R < 1:3
+
+strategy:
+  name: ema_atr
+  params:
+    fast: 20
+    slow: 50
+    atr_period: 14
+    sl_atr_mult: 1.5
+    rr: 3.5                  # target above min_rr so the NET R:R (after
+                             # spread/slippage on the fill) stays >= 3
+
+    trend_tf: 1h
+    trend_ema: 50
+  param_grid:                # used by OOS optimize, walk-forward, sensitivity
+    fast: [10, 20, 30, 40]
+    slow: [50, 75, 100, 150]
+
+validation:
+  oos:
+    enabled: true
+    train_ratio: 0.7
+    optimize: true
+    objective: sharpe
+    degradation_warn: 0.5    # OOS < 50% of IS => degradation warning
+  walkforward:
+    enabled: true
+    n_folds: 5
+    train_bars: 6000
+    test_bars: 2000
+    anchored: false
+    objective: sharpe
+    min_wfe: 0.5
+  montecarlo:
+    enabled: true
+    n_runs: 2000
+    method: both             # shuffle | bootstrap | both
+    ruin_threshold: 0.5
+    seed: 42
+  noise:
+    enabled: true
+    n_runs: 30
+    noise_atr_frac: 0.1
+    atr_period: 14
+    seed: 42
+    max_metric_cv: 1.0
+  detrend:
+    enabled: true
+    min_edge_ratio: 0.3
+  sensitivity:
+    enabled: true
+    metric: sharpe
+    params: [fast, slow]
+    peak_ratio: 2.0
+
+report:
+  output_dir: reports
+  title: "XAG/USD 15m — EMA/ATR — validation anti-overfitting"
+  plotlyjs: cdn              # cdn | inline (inline = fully offline, bigger file)
