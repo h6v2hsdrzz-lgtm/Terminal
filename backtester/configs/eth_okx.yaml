@@ -1,0 +1,49 @@
+# Example: fetch ETH/USDT 15m candles from OKX via ccxt and validate.
+# Requires: pip install ccxt (network access to OKX).
+
+seed: 42
+
+data:
+  source: ccxt
+  symbol: ETH/USDT
+  exchange: okx
+  base_timeframe: 15min
+  extra_timeframes: [1h, 1D]
+  start: "2025-01-01"
+  end: "2025-07-01"
+
+costs:
+  spread: { mode: pct, value: 0.0002, pessimistic_mult: 1.5 }
+  slippage_pct: 0.0002
+  commission_pct: 0.0008     # taker fee
+  funding_daily_pct: 0.0003  # ~3 bp/day if trading the perp
+
+risk:
+  initial_capital: 10000
+  risk_pct: 0.01
+  max_leverage: 3
+  min_rr: 3.0
+
+strategy:
+  name: ema_atr
+  params: { fast: 20, slow: 75, atr_period: 14, sl_atr_mult: 2.0, rr: 3.5,
+            trend_tf: 1h, trend_ema: 50 }
+  param_grid:
+    fast: [10, 20, 30, 40]
+    slow: [50, 75, 100, 150]
+
+validation:
+  oos: { enabled: true, train_ratio: 0.7, optimize: true, objective: sharpe,
+         degradation_warn: 0.5 }
+  walkforward: { enabled: true, n_folds: 4, train_bars: 5000, test_bars: 1500,
+                 anchored: false, objective: sharpe, min_wfe: 0.5 }
+  montecarlo: { enabled: true, n_runs: 2000, method: both, ruin_threshold: 0.5, seed: 42 }
+  noise: { enabled: true, n_runs: 30, noise_atr_frac: 0.1, atr_period: 14,
+           seed: 42, max_metric_cv: 1.0 }
+  detrend: { enabled: true, min_edge_ratio: 0.3 }
+  sensitivity: { enabled: true, metric: sharpe, params: [fast, slow], peak_ratio: 2.0 }
+
+report:
+  output_dir: reports
+  title: "ETH/USDT 15m OKX — EMA/ATR — validation anti-overfitting"
+  plotlyjs: cdn
