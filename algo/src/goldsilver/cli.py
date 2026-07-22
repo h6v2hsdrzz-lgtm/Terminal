@@ -141,11 +141,12 @@ def cmd_validate(cfg: Config) -> int:
         "monte_carlo": {
             "scope": mc_scope,
             "p_ruin": mc.shuffle.p_ruin,
-            "p_loss": mc.shuffle.p_loss,
-            "ret_p5_pct": round(100 * mc.shuffle.ret_p5, 2),
-            "ret_p50_pct": round(100 * mc.shuffle.ret_p50, 2),
-            "ret_p95_pct": round(100 * mc.shuffle.ret_p95, 2),
-            "dd_p95_pct": round(100 * mc.shuffle.dd_p95, 2),
+            "p_loss_bootstrap": mc.bootstrap.p_loss,
+            "shuffle_dd_p50_pct": round(100 * mc.shuffle.dd_p50, 2),
+            "shuffle_dd_p95_pct": round(100 * mc.shuffle.dd_p95, 2),
+            "bootstrap_ret_p5_pct": round(100 * mc.bootstrap.ret_p5, 2),
+            "bootstrap_ret_p50_pct": round(100 * mc.bootstrap.ret_p50, 2),
+            "bootstrap_ret_p95_pct": round(100 * mc.bootstrap.ret_p95, 2),
         },
         "noise": {
             "profitable_frac": noise.profitable_frac,

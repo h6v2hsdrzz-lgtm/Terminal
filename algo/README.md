@@ -94,10 +94,56 @@ algo/
 
 ## Résultats mesurés
 
-*(section remplie par le run de validation du dépôt — régénérez avec
-`python3 -m goldsilver validate`, rapport HTML détaillé dans `reports/`)*
+Run du 2026-07-22, données réelles Dukascopy 1h bid+ask **2019-01-01 →
+2026-06-30** (~44 300 bougies tradables par actif), spread réel par bougie
+× 1.3, slippage, swap, worst-case intrabar. Résumé chiffré commité dans
+[`reports/summary_20260722_2350.json`](reports/summary_20260722_2350.json) ;
+rapport HTML complet régénérable via `python3 -m goldsilver validate`.
 
-<!-- RESULTS -->
+### VERDICT : OVERFIT / PAS D'EDGE — 0/7 contrôles passés
+
+La stratégie d'exemple (`trend_pullback` : tendance EMA 50 daily, pullback
+RSI 40 en 1h, SL 2×ATR, TP à R:R 1:3) **n'a pas d'edge exploitable** sur
+or + argent une fois les coûts réalistes appliqués. Les vrais chiffres :
+
+| Mesure | Valeur RÉELLE |
+|---|---|
+| **Rendement mensuel OOS (params par défaut, 2024-03 → 2026-06)** | **−0.14 % ± 3.05 %/mois** |
+| Cible utilisateur (benchmark mesuré, jamais forcé) | 5-6 %/mois → **non atteinte, très loin** |
+| OOS : rendement total / Sharpe / PF / trades | −4.8 % / −0.09 / 0.97 / 385 |
+| Backtest complet 7.5 ans (défaut) | −77 %, max DD 79 %, WR 21 %, PF 0.65 |
+| Walk-forward (9 folds ré-optimisés) | 3/9 folds profitables, **−11.8 %/an** en OOS chaîné |
+| Monte-Carlo bootstrap (trades OOS) | P(perte) 63 %, rendement p5 −28.6 % / p95 +29.4 % |
+| Noise test (bruit 0.1×ATR, 100 runs) | **0 %** de runs profitables |
+| Detrending (dérive ~16 %/an XAU, ~19 %/an XAG retirée) | Sharpe −1.4 → **−2.6** : le peu de positif n'était que la tendance |
+| Sensibilité | plateau 0.00 : aucun voisinage de paramètres sain |
+
+### Lecture honnête
+
+1. **L'edge brut est quasi nul et les coûts l'achèvent.** Sur l'or seul,
+   sans aucun coût : +21.9 % en 7.5 ans (Sharpe 0.27, longs seulement) ;
+   avec coûts réalistes : −15.6 %. Le win rate observé (~21-27 %) est sous
+   le point mort d'un R:R 1:3 (25 % avant coûts, ~27-28 % après).
+2. **L'argent aggrave tout** : son spread médian mesuré (0.030 $ sur ~25 $,
+   soit ~0.12 %) coûte ~6× plus cher que l'or en relatif, pour une
+   volatilité supérieure — le portefeuille complet fait bien pire que l'or seul.
+3. **Les shorts perdent structurellement** sur un marché en bull séculaire,
+   et le detrending montre que les longs ne faisaient que surfer cette
+   même tendance : il n'y a pas de timing, il y a du beta.
+4. Le seul contrôle presque favorable (P(DD≥30 %) = 1 % en reshuffle) dit
+   simplement que la stratégie perd *lentement* — risque de ruine faible
+   parce que le sizing à 0.75 % fonctionne, pas parce que ça gagne.
+
+**Réponse à la question posée : non, cette stratégie n'a pas d'edge
+out-of-sample.** Le framework, lui, fait exactement son travail : il l'a
+prouvé en 2 minutes de calcul, avant qu'un seul euro réel ne soit risqué.
+Pour viser honnêtement 5-6 %/mois (≈ 79-101 %/an composés), il faudra une
+hypothèse de marché réellement différenciante — pas un réglage de
+paramètres. Les pistes sérieuses : exploiter le ratio or/argent
+(mean-reversion du spread entre les deux métaux corrélés), des filtres de
+régime (l'edge long n'existe qu'en tendance daily confirmée), ou des
+horizons plus longs où le spread pèse moins. Chacune se teste dans ce
+framework en écrivant une classe `Strategy` et en relançant `validate`.
 
 ## Avertissements
 

@@ -112,18 +112,20 @@ def build_verdict(
                    f"{th['wf_profitable_folds_min']:.0%}"),
     ))
 
-    # 4 — Monte-Carlo
+    # 4 — Monte-Carlo. Drawdown/ruine : reshuffle (le rendement final d'une
+    # permutation est invariant, seul le chemin change) ; dispersion du
+    # rendement : bootstrap (tirage avec remise -> l'échantillon varie).
     c4 = (
         mc.shuffle.p_ruin <= th["mc_ruin_prob_max"]
-        and mc.shuffle.ret_p5 >= th["mc_p5_total_return_min"]
+        and mc.bootstrap.ret_p5 >= th["mc_p5_total_return_min"]
     )
     checks.append(Check(
-        name="Monte-Carlo (reshuffle des trades)",
+        name="Monte-Carlo (reshuffle + bootstrap des trades)",
         passed=c4, core=False,
-        value=(f"P(DD >= {mc.ruin_drawdown:.0%}) = {mc.shuffle.p_ruin:.1%}, "
-               f"rendement p5 {_fmt_pct(mc.shuffle.ret_p5)}, "
+        value=(f"P(DD >= {mc.ruin_drawdown:.0%}) = {mc.shuffle.p_ruin:.1%} (reshuffle), "
+               f"rendement p5 {_fmt_pct(mc.bootstrap.ret_p5)} (bootstrap), "
                f"DD p95 {_fmt_pct(-mc.shuffle.dd_p95)}"),
-        threshold=(f"P(ruine) <= {th['mc_ruin_prob_max']:.0%} et p5 >= "
+        threshold=(f"P(ruine) <= {th['mc_ruin_prob_max']:.0%} et p5 bootstrap >= "
                    f"{_fmt_pct(th['mc_p5_total_return_min'])}"),
     ))
 
