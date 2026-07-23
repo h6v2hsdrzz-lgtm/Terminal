@@ -44,7 +44,19 @@ class Strategy(ABC):
         """Retourne le DataFrame de base + colonnes ``SIGNAL_COLUMNS``.
 
         ``tfs`` : {timeframe: OHLCV}, contient au moins le timeframe de base.
+        Colonne optionnelle ``exit_signal`` (0/1) : clôture au marché à
+        l'ouverture de la bougie suivante.
         """
+
+    def generate_all(
+        self, tfs_by_asset: Mapping[str, Mapping[str, pd.DataFrame]]
+    ) -> dict[str, pd.DataFrame]:
+        """Signaux pour tous les actifs. Par défaut : actif par actif.
+
+        Les stratégies CROSS-ACTIFS (ex. pair trading sur le ratio or/argent)
+        surchargent cette méthode — elles voient toutes les données à la fois.
+        """
+        return {a: self.generate(a, tfs) for a, tfs in tfs_by_asset.items()}
 
     def with_params(self, override: Mapping[str, Any]) -> "Strategy":
         """Nouvelle instance avec des paramètres surchargés (grid-search)."""

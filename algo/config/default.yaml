@@ -26,11 +26,13 @@ data:
       contract_size: 1.0        # $ de PnL pour 1.0 unité et 1.0$ de variation (1 unité = 1 oz)
       min_size: 1.0             # taille mini (oz) — ~0.01 lot CFD or
       size_step: 1.0
+      max_leverage: 20.0        # contrainte courtier : or x20
     XAGUSD:
       csv: "data/raw/XAGUSD_1h.csv"
       contract_size: 1.0        # 1 unité = 1 oz d'argent
       min_size: 50.0            # ~0.01 lot CFD argent = 50 oz
       size_step: 50.0
+      max_leverage: 10.0        # contrainte courtier : argent x10
 
 fetch:
   source: "dukascopy"           # datafeed public, bougies BID + ASK → spread réel

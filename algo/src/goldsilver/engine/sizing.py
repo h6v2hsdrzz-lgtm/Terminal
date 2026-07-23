@@ -36,7 +36,9 @@ def position_size(
       le métal corrélé dans le même sens).
     - ``risk_budget_left`` : $ de risque encore autorisés (plafond global) ;
       la taille est réduite pour tenir dedans, jamais augmentée.
-    - ``max_leverage`` : plafond de notionnel total / equity.
+    - ``max_leverage`` : plafond de notionnel total / equity (portefeuille).
+      ``spec.max_leverage`` ajoute un plafond propre à l'actif (ex. or x20,
+      argent x10) sur le notionnel de CETTE position.
     """
     if equity <= 0:
         return SizingDecision(0.0, 0.0, "equity nulle ou négative")
@@ -59,6 +61,9 @@ def position_size(
         if notional_left <= 0:
             return SizingDecision(0.0, 0.0, "levier max atteint")
         units = min(units, notional_left / (price * spec.contract_size))
+
+    if spec.max_leverage is not None:
+        units = min(units, equity * spec.max_leverage / (price * spec.contract_size))
 
     units = math.floor(units / spec.size_step) * spec.size_step
     if units < spec.min_size:

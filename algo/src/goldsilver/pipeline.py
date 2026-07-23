@@ -73,15 +73,16 @@ def run_backtest(
         params.update(params_override)
     strategy = get_strategy(cfg.strategy.name, params)
 
-    signals: dict[str, pd.DataFrame] = {}
-    for asset, base in market.items():
-        tfs = build_timeframes(
+    tfs_by_asset = {
+        asset: build_timeframes(
             base,
             cfg.data.base_timeframe,
             cfg.data.timeframes,
             cfg.data.session_day_offset_hours,
         )
-        signals[asset] = strategy.generate(asset, tfs)
+        for asset, base in market.items()
+    }
+    signals = strategy.generate_all(tfs_by_asset)
 
     bt = Backtester(cfg)
     max_bars = params.get("max_bars_held")

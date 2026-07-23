@@ -110,6 +110,13 @@ class Backtester:
                 "sig": df["signal"].to_numpy(dtype=np.int64),
                 "sld": df["sl_dist"].to_numpy(dtype=np.float64),
                 "tpd": df["tp_dist"].to_numpy(dtype=np.float64),
+                # sortie sur signal (optionnelle) : émise à la clôture d'une
+                # bougie, exécutée au marché à l'ouverture de la suivante
+                "xs": (
+                    df["exit_signal"].to_numpy(dtype=np.int64)
+                    if "exit_signal" in df.columns
+                    else np.zeros(len(df), dtype=np.int64)
+                ),
             }
 
         union = arr[assets[0]]["ts"]
@@ -166,12 +173,15 @@ class Backtester:
         def _exit_price(
             pos: _OpenPosition, o: float, h: float, l: float, c: float,
             spr: float, sl_pips: float, pre_existing: bool, time_due: bool,
+            signal_exit: bool = False,
         ) -> tuple[float, str] | None:
             if pos.side > 0:  # sorties au bid
                 if pre_existing and o <= pos.sl:
                     return o - sl_pips, "sl"
                 if pre_existing and o >= pos.tp:
                     return o, "tp"
+                if signal_exit:  # ordre au marché à l'ouverture
+                    return o - sl_pips, "signal"
                 hit_sl, hit_tp = l <= pos.sl, h >= pos.tp
                 if hit_sl and hit_tp:
                     return (pos.sl - sl_pips, "sl") if worst_case else (pos.tp, "tp")
@@ -187,6 +197,8 @@ class Backtester:
                     return ao + sl_pips, "sl"
                 if pre_existing and ao <= pos.tp:
                     return ao, "tp"
+                if signal_exit:
+                    return ao + sl_pips, "signal"
                 hit_sl, hit_tp = ah >= pos.sl, al <= pos.tp
                 if hit_sl and hit_tp:
                     return (pos.sl + sl_pips, "sl") if worst_case else (pos.tp, "tp")
@@ -223,6 +235,7 @@ class Backtester:
                 res = _exit_price(
                     pos, A["o"][j], A["h"][j], A["l"][j], A["c"][j], A["spr"][j],
                     slip[a], pre_existing=True, time_due=time_due,
+                    signal_exit=bool(j > 0 and A["xs"][j - 1] == 1),
                 )
                 if res is not None:
                     _close(a, pos, res[0], res[1], u_index[i])

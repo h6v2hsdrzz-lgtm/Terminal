@@ -19,6 +19,8 @@ class AssetSpec:
     contract_size: float
     min_size: float
     size_step: float
+    max_leverage: float | None = None  # plafond de levier propre à l'actif
+    # (ex. courtier : or x20, argent x10) ; None = plafond global seulement
 
 
 @dataclass(frozen=True)
@@ -170,6 +172,9 @@ def load_config(path: str | Path) -> Config:
                 contract_size=float(_require(a, "contract_size", f"data.assets.{name}")),
                 min_size=float(_require(a, "min_size", f"data.assets.{name}")),
                 size_step=float(_require(a, "size_step", f"data.assets.{name}")),
+                max_leverage=(
+                    float(a["max_leverage"]) if a.get("max_leverage") is not None else None
+                ),
             )
             for name, a in _require(d, "assets", "data").items()
         },
