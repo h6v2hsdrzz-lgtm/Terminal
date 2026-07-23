@@ -2,6 +2,12 @@ from __future__ import annotations
 
 from goldsilver.strategy.base import STRATEGIES, Strategy, get_strategy
 from goldsilver.strategy.daily_breakout import DailyBreakoutStrategy
+from goldsilver.strategy.price_action import (
+    ExcessiveCandleReversion,
+    FairValueGap,
+    GapFill,
+    LiquiditySweep,
+)
 from goldsilver.strategy.ratio_reversion import RatioReversionStrategy
 from goldsilver.strategy.trend_pullback import TrendPullbackStrategy
 
@@ -12,4 +18,8 @@ __all__ = [
     "TrendPullbackStrategy",
     "RatioReversionStrategy",
     "DailyBreakoutStrategy",
+    "ExcessiveCandleReversion",
+    "GapFill",
+    "FairValueGap",
+    "LiquiditySweep",
 ]
