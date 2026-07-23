@@ -232,6 +232,49 @@ recherche. Zone défendable pour un compte réel : **2-3 % de risque,
 +1-2 %/mois d'espérance conditionnelle au régime haussier, −15 à −40 % de
 drawdown à accepter.**
 
+## Itération 4 : price-action / SMC (bougies excessives, gaps, FVG, liquidité)
+
+Quatre hypothèses supplémentaires ont été codées (`strategy/price_action.py`)
+et passées dans la MÊME validation, puis comparées à l'incumbent
+(`scripts/compare_strategies.py`, résultats dans
+`reports/strategy_comparison.json`) :
+
+| Stratégie | Verdict | OOS %/mois | WFE | Noise+ | Detrend Sh | Plateau |
+|---|---|---|---|---|---|---|
+| **breakout_4h (incumbent)** | **ROBUSTE 6/7** | +0.57 % | 1.42 | 100 % | −0.27 | 1.0 |
+| excessive_candle_reversion | OVERFIT 2/7 | +0.72 % | −0.10 | 3 % | −0.80 | 0.0 |
+| gap_fill | OVERFIT 2/7 | −0.05 % | n/a (4 trades) | 28 % | +0.16 | 0.0 |
+| fair_value_gap (SMC) | OVERFIT 1/7 | −0.06 % | −0.07 | 25 % | −0.70 | 0.0 |
+| liquidity_sweep (SMC) | OVERFIT 0/7 | −0.35 % | −1.54 | 0 % | −1.54 | 0.0 |
+
+**Aucune ne bat breakout_4h.** Le cas instructif est
+`excessive_candle_reversion` : rendement OOS affiché *supérieur* (+0.72 %)
+mais walk-forward négatif, 3 % seulement des runs bruités profitables (vs
+100 %) et plateau de sensibilité nul — le +0.72 % est un accident de
+l'échantillon, pas un edge. Les concepts SMC (FVG, liquidity sweep) et le
+gap fill n'ont, sur ces métaux, aucun edge out-of-sample. Le mean-reversion
+perd là où le trend-following gagne : cohérent avec le detrending, qui
+disait déjà que le régime des métaux 2019-2026 est directionnel.
+
+**Décision (règle fixée par l'utilisateur : garder l'ancien si le nouveau
+est moins bon)** : on RESTE sur `breakout_4h`. Le code des 4 stratégies est
+conservé (testé, réutilisable si le régime change), mais aucune ne pilote le
+bot. Note honnête sur les **tests multiples** : 8 hypothèses ont maintenant
+été essayées sur le même historique — même breakout_4h mérite son forward
+test avant tout argent réel.
+
+### Note sur « 2 % par trade + 7 positions simultanées »
+
+Risque par trade fixé à 2 % (min = max = plafond dur). Concurrence : avec
+**2 instruments** (or, argent) et une position par instrument, le maximum
+réellement atteignable est **2 positions** — `max_open_risk_pct` passé à
+`0.04` pour les autoriser toutes deux (mesuré : +1.01 %/mois tous régimes
+contre +0.76 % à une position à la fois, DD 41 % vs 37 %). Atteindre 7
+positions exigerait soit d'empiler plusieurs trades sur le même métal
+(pyramidage — imprudent sur deux actifs quasi identiques, ≈ un seul pari
+×3.5), soit d'ajouter ~5 instruments décorrélés (le moteur gère N actifs :
+c'est la seule voie honnête vers plus de concurrence).
+
 ### Conclusion sur l'objectif « minimum 5 %/mois »
 
 **Non tenable, et aucun réglage ne le rendra tenable.** Les faits mesurés :
