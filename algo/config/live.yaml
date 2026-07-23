@@ -1,0 +1,69 @@
+# ============================================================================
+# Bot d'exécution — Phase 1 : PAPER TRADING OBLIGATOIRE.
+#
+# mode: paper  -> ordres simulés localement, données réelles (aucun ordre broker)
+# mode: demo   -> ordres réels sur compte de démonstration OANDA (practice)
+# mode: live   -> VERROUILLÉ : exige EN PLUS la variable d'environnement
+#                 GOLDSILVER_LIVE_ACK=JE-COMPRENDS-ARGENT-REEL et le flag CLI
+#                 --enable-live. Une condition manquante = refus de démarrer.
+#
+# Identifiants (JAMAIS ici, uniquement en variables d'environnement) :
+#   OANDA_API_TOKEN, OANDA_ACCOUNT_ID, OANDA_ENV=practice|live
+#   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (optionnel)
+# ============================================================================
+
+mode: paper
+
+# La stratégie VALIDÉE (ROBUSTE 6/7) — réutilisée telle quelle, pas recodée.
+strategy_config: "config/breakout_4h.yaml"
+
+poll:
+  granularity_hours: 4          # décision à la clôture de chaque bougie 4h
+  delay_after_close_seconds: 90 # marge pour que le broker publie la bougie
+  history_hours: 3000           # H1 chargées à chaque cycle (warmup indicateurs)
+  max_signal_age_bars: 4        # un signal 1h plus vieux que ça n'est plus pris
+
+broker:
+  adapter: "oanda"              # IG Markets possible plus tard via BrokerAdapter
+  instruments:
+    XAUUSD: "XAU_USD"
+    XAGUSD: "XAG_USD"
+
+risk:
+  # Plafond DUR du moteur : 2 % par trade, codé en dur dans live/risk.py.
+  # Mettre plus ici => le moteur REFUSE de démarrer.
+  risk_pct: 0.01                # 1 % par trade en forward test
+  max_open_risk_pct: 0.02       # risque cumulé max (les 2 métaux)
+  min_rr: 3.0                   # aucun ordre si TP/SL < 1:3
+
+regime:
+  # Critère documenté dans live/regime.py (issu du test de detrending) :
+  # close > EMA(trend_ema) 4h ET pente EMA >= min_slope_pct sur slope_lookback
+  # ET Efficiency Ratio >= er_min. Sinon : pause (aucune nouvelle entrée).
+  trend_ema: 100
+  slope_lookback_bars: 30
+  min_slope_pct: 0.0
+  use_efficiency_ratio: true
+  er_window_bars: 60
+  er_min: 0.20
+
+kill:
+  daily_loss_limit_pct: 0.05    # -5 % sur la journée -> flatten + halte
+  max_drawdown_pct: 0.20        # -20 % depuis le plus-haut -> flatten + halte
+  max_consecutive_losses: 6     # 6 pertes d'affilée -> flatten + halte
+  kill_file: "KILL"             # créer ce fichier (racine algo/) = arrêt manuel
+
+paths:
+  state: "live_state/state.json"
+  journal: "live_state/journal.jsonl"
+
+notify:
+  telegram: true                # no-op si les variables d'env sont absentes
+
+paper:
+  initial_equity: 10000.0
+
+slippage_alert_r: 0.05          # alerte si le coût d'exécution moyen dépasse 5 % de R
+
+# Attentes du backtest pour le rapport de forward test (comparaison continue)
+expectations_path: "reports/summary_20260723_0053.json"

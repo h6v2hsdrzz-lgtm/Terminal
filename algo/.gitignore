@@ -6,3 +6,5 @@ data/raw/
 reports/
 !reports/.gitkeep
 !data/raw/.gitkeep
+live_state/
+KILL

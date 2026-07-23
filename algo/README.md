@@ -245,6 +245,72 @@ contrat. Ce que les données autorisent honnêtement avec l'edge survivant :
 historiquement favorable.** Quiconque promet mieux sur ces marchés vend la
 colonne « mirage » du tableau ci-dessus.
 
+## Exécution automatique : paper → DEMO → LIVE (verrouillé)
+
+Le bot (`src/goldsilver/live/`) exécute la stratégie **validée** de
+`config/breakout_4h.yaml` — le signal live est calculé par le MÊME code que
+le backtest (loader/nettoyage/timeframes/Strategy/sizing partagés).
+
+### Phase 1 (obligatoire) : paper trading
+
+```bash
+# 1) Compte OANDA practice GRATUIT (source de données + futur mode demo)
+export OANDA_API_TOKEN="..."          # jamais dans un fichier committé
+export OANDA_ACCOUNT_ID="101-..."
+export OANDA_ENV=practice
+# (optionnel) alertes Telegram :
+export TELEGRAM_BOT_TOKEN="..." ; export TELEGRAM_CHAT_ID="..."
+
+# 2) Lancer le paper trading (config/live.yaml est en mode: paper par défaut)
+goldsilver-live run                   # boucle : décision à chaque clôture 4h
+goldsilver-live run --once            # un cycle (cron/systemd externe)
+
+# Suivi
+goldsilver-live status                # halte ? equity paper ? positions ?
+goldsilver-live report                # forward test vs attentes du backtest
+tail -f live_state/journal.jsonl      # chaque décision/ordre/fill/rejet
+```
+
+Laisser tourner **plusieurs mois** (cible ≥ 30-50 trades). Le rapport
+compare win rate, expectancy R, profit factor, fréquence et slippage réel
+aux valeurs OOS du backtest et signale toute dégradation.
+
+### Passage DEMO puis LIVE
+
+- **DEMO** : `mode: demo` dans `config/live.yaml` → ordres réels sur le
+  compte practice OANDA (SL/TP posés chez le broker, réconciliation à
+  chaque cycle : l'état du compte fait foi, jamais la mémoire du bot).
+- **LIVE** : trois verrous indépendants, il les faut TOUS :
+  1. `mode: live` dans la config ;
+  2. `export GOLDSILVER_LIVE_ACK=JE-COMPRENDS-ARGENT-REEL` (+ `OANDA_ENV=live`) ;
+  3. `goldsilver-live run --enable-live`.
+  Une condition manquante = refus de démarrer. C'est volontaire.
+
+### Garde-fous non négociables (codés en dur ou par défaut)
+
+- **Plafond DUR de 2 % de risque par trade** (`live/risk.py`) : une config
+  au-dessus fait refuser le démarrage, et chaque ordre est re-vérifié.
+- **Filtre de régime** (`live/regime.py`, critère documenté — conséquence
+  directe du test de detrending) : close > EMA100 4h, pente EMA ≥ 0 sur
+  30 bougies, Efficiency Ratio ≥ 0.20 — sinon pause des nouvelles entrées
+  (les positions ouvertes gardent leurs SL/TP broker).
+- **Kill switches** : −5 % sur la journée, −20 % de drawdown depuis le
+  plus-haut, 6 pertes consécutives → flatten + halte persistante
+  (`goldsilver-live reset-halt` pour lever, action humaine).
+- **R:R ≥ 1:3 exigé** à chaque ordre, sizing en % de risque, plafonds de
+  levier par actif.
+- **Erreur API** : retries avec backoff, puis cycle SANS action de trading
+  (« ne pas trader » plutôt que « trader à l'aveugle » ; les SL/TP restant
+  côté serveur, les positions restent protégées).
+
+### Tout couper, tout de suite
+
+```bash
+touch KILL                            # prochain cycle : flatten + halte
+goldsilver-live flatten               # immédiat : ferme tout + halte
+# reprendre plus tard : rm KILL && goldsilver-live reset-halt
+```
+
 ## Avertissements
 
 Backtest ≠ avenir. Les hypothèses de coûts sont pessimistes mais pas

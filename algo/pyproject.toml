@@ -19,6 +19,7 @@ dev = ["pytest>=8.0"]
 
 [project.scripts]
 goldsilver = "goldsilver.cli:main"
+goldsilver-live = "goldsilver.live.runner:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
