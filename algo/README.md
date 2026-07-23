@@ -254,14 +254,22 @@ le backtest (loader/nettoyage/timeframes/Strategy/sizing partagés).
 ### Phase 1 (obligatoire) : paper trading
 
 ```bash
-# 1) Compte OANDA practice GRATUIT (source de données + futur mode demo)
-export OANDA_API_TOKEN="..."          # jamais dans un fichier committé
-export OANDA_ACCOUNT_ID="101-..."
-export OANDA_ENV=practice
+# 1) Compte IG DÉMO GRATUIT (source de données + futur mode demo).
+#    Clé API : My IG > Paramètres > API. JAMAIS dans un fichier committé.
+export IG_API_KEY="..."
+export IG_IDENTIFIER="..."             # identifiant de connexion IG
+export IG_PASSWORD="..."
+export IG_ENV=demo                     # demo par défaut
+export IG_ACCOUNT_ID="..."             # optionnel (sinon compte "préféré")
 # (optionnel) alertes Telegram :
 export TELEGRAM_BOT_TOKEN="..." ; export TELEGRAM_CHAT_ID="..."
 
-# 2) Lancer le paper trading (config/live.yaml est en mode: paper par défaut)
+# 2) Confirmer les epics IG de l'or et de l'argent sur VOTRE compte
+#    (ils varient selon le compte/région) et les reporter dans config/live.yaml :
+goldsilver-live find-epic or
+goldsilver-live find-epic argent
+
+# 3) Lancer le paper trading (config/live.yaml est en mode: paper par défaut)
 goldsilver-live run                   # boucle : décision à chaque clôture 4h
 goldsilver-live run --once            # un cycle (cron/systemd externe)
 
@@ -271,6 +279,15 @@ goldsilver-live report                # forward test vs attentes du backtest
 tail -f live_state/journal.jsonl      # chaque décision/ordre/fill/rejet
 ```
 
+> **Contrats IG** : IG dimensionne les ordres en *contrats* (ex. 1 contrat
+> or ≈ 100 oz), pas en onces. La conversion onces→contrats (arrondi au pas
+> inférieur, minimum broker) est faite par l'adaptateur via
+> `broker.ig.contracts` dans `config/live.yaml` — vérifiez `oz_per_contract`,
+> `min_contracts` et `contract_step` contre `GET /markets/{epic}` de votre
+> compte. Les données historiques IG ont un **quota hebdomadaire** : les
+> bougies H1 sont mises en cache dans `live_state/cache/` et seuls les points
+> manquants sont redemandés à chaque cycle.
+
 Laisser tourner **plusieurs mois** (cible ≥ 30-50 trades). Le rapport
 compare win rate, expectancy R, profit factor, fréquence et slippage réel
 aux valeurs OOS du backtest et signale toute dégradation.
@@ -278,11 +295,13 @@ aux valeurs OOS du backtest et signale toute dégradation.
 ### Passage DEMO puis LIVE
 
 - **DEMO** : `mode: demo` dans `config/live.yaml` → ordres réels sur le
-  compte practice OANDA (SL/TP posés chez le broker, réconciliation à
-  chaque cycle : l'état du compte fait foi, jamais la mémoire du bot).
+  compte démo IG (SL/TP posés chez le broker, réconciliation à chaque cycle
+  via l'historique de transactions : l'état du compte fait foi, jamais la
+  mémoire du bot).
 - **LIVE** : trois verrous indépendants, il les faut TOUS :
   1. `mode: live` dans la config ;
-  2. `export GOLDSILVER_LIVE_ACK=JE-COMPRENDS-ARGENT-REEL` (+ `OANDA_ENV=live`) ;
+  2. `export GOLDSILVER_LIVE_ACK=JE-COMPRENDS-ARGENT-REEL` (+ `IG_ENV=live`
+     et une clé API de compte réel) ;
   3. `goldsilver-live run --enable-live`.
   Une condition manquante = refus de démarrer. C'est volontaire.
 

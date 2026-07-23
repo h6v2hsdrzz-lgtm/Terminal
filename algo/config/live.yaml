@@ -2,13 +2,14 @@
 # Bot d'exécution — Phase 1 : PAPER TRADING OBLIGATOIRE.
 #
 # mode: paper  -> ordres simulés localement, données réelles (aucun ordre broker)
-# mode: demo   -> ordres réels sur compte de démonstration OANDA (practice)
+# mode: demo   -> ordres réels sur compte de démonstration IG (IG_ENV=demo)
 # mode: live   -> VERROUILLÉ : exige EN PLUS la variable d'environnement
 #                 GOLDSILVER_LIVE_ACK=JE-COMPRENDS-ARGENT-REEL et le flag CLI
 #                 --enable-live. Une condition manquante = refus de démarrer.
 #
 # Identifiants (JAMAIS ici, uniquement en variables d'environnement) :
-#   OANDA_API_TOKEN, OANDA_ACCOUNT_ID, OANDA_ENV=practice|live
+#   IG_API_KEY, IG_IDENTIFIER, IG_PASSWORD, IG_ENV=demo|live
+#   IG_ACCOUNT_ID (optionnel — sinon compte "préféré")
 #   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (optionnel)
 # ============================================================================
 
@@ -24,10 +25,28 @@ poll:
   max_signal_age_bars: 4        # un signal 1h plus vieux que ça n'est plus pris
 
 broker:
-  adapter: "oanda"              # IG Markets possible plus tard via BrokerAdapter
+  adapter: "ig"                 # IG Markets (REST) ; autre broker = nouvel adaptateur
+  # actif interne -> epic IG. VÉRIFIER ces epics sur VOTRE compte :
+  #   goldsilver-live find-epic or   /   goldsilver-live find-epic argent
+  # (ceux ci-dessous sont les CFD spot "cash" usuels, à confirmer).
   instruments:
-    XAUUSD: "XAU_USD"
-    XAGUSD: "XAG_USD"
+    XAUUSD: "CS.D.CFDGOLD.CFDGC.IP"
+    XAGUSD: "CS.D.CFDSILVER.CFM.IP"
+  ig:
+    # Conversion onces <-> contrats + décimales des niveaux SL/TP, PAR epic.
+    # À confirmer via GET /markets/{epic} (contractSize, dealingRules).
+    # Ex. classique : 1 contrat or = 100 oz, 1 contrat argent = 5000 oz.
+    contracts:
+      "CS.D.CFDGOLD.CFDGC.IP":
+        oz_per_contract: 100.0
+        min_contracts: 0.1
+        contract_step: 0.1
+        level_decimals: 2
+      "CS.D.CFDSILVER.CFM.IP":
+        oz_per_contract: 5000.0
+        min_contracts: 0.1
+        contract_step: 0.1
+        level_decimals: 3
 
 risk:
   # Plafond DUR du moteur : 2 % par trade, codé en dur dans live/risk.py.

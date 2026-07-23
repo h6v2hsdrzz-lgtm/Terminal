@@ -200,15 +200,14 @@ class LiveEngine:
             instr = self.cfg.broker.instruments[a]
             if a in known and instr not in open_pos:
                 # la position connue a été clôturée (SL/TP broker, hors-ligne…)
+                # l'adaptateur renvoie les clôtures POSTÉRIEURES au marqueur,
+                # triées ; le marqueur est opaque (id numérique, horodatage…)
                 closed = self.broker.get_closed_trades_since(
                     state.get("last_closed_trade_id")
                 )
                 for c in closed:
                     register_closed_trade(state, c.realized_pnl)
-                    state["last_closed_trade_id"] = max(
-                        int(c.trade_id),
-                        int(state.get("last_closed_trade_id") or 0),
-                    )
+                    state["last_closed_trade_id"] = c.trade_id
                     self.journal.write("trade_closed", instrument=c.instrument,
                                        trade_id=c.trade_id,
                                        pnl=round(c.realized_pnl, 2),

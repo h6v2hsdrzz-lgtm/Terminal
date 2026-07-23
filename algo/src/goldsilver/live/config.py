@@ -22,9 +22,26 @@ class PollConfig:
 
 
 @dataclass(frozen=True)
+class IgContractSpec:
+    """Spécification d'un CFD IG : conversion onces <-> contrats.
+
+    Chez IG, la taille d'ordre est en CONTRATS (ex. or : 1 contrat = 100 oz),
+    alors que la stratégie et le sizing raisonnent en onces. Vérifier ces
+    valeurs sur votre compte via ``goldsilver-live find-epic or`` puis
+    ``GET /markets/{epic}`` (contractSize, decimalPlacesFactor).
+    """
+
+    oz_per_contract: float
+    min_contracts: float
+    contract_step: float
+    level_decimals: int               # décimales des niveaux SL/TP acceptées
+
+
+@dataclass(frozen=True)
 class LiveBrokerConfig:
-    adapter: str                      # "oanda" (IG possible plus tard)
-    instruments: dict[str, str]       # actif interne -> instrument broker
+    adapter: str                      # "ig"
+    instruments: dict[str, str]       # actif interne -> epic IG
+    ig_contracts: dict[str, IgContractSpec]  # epic -> spécification contrat
 
 
 @dataclass(frozen=True)
@@ -88,6 +105,15 @@ def load_live_config(path: str | Path) -> LiveConfig:
             adapter=str(_req(broker, "adapter", "broker")),
             instruments={str(k): str(v)
                          for k, v in _req(broker, "instruments", "broker").items()},
+            ig_contracts={
+                str(epic): IgContractSpec(
+                    oz_per_contract=float(_req(spec, "oz_per_contract", f"ig.{epic}")),
+                    min_contracts=float(_req(spec, "min_contracts", f"ig.{epic}")),
+                    contract_step=float(_req(spec, "contract_step", f"ig.{epic}")),
+                    level_decimals=int(_req(spec, "level_decimals", f"ig.{epic}")),
+                )
+                for epic, spec in broker.get("ig", {}).get("contracts", {}).items()
+            },
         ),
         risk=LiveRiskConfig(
             risk_pct=float(_req(risk, "risk_pct", "risk")),

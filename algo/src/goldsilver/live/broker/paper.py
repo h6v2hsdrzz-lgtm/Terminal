@@ -9,9 +9,9 @@ Phase 1 obligatoire du forward test. Aucun ordre ne quitte la machine :
 - le compte (cash, positions, trades clos) vit dans l'état persistant du
   moteur : un redémarrage reprend exactement où on en était.
 
-Le PaperBroker délègue données/cotations à un adaptateur source (OANDA
-practice en pratique) et implémente la même interface que lui : le moteur
-ne voit aucune différence entre paper, demo et live.
+Le PaperBroker délègue données/cotations à un adaptateur source (IG demo
+en pratique) et implémente la même interface que lui : le moteur ne voit
+aucune différence entre paper, demo et live.
 """
 
 from __future__ import annotations

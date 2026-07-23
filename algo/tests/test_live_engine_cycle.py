@@ -26,7 +26,7 @@ LIVE_CFG = {
     "strategy_config": "config/strat.yaml",
     "poll": {"granularity_hours": 4, "delay_after_close_seconds": 5,
               "history_hours": 800, "max_signal_age_bars": 4},
-    "broker": {"adapter": "oanda", "instruments": {"XAUUSD": "XAU_USD"}},
+    "broker": {"adapter": "ig", "instruments": {"XAUUSD": "XAU_USD"}},
     "risk": {"risk_pct": 0.01, "max_open_risk_pct": 0.02, "min_rr": 3.0},
     "regime": {"trend_ema": 20, "slope_lookback_bars": 5, "min_slope_pct": 0.0,
                 "use_efficiency_ratio": True, "er_window_bars": 20, "er_min": 0.2},

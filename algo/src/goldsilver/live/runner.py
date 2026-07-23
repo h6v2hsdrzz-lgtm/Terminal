@@ -21,13 +21,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from goldsilver.live.broker.base import BrokerAdapter
-from goldsilver.live.broker.oanda import OandaBroker
+from goldsilver.live.broker.base import BrokerAdapter, BrokerError
+from goldsilver.live.broker.ig import IgBroker
 from goldsilver.live.broker.paper import PaperBroker, default_paper_state
 from goldsilver.live.config import LiveConfig, load_live_config
 from goldsilver.live.engine import CycleReport, LiveEngine
 from goldsilver.live.journal import Journal
-from goldsilver.live.modes import TradingMode, check_live_gate
+from goldsilver.live.modes import LiveLockError, TradingMode, check_live_gate
 from goldsilver.live.notify import TelegramNotifier
 from goldsilver.live.state import StateStore
 
@@ -35,13 +35,14 @@ log = logging.getLogger("goldsilver.live")
 
 
 def _build_broker(cfg: LiveConfig, state: dict) -> BrokerAdapter:
-    if cfg.broker.adapter != "oanda":
+    if cfg.broker.adapter != "ig":
         raise SystemExit(f"Adaptateur broker inconnu : {cfg.broker.adapter!r} "
-                         "(disponible : oanda ; IG à venir via BrokerAdapter)")
-    if cfg.mode is TradingMode.LIVE:
-        source = OandaBroker(expected_env="live")
-    else:
-        source = OandaBroker(expected_env="practice")
+                         "(disponible : ig ; autre broker = implémenter BrokerAdapter)")
+    source = IgBroker(
+        expected_env="live" if cfg.mode is TradingMode.LIVE else "demo",
+        contracts=cfg.broker.ig_contracts,
+        cache_dir=cfg.resolve("live_state/cache"),
+    )
     if cfg.mode is TradingMode.PAPER:
         if state.get("paper") is None:
             state["paper"] = default_paper_state(cfg.paper_initial_equity)
@@ -153,6 +154,25 @@ def cmd_report(cfg: LiveConfig) -> int:
     return 0
 
 
+def cmd_find_epic(cfg: LiveConfig, term: str) -> int:
+    """Recherche les epics IG d'un terme (ex. 'or', 'gold', 'silver')."""
+    if cfg.broker.adapter != "ig":
+        raise SystemExit("find-epic n'est disponible que pour l'adaptateur IG")
+    broker = IgBroker(
+        expected_env="live" if cfg.mode is TradingMode.LIVE else "demo",
+        contracts=cfg.broker.ig_contracts,
+    )
+    results = broker.search_markets(term)
+    if not results:
+        log.info("Aucun marché trouvé pour %r", term)
+        return 0
+    for m in results:
+        log.info("%-28s %-40s %s %s", m["epic"], m["name"], m["type"], m["expiry"])
+    log.info("Renseignez l'epic choisi dans broker.instruments de %s, puis "
+             "vérifiez contractSize via GET /markets/{epic}.", cfg.strategy_config)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="goldsilver-live",
@@ -170,6 +190,8 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("reset-halt", help="lève la halte (action humaine explicite)")
     sub.add_parser("status", help="état courant")
     sub.add_parser("report", help="rapport forward test vs backtest")
+    epic_p = sub.add_parser("find-epic", help="recherche un epic IG par mot-clé")
+    epic_p.add_argument("term", help="ex. or, gold, silver, argent")
 
     args = parser.parse_args(argv)
     logging.basicConfig(
@@ -178,16 +200,28 @@ def main(argv: list[str] | None = None) -> int:
         datefmt="%H:%M:%S", stream=sys.stdout,
     )
     cfg = load_live_config(args.config)
-    if args.command == "run":
-        return cmd_run(cfg, args.once, args.enable_live)
-    if args.command == "flatten":
-        return cmd_flatten(cfg, args.enable_live)
-    if args.command == "reset-halt":
-        return cmd_reset_halt(cfg)
-    if args.command == "status":
-        return cmd_status(cfg)
-    if args.command == "report":
-        return cmd_report(cfg)
+    try:
+        if args.command == "run":
+            return cmd_run(cfg, args.once, args.enable_live)
+        if args.command == "flatten":
+            return cmd_flatten(cfg, args.enable_live)
+        if args.command == "reset-halt":
+            return cmd_reset_halt(cfg)
+        if args.command == "status":
+            return cmd_status(cfg)
+        if args.command == "report":
+            return cmd_report(cfg)
+        if args.command == "find-epic":
+            return cmd_find_epic(cfg, args.term)
+    except LiveLockError as exc:
+        log.error("Démarrage refusé (verrou de sécurité) : %s", exc)
+        return 3
+    except BrokerError as exc:
+        # échec au DÉMARRAGE (identifiants, broker injoignable) : on ne démarre
+        # pas. En cours de cycle, ces erreurs sont déjà rattrapées (cycle sans
+        # trade). Message clair plutôt qu'une stack trace.
+        log.error("Broker indisponible au démarrage, arrêt : %s", exc)
+        return 4
     return 2
 
 

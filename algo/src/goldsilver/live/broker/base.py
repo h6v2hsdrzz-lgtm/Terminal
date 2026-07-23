@@ -1,8 +1,8 @@
-"""Interface BrokerAdapter : tout broker (OANDA, IG, paper) l'implémente.
+"""Interface BrokerAdapter : tout broker (IG, paper, …) l'implémente.
 
 Le moteur ne parle QU'À cette interface. Conventions :
-- ``instrument`` : identifiant broker (ex. OANDA ``XAU_USD``) — le mapping
-  actif interne -> instrument vit dans la config.
+- ``instrument`` : identifiant broker (ex. epic IG ``CS.D.CFDGOLD.CFDGC.IP``)
+  — le mapping actif interne -> instrument vit dans la config.
 - ``units`` : positif = long, négatif = short, en unités de l'instrument
   (1 unité XAU_USD = 1 once).
 - Les SL/TP sont posés CHEZ le broker à l'entrée (``place_market_order``),
@@ -70,7 +70,7 @@ class ClosedTrade:
 
 
 class BrokerAdapter(ABC):
-    """Contrat minimal dont le moteur a besoin. Implémentations : oanda, paper."""
+    """Contrat minimal dont le moteur a besoin. Implémentations : ig, paper."""
 
     name: str = "base"
 
