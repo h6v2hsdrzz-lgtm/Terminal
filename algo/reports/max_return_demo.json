@@ -1,0 +1,167 @@
+[
+  {
+    "strategy": "trend_pullback",
+    "config": "config/default.yaml",
+    "grid_sizes": {
+      "trend_ema": 7,
+      "rsi_buy": 5,
+      "sl_atr_mult": 5,
+      "tp_rr": 5
+    },
+    "n_combos": 875,
+    "mirage_full_sample": {
+      "params": {
+        "trend_ema": 140,
+        "rsi_buy": 35.0,
+        "sl_atr_mult": 3.0,
+        "tp_rr": 4.0
+      },
+      "metrics": {
+        "total_return": -0.0601713178187967,
+        "monthly_mean": -0.0002871460962649218,
+        "monthly_std": 0.028509913043304663,
+        "sharpe": -0.04276815951024568,
+        "max_drawdown": 0.38851472995734704,
+        "n_trades": 751,
+        "profit_factor": 0.9732890804355846
+      }
+    },
+    "honest_process": {
+      "split": "2024-04-02 00:00:00+00:00",
+      "params_from_train": {
+        "trend_ema": 140,
+        "rsi_buy": 30.0,
+        "sl_atr_mult": 3.0,
+        "tp_rr": 2.5
+      },
+      "train_metrics": {
+        "total_return": -0.26144790442669075,
+        "monthly_mean": -0.0045217772481597595,
+        "monthly_std": 0.020188548845562482,
+        "sharpe": -0.7173370665423756,
+        "max_drawdown": 0.3152636378079834,
+        "n_trades": 421,
+        "profit_factor": 0.8091821959136939
+      },
+      "oos_metrics": {
+        "total_return": 0.2174200868059568,
+        "monthly_mean": 0.0074890122777918336,
+        "monthly_std": 0.01927047767624456,
+        "sharpe": 1.3262742030600467,
+        "max_drawdown": 0.05326240384400294,
+        "n_trades": 133,
+        "profit_factor": 1.5358311498628585
+      }
+    }
+  },
+  {
+    "strategy": "ratio_reversion",
+    "config": "config/ratio.yaml",
+    "grid_sizes": {
+      "z_window": 6,
+      "z_entry": 5,
+      "sl_atr_mult": 5,
+      "tp_rr": 5
+    },
+    "n_combos": 750,
+    "mirage_full_sample": {
+      "params": {
+        "z_window": 480,
+        "z_entry": 1.5,
+        "sl_atr_mult": 3.0,
+        "tp_rr": 6.0
+      },
+      "metrics": {
+        "total_return": 0.11920182753248199,
+        "monthly_mean": 0.0015061929332586506,
+        "monthly_std": 0.02272215280928912,
+        "sharpe": 0.2176210004022483,
+        "max_drawdown": 0.2083306383828366,
+        "n_trades": 573,
+        "profit_factor": 1.0544765028619727
+      }
+    },
+    "honest_process": {
+      "split": "2024-04-02 00:00:00+00:00",
+      "params_from_train": {
+        "z_window": 600,
+        "z_entry": 3.0,
+        "sl_atr_mult": 3.5,
+        "tp_rr": 3.0
+      },
+      "train_metrics": {
+        "total_return": -0.013957274858641178,
+        "monthly_mean": -0.00017983651896201665,
+        "monthly_std": 0.008971394347188424,
+        "sharpe": -0.05833850416951304,
+        "max_drawdown": 0.13921249086110177,
+        "n_trades": 90,
+        "profit_factor": 0.9640522098617782
+      },
+      "oos_metrics": {
+        "total_return": -0.0047848770531770946,
+        "monthly_mean": -0.0001465855168677271,
+        "monthly_std": 0.008022094817696123,
+        "sharpe": -0.06314182166443512,
+        "max_drawdown": 0.03170068497864065,
+        "n_trades": 21,
+        "profit_factor": 0.9467718732880057
+      }
+    }
+  },
+  {
+    "strategy": "daily_breakout",
+    "config": "config/daily.yaml",
+    "grid_sizes": {
+      "donchian_n": 6,
+      "trend_ema": 4,
+      "sl_atr_mult": 5,
+      "tp_rr": 5
+    },
+    "n_combos": 600,
+    "mirage_full_sample": {
+      "params": {
+        "donchian_n": 30,
+        "trend_ema": 50,
+        "sl_atr_mult": 1.5,
+        "tp_rr": 2.5
+      },
+      "metrics": {
+        "total_return": 0.3197737834923633,
+        "monthly_mean": 0.003143561971151349,
+        "monthly_std": 0.010724006304875225,
+        "sharpe": 1.150565832740998,
+        "max_drawdown": 0.05690916111005473,
+        "n_trades": 83,
+        "profit_factor": 2.467347700965047
+      }
+    },
+    "honest_process": {
+      "split": "2024-04-02 00:00:00+00:00",
+      "params_from_train": {
+        "donchian_n": 30,
+        "trend_ema": 50,
+        "sl_atr_mult": 1.5,
+        "tp_rr": 2.5
+      },
+      "train_metrics": {
+        "total_return": 0.17392528938928398,
+        "monthly_mean": 0.002568238461832977,
+        "monthly_std": 0.01110428422914516,
+        "sharpe": 0.948873475449563,
+        "max_drawdown": 0.05690916111005473,
+        "n_trades": 64,
+        "profit_factor": 1.9415075018588803
+      },
+      "oos_metrics": {
+        "total_return": 0.08310190603596723,
+        "monthly_mean": 0.0030035590838132847,
+        "monthly_std": 0.009481328922013813,
+        "sharpe": 1.1538131818439805,
+        "max_drawdown": 0.02172535654210328,
+        "n_trades": 17,
+        "profit_factor": 3.5033901254251196
+      }
+    }
+  }
+]

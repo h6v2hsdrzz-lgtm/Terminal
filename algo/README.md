@@ -137,13 +137,77 @@ or + argent une fois les coûts réalistes appliqués. Les vrais chiffres :
 **Réponse à la question posée : non, cette stratégie n'a pas d'edge
 out-of-sample.** Le framework, lui, fait exactement son travail : il l'a
 prouvé en 2 minutes de calcul, avant qu'un seul euro réel ne soit risqué.
-Pour viser honnêtement 5-6 %/mois (≈ 79-101 %/an composés), il faudra une
-hypothèse de marché réellement différenciante — pas un réglage de
-paramètres. Les pistes sérieuses : exploiter le ratio or/argent
-(mean-reversion du spread entre les deux métaux corrélés), des filtres de
-régime (l'edge long n'existe qu'en tendance daily confirmée), ou des
-horizons plus longs où le spread pèse moins. Chacune se teste dans ce
-framework en écrivant une classe `Strategy` et en relançant `validate`.
+
+---
+
+## Itération 2 : trois hypothèses de marché, optimisation max, et la vérité
+
+Suite à la demande « optimise tout pour le rendement maximum, minimum
+5 %/mois » : deux nouvelles stratégies ont été construites (hypothèses
+différentes, pas des réglages), les contraintes réelles de levier ajoutées
+(or ×20, argent ×10), puis **2 225 combinaisons** de paramètres balayées par
+`scripts/optimize_max_return.py` — chaque « optimum » étant rejoué
+honnêtement (optimisation sur 70 % de l'historique, évaluation figée sur
+les 30 % jamais vus). Résumés commités dans `reports/`.
+
+### Verdicts de la validation complète (risque 0.75 %/trade)
+
+| Stratégie | Verdict | Détail |
+|---|---|---|
+| `trend_pullback` (1h) | **OVERFIT / PAS D'EDGE** (0/7) | cf. section précédente |
+| `ratio_reversion` (pair or/argent) | **OVERFIT / PAS D'EDGE** (1/7) | WF négatif (WFE −1.8), 0 % des runs bruités profitables, plateau 0. L'écart or/argent saute de régime en régime au lieu de revenir à la moyenne. |
+| `daily_breakout` (Donchian daily long-only) | **FRAGILE** (6/7) | WFE 1.89, 67 % de folds WF profitables, 100 % des runs bruités profitables, plateau 1.0 — mais voir les réserves ci-dessous. |
+
+### « Optimiser tout au rendement max » : mirage vs réalité
+
+| Stratégie | A. Optimisé sur TOUT l'historique (mirage) | B. Même optimiseur sur 70 %, testé sur les 30 % jamais vus |
+|---|---|---|
+| trend_pullback | −6.0 % (rien ne rend le 1h profitable, même en 875 combos) | train −26 % → OOS +21.7 % (pur hasard de régime : le WF dit 3/9 folds) |
+| ratio_reversion | +11.9 % | train −1.4 % → **OOS −0.5 %** |
+| daily_breakout | +32.0 % | train +17.4 % → **OOS +8.3 %** (+0.30 %/mois) — mêmes paramètres retenus sur 70 % et 100 % : stabilité réelle |
+
+### Le seul edge survivant, et son prix en risque
+
+`daily_breakout`, paramètres choisis sur le train uniquement (Donchian 30,
+EMA 50, SL 1.5×ATR daily, R:R 2.5 — l'optimiseur préfère un R:R < 1:3),
+**période complète 2019-2026, tous régimes** :
+
+| Risque/trade | Rendement mensuel moyen | σ mensuel | Max drawdown | Verdict pratique |
+|---|---|---|---|---|
+| 2 % | **+0.87 %/mois** | 3.4 % | **−18.8 %** | tradable (PF 1.97, WR 47 %, 118 trades) |
+| 5 % | +2.11 %/mois | 8.9 % | −48.9 % | la moitié du compte part en drawdown |
+| 10 % | +4.39 %/mois | 18.9 % | **−78.1 %** | compte détruit en pratique ; et toujours < 5 %/mois |
+
+Sur la seule fenêtre OOS 2024-2026 (le régime le plus favorable de
+l'histoire des métaux), 10 % de risque donne +9.1 %/mois — avec
+**P(drawdown ≥ 30 %) = 30 %** en Monte-Carlo et des mois à ±20 %.
+
+### Réserves honnêtes sur le breakout daily (à lire avant d'y croire)
+
+1. Le contrôle « OOS profitable » du verdict FRAGILE n'a validé qu'**1 trade**
+   au risque par défaut : avec des stops en ATR daily et un compte de 10 k$,
+   les tailles calculées tombent souvent sous les minimums de lot
+   (surtout les 50 oz d'argent) — le système ne devient actif qu'à ~2 %
+   de risque. Preuve faible, pas preuve forte.
+2. Le detrending ne laisse que **+0.05 %/mois** d'edge résiduel : l'essentiel
+   du rendement EST la tendance séculaire des métaux. C'est un système
+   long-only qui vit du bull ; dans un marché baissier ou en range
+   prolongé, il s'assèche (au mieux) ou saigne en faux départs.
+3. ~120 trades en 7.5 ans : échantillon petit ; les intervalles de
+   confiance sont larges.
+
+### Conclusion sur l'objectif « minimum 5 %/mois »
+
+**Non tenable, et aucun réglage ne le rendra tenable.** Les faits mesurés :
+même à 10 % de risque par trade (levier ×20/×10 pleinement utilisé), la
+moyenne tous-régimes reste sous 5 %/mois, au prix d'un drawdown historique
+de 78 % et d'une probabilité de ruine inacceptable. Et un rendement mensuel
+*minimum garanti* n'existe pour aucune stratégie : celle-ci, à ce niveau de
+risque, a un écart-type mensuel de ±19 % — des mois à −30 % font partie du
+contrat. Ce que les données autorisent honnêtement avec l'edge survivant :
+**~0.9 %/mois de moyenne à 2 % de risque, drawdown ~19 %, sur un régime
+historiquement favorable.** Quiconque promet mieux sur ces marchés vend la
+colonne « mirage » du tableau ci-dessus.
 
 ## Avertissements
 
