@@ -51,8 +51,14 @@ broker:
 risk:
   # Plafond DUR du moteur : 2 % par trade, codé en dur dans live/risk.py.
   # Mettre plus ici => le moteur REFUSE de démarrer.
-  risk_pct: 0.01                # 1 % par trade en forward test
-  max_open_risk_pct: 0.02       # risque cumulé max (les 2 métaux)
+  # Réglage demandé : 2 % min ET 2 % max => chaque trade vise EXACTEMENT 2 %
+  # (le plafond dur), et le risque total ouvert est lui aussi plafonné à 2 %
+  # => UNE SEULE position à la fois (or OU argent). Le second signal simultané
+  # est refusé (budget épuisé), jamais réduit sous 2 %.
+  risk_pct: 0.02                # 2 % par trade = plafond dur du moteur
+  max_open_risk_pct: 0.02       # 2 % de risque total ouvert => 1 position max
+  # NB : pour tenir or ET argent en même temps à 2 % chacun (jusqu'à 4 % de
+  # risque total, plus proche du backtest), passer max_open_risk_pct à 0.04.
   min_rr: 3.0                   # aucun ordre si TP/SL < 1:3
 
 regime:
