@@ -196,6 +196,42 @@ l'histoire des métaux), 10 % de risque donne +9.1 %/mois — avec
 3. ~120 trades en 7.5 ans : échantillon petit ; les intervalles de
    confiance sont larges.
 
+## Itération 3 : breakout 4h — premier verdict ROBUSTE, et sa frontière de risque
+
+Même moteur de cassure Donchian + filtre EMA, déplacé du daily au **4h**
+(`config/breakout_4h.yaml`) pour densifier l'edge (~4× plus de signaux, coûts
+encore faibles). Verdict de la suite complète : **ROBUSTE, 6/7 contrôles** —
+74 trades OOS (+16.1 %, Sharpe 1.19, PF 1.66, expectancy +0.53R), 8/9 folds
+walk-forward profitables (WFE 1.42), 100 % des runs bruités profitables,
+plateau de sensibilité 1.0, P(perte) bootstrap 3 %.
+
+**Le contrôle qui échoue est le detrending (Sharpe détendu −0.27) : cet
+edge EST la tendance haussière des métaux.** C'est un trend-rider discipliné,
+pas une machine à rendement absolu — si le bull s'arrête, le filtre le met à
+plat et il saigne lentement (−0.14 %/mois sur données détendues).
+
+Frontière de risque mesurée (moteur réel, params par défaut jamais réglés
+sur l'OOS) :
+
+| Risque/trade | Toute période %/mois | DD hist | P(DD≥50 %) | OOS 2024-26 %/mois | DD OOS |
+|---|---|---|---|---|---|
+| 2 % | +1.01 % | −41 % | 0.4 % | +2.08 % | −13 % |
+| **5 %** | +2.71 % | **−78 %** | **53 %** | **+5.41 %** | −36 % |
+| 7.5 % | +4.13 % | −91 % | 92 % | +8.25 % | −51 % |
+| 10 % | +5.68 % | −96 % | 99 % | +11.07 % | −61 % |
+
+Lecture honnête : la fourchette « 4-5 %/mois à 5-15 % de risque » n'existe
+que sur la fenêtre 2024-2026 (le meilleur régime de l'histoire des métaux)
+et s'achète avec une chance sur deux de traverser −50 % sur un cycle
+complet. Sur l'ensemble des régimes 2019-2026, le même système à 5 % de
+risque fait +2.7 %/mois de moyenne avec un −78 % historique (le chop
+2021-2022 broie les cassures). S'ajoute l'avertissement de test multiple :
+c'est la 4ᵉ hypothèse essayée sur les mêmes 7.5 ans — la probabilité qu'un
+« ROBUSTE » soit un survivant chanceux augmente à chaque itération de
+recherche. Zone défendable pour un compte réel : **2-3 % de risque,
++1-2 %/mois d'espérance conditionnelle au régime haussier, −15 à −40 % de
+drawdown à accepter.**
+
 ### Conclusion sur l'objectif « minimum 5 %/mois »
 
 **Non tenable, et aucun réglage ne le rendra tenable.** Les faits mesurés :

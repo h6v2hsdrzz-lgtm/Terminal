@@ -1,0 +1,106 @@
+# Stratégie 3 : breakout Donchian daily long-only, filtre EMA.
+# Horizon swing lent : le spread pèse un ordre de grandeur de moins.
+
+seed: 42
+
+data:
+  base_timeframe: "1h"
+  timeframes: ["1h", "4h", "1d"]
+  start: "2019-01-01"
+  end: null
+  session_day_offset_hours: -2
+  warmup_days: 120              # Donchian 55j + EMA 150 daily à amorcer
+  assets:
+    XAUUSD:
+      csv: "data/raw/XAUUSD_1h.csv"
+      contract_size: 1.0
+      min_size: 1.0
+      size_step: 1.0
+      max_leverage: 20.0        # contrainte courtier : or x20
+    XAGUSD:
+      csv: "data/raw/XAGUSD_1h.csv"
+      contract_size: 1.0
+      min_size: 50.0
+      size_step: 50.0
+      max_leverage: 10.0        # argent x10
+
+fetch:
+  source: "dukascopy"
+  symbols: [XAUUSD, XAGUSD]
+  start: "2019-01-01"
+  end: null
+  out_dir: "data/raw"
+  price_scale: 1000.0
+  pause_seconds: 0.15
+
+strategy:
+  name: "daily_breakout"
+  params:
+    trend_timeframe: "4h"
+    donchian_n: 60
+    trend_ema: 100
+    atr_period: 14
+    sl_atr_mult: 2.5
+    tp_rr: 3.0
+    max_bars_held: 240
+    direction: "long"
+
+engine:
+  initial_equity: 10000.0
+  risk_pct: 0.0075
+  max_open_risk_pct: 0.015
+  corr_risk_factor: 0.5
+  max_leverage: 20.0
+  intrabar_worst_case: true
+  costs:
+    spread_mode: "from_data"
+    pessimistic_spread_mult: 1.3
+    rollover_hour_utc: 21
+    triple_swap_weekday: 2
+    per_asset:
+      XAUUSD: {fixed_spread: 0.35, slippage: 0.10, swap_long: -0.60, swap_short: 0.05}
+      XAGUSD: {fixed_spread: 0.030, slippage: 0.012, swap_long: -0.008, swap_short: 0.0005}
+
+validation:
+  objective: "sharpe"
+  min_trades: 40               # ~10-20 cassures/an sur deux actifs
+  grid:
+    donchian_n: [30, 60, 90]
+    trend_ema: [50, 100, 150]
+    sl_atr_mult: [2.0, 2.5, 3.0]
+  oos:
+    train_frac: 0.70
+  walk_forward:
+    train_months: 36
+    test_months: 6
+    anchored: false
+  monte_carlo:
+    n_runs: 2000
+    ruin_drawdown: 0.30
+  noise:
+    n_runs: 100
+    atr_frac: 0.10
+  sensitivity:
+    metric: "sharpe"
+    pairs:
+      - ["donchian_n", "trend_ema"]
+      - ["sl_atr_mult", "tp_rr"]
+    ranges:
+      donchian_n: [20, 30, 45, 60, 90, 120]
+      trend_ema: [50, 100, 150, 200]
+      sl_atr_mult: [1.5, 2.0, 2.5, 3.0, 3.5]
+      tp_rr: [2.0, 2.5, 3.0, 4.0, 5.0]
+
+report:
+  out_dir: "reports"
+  plotlyjs: "inline"
+  monthly_benchmark_pct: [5.0, 6.0]
+  thresholds:
+    oos_sharpe_retention: 0.5
+    wfe_min: 0.5
+    wf_profitable_folds_min: 0.5
+    mc_ruin_prob_max: 0.05
+    mc_p5_total_return_min: -0.10
+    noise_profitable_frac_min: 0.6
+    noise_sharpe_retention: 0.5
+    sensitivity_plateau_min: 0.5

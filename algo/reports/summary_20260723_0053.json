@@ -1,0 +1,173 @@
+{
+  "generated_utc": "2026-07-23T00:53:48+00:00",
+  "verdict": "ROBUSTE",
+  "checks": [
+    {
+      "name": "OOS profitable (paramètres par défaut)",
+      "passed": true,
+      "core": true,
+      "value": "rendement +16.05 %, Sharpe 1.19, PF 1.66, 74 trades",
+      "threshold": "rendement > 0, Sharpe > 0, PF > 1"
+    },
+    {
+      "name": "Dégradation IS -> OOS (paramètres optimisés sur le train)",
+      "passed": true,
+      "core": true,
+      "value": "Sharpe IS 0.66 -> OOS 1.51 (rétention 2.30) ; défaut : IS 0.34 -> OOS 1.19",
+      "threshold": "rétention >= 0.50 et Sharpe OOS > 0"
+    },
+    {
+      "name": "Walk-forward (fenêtre glissante)",
+      "passed": true,
+      "core": true,
+      "value": "WFE 1.42, folds profitables 89% (9 folds)",
+      "threshold": "WFE >= 0.50 et folds profitables >= 50%"
+    },
+    {
+      "name": "Monte-Carlo (reshuffle + bootstrap des trades)",
+      "passed": true,
+      "core": false,
+      "value": "P(DD >= 30%) = 0.0% (reshuffle), rendement p5 +1.85 % (bootstrap), DD p95 -6.65 %",
+      "threshold": "P(ruine) <= 5% et p5 bootstrap >= -10.00 %"
+    },
+    {
+      "name": "Noise test (stabilité au bruit de prix)",
+      "passed": true,
+      "core": false,
+      "value": "100% des 100 runs profitables, Sharpe médian 0.53 vs base 0.51",
+      "threshold": ">= 60% profitables et rétention >= 0.50"
+    },
+    {
+      "name": "Detrending (edge hors tendance de fond)",
+      "passed": false,
+      "core": false,
+      "value": "Sharpe détendu -0.27 (base 0.51) ; rendement mensuel détendu -0.14 %",
+      "threshold": "Sharpe détendu > 0"
+    },
+    {
+      "name": "Sensibilité aux paramètres (plateau vs pic)",
+      "passed": true,
+      "core": false,
+      "value": "score de plateau 1.00",
+      "threshold": ">= 0.50"
+    }
+  ],
+  "oos_monthly_mean_pct": 0.566,
+  "oos_monthly_std_pct": 1.645,
+  "wf_oos_annual_return_pct": 7.2,
+  "benchmark_pct": [
+    5.0,
+    6.0
+  ],
+  "benchmark_verdict": "La cible de 5-6 %/mois N'EST PAS atteinte : le rendement mensuel OOS réellement mesuré est +0.57 %/mois.",
+  "full_period_metrics": {
+    "start": "2019-01-01 23:00:00+00:00",
+    "end": "2026-06-30 23:00:00+00:00",
+    "n_days": 2737.0,
+    "initial_equity": 10000.0,
+    "final_equity": 12458.02,
+    "total_return": 0.24580172976289494,
+    "cagr": 0.029763673211486985,
+    "monthly_mean": 0.0025927477951111807,
+    "monthly_std": 0.01743264571650638,
+    "monthly_median": -0.0024297502822763772,
+    "best_month": 0.07871743156899491,
+    "worst_month": -0.026885169076668047,
+    "pct_positive_months": 0.4222222222222222,
+    "sharpe": 0.5125870382967396,
+    "sortino": 0.5390185251672949,
+    "max_drawdown": 0.1255161688916172,
+    "max_drawdown_duration_days": 1344.3,
+    "n_trades": 264,
+    "win_rate": 0.3560606060606061,
+    "profit_factor": 1.2784283563466248,
+    "expectancy_r": 0.20981436882991286,
+    "expectancy_usd": 9.310671581927807,
+    "avg_win_usd": 120.0659917686393,
+    "avg_loss_usd": -51.93050546248911,
+    "avg_bars_held": 90.97348484848484,
+    "exposure": 0.38507887076027353,
+    "total_swap_paid": -599.4
+  },
+  "oos_default_metrics": {
+    "start": "2024-04-02 00:00:00+00:00",
+    "end": "2026-06-30 23:00:00+00:00",
+    "n_days": 820.0,
+    "initial_equity": 10000.0,
+    "final_equity": 11605.09,
+    "total_return": 0.16050897296996047,
+    "cagr": 0.06855687011897493,
+    "monthly_mean": 0.005657073410937718,
+    "monthly_std": 0.0164490175234167,
+    "monthly_median": 0.0,
+    "best_month": 0.041501524318876326,
+    "worst_month": -0.018003906088518207,
+    "pct_positive_months": 0.4444444444444444,
+    "sharpe": 1.1892793009643527,
+    "sortino": 1.284948813349219,
+    "max_drawdown": 0.07404009605922202,
+    "max_drawdown_duration_days": 175.8,
+    "n_trades": 74,
+    "win_rate": 0.43243243243243246,
+    "profit_factor": 1.6608624452974547,
+    "expectancy_r": 0.5269446578353577,
+    "expectancy_usd": 21.690401752697568,
+    "avg_win_usd": 126.05844039293838,
+    "avg_loss_usd": -57.828103877962086,
+    "avg_bars_held": 92.0,
+    "exposure": 0.3436842105263158,
+    "total_swap_paid": -80.6
+  },
+  "oos_tuned_params": {
+    "donchian_n": 90,
+    "trend_ema": 50,
+    "sl_atr_mult": 2.5
+  },
+  "wf": {
+    "wfe": 1.4193733221468132,
+    "wfe_sharpe": 1.4934559297958414,
+    "profitable_folds_frac": 0.8888888888888888,
+    "n_folds": 9
+  },
+  "monte_carlo": {
+    "scope": "OOS",
+    "p_ruin": 0.0,
+    "p_loss_bootstrap": 0.032,
+    "shuffle_dd_p50_pct": 4.12,
+    "shuffle_dd_p95_pct": 6.65,
+    "bootstrap_ret_p5_pct": 1.85,
+    "bootstrap_ret_p50_pct": 15.85,
+    "bootstrap_ret_p95_pct": 32.19
+  },
+  "noise": {
+    "profitable_frac": 1.0,
+    "sharpe_median": 0.5345988573940972,
+    "base_sharpe": 0.5125870382967396
+  },
+  "detrend": {
+    "residual_sharpe": -0.27098949991358007,
+    "residual_monthly_mean_pct": -0.142,
+    "drift_annual_pct": {
+      "XAUUSD": 16.430715456216994,
+      "XAGUSD": 19.408533304123978
+    }
+  },
+  "sensitivity_plateau": 1.0,
+  "data": {
+    "XAUUSD": {
+      "bars": 44313,
+      "start": "2019-01-01 23:00:00+00:00",
+      "end": "2026-06-30 23:00:00+00:00",
+      "median_spread": 0.37,
+      "spread_p90": 0.71
+    },
+    "XAGUSD": {
+      "bars": 44306,
+      "start": "2019-01-01 23:00:00+00:00",
+      "end": "2026-06-30 23:00:00+00:00",
+      "median_spread": 0.03,
+      "spread_p90": 0.042
+    }
+  },
+  "seed": 42
+}
