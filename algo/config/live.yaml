@@ -13,7 +13,7 @@
 #   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID (optionnel)
 # ============================================================================
 
-mode: paper
+mode: demo
 
 # La stratégie VALIDÉE (ROBUSTE 6/7) — réutilisée telle quelle, pas recodée.
 strategy_config: "config/breakout_4h.yaml"
