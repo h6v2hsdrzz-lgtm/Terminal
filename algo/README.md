@@ -275,6 +275,61 @@ positions exigerait soit d'empiler plusieurs trades sur le même métal
 ×3.5), soit d'ajouter ~5 instruments décorrélés (le moteur gère N actifs :
 c'est la seule voie honnête vers plus de concurrence).
 
+## Itération 5 : portefeuille décorrélé (S&P 500, WTI, BTC) + risque doublé
+
+Pour chercher un edge par **décorrélation**, la même stratégie validée
+(breakout 4h long-only) a été appliquée à 5 instruments de 4 classes
+d'actifs — or, argent, S&P 500, pétrole WTI, Bitcoin (données Dukascopy
+2019-2026, `scripts/portfolio_analysis.py`).
+
+**La décorrélation est réelle au niveau des données** — corrélation des
+rendements journaliers :
+
+| | BTC | WTI | S&P500 | Argent | Or |
+|---|---|---|---|---|---|
+| **BTC** | 1.00 | 0.09 | 0.37 | 0.21 | 0.15 |
+| **WTI** | 0.09 | 1.00 | 0.18 | 0.08 | 0.04 |
+| **S&P500** | 0.37 | 0.18 | 1.00 | 0.25 | 0.13 |
+| **Or** | 0.15 | 0.04 | 0.13 | 0.79 | 1.00 |
+
+Tout est faiblement corrélé, sauf or/argent (0.79, même classe). **Mais**
+la stratégie breakout **n'a aucun edge sur le S&P, le pétrole et le BTC** —
+elle y perd (−0.91 %/mois), et diversifier dans des paris perdants dégrade
+le portefeuille au lieu de l'améliorer :
+
+| Univers (2 % / trade) | %/mois | Sharpe | Max DD | Verdict validation |
+|---|---|---|---|---|
+| Métaux seuls (or+argent) | **+0.91 %** | 0.56 | 40 % | (breakout_4h : ROBUSTE 6/7) |
+| Non-métaux (S&P+WTI+BTC) | −0.91 % | −0.47 | 64 % | — |
+| Portefeuille complet (5) | −0.32 % | −0.14 | 58 % | **OVERFIT 2/7** (même ré-optimisé OOS) |
+
+**La leçon** : la décorrélation ne crée pas d'edge, elle ne fait que
+combiner ceux qui existent. Ajouter des marchés décorrélés mais sur lesquels
+la stratégie n'a pas d'edge propre ne diversifie que des pertes. Le
+portefeuille complet, même avec ses paramètres ré-optimisés hors échantillon,
+ressort **OVERFIT / PAS D'EDGE** — strictement pire que les métaux seuls.
+**Décision (règle utilisateur) : on garde les métaux seuls.** Le code, les
+données et `config/portfolio.yaml` restent comme résultat négatif documenté ;
+brancher d'autres marchés exigerait de trouver, par marché, une stratégie
+qui y a un vrai edge (le framework le teste — aucun raccourci).
+
+### Risque doublé : 2 % → 4 % par trade
+
+Sur la stratégie conservée (métaux), le risque par trade a été **doublé à
+4 %** comme demandé — le plafond dur du moteur (`live/risk.py`) a été relevé
+de 2 % à 4 % par décision explicite. Coût mesuré du doublement :
+
+| Risque/trade | %/mois (métaux, full) | Max drawdown |
+|---|---|---|
+| 2 % | +0.9 % | ~40 % |
+| **4 %** | **+2.0 %** | **~67 %** |
+
+Le doublement double aussi le drawdown. À 4 %/trade, le vrai filet de
+sécurité n'est plus le plafond mais les **kill switches** : le halt à −20 %
+de drawdown et la limite de perte journalière −5 % (deux stops le même jour
+= −8 % → halte) interviennent bien avant le −67 % théorique. C'est un choix
+de risque assumé du propriétaire du compte, pas une recommandation.
+
 ### Conclusion sur l'objectif « minimum 5 %/mois »
 
 **Non tenable, et aucun réglage ne le rendra tenable.** Les faits mesurés :

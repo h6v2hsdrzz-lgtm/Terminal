@@ -60,7 +60,7 @@ engine:
       XAGUSD:       {fixed_spread: 0.030, slippage: 0.012, swap_long: -0.008, swap_short: 0.0005}
       USA500IDXUSD: {fixed_spread: 0.60,  slippage: 0.40,  swap_long: -0.50,  swap_short: -0.20}
       LIGHTCMDUSD:  {fixed_spread: 0.040, slippage: 0.025, swap_long: -0.020, swap_short: -0.010}
-      BTCUSD:       {fixed_spread: 30.0,  slippage: 20.0,  swap_long: -20.0,  swap_short: -20.0}
+      BTCUSD:       {fixed_spread: 80.0,  slippage: 45.0,  swap_long: -30.0,  swap_short: -30.0}
 
 validation:
   objective: "sharpe"

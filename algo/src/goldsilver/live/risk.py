@@ -6,16 +6,23 @@ plafond, le moteur refuse de démarrer ; et chaque ordre est re-vérifié au
 moment de sa construction (défense en profondeur : même un bug de config ou
 de sizing ne doit pas produire un ordre au-dessus du plafond).
 
-La frontière de risque mesurée (reports/risk_frontier_4h.json) montre qu'au
--delà de ~2 % par trade, la probabilité d'un drawdown >= 50 % sur un cycle
-complet devient non négligeable. D'où la valeur.
+VALEUR = 4 % — RELEVÉE de 2 % à 4 % sur DÉCISION EXPLICITE du propriétaire du
+compte (« double le risque par trade »), en pleine connaissance du coût
+mesuré : sur la stratégie métaux, passer de 2 % à 4 % par trade fait passer
+le rendement d'environ +0.9 %/mois à +2.0 %/mois MAIS le max drawdown
+historique de ~40 % à ~67 % (reports/portfolio_analysis.json). Ce n'est donc
+PLUS un garde-fou de prudence : le vrai filet de sécurité devient les kill
+switches (drawdown -20 %, perte journalière -5 %), qui HALTENT le bot bien
+avant le -67 % théorique. À 4 % par trade, deux stops le même jour (-8 %)
+déclenchent déjà la limite journalière -5 %. Ne pas relever cette valeur
+davantage sans une nouvelle décision explicite et documentée.
 """
 
 from __future__ import annotations
 
 from typing import Final
 
-HARD_MAX_RISK_PCT: Final[float] = 0.02
+HARD_MAX_RISK_PCT: Final[float] = 0.04
 _EPS: Final[float] = 1e-9
 
 
