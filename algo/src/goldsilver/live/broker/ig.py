@@ -120,12 +120,18 @@ class IgBroker(BrokerAdapter):
         self._timeout = timeout_s
         self._contracts = dict(contracts or {})
         self._cache_dir = cache_dir
-        self._cst: str | None = None
-        self._xst: str | None = None
+        # Authentification OAuth v3 : IG rejette le flux v2 (CST/X-SECURITY-TOKEN)
+        # pour certains comptes ; v3 (Bearer) fonctionne pour tous. Le compte
+        # ciblé est IG_ACCOUNT_ID (obligatoire si le compte par défaut n'est pas
+        # celui qu'on veut trader, ex. compte "Investir" par défaut).
+        self._access_token: str | None = None
+        self._refresh_token: str | None = None
+        self._active_account: str | None = None
 
     # ------------------------------------------------------------- session/HTTP
 
     def _login(self) -> None:
+        """Ouvre une session OAuth v3 et fixe le compte actif (IG_ACCOUNT_ID)."""
         req = urllib.request.Request(
             self._host + "/session",
             data=json.dumps(
@@ -136,14 +142,12 @@ class IgBroker(BrokerAdapter):
                 "X-IG-API-KEY": self._api_key,
                 "Content-Type": "application/json; charset=UTF-8",
                 "Accept": "application/json; charset=UTF-8",
-                "Version": "2",
+                "Version": "3",
             },
         )
         try:
             with urllib.request.urlopen(req, timeout=self._timeout) as resp:
-                self._cst = resp.headers.get("CST")
-                self._xst = resp.headers.get("X-SECURITY-TOKEN")
-                resp.read()
+                data = json.loads(resp.read().decode())
         except urllib.error.HTTPError as exc:
             raise BrokerError(
                 f"Connexion IG refusée ({exc.code}) : "
@@ -151,14 +155,46 @@ class IgBroker(BrokerAdapter):
             ) from exc
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             raise BrokerError(f"IG injoignable à la connexion : {exc}") from exc
-        if not self._cst or not self._xst:
-            raise BrokerError("IG : jetons CST/X-SECURITY-TOKEN absents de la réponse")
-        log.info("Session IG ouverte (%s)", self.env)
+        oauth = data.get("oauthToken") or {}
+        self._access_token = oauth.get("access_token")
+        self._refresh_token = oauth.get("refresh_token")
+        if not self._access_token:
+            raise BrokerError("IG : jeton OAuth absent de la réponse de session")
+        # compte à trader : IG_ACCOUNT_ID prioritaire, sinon compte par défaut
+        self._active_account = self._account_pref or data.get("accountId")
+        if not self._active_account:
+            raise BrokerError("IG : aucun compte cible (définir IG_ACCOUNT_ID)")
+        log.info("Session IG OAuth ouverte (%s) — compte actif %s",
+                 self.env, self._active_account)
+
+    def _refresh(self) -> bool:
+        """Rafraîchit le jeton (v3 expire en ~60 s). True si réussi."""
+        if not self._refresh_token:
+            return False
+        req = urllib.request.Request(
+            self._host + "/session/refresh-token",
+            data=json.dumps({"refresh_token": self._refresh_token}).encode(),
+            method="POST",
+            headers={
+                "X-IG-API-KEY": self._api_key,
+                "Content-Type": "application/json; charset=UTF-8",
+                "Accept": "application/json; charset=UTF-8",
+                "Version": "1",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=self._timeout) as resp:
+                data = json.loads(resp.read().decode())
+        except Exception:  # noqa: BLE001 — sur échec on retombera sur un login complet
+            return False
+        self._access_token = data.get("access_token") or self._access_token
+        self._refresh_token = data.get("refresh_token") or self._refresh_token
+        return bool(data.get("access_token"))
 
     def _request(self, method: str, path: str, *, version: str,
                  params: dict | None = None, body: dict | None = None,
                  extra_headers: dict | None = None, _retry_auth: bool = True) -> dict:
-        if self._cst is None:
+        if self._access_token is None:
             self._login()
         url = self._host + path
         if params:
@@ -167,8 +203,8 @@ class IgBroker(BrokerAdapter):
         for attempt in range(_RETRIES + 1):
             headers = {
                 "X-IG-API-KEY": self._api_key,
-                "CST": self._cst or "",
-                "X-SECURITY-TOKEN": self._xst or "",
+                "Authorization": f"Bearer {self._access_token}",
+                "IG-ACCOUNT-ID": self._active_account or "",
                 "Content-Type": "application/json; charset=UTF-8",
                 "Accept": "application/json; charset=UTF-8",
                 "Version": version,
@@ -185,8 +221,9 @@ class IgBroker(BrokerAdapter):
             except urllib.error.HTTPError as exc:
                 detail = exc.read().decode(errors="replace")[:400]
                 if exc.code == 401 and _retry_auth:
-                    log.info("Session IG expirée, reconnexion…")
-                    self._login()
+                    log.info("Jeton IG expiré, rafraîchissement…")
+                    if not self._refresh():
+                        self._login()
                     return self._request(method, path, version=version,
                                          params=params, body=body,
                                          extra_headers=extra_headers,
