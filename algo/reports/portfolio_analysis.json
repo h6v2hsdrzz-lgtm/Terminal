@@ -1,0 +1,119 @@
+{
+  "correlation": {
+    "BTCUSD": {
+      "BTCUSD": 1.0,
+      "LIGHTCMDUSD": 0.085,
+      "USA500IDXUSD": 0.365,
+      "XAGUSD": 0.205,
+      "XAUUSD": 0.154
+    },
+    "LIGHTCMDUSD": {
+      "BTCUSD": 0.085,
+      "LIGHTCMDUSD": 1.0,
+      "USA500IDXUSD": 0.177,
+      "XAGUSD": 0.082,
+      "XAUUSD": 0.037
+    },
+    "USA500IDXUSD": {
+      "BTCUSD": 0.365,
+      "LIGHTCMDUSD": 0.177,
+      "USA500IDXUSD": 1.0,
+      "XAGUSD": 0.248,
+      "XAUUSD": 0.135
+    },
+    "XAGUSD": {
+      "BTCUSD": 0.205,
+      "LIGHTCMDUSD": 0.082,
+      "USA500IDXUSD": 0.248,
+      "XAGUSD": 1.0,
+      "XAUUSD": 0.794
+    },
+    "XAUUSD": {
+      "BTCUSD": 0.154,
+      "LIGHTCMDUSD": 0.037,
+      "USA500IDXUSD": 0.135,
+      "XAGUSD": 0.794,
+      "XAUUSD": 1.0
+    }
+  },
+  "backtests": [
+    {
+      "universe": "métaux (or+argent)",
+      "n_assets": 2,
+      "risk_pct": 0.02,
+      "monthly_mean_pct": 0.91,
+      "monthly_std_pct": 5.39,
+      "sharpe": 0.56,
+      "total_return_pct": 99.0,
+      "max_dd_pct": 39.6,
+      "return_dd_ratio": 2.51,
+      "n_trades": 285,
+      "win_rate_pct": 36.0
+    },
+    {
+      "universe": "métaux (or+argent)",
+      "n_assets": 2,
+      "risk_pct": 0.04,
+      "monthly_mean_pct": 2.05,
+      "monthly_std_pct": 11.78,
+      "sharpe": 0.59,
+      "total_return_pct": 258.0,
+      "max_dd_pct": 67.0,
+      "return_dd_ratio": 3.85,
+      "n_trades": 290,
+      "win_rate_pct": 36.0
+    },
+    {
+      "universe": "non-métaux (SPX+WTI+BTC)",
+      "n_assets": 3,
+      "risk_pct": 0.02,
+      "monthly_mean_pct": -0.91,
+      "monthly_std_pct": 5.23,
+      "sharpe": -0.47,
+      "total_return_pct": -61.0,
+      "max_dd_pct": 64.0,
+      "return_dd_ratio": -0.95,
+      "n_trades": 484,
+      "win_rate_pct": 30.0
+    },
+    {
+      "universe": "non-métaux (SPX+WTI+BTC)",
+      "n_assets": 3,
+      "risk_pct": 0.04,
+      "monthly_mean_pct": -1.83,
+      "monthly_std_pct": 10.39,
+      "sharpe": -0.47,
+      "total_return_pct": -88.0,
+      "max_dd_pct": 89.8,
+      "return_dd_ratio": -0.98,
+      "n_trades": 484,
+      "win_rate_pct": 30.0
+    },
+    {
+      "universe": "portefeuille complet (5)",
+      "n_assets": 5,
+      "risk_pct": 0.02,
+      "monthly_mean_pct": -0.32,
+      "monthly_std_pct": 5.73,
+      "sharpe": -0.14,
+      "total_return_pct": -35.0,
+      "max_dd_pct": 58.4,
+      "return_dd_ratio": -0.61,
+      "n_trades": 750,
+      "win_rate_pct": 32.0
+    },
+    {
+      "universe": "portefeuille complet (5)",
+      "n_assets": 5,
+      "risk_pct": 0.04,
+      "monthly_mean_pct": -0.68,
+      "monthly_std_pct": 11.35,
+      "sharpe": -0.13,
+      "total_return_pct": -69.0,
+      "max_dd_pct": 86.3,
+      "return_dd_ratio": -0.8,
+      "n_trades": 748,
+      "win_rate_pct": 32.0
+    }
+  ]
+}

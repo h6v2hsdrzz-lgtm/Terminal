@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+data/raw/
+reports/
+!reports/.gitkeep
+!data/raw/.gitkeep
+live_state/
+KILL
+# Secrets — ne JAMAIS committer un .env rempli. Seul .env.example est suivi.
+.env
+.env.*
+!.env.example

@@ -1,0 +1,6 @@
+# Filet de sécurité à la racine du dépôt : aucun fichier d'environnement
+# (secrets, jetons, mots de passe) ne doit jamais être commité, où qu'il soit.
+.env
+.env.*
+!.env.example
+**/.env

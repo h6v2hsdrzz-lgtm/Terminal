@@ -1,0 +1,182 @@
+[
+  {
+    "risk_pct": 0.01,
+    "full_monthly_mean": 0.003404786454405955,
+    "full_monthly_std": 0.014139926611497013,
+    "full_total_return": 0.34607776904423004,
+    "full_max_dd": 0.09400479525180094,
+    "full_n_trades": 108,
+    "oos_monthly_mean": 0.005532622951879663,
+    "oos_max_dd": 0.032242501670705415,
+    "mc": {
+      "median_final_multiple": 1.3511583075490987,
+      "p5_final_multiple": 1.1112106116817202,
+      "p_dd_30": 0.0,
+      "p_dd_50": 0.0,
+      "p_dd_80": 0.0
+    },
+    "mc_median_annual_growth": 0.040980563240678114
+  },
+  {
+    "risk_pct": 0.02,
+    "full_monthly_mean": 0.008726026166003587,
+    "full_monthly_std": 0.034258364150989276,
+    "full_total_return": 1.079881065323637,
+    "full_max_dd": 0.18843542041887185,
+    "full_n_trades": 118,
+    "oos_monthly_mean": 0.01416606985313296,
+    "oos_max_dd": 0.08048910430924228,
+    "mc": {
+      "median_final_multiple": 2.1044722893584806,
+      "p5_final_multiple": 1.4039508747949174,
+      "p_dd_30": 0.0015,
+      "p_dd_50": 0.0,
+      "p_dd_80": 0.0
+    },
+    "mc_median_annual_growth": 0.1043917372500136
+  },
+  {
+    "risk_pct": 0.03,
+    "full_monthly_mean": 0.0129449232180806,
+    "full_monthly_std": 0.05251910005349681,
+    "full_total_return": 1.8404131351415125,
+    "full_max_dd": 0.3081655898112142,
+    "full_n_trades": 120,
+    "oos_monthly_mean": 0.0238840221240171,
+    "oos_max_dd": 0.1255600752992746,
+    "mc": {
+      "median_final_multiple": 2.947316000912279,
+      "p5_final_multiple": 1.5151289015375813,
+      "p_dd_30": 0.0365,
+      "p_dd_50": 0.0005,
+      "p_dd_80": 0.0
+    },
+    "mc_median_annual_growth": 0.1551663751381671
+  },
+  {
+    "risk_pct": 0.05,
+    "full_monthly_mean": 0.021054183658122245,
+    "full_monthly_std": 0.0890407430535495,
+    "full_total_return": 3.7739068762630863,
+    "full_max_dd": 0.4892349584292316,
+    "full_n_trades": 120,
+    "oos_monthly_mean": 0.04327430256213199,
+    "oos_max_dd": 0.19765228726464434,
+    "mc": {
+      "median_final_multiple": 5.152817146255649,
+      "p5_final_multiple": 1.7124431964964821,
+      "p_dd_30": 0.4065,
+      "p_dd_50": 0.0265,
+      "p_dd_80": 0.0
+    },
+    "mc_median_annual_growth": 0.24457673948706615
+  },
+  {
+    "risk_pct": 0.075,
+    "full_monthly_mean": 0.03244615852013065,
+    "full_monthly_std": 0.13856328351963845,
+    "full_total_return": 7.694991789903343,
+    "full_max_dd": 0.6623632152273489,
+    "full_n_trades": 120,
+    "oos_monthly_mean": 0.06729751400485873,
+    "oos_max_dd": 0.29375579359771165,
+    "mc": {
+      "median_final_multiple": 10.138583107610721,
+      "p5_final_multiple": 1.750884946250161,
+      "p_dd_30": 0.8775,
+      "p_dd_50": 0.194,
+      "p_dd_80": 0.0015
+    },
+    "mc_median_annual_growth": 0.36221824289752425
+  },
+  {
+    "risk_pct": 0.1,
+    "full_monthly_mean": 0.04389865575589127,
+    "full_monthly_std": 0.188503745002285,
+    "full_total_return": 12.768350687622338,
+    "full_max_dd": 0.7807511276738941,
+    "full_n_trades": 120,
+    "oos_monthly_mean": 0.09138130897941951,
+    "oos_max_dd": 0.3817839037126346,
+    "mc": {
+      "median_final_multiple": 17.510332380330603,
+      "p5_final_multiple": 1.8771341882709034,
+      "p_dd_30": 0.99,
+      "p_dd_50": 0.5395,
+      "p_dd_80": 0.0205
+    },
+    "mc_median_annual_growth": 0.4652658656989548
+  },
+  {
+    "risk_pct": 0.15,
+    "full_monthly_mean": 0.06679640318493925,
+    "full_monthly_std": 0.2923899251818228,
+    "full_total_return": 21.56146833975008,
+    "full_max_dd": 0.9214698259722793,
+    "full_n_trades": 120,
+    "oos_monthly_mean": 0.14134298734404693,
+    "oos_max_dd": 0.5312248937381243,
+    "mc": {
+      "median_final_multiple": 40.61071384585382,
+      "p5_final_multiple": 1.430717283064065,
+      "p_dd_30": 1.0,
+      "p_dd_50": 0.937,
+      "p_dd_80": 0.1845
+    },
+    "mc_median_annual_growth": 0.639349428804618
+  },
+  {
+    "risk_pct": 0.2,
+    "full_monthly_mean": 0.089858994007253,
+    "full_monthly_std": 0.400253868755713,
+    "full_total_return": 21.29060180229472,
+    "full_max_dd": 0.9761640208334649,
+    "full_n_trades": 120,
+    "oos_monthly_mean": 0.18962755409374396,
+    "oos_max_dd": 0.649646447728542,
+    "mc": {
+      "median_final_multiple": 51.87027877254224,
+      "p5_final_multiple": 0.9365173762127824,
+      "p_dd_30": 1.0,
+      "p_dd_50": 0.995,
+      "p_dd_80": 0.5165
+    },
+    "mc_median_annual_growth": 0.6937691731222886
+  },
+  {
+    "risk_pct": 0.25,
+    "full_monthly_mean": 0.1129743062934622,
+    "full_monthly_std": 0.5131049131854686,
+    "full_total_return": 11.995316249571697,
+    "full_max_dd": 0.9942334237430163,
+    "full_n_trades": 120,
+    "oos_monthly_mean": 0.2394345274398267,
+    "oos_max_dd": 0.7459510131684637,
+    "mc": {
+      "median_final_multiple": 60.43700895023005,
+      "p5_final_multiple": 0.31765352390148266,
+      "p_dd_30": 1.0,
+      "p_dd_50": 1.0,
+      "p_dd_80": 0.7935
+    },
+    "mc_median_annual_growth": 0.728674221451979
+  },
+  {
+    "risk_pct": 0.3,
+    "full_monthly_mean": 0.12494380545617971,
+    "full_monthly_std": 0.5860496349909864,
+    "full_total_return": 3.1086050853724796,
+    "full_max_dd": 0.9988216077085307,
+    "full_n_trades": 120,
+    "oos_monthly_mean": 0.2775783226917516,
+    "oos_max_dd": 0.8217188027657283,
+    "mc": {
+      "median_final_multiple": 38.10112081124307,
+      "p5_final_multiple": 0.12809760949274349,
+      "p_dd_30": 1.0,
+      "p_dd_50": 1.0,
+      "p_dd_80": 0.91
+    },
+    "mc_median_annual_growth": 0.6254537330433785
+  }
+]

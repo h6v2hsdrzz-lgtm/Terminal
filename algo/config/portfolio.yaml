@@ -1,0 +1,107 @@
+# ============================================================================
+# Portefeuille DÉCORRÉLÉ : même stratégie validée (breakout Donchian 4h,
+# long-only) appliquée à 5 instruments de 4 classes d'actifs distinctes.
+# Objectif : empiler des edges de suivi de tendance décorrélés -> même
+# rendement pour MOINS de drawdown (ou plus de rendement à drawdown égal).
+# C'est la seule voie honnête vers "plus de positions / plus de rentabilité".
+# ============================================================================
+
+seed: 42
+
+data:
+  base_timeframe: "1h"
+  timeframes: ["1h", "4h", "1d"]
+  start: "2019-01-01"
+  end: null
+  session_day_offset_hours: -2
+  warmup_days: 120
+  assets:
+    XAUUSD:   {csv: "data/raw/XAUUSD_1h.csv",       contract_size: 1.0, min_size: 1.0,    size_step: 1.0,    max_leverage: 20.0}
+    XAGUSD:   {csv: "data/raw/XAGUSD_1h.csv",       contract_size: 1.0, min_size: 50.0,   size_step: 50.0,   max_leverage: 10.0}
+    USA500IDXUSD: {csv: "data/raw/USA500IDXUSD_1h.csv", contract_size: 1.0, min_size: 0.01, size_step: 0.01, max_leverage: 20.0}
+    LIGHTCMDUSD:  {csv: "data/raw/LIGHTCMDUSD_1h.csv",  contract_size: 1.0, min_size: 0.1,  size_step: 0.1,  max_leverage: 10.0}
+    BTCUSD:   {csv: "data/raw/BTCUSD_1h.csv",       contract_size: 1.0, min_size: 0.001,  size_step: 0.001,  max_leverage: 5.0}
+
+fetch:
+  source: "dukascopy"
+  symbols: [XAUUSD, XAGUSD, USA500IDXUSD, LIGHTCMDUSD, BTCUSD]
+  start: "2019-01-01"
+  end: null
+  out_dir: "data/raw"
+  price_scale: 1000.0
+  pause_seconds: 0.1
+
+strategy:
+  name: "daily_breakout"
+  params:
+    trend_timeframe: "4h"
+    donchian_n: 60
+    trend_ema: 100
+    atr_period: 14
+    sl_atr_mult: 2.5
+    tp_rr: 3.0
+    max_bars_held: 240
+    direction: "long"
+
+engine:
+  initial_equity: 10000.0
+  risk_pct: 0.02                # 2 % par trade (référence ; le script teste aussi 4 %)
+  max_open_risk_pct: 0.10       # jusqu'à 5 positions décorrélées à 2 % chacune
+  corr_risk_factor: 0.5         # réduit encore le doublon or/argent (même classe)
+  max_leverage: 20.0
+  intrabar_worst_case: true
+  costs:
+    spread_mode: "from_data"
+    pessimistic_spread_mult: 1.3
+    rollover_hour_utc: 21
+    triple_swap_weekday: 2
+    per_asset:
+      XAUUSD:       {fixed_spread: 0.35,  slippage: 0.10,  swap_long: -0.60,  swap_short: 0.05}
+      XAGUSD:       {fixed_spread: 0.030, slippage: 0.012, swap_long: -0.008, swap_short: 0.0005}
+      USA500IDXUSD: {fixed_spread: 0.60,  slippage: 0.40,  swap_long: -0.50,  swap_short: -0.20}
+      LIGHTCMDUSD:  {fixed_spread: 0.040, slippage: 0.025, swap_long: -0.020, swap_short: -0.010}
+      BTCUSD:       {fixed_spread: 80.0,  slippage: 45.0,  swap_long: -30.0,  swap_short: -30.0}
+
+validation:
+  objective: "sharpe"
+  min_trades: 60
+  grid:
+    donchian_n: [30, 60, 90]
+    trend_ema: [50, 100, 150]
+    sl_atr_mult: [2.0, 2.5, 3.0]
+  oos:
+    train_frac: 0.70
+  walk_forward:
+    train_months: 36
+    test_months: 6
+    anchored: false
+  monte_carlo:
+    n_runs: 2000
+    ruin_drawdown: 0.30
+  noise:
+    n_runs: 60
+    atr_frac: 0.10
+  sensitivity:
+    metric: "sharpe"
+    pairs:
+      - ["donchian_n", "trend_ema"]
+      - ["sl_atr_mult", "tp_rr"]
+    ranges:
+      donchian_n: [20, 30, 45, 60, 90, 120]
+      trend_ema: [50, 100, 150, 200]
+      sl_atr_mult: [1.5, 2.0, 2.5, 3.0, 3.5]
+      tp_rr: [2.0, 2.5, 3.0, 4.0, 5.0]
+
+report:
+  out_dir: "reports"
+  plotlyjs: "inline"
+  monthly_benchmark_pct: [5.0, 6.0]
+  thresholds:
+    oos_sharpe_retention: 0.5
+    wfe_min: 0.5
+    wf_profitable_folds_min: 0.5
+    mc_ruin_prob_max: 0.05
+    mc_p5_total_return_min: -0.10
+    noise_profitable_frac_min: 0.6
+    noise_sharpe_retention: 0.5
+    sensitivity_plateau_min: 0.5
