@@ -29,6 +29,7 @@ from goldsilver.live.engine import CycleReport, LiveEngine
 from goldsilver.live.journal import Journal
 from goldsilver.live.modes import LiveLockError, TradingMode, check_live_gate
 from goldsilver.live.notify import TelegramNotifier
+from goldsilver.live.risk import HARD_MAX_RISK_PCT
 from goldsilver.live.state import StateStore
 
 log = logging.getLogger("goldsilver.live")
@@ -73,8 +74,9 @@ def _next_boundary(now: pd.Timestamp, hours: int, delay_s: int) -> pd.Timestamp:
 def cmd_run(cfg: LiveConfig, once: bool, enable_live: bool) -> int:
     engine, store = _make_engine(cfg, enable_live)
     mode = cfg.mode.value.upper()
-    log.info("Démarrage %s — stratégie %s — risque %.2f %%/trade (plafond dur 2 %%)",
-             mode, cfg.strategy_config, 100 * cfg.risk.risk_pct)
+    log.info("Démarrage %s — stratégie %s — risque %.2f %%/trade (plafond dur %.0f %%)",
+             mode, cfg.strategy_config, 100 * cfg.risk.risk_pct,
+             100 * HARD_MAX_RISK_PCT)
     if cfg.mode is TradingMode.LIVE:
         log.warning("MODE LIVE : ARGENT RÉEL. Kill switch = fichier %s",
                     cfg.kill.kill_file)

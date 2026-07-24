@@ -30,23 +30,21 @@ broker:
   #   goldsilver-live find-epic or   /   goldsilver-live find-epic argent
   # (ceux ci-dessous sont les CFD spot "cash" usuels, à confirmer).
   instruments:
-    XAUUSD: "CS.D.CFDGOLD.CFDGC.IP"
-    XAGUSD: "CS.D.CFDSILVER.CFM.IP"
+    XAUUSD: "CS.D.CFEGOLD.CEF.IP"      # "Spot Gold ($1)" — CONFIRMÉ tradeable
+    XAGUSD: "CS.D.CFDSILVER.CFM.IP"    # "Argent au comptant mini (500oz)" — CONFIRMÉ
   ig:
-    # Conversion onces <-> contrats + décimales des niveaux SL/TP, PAR epic.
-    # À confirmer via GET /markets/{epic} (contractSize, dealingRules).
-    # Ex. classique : 1 contrat or = 100 oz, 1 contrat argent = 5000 oz.
+    # Valeurs CONFIRMÉES via GET /markets/{epic} sur le compte CFD démo (Z5MVJV).
     contracts:
-      "CS.D.CFDGOLD.CFDGC.IP":
-        oz_per_contract: 100.0
-        min_contracts: 0.1
+      "CS.D.CFEGOLD.CEF.IP":
+        oz_per_contract: 1.0           # Spot Gold ($1) : 1 contrat = 1 oz (1 pt = $1)
+        min_contracts: 0.1             # minDealSize IG
         contract_step: 0.1
-        level_decimals: 2
+        level_decimals: 2              # 2 décimales (bid ~4063.72)
       "CS.D.CFDSILVER.CFM.IP":
-        oz_per_contract: 5000.0
+        oz_per_contract: 500.0         # mini : 1 contrat = 500 oz (1 pip = $0.01/oz -> $5)
         min_contracts: 0.1
         contract_step: 0.1
-        level_decimals: 3
+        level_decimals: 3              # 3 décimales (bid ~58.528)
 
 risk:
   # Plafond DUR du moteur : 4 % par trade (relevé de 2 % à 4 % sur décision
@@ -87,7 +85,7 @@ notify:
   telegram: true                # no-op si les variables d'env sont absentes
 
 paper:
-  initial_equity: 10000.0
+  initial_equity: 31703.0        # calé sur le solde du compte CFD démo (forward test réaliste)
 
 slippage_alert_r: 0.05          # alerte si le coût d'exécution moyen dépasse 5 % de R
 
