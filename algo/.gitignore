@@ -8,3 +8,7 @@ reports/
 !data/raw/.gitkeep
 live_state/
 KILL
+# Secrets — ne JAMAIS committer un .env rempli. Seul .env.example est suivi.
+.env
+.env.*
+!.env.example
