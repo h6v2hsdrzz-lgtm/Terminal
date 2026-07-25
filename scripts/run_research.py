@@ -76,6 +76,13 @@ def phase_research(cfg, quick: bool = False) -> dict:
     runner = ValidationRunner(cfg, md, registry=registry)
 
     grid = DEFAULT_GRID if not quick else {"entry_threshold": [0.35], "atr_stop_mult": [2.0]}
+    # Grille réduite pour le walk-forward et le k-fold : chaque fenêtre est
+    # réoptimisée, donc explorer trois axes par fenêtre multiplie les essais (et
+    # le surajustement local) sans rien apprendre de plus. La grille complète
+    # sert à l'étude de sensibilité, qui est faite une fois sur tout l'IS.
+    wf_grid = {"entry_threshold": [0.25, 0.35, 0.45], "atr_stop_mult": [1.5, 2.5]}
+    if quick:
+        wf_grid = grid
 
     # ---- 1. référence : configuration par défaut, in-sample ----------------
     log.info("-- backtest de référence (paramètres du YAML) --")
@@ -98,13 +105,13 @@ def phase_research(cfg, quick: bool = False) -> dict:
     if not quick:
         for mode in list(cfg.get_path("validation.walk_forward.modes")):
             log.info("-- walk-forward %s --", mode)
-            wf[mode] = runner.walk_forward(is_start, is_end, mode=mode, grid=grid)
+            wf[mode] = runner.walk_forward(is_start, is_end, mode=mode, grid=wf_grid)
 
     # ---- 4. k-fold purgé avec embargo --------------------------------------
     kfold = pd.DataFrame()
     if not quick:
         log.info("-- purged k-fold --")
-        kfold = runner.purged_kfold(is_start, is_end, grid=grid)
+        kfold = runner.purged_kfold(is_start, is_end, grid=wf_grid)
 
     # ---- 5. Monte Carlo et probabilité de ruine ----------------------------
     log.info("-- Monte Carlo --")
@@ -502,7 +509,7 @@ live n'est disponible. 60 jours minimum sont requis avant tout capital réel.</l
     subtitle = (
         f"Univers {', '.join(cfg.get_path('universe.symbols'))} — perpétuels OKX — "
         f"levier max {cfg.get_path('risk.leverage_max'):g} — "
-        f"généré le {pd.Timestamp.now("UTC").strftime('%Y-%m-%d %H:%M UTC')}"
+        f"généré le {pd.Timestamp.now('UTC').strftime('%Y-%m-%d %H:%M UTC')}"
     )
     return render_report("Audit de stratégie — perpétuels crypto en levier x10", subtitle, sections, path)
 
