@@ -1,24 +1,24 @@
 {
-  "generated_at": "2026-07-25T19:51:33.525168+00:00",
+  "generated_at": "2026-07-25T21:24:39.038255+00:00",
   "symbols": {
     "BTC-USDT-SWAP": {
       "ohlcv": {
         "1m": {
           "status": "ok",
-          "rows": 262081,
+          "rows": 3452881,
           "start": "2020-01-01 00:00:00+00:00",
-          "end": "2020-07-01 00:00:00+00:00",
-          "expected_bars": 262081,
+          "end": "2026-07-25 20:00:00+00:00",
+          "expected_bars": 3452881,
           "coverage_pct": 100.0,
           "duplicates": 0,
           "n_gaps": 0,
           "missing_bars": 0,
           "largest_gap_hours": 0.0,
-          "zero_volume_bars": 2566,
-          "zero_volume_pct": 0.9791,
+          "zero_volume_bars": 7702,
+          "zero_volume_pct": 0.2231,
           "ohlc_inconsistent": 0,
           "non_positive_prices": 0,
-          "return_outliers_10sigma": 251,
+          "return_outliers_10sigma": 1907,
           "max_abs_bar_return": 0.08213
         },
         "15m": {
@@ -169,7 +169,22 @@
     "ETH-USDT-SWAP": {
       "ohlcv": {
         "1m": {
-          "status": "absent"
+          "status": "ok",
+          "rows": 3452881,
+          "start": "2020-01-01 00:00:00+00:00",
+          "end": "2026-07-25 20:00:00+00:00",
+          "expected_bars": 3452881,
+          "coverage_pct": 100.0,
+          "duplicates": 0,
+          "n_gaps": 0,
+          "missing_bars": 0,
+          "largest_gap_hours": 0.0,
+          "zero_volume_bars": 15998,
+          "zero_volume_pct": 0.4633,
+          "ohlc_inconsistent": 0,
+          "non_positive_prices": 0,
+          "return_outliers_10sigma": 1735,
+          "max_abs_bar_return": 0.12457
         },
         "15m": {
           "status": "ok",
@@ -319,7 +334,22 @@
     "SOL-USDT-SWAP": {
       "ohlcv": {
         "1m": {
-          "status": "absent"
+          "status": "ok",
+          "rows": 2895181,
+          "start": "2021-01-22 07:00:00+00:00",
+          "end": "2026-07-25 20:00:00+00:00",
+          "expected_bars": 2895181,
+          "coverage_pct": 100.0,
+          "duplicates": 0,
+          "n_gaps": 0,
+          "missing_bars": 0,
+          "largest_gap_hours": 0.0,
+          "zero_volume_bars": 3665,
+          "zero_volume_pct": 0.1266,
+          "ohlc_inconsistent": 0,
+          "non_positive_prices": 0,
+          "return_outliers_10sigma": 1425,
+          "max_abs_bar_return": 0.17873
         },
         "15m": {
           "status": "ok",
@@ -467,8 +497,5 @@
       }
     }
   },
-  "blocking_issues": [
-    "ETH-USDT-SWAP 1m: donnee absente",
-    "SOL-USDT-SWAP 1m: donnee absente"
-  ]
+  "blocking_issues": []
 }

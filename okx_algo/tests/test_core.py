@@ -323,3 +323,29 @@ class TestPersistence:
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+class TestConcurrentState:
+    """Deux processus, deux instances : aucune etape ne doit etre perdue."""
+
+    def test_concurrent_saves_merge(self, tmp_path):
+        p = tmp_path / "run_state.json"
+        a = RunState(p)
+        a.mark_done("telechargement_lot_1")
+        b = RunState(p)                      # second processus, charge l'etat
+        a.mark_done("telechargement_lot_2")  # A continue d'ecrire
+        b.mark_done("rapport_qualite")       # B ecrit en parallele
+        final = RunState(p)
+        assert final.is_done("telechargement_lot_1")
+        assert final.is_done("telechargement_lot_2")
+        assert final.is_done("rapport_qualite")
+
+    def test_oos_opening_cannot_be_unsealed(self, tmp_path):
+        p = tmp_path / "run_state.json"
+        a = RunState(p)
+        b = RunState(p)
+        a.data["oos_opened"] = True
+        a.data["oos_opened_at"] = "2026-07-25T00:00:00Z"
+        a.save()
+        b.set("phase", "autre")              # B ignore l'ouverture
+        assert RunState(p).get("oos_opened") is True

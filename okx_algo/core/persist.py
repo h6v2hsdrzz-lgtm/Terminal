@@ -165,8 +165,41 @@ class RunState:
                 pass  # etat corrompu : on repart du defaut plutot que de crasher
 
     def save(self) -> None:
+        """Ecrit l'etat en FUSIONNANT avec ce qui est deja sur disque.
+
+        Plusieurs processus travaillent en parallele (un telechargement de fond
+        et les etapes au premier plan). Chacun detient sa propre instance : une
+        ecriture qui remplacerait le fichier ecraserait silencieusement les
+        etapes terminees par l'autre processus — c'est exactement ce qui est
+        arrive aux drapeaux `data_quality` et `engine_selftest`. La fusion rend
+        l'ecriture concurrente sure : les etapes terminees s'unissent, les
+        autres champs suivent la derniere ecriture.
+        """
         self.data["updated_at"] = _now_iso()
-        atomic_write_json(self.path, self.data)
+        merged = dict(self.data)
+        if self.path.exists():
+            try:
+                on_disk = json.loads(self.path.read_text())
+            except (json.JSONDecodeError, OSError):
+                on_disk = {}
+            steps = list(on_disk.get("completed_steps", []))
+            for s in merged.get("completed_steps", []):
+                if s not in steps:
+                    steps.append(s)
+            merged["completed_steps"] = steps
+            notes = dict(on_disk.get("notes", {}))
+            notes.update(merged.get("notes", {}))
+            merged["notes"] = notes
+            merged["downloaded"] = {**on_disk.get("downloaded", {}),
+                                    **merged.get("downloaded", {})}
+            # l'ouverture de l'out-of-sample est un fait irreversible : une fois
+            # scellee par un processus, aucun autre ne peut la desceller
+            if on_disk.get("oos_opened"):
+                merged["oos_opened"] = True
+                merged["oos_opened_at"] = (merged.get("oos_opened_at")
+                                           or on_disk.get("oos_opened_at"))
+        self.data = merged
+        atomic_write_json(self.path, merged)
 
     # -- etapes ---------------------------------------------------------
     def is_done(self, step: str) -> bool:
