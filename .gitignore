@@ -1,0 +1,6 @@
+.venv/
+data_store/
+logs/
+__pycache__/
+*.pyc
+state/*.tmp

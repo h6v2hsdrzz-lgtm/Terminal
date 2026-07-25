@@ -1,0 +1,204 @@
+# =====================================================================
+# okx_algo — configuration de reference. AUCUN parametre en dur ailleurs.
+# Toutes les bornes temporelles sont en UTC.
+# =====================================================================
+
+project:
+  name: okx_algo
+  data_root: data_store
+  state_root: state
+  research_root: research
+  artifacts_root: artifacts
+  logs_root: logs
+  seed: 20260725
+
+universe:
+  # Univers de trading (perpetuels OKX)
+  symbols: [BTC-USDT-SWAP, ETH-USDT-SWAP, SOL-USDT-SWAP]
+  # Univers etendu, utilise uniquement par H2 (cross-sectionnel elargi)
+  extended_symbols:
+    [BTC-USDT-SWAP, ETH-USDT-SWAP, SOL-USDT-SWAP, XRP-USDT-SWAP,
+     DOGE-USDT-SWAP, ADA-USDT-SWAP, LTC-USDT-SWAP, LINK-USDT-SWAP,
+     AVAX-USDT-SWAP, DOT-USDT-SWAP]
+
+data:
+  start: "2020-01-01"
+  end: null                 # null => aujourd'hui
+  timeframes: [1m, 15m, 1H, 4H, 1D]
+  signal_timeframe: 15m     # barre de decision du moteur (brique 3 exige mieux que 1H)
+  execution_timeframe: 1m   # resolution intrabar / cascade
+  okx_base: https://www.okx.com
+  binance_vision_base: https://data.binance.vision
+  max_requests_per_second: 8.0
+  download_threads: 10
+  request_timeout_s: 30
+  request_retries: 5
+
+# ---------------------------------------------------------------------
+# Decoupage temporel. L'OOS n'est ouvert QU'UNE SEULE FOIS (cf. §11).
+# ---------------------------------------------------------------------
+split:
+  in_sample_start: "2020-01-01"
+  in_sample_end: "2024-12-31"
+  out_of_sample_start: "2025-01-01"
+  out_of_sample_end: null
+
+# ---------------------------------------------------------------------
+# Couts et microstructure OKX (palier standard)
+# ---------------------------------------------------------------------
+costs:
+  maker_fee: 0.0002         # 0.02 %
+  taker_fee: 0.0005         # 0.05 %
+  spread_bps_base: 2.0      # spread median en bps
+  spread_bps_max: 5.0
+  slippage_atr_fraction: 0.05   # composante volatilite
+  impact_coefficient: 0.10      # impact ~ coef * (taille / volume de barre)
+  latency_ms: [200, 500]
+  maker:
+    enabled: true
+    offset_ticks: 1            # distance au mid en ticks
+    timeout_bars: 2            # bascule taker apres N barres de signal
+    base_fill_probability: 0.65
+    vol_sensitivity: 0.55      # fill plus probable si la barre bouge
+  funding_interval_hours: 8
+  funding_hours_utc: [0, 8, 16]
+
+# Paliers de marge de maintenance OKX (simplifie, tier 1-2 des perps majeurs)
+margin:
+  maintenance_margin_rate: 0.005   # 0.5 %
+  taker_liquidation_penalty: 0.0005
+  contract_values:                 # ctVal officiel OKX
+    BTC-USDT-SWAP: 0.01
+    ETH-USDT-SWAP: 0.1
+    SOL-USDT-SWAP: 1.0
+
+backtest:
+  initial_equity: 100000.0
+  min_order_fraction: 0.002   # ordre ignore sous 0.2 % de l'equity
+
+# ---------------------------------------------------------------------
+# Briques
+# ---------------------------------------------------------------------
+strategies:
+  ts_momentum:
+    enabled: true
+    horizons_hours: [24, 72, 168]
+    k: 1.0
+    vol_halflife_days: 20
+    deadband: 0.20
+    rebalance_timeframe: 1H
+    max_abs_position: 1.0
+  cross_sectional:
+    enabled: true
+    lookback_hours: 168
+    vol_halflife_days: 20
+    rebalance_timeframe: 1D
+    dollar_neutral: true
+    universe: base            # base | extended
+    max_abs_position: 1.0
+  cascade_reversal:
+    enabled: true
+    window_minutes: 15
+    return_threshold: 0.04         # |r_15m| > 4 %
+    volume_multiple: 8.0           # > 8x mediane 30j
+    basis_dislocation: 0.0030      # |perp-index|/index > 0.30 %
+    oi_drop_1h: -0.03              # d_OI_1h < -3 %
+    wick_ratio_min: 0.60           # meche > 60 % du range de la bougie 1m
+    entry_tranches: 3
+    tranche_spacing_atr: 0.25
+    stop_atr_multiple: 0.5         # au-dela de l'extreme + 0.5 * ATR(1H)
+    time_exit_hours: 8
+    max_concurrent: 1
+    cooldown_hours: 24
+
+# ---------------------------------------------------------------------
+# Modulateur de funding (multiplicateur, pas une brique)
+# ---------------------------------------------------------------------
+funding_modulator:
+  enabled: true
+  zscore_window_days: 30
+  z_high: 2.0
+  z_low: -2.0
+  damping: 0.5
+  extreme_z: 3.0
+
+# ---------------------------------------------------------------------
+# Portefeuille
+# ---------------------------------------------------------------------
+portfolio:
+  allocation: risk_parity        # risk_parity | equal | fixed
+  risk_budget_bounds:            # bornes du §5
+    ts_momentum: [0.60, 0.70]
+    cross_sectional: [0.20, 0.30]
+    cascade_reversal: [0.10, 0.20]
+  pnl_vol_window_days: 60
+  corr_window_days: 90
+  target_vol_annualized: 0.10
+  vol_estimator_window_days: 20
+  max_concurrent_positions: 2    # hors cascade
+  netting: true
+
+# ---------------------------------------------------------------------
+# Moteur de risque — invariants. Toute violation leve une exception.
+# ---------------------------------------------------------------------
+risk:
+  leverage_effective_max: 10.0
+  max_concurrent_positions: 2
+  cascade_slot: 1
+  daily_dd_stop: -0.05
+  weekly_dd_stop: -0.12
+  monthly_dd_stop: -0.25
+  global_kill_switch: -0.40
+  risk_per_trade: 0.01           # 1 % de l'equity
+  stop_loss_required: true
+  # stop = sigma_mult * sqrt(horizon_days) * ATR(24h) ; cf. commentaire moteur
+  default_stop_sigma_multiple: 3.0
+  default_stop_horizon_days: 3
+  stop_rearm_max_hours: 24        # duree max de blocage d'un sens apres un stop
+  funding_cost_guard: 0.30       # funding paye > 30 % du PnL latent => reduire
+  funding_guard_reduction: 0.5
+
+# ---------------------------------------------------------------------
+# Calibration du levier (§8)
+# ---------------------------------------------------------------------
+leverage:
+  target_annual_return: 0.80
+  monthly_dd_limit: 0.25
+  max_leverage: 10.0
+  monte_carlo_draws: 10000
+  sensitivity_grid: [1.0, 10.0, 0.5]
+
+# ---------------------------------------------------------------------
+# Validation (§11) et go/no-go (§13)
+# ---------------------------------------------------------------------
+validation:
+  walk_forward:
+    train_months: 12
+    test_months: 3
+    modes: [anchored, rolling]
+  purged_kfold:
+    n_splits: 5
+    embargo_days: 5
+  monte_carlo_draws: 10000
+  cost_stress_multipliers: [1.0, 1.5, 2.0]
+  random_control_runs: 50
+  benchmarks: [btc_hold, equal_weight_basket, btc_2x]
+
+go_no_go:
+  min_oos_sharpe: 1.8
+  max_dsr_pvalue: 0.05
+  min_oos_trades: 300
+  max_sharpe_degradation: 0.35
+  min_profitable_regimes: 2
+  require_random_control_loses: true
+  require_edge_survives_2x_costs: true
+  require_lookahead_tests_pass: true
+
+# ---------------------------------------------------------------------
+# Boucle de recherche (§16) — budget d'essais strict
+# ---------------------------------------------------------------------
+research:
+  max_trials: 200
+  target_monthly_return: 0.05
+  log_path: research/research_log.jsonl
+  hypotheses_path: research/HYPOTHESES.md

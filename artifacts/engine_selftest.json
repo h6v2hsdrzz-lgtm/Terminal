@@ -1,0 +1,64 @@
+{
+  "generated_at": "2026-07-25T19:50:47.115329+00:00",
+  "window": [
+    "2022-01-01",
+    "2023-01-01"
+  ],
+  "all_passed": true,
+  "tests": [
+    {
+      "test": "T1_buy_and_hold_fidelity",
+      "analytic_return": -0.6434187643218097,
+      "engine_return": -0.6059808467428024,
+      "abs_error": 0.037437917579007274,
+      "tolerance": 0.05,
+      "passed": true
+    },
+    {
+      "test": "T2_costs_degrade",
+      "equity_no_costs": 39401.91532571976,
+      "equity_costs": 35228.318186285345,
+      "equity_costs_x2": 31504.69715948257,
+      "fees_charged": 3400.069978563683,
+      "passed": true
+    },
+    {
+      "test": "T3_funding_sign",
+      "mean_funding_rate": 1.1914400273964785e-06,
+      "long_funding_paid": 2714.8318253240313,
+      "short_funding_paid": -5443.352065953163,
+      "passed": true
+    },
+    {
+      "test": "T4_random_control_loses",
+      "n_runs": 30,
+      "mean_return": -0.3856163633413741,
+      "median_return": -0.389163809786778,
+      "pct_profitable": 0.0,
+      "mean_sharpe": -1.6154477215986147,
+      "passed": true
+    },
+    {
+      "test": "T5_leverage_cap",
+      "cap": 10.0,
+      "max_observed_leverage": 0.0,
+      "n_orders_refused": 35040,
+      "passed": true
+    },
+    {
+      "test": "T6_drawdown_halts",
+      "n_daily_halts": 35,
+      "passed": true
+    },
+    {
+      "test": "T7_no_lookahead_features",
+      "checks": {
+        "log_return_168": true,
+        "ewma_vol": true,
+        "zscore_720": true,
+        "rolling_median_720": true
+      },
+      "passed": true
+    }
+  ]
+}

@@ -1,0 +1,473 @@
+{
+  "phase": "data_minute",
+  "completed_steps": [
+    "dl:instruments",
+    "dl:funding:BTC-USDT-SWAP",
+    "dl:funding_okx:BTC-USDT-SWAP",
+    "dl:funding:ETH-USDT-SWAP",
+    "dl:funding_okx:ETH-USDT-SWAP",
+    "dl:funding:SOL-USDT-SWAP",
+    "dl:funding_okx:SOL-USDT-SWAP",
+    "dl:oi:BTC-USDT-SWAP:202001-202007",
+    "dl:oi:BTC-USDT-SWAP:202007-202101",
+    "dl:oi:BTC-USDT-SWAP:202101-202107",
+    "dl:oi:BTC-USDT-SWAP:202107-202201",
+    "dl:oi:BTC-USDT-SWAP:202201-202207",
+    "dl:oi:BTC-USDT-SWAP:202207-202301",
+    "dl:oi:BTC-USDT-SWAP:202301-202307",
+    "dl:oi:BTC-USDT-SWAP:202307-202401",
+    "dl:oi:BTC-USDT-SWAP:202401-202407",
+    "dl:oi:BTC-USDT-SWAP:202407-202501",
+    "dl:oi:BTC-USDT-SWAP:202501-202507",
+    "dl:oi:BTC-USDT-SWAP:202507-202601",
+    "dl:oi:BTC-USDT-SWAP:202601-202607",
+    "dl:oi:BTC-USDT-SWAP:202607-202607",
+    "dl:oi:ETH-USDT-SWAP:202001-202007",
+    "dl:oi:ETH-USDT-SWAP:202007-202101",
+    "dl:oi:ETH-USDT-SWAP:202101-202107",
+    "dl:oi:ETH-USDT-SWAP:202107-202201",
+    "dl:oi:ETH-USDT-SWAP:202201-202207",
+    "dl:oi:ETH-USDT-SWAP:202207-202301",
+    "dl:oi:ETH-USDT-SWAP:202301-202307",
+    "dl:oi:ETH-USDT-SWAP:202307-202401",
+    "dl:oi:ETH-USDT-SWAP:202401-202407",
+    "dl:oi:ETH-USDT-SWAP:202407-202501",
+    "dl:oi:ETH-USDT-SWAP:202501-202507",
+    "dl:oi:ETH-USDT-SWAP:202507-202601",
+    "dl:oi:ETH-USDT-SWAP:202601-202607",
+    "dl:oi:ETH-USDT-SWAP:202607-202607",
+    "dl:oi:SOL-USDT-SWAP:202101-202107",
+    "dl:oi:SOL-USDT-SWAP:202107-202201",
+    "dl:oi:SOL-USDT-SWAP:202201-202207",
+    "dl:oi:SOL-USDT-SWAP:202207-202301",
+    "dl:oi:SOL-USDT-SWAP:202301-202307",
+    "dl:oi:SOL-USDT-SWAP:202307-202401",
+    "dl:oi:SOL-USDT-SWAP:202401-202407",
+    "dl:oi:SOL-USDT-SWAP:202407-202501",
+    "dl:oi:SOL-USDT-SWAP:202501-202507",
+    "dl:oi:SOL-USDT-SWAP:202507-202601",
+    "dl:oi:SOL-USDT-SWAP:202601-202607",
+    "dl:oi:SOL-USDT-SWAP:202607-202607",
+    "dl:mark:BTC-USDT-SWAP:1H:202001-202201",
+    "dl:mark:BTC-USDT-SWAP:1H:202201-202401",
+    "dl:mark:BTC-USDT-SWAP:1H:202401-202601",
+    "dl:mark:BTC-USDT-SWAP:1H:202601-202607",
+    "dl:index:BTC-USDT-SWAP:1H:202001-202201",
+    "dl:index:BTC-USDT-SWAP:1H:202201-202401",
+    "dl:index:BTC-USDT-SWAP:1H:202401-202601",
+    "dl:index:BTC-USDT-SWAP:1H:202601-202607",
+    "dl:mark:ETH-USDT-SWAP:1H:202001-202201",
+    "dl:mark:ETH-USDT-SWAP:1H:202201-202401",
+    "dl:mark:ETH-USDT-SWAP:1H:202401-202601",
+    "dl:mark:ETH-USDT-SWAP:1H:202601-202607",
+    "dl:index:ETH-USDT-SWAP:1H:202001-202201",
+    "dl:index:ETH-USDT-SWAP:1H:202201-202401",
+    "dl:index:ETH-USDT-SWAP:1H:202401-202601",
+    "dl:index:ETH-USDT-SWAP:1H:202601-202607",
+    "dl:mark:SOL-USDT-SWAP:1H:202101-202301",
+    "dl:mark:SOL-USDT-SWAP:1H:202301-202501",
+    "dl:mark:SOL-USDT-SWAP:1H:202501-202607",
+    "dl:index:SOL-USDT-SWAP:1H:202101-202301",
+    "dl:index:SOL-USDT-SWAP:1H:202301-202501",
+    "dl:index:SOL-USDT-SWAP:1H:202501-202607",
+    "dl:ohlcv:BTC-USDT-SWAP:15m:202001-202101",
+    "dl:ohlcv:BTC-USDT-SWAP:15m:202101-202201",
+    "dl:ohlcv:BTC-USDT-SWAP:15m:202201-202301",
+    "dl:ohlcv:BTC-USDT-SWAP:15m:202301-202401",
+    "dl:ohlcv:BTC-USDT-SWAP:15m:202401-202501",
+    "dl:ohlcv:BTC-USDT-SWAP:15m:202501-202601",
+    "dl:ohlcv:BTC-USDT-SWAP:15m:202601-202607",
+    "dl:ohlcv:ETH-USDT-SWAP:15m:202001-202101",
+    "dl:ohlcv:ETH-USDT-SWAP:15m:202101-202201",
+    "dl:ohlcv:ETH-USDT-SWAP:15m:202201-202301",
+    "dl:ohlcv:ETH-USDT-SWAP:15m:202301-202401",
+    "dl:ohlcv:ETH-USDT-SWAP:15m:202401-202501",
+    "dl:ohlcv:ETH-USDT-SWAP:15m:202501-202601",
+    "dl:ohlcv:ETH-USDT-SWAP:15m:202601-202607",
+    "dl:ohlcv:SOL-USDT-SWAP:15m:202101-202201",
+    "dl:ohlcv:SOL-USDT-SWAP:15m:202201-202301",
+    "dl:ohlcv:SOL-USDT-SWAP:15m:202301-202401",
+    "dl:ohlcv:SOL-USDT-SWAP:15m:202401-202501",
+    "dl:ohlcv:SOL-USDT-SWAP:15m:202501-202601",
+    "dl:ohlcv:SOL-USDT-SWAP:15m:202601-202607",
+    "dl:ohlcv:BTC-USDT-SWAP:1H:202001-202201",
+    "dl:ohlcv:BTC-USDT-SWAP:1H:202201-202401",
+    "dl:ohlcv:BTC-USDT-SWAP:1H:202401-202601",
+    "dl:ohlcv:BTC-USDT-SWAP:1H:202601-202607",
+    "dl:ohlcv:ETH-USDT-SWAP:1H:202001-202201",
+    "dl:ohlcv:ETH-USDT-SWAP:1H:202201-202401",
+    "dl:ohlcv:ETH-USDT-SWAP:1H:202401-202601",
+    "dl:ohlcv:ETH-USDT-SWAP:1H:202601-202607",
+    "dl:ohlcv:SOL-USDT-SWAP:1H:202101-202301",
+    "dl:ohlcv:SOL-USDT-SWAP:1H:202301-202501",
+    "dl:ohlcv:SOL-USDT-SWAP:1H:202501-202607",
+    "dl:ohlcv:BTC-USDT-SWAP:4H:202001-202301",
+    "dl:ohlcv:BTC-USDT-SWAP:4H:202301-202601",
+    "dl:ohlcv:BTC-USDT-SWAP:4H:202601-202607",
+    "dl:ohlcv:ETH-USDT-SWAP:4H:202001-202301",
+    "dl:ohlcv:ETH-USDT-SWAP:4H:202301-202601",
+    "dl:ohlcv:ETH-USDT-SWAP:4H:202601-202607",
+    "dl:ohlcv:SOL-USDT-SWAP:4H:202101-202401",
+    "dl:ohlcv:SOL-USDT-SWAP:4H:202401-202607",
+    "dl:ohlcv:BTC-USDT-SWAP:1D:202001-202607",
+    "dl:ohlcv:ETH-USDT-SWAP:1D:202001-202607",
+    "dl:ohlcv:SOL-USDT-SWAP:1D:202101-202607",
+    "step:data_fast",
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202001-202004",
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202004-202007"
+  ],
+  "current_hypothesis": null,
+  "config_index": 0,
+  "seed": 20260725,
+  "downloaded": {},
+  "notes": {
+    "dl:instruments": {
+      "rows": 426
+    },
+    "dl:funding:BTC-USDT-SWAP": {
+      "rows": 7119,
+      "source": "binance_vision"
+    },
+    "dl:funding_okx:BTC-USDT-SWAP": {
+      "rows": 286,
+      "source": "okx"
+    },
+    "dl:funding:ETH-USDT-SWAP": {
+      "rows": 7119,
+      "source": "binance_vision"
+    },
+    "dl:funding_okx:ETH-USDT-SWAP": {
+      "rows": 286,
+      "source": "okx"
+    },
+    "dl:funding:SOL-USDT-SWAP": {
+      "rows": 6032,
+      "source": "binance_vision"
+    },
+    "dl:funding_okx:SOL-USDT-SWAP": {
+      "rows": 286,
+      "source": "okx"
+    },
+    "dl:oi:BTC-USDT-SWAP:202001-202007": {
+      "rows": 0
+    },
+    "dl:oi:BTC-USDT-SWAP:202007-202101": {
+      "rows": 35391
+    },
+    "dl:oi:BTC-USDT-SWAP:202101-202107": {
+      "rows": 52047
+    },
+    "dl:oi:BTC-USDT-SWAP:202107-202201": {
+      "rows": 53181
+    },
+    "dl:oi:BTC-USDT-SWAP:202201-202207": {
+      "rows": 52416
+    },
+    "dl:oi:BTC-USDT-SWAP:202207-202301": {
+      "rows": 53280
+    },
+    "dl:oi:BTC-USDT-SWAP:202301-202307": {
+      "rows": 52416
+    },
+    "dl:oi:BTC-USDT-SWAP:202307-202401": {
+      "rows": 53277
+    },
+    "dl:oi:BTC-USDT-SWAP:202401-202407": {
+      "rows": 52577
+    },
+    "dl:oi:BTC-USDT-SWAP:202407-202501": {
+      "rows": 53278
+    },
+    "dl:oi:BTC-USDT-SWAP:202501-202507": {
+      "rows": 52416
+    },
+    "dl:oi:BTC-USDT-SWAP:202507-202601": {
+      "rows": 53277
+    },
+    "dl:oi:BTC-USDT-SWAP:202601-202607": {
+      "rows": 52414
+    },
+    "dl:oi:BTC-USDT-SWAP:202607-202607": {
+      "rows": 6912
+    },
+    "dl:oi:ETH-USDT-SWAP:202001-202007": {
+      "rows": 0
+    },
+    "dl:oi:ETH-USDT-SWAP:202007-202101": {
+      "rows": 0
+    },
+    "dl:oi:ETH-USDT-SWAP:202101-202107": {
+      "rows": 0
+    },
+    "dl:oi:ETH-USDT-SWAP:202107-202201": {
+      "rows": 9209
+    },
+    "dl:oi:ETH-USDT-SWAP:202201-202207": {
+      "rows": 52416
+    },
+    "dl:oi:ETH-USDT-SWAP:202207-202301": {
+      "rows": 53280
+    },
+    "dl:oi:ETH-USDT-SWAP:202301-202307": {
+      "rows": 52416
+    },
+    "dl:oi:ETH-USDT-SWAP:202307-202401": {
+      "rows": 53277
+    },
+    "dl:oi:ETH-USDT-SWAP:202401-202407": {
+      "rows": 52577
+    },
+    "dl:oi:ETH-USDT-SWAP:202407-202501": {
+      "rows": 53278
+    },
+    "dl:oi:ETH-USDT-SWAP:202501-202507": {
+      "rows": 52416
+    },
+    "dl:oi:ETH-USDT-SWAP:202507-202601": {
+      "rows": 53277
+    },
+    "dl:oi:ETH-USDT-SWAP:202601-202607": {
+      "rows": 52414
+    },
+    "dl:oi:ETH-USDT-SWAP:202607-202607": {
+      "rows": 6912
+    },
+    "dl:oi:SOL-USDT-SWAP:202101-202107": {
+      "rows": 0
+    },
+    "dl:oi:SOL-USDT-SWAP:202107-202201": {
+      "rows": 9209
+    },
+    "dl:oi:SOL-USDT-SWAP:202201-202207": {
+      "rows": 52416
+    },
+    "dl:oi:SOL-USDT-SWAP:202207-202301": {
+      "rows": 53280
+    },
+    "dl:oi:SOL-USDT-SWAP:202301-202307": {
+      "rows": 52416
+    },
+    "dl:oi:SOL-USDT-SWAP:202307-202401": {
+      "rows": 53260
+    },
+    "dl:oi:SOL-USDT-SWAP:202401-202407": {
+      "rows": 52576
+    },
+    "dl:oi:SOL-USDT-SWAP:202407-202501": {
+      "rows": 53278
+    },
+    "dl:oi:SOL-USDT-SWAP:202501-202507": {
+      "rows": 52416
+    },
+    "dl:oi:SOL-USDT-SWAP:202507-202601": {
+      "rows": 53277
+    },
+    "dl:oi:SOL-USDT-SWAP:202601-202607": {
+      "rows": 52414
+    },
+    "dl:oi:SOL-USDT-SWAP:202607-202607": {
+      "rows": 6912
+    },
+    "dl:mark:BTC-USDT-SWAP:1H:202001-202201": {
+      "rows": 17505
+    },
+    "dl:mark:BTC-USDT-SWAP:1H:202201-202401": {
+      "rows": 17521
+    },
+    "dl:mark:BTC-USDT-SWAP:1H:202401-202601": {
+      "rows": 17545
+    },
+    "dl:mark:BTC-USDT-SWAP:1H:202601-202607": {
+      "rows": 4936
+    },
+    "dl:index:BTC-USDT-SWAP:1H:202001-202201": {
+      "rows": 17505
+    },
+    "dl:index:BTC-USDT-SWAP:1H:202201-202401": {
+      "rows": 17521
+    },
+    "dl:index:BTC-USDT-SWAP:1H:202401-202601": {
+      "rows": 17545
+    },
+    "dl:index:BTC-USDT-SWAP:1H:202601-202607": {
+      "rows": 4936
+    },
+    "dl:mark:ETH-USDT-SWAP:1H:202001-202201": {
+      "rows": 17505
+    },
+    "dl:mark:ETH-USDT-SWAP:1H:202201-202401": {
+      "rows": 17521
+    },
+    "dl:mark:ETH-USDT-SWAP:1H:202401-202601": {
+      "rows": 17545
+    },
+    "dl:mark:ETH-USDT-SWAP:1H:202601-202607": {
+      "rows": 4936
+    },
+    "dl:index:ETH-USDT-SWAP:1H:202001-202201": {
+      "rows": 17505
+    },
+    "dl:index:ETH-USDT-SWAP:1H:202201-202401": {
+      "rows": 17521
+    },
+    "dl:index:ETH-USDT-SWAP:1H:202401-202601": {
+      "rows": 17545
+    },
+    "dl:index:ETH-USDT-SWAP:1H:202601-202607": {
+      "rows": 4936
+    },
+    "dl:mark:SOL-USDT-SWAP:1H:202101-202301": {
+      "rows": 17010
+    },
+    "dl:mark:SOL-USDT-SWAP:1H:202301-202501": {
+      "rows": 17545
+    },
+    "dl:mark:SOL-USDT-SWAP:1H:202501-202607": {
+      "rows": 13696
+    },
+    "dl:index:SOL-USDT-SWAP:1H:202101-202301": {
+      "rows": 17010
+    },
+    "dl:index:SOL-USDT-SWAP:1H:202301-202501": {
+      "rows": 17545
+    },
+    "dl:index:SOL-USDT-SWAP:1H:202501-202607": {
+      "rows": 13696
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:15m:202001-202101": {
+      "rows": 35137
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:15m:202101-202201": {
+      "rows": 35041
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:15m:202201-202301": {
+      "rows": 35041
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:15m:202301-202401": {
+      "rows": 35041
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:15m:202401-202501": {
+      "rows": 35137
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:15m:202501-202601": {
+      "rows": 35041
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:15m:202601-202607": {
+      "rows": 19759
+    },
+    "dl:ohlcv:ETH-USDT-SWAP:15m:202001-202101": {
+      "rows": 35137
+    },
+    "dl:ohlcv:ETH-USDT-SWAP:15m:202101-202201": {
+      "rows": 35041
+    },
+    "dl:ohlcv:ETH-USDT-SWAP:15m:202201-202301": {
+      "rows": 35041
+    },
+    "dl:ohlcv:ETH-USDT-SWAP:15m:202301-202401": {
+      "rows": 35041
+    },
+    "dl:ohlcv:ETH-USDT-SWAP:15m:202401-202501": {
+      "rows": 35137
+    },
+    "dl:ohlcv:ETH-USDT-SWAP:15m:202501-202601": {
+      "rows": 35041
+    },
+    "dl:ohlcv:ETH-USDT-SWAP:15m:202601-202607": {
+      "rows": 19759
+    },
+    "dl:ohlcv:SOL-USDT-SWAP:15m:202101-202201": {
+      "rows": 32997
+    },
+    "dl:ohlcv:SOL-USDT-SWAP:15m:202201-202301": {
+      "rows": 35041
+    },
+    "dl:ohlcv:SOL-USDT-SWAP:15m:202301-202401": {
+      "rows": 35041
+    },
+    "dl:ohlcv:SOL-USDT-SWAP:15m:202401-202501": {
+      "rows": 35137
+    },
+    "dl:ohlcv:SOL-USDT-SWAP:15m:202501-202601": {
+      "rows": 35041
+    },
+    "dl:ohlcv:SOL-USDT-SWAP:15m:202601-202607": {
+      "rows": 19759
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1H:202001-202201": {
+      "rows": 17545
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1H:202201-202401": {
+      "rows": 17521
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1H:202401-202601": {
+      "rows": 17545
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1H:202601-202607": {
+      "rows": 4940
+    },
+    "dl:ohlcv:ETH-USDT-SWAP:1H:202001-202201": {
+      "rows": 17545
+    },
+    "dl:ohlcv:ETH-USDT-SWAP:1H:202201-202401": {
+      "rows": 17521
+    },
+    "dl:ohlcv:ETH-USDT-SWAP:1H:202401-202601": {
+      "rows": 17545
+    },
+    "dl:ohlcv:ETH-USDT-SWAP:1H:202601-202607": {
+      "rows": 4940
+    },
+    "dl:ohlcv:SOL-USDT-SWAP:1H:202101-202301": {
+      "rows": 17010
+    },
+    "dl:ohlcv:SOL-USDT-SWAP:1H:202301-202501": {
+      "rows": 17545
+    },
+    "dl:ohlcv:SOL-USDT-SWAP:1H:202501-202607": {
+      "rows": 13700
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:4H:202001-202301": {
+      "rows": 6577
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:4H:202301-202601": {
+      "rows": 6577
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:4H:202601-202607": {
+      "rows": 1235
+    },
+    "dl:ohlcv:ETH-USDT-SWAP:4H:202001-202301": {
+      "rows": 6577
+    },
+    "dl:ohlcv:ETH-USDT-SWAP:4H:202301-202601": {
+      "rows": 6577
+    },
+    "dl:ohlcv:ETH-USDT-SWAP:4H:202601-202607": {
+      "rows": 1235
+    },
+    "dl:ohlcv:SOL-USDT-SWAP:4H:202101-202401": {
+      "rows": 6443
+    },
+    "dl:ohlcv:SOL-USDT-SWAP:4H:202401-202607": {
+      "rows": 5621
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1D:202001-202607": {
+      "rows": 2398
+    },
+    "dl:ohlcv:ETH-USDT-SWAP:1D:202001-202607": {
+      "rows": 2398
+    },
+    "dl:ohlcv:SOL-USDT-SWAP:1D:202101-202607": {
+      "rows": 2011
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202001-202004": {
+      "rows": 131041
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202004-202007": {
+      "rows": 131041
+    }
+  },
+  "updated_at": "2026-07-25T19:50:57.615338+00:00",
+  "oos_opened": false,
+  "oos_opened_at": null
+}
