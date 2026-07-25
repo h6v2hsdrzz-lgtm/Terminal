@@ -246,7 +246,7 @@
     "h2_universe_study",
     "step:universe_h2"
   ],
-  "current_hypothesis": "H7",
+  "current_hypothesis": "H8",
   "config_index": 0,
   "seed": 20260725,
   "downloaded": {},
@@ -989,7 +989,7 @@
       "recommendation": "Extension NON recommandee sur ces mesures : le gain de Sharpe est insuffisant. "
     }
   },
-  "updated_at": "2026-07-25T21:48:45.328161+00:00",
+  "updated_at": "2026-07-25T21:49:22.550276+00:00",
   "oos_opened": false,
   "oos_opened_at": null
 }
