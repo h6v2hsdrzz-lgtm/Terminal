@@ -547,9 +547,16 @@ marquées « échantillon insuffisant » ne permettent aucune affirmation.</p>
 <p>Paramètres utilisés (figés avant ouverture) : <code>{oos['params']}</code>.
 Aucune modification n'a été faite après consultation de l'out-of-sample.</p>
 """
+        oos_kill = ""
+        if om.get("killed"):
+            oos_kill = callout(
+                f"<p>Le kill switch s'est également déclenché hors échantillon, le "
+                f"{om.get('killed_at')} (après {om.get('days_before_kill_switch', float('nan')):.0f} jours).</p>",
+                "bad")
+
         sections.append(
             ("Out-of-sample (2024-2026) — ouvert une seule fois",
-             callout(deg_text, "good" if degradation > -0.3 else "bad")
+             callout(deg_text, "good" if degradation > -0.3 else "bad") + oos_kill
              + image(oos_eq, "equity OOS") + image(oos_uw, "underwater OOS")
              + kpi_grid([
                  ("CAGR OOS", om.get("cagr"), "cagr"),
