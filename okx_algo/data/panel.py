@@ -127,6 +127,12 @@ def build_panel(cfg: Config, symbols: list[str] | None = None,
         return _build_panel_uncached(cfg, store, symbols, timeframe,
                                      with_minute, start_ts, end_dt, end)
 
+    # Un panel avec le 1 minute pese plus d'un Go et son empreinte change a
+    # chaque nouvelle barre telechargee : le mettre en cache disque remplirait
+    # le volume pour un gain nul, le panel etant construit une fois par run et
+    # reutilise en memoire ensuite.
+    if with_minute:
+        return build()
     return cache.get_or_compute(key, build)
 
 
