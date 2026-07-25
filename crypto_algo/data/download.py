@@ -6,6 +6,7 @@ Les barres non clôturées ne sont jamais écrites (source classique de lookahea
 
 from __future__ import annotations
 
+import json
 import time
 from typing import Any, Callable
 
@@ -27,6 +28,17 @@ class Downloader:
         self.backoff = list(cfg.get_path("data.retry_backoff_seconds"))
         self.pause = float(cfg.get_path("data.request_pause_seconds"))
         self._ex = exchange
+        # Mémoire des comblements amont infructueux : un symbole listé après
+        # data.start (SOL n'existe qu'à partir de 2021) ferait sinon des
+        # centaines de requêtes vides à chaque appel, ce qui rend la boucle de
+        # paper trading inutilisable.
+        self._probe_path = self.store.root / "_meta" / "backfill_probes.json"
+        self._probes: dict[str, int] = {}
+        if self._probe_path.exists():
+            try:
+                self._probes = json.loads(self._probe_path.read_text(encoding="utf-8"))
+            except Exception:  # noqa: BLE001
+                self._probes = {}
 
     # ------------------------------------------------------------------ utils
     @property
@@ -42,6 +54,15 @@ class Downloader:
         return call_with_retry(
             fn, *args, max_retries=self.max_retries, backoff=self.backoff, **kwargs
         )
+
+    def _remember_probe(self, key: str, probed_start: int) -> None:
+        self._probes[key] = int(probed_start)
+        self._probe_path.parent.mkdir(parents=True, exist_ok=True)
+        self._probe_path.write_text(json.dumps(self._probes, indent=2), encoding="utf-8")
+
+    def _backfill_already_probed(self, key: str, desired_start: int) -> bool:
+        probed = self._probes.get(key)
+        return probed is not None and probed <= desired_start
 
     def _resume_from(self, kind: str, symbol: str, timeframe: str | None, step_ms: int) -> int:
         """Point de reprise : dernière barre stockée moins 2 pas (refresh de bord)."""
@@ -84,10 +105,18 @@ class Downloader:
         # 1) comblement amont : une série déjà présente mais commençant trop tard
         #    ne doit pas empêcher la récupération de son passé.
         first = self.store.first_timestamp(kind, symbol, timeframe)
+        probe_key = f"{kind}|{symbol}|{timeframe}"
         if first is not None and first > desired_start + step:
-            added += self._fetch_range(
-                fetcher, symbol, timeframe, kind, desired_start, first, step, batch_limit
-            )
+            if self._backfill_already_probed(probe_key, desired_start):
+                log.debug("%s %s %s : comblement amont déjà tenté, ignoré", symbol, timeframe, kind)
+            else:
+                gained = self._fetch_range(
+                    fetcher, symbol, timeframe, kind, desired_start, first, step, batch_limit
+                )
+                added += gained
+                if gained == 0:
+                    # rien avant cette date : on ne réessaiera pas
+                    self._remember_probe(probe_key, desired_start)
 
         # 2) prolongement aval depuis la dernière barre stockée
         forward_start = to_ms(start) if start is not None else self._resume_from(kind, symbol, timeframe, step)
