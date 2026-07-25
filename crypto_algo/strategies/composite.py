@@ -74,6 +74,12 @@ class RoutedMultiFamilyStrategy(Strategy):
         self.min_stop_pct = float(cfg.get_path("strategy.min_stop_pct"))
         self.max_stop_pct = float(cfg.get_path("strategy.max_stop_pct"))
         self.use_hysteresis = bool(cfg.get_path("strategy.use_hysteresis"))
+        # Contrôle d'inversion : on retourne l'opinion de chaque famille **avant**
+        # le routage, donc régimes et contraintes de direction s'appliquent
+        # normalement. Si la version inversée gagne nettement, la perte vient
+        # d'une erreur de signe et non d'une absence d'edge ; si elle perd aussi,
+        # les signaux sont du bruit que les coûts achèvent.
+        self.invert_signals = bool(overrides.get("invert_signals", False))
         self.diagnostics: dict[str, pd.DataFrame] = {}
         self.routing_log: dict[str, pd.DataFrame] = {}
         self.regime_shares: dict[str, pd.DataFrame] = {}
@@ -115,6 +121,9 @@ class RoutedMultiFamilyStrategy(Strategy):
                 except Exception as exc:  # noqa: BLE001
                     log.warning("famille %s indisponible sur %s : %s", name, symbol, exc)
                     scores[name] = pd.Series(0.0, index=df.index)
+
+            if self.invert_signals:
+                scores = {name: -s for name, s in scores.items()}
 
             diagnostics = classifier.classify(ctx)
             regimes = diagnostics.stable

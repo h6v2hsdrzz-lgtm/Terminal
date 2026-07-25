@@ -189,3 +189,37 @@ def test_daily_drawdown_stop_flattens_and_blocks_reentry():
     after = res.trades[pd.to_datetime(res.trades["opened_at"]) > first_halt]
     same_day = after[pd.to_datetime(after["opened_at"]) < first_halt.normalize() + pd.Timedelta(days=1)]
     assert same_day.empty, "des positions ont été ouvertes malgré la halte"
+
+
+def test_kill_switch_stops_the_backtest_definitively():
+    """Scénario synthétique : effondrement continu jusqu'à -60 % du HWM.
+
+    Le kill switch doit se déclencher, enregistrer sa date, et **aucun** trade
+    ne doit être ouvert ensuite — même des semaines plus tard.
+    """
+    from crypto_algo.tests.conftest import make_bars, market_from_bars
+    from crypto_algo.tests.test_execution import ScriptedStrategy
+
+    # Il faut plusieurs mois : le coupe-circuit mensuel plafonne la perte à
+    # -25 % par mois, donc atteindre -60 % du high-water mark demande au moins
+    # quatre mois de pertes (0,75^4 = -68 %). Une chute violente sur quelques
+    # jours ne déclenche *pas* le kill switch — c'est le comportement voulu.
+    n = 12_000                                     # ~125 jours en 15m
+    prices, price = [], 100.0
+    for i in range(n):
+        price *= 0.93 if i % 8 == 4 else 1.004     # gaps répétés à travers le stop
+        prices.append((price, price * 1.001, price * 0.999, price))
+    bars = make_bars(prices, timeframe_ms=900_000, start_ms=1_704_067_200_000)
+    md = market_from_bars(bars, timeframe="15m")
+    cfg = make_cfg(**{"execution.latency.enabled": False})
+    engine = BacktestEngine(cfg, md, ScriptedStrategy([1.0] * n, [p[0] * 0.97 for p in prices]))
+    res = engine.run()
+
+    assert engine.risk.killed, "le kill switch ne s'est pas déclenché"
+    assert res.stats["killed_at"] is not None
+    killed_at = pd.Timestamp(res.stats["killed_at"])
+    after = res.trades[pd.to_datetime(res.trades["opened_at"]) > killed_at]
+    assert after.empty, "des positions ont été ouvertes après le kill switch"
+    # l'arrêt est définitif : l'equity ne bouge plus après la dernière clôture
+    tail = res.equity.loc[res.equity.index > killed_at + pd.Timedelta(hours=2), "equity"]
+    assert tail.nunique() <= 1, "l'equity varie encore après l'arrêt définitif"
