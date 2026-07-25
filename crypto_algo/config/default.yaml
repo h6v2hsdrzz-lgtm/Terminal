@@ -158,6 +158,15 @@ execution:
     hours_utc: [0, 8, 16]
     use_real_rates: true
     fallback_rate: 0.0001           # utilisé seulement si l'historique manque
+    # Niveau assumé du funding reconstruit (composante d'intérêt standard des
+    # perpétuels, ~0.01 %/8h soit ~11 %/an pour un long). Ce n'est PAS une
+    # mesure : la reconstruction ne calibre que la variation, pas le niveau.
+    # Le stress des coûts (x1,5, x2) borne la sensibilité à ce choix.
+    base_rate: 0.0001
+    # fenêtre de centrage glissant de la prime (en cycles de 8h ; 270 ~ 90 jours).
+    # Le niveau de la prime n'est pas comparable d'une période à l'autre : on ne
+    # l'utilise donc que pour ses écarts de court terme.
+    centring_periods: 270
   liquidation:
     enabled: true
     use_mark_price: true

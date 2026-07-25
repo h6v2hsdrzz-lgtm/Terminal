@@ -44,8 +44,11 @@ def buy_and_hold_equity(
 ) -> pd.Series:
     """Equity d'un achat-conservation, éventuellement en levier.
 
-    En levier > 1, le funding est facturé à chaque règlement 8h sur le
-    notionnel, et une perte totale (equity <= 0) est absorbante.
+    À levier 1, le benchmark est un **achat au comptant** : « aurais-je fait
+    mieux qu'acheter et attendre ? » se compare au spot, qui ne paie pas de
+    funding. À partir du levier 2, la position exige un perpétuel ou de la
+    marge : le funding est alors facturé à chaque règlement 8h sur le notionnel.
+    Une perte totale (equity <= 0) est absorbante.
     """
     tf = str(cfg.get_path("data.execution_timeframe"))
     symbol = symbol or str(cfg.get_path("universe.benchmark_symbol"))
@@ -60,7 +63,8 @@ def buy_and_hold_equity(
     if leverage == 1.0 and not apply_costs:
         return equity0 * (price / price.iloc[0])
 
-    funding_model = FundingModel(cfg, {symbol: md.funding.get(symbol)}) if apply_costs else None
+    pays_funding = apply_costs and abs(leverage) > 1.0
+    funding_model = FundingModel(cfg, {symbol: md.funding.get(symbol)}) if pays_funding else None
     equity = np.empty(len(price))
     value = equity0 * (1.0 - taker)          # frais d'entrée
     prev_ts = price.index[0]

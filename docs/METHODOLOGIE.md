@@ -190,3 +190,48 @@ Ce que cela implique, et ce que cela n'implique pas :
   partir de la seule grille in-sample.
 * Le chiffre va dans le même sens que l'in-sample, ce qui ne le rend ni plus ni
   moins valable : il est rapporté ici, pas utilisé comme argument.
+
+
+---
+
+## 11. Le funding reconstruit, corrigé deux fois
+
+La première version calibrait `funding = a + b·prime` par régression libre. En
+fenêtre de calibration : excellente (R² 0,78, biais nul). Hors fenêtre :
+catastrophique. La prime mesurée y est biaisée de **−4,8 bps** (le perp cote sous
+l'index) alors que le funding réel y vaut **+0,0023 %** ; la constante absorbait
+donc ce biais, et l'appliquer à 2020-2024 imposait un plancher de +3,7 bps par
+cycle, soit **+50 %/an de portage** contre ~2,5 %/an réellement observés.
+
+Le symptôme visible : le benchmark « BTC buy & hold » ressortait à **−15 %** sur
+une période où BTC faisait **+489 %**. Un benchmark aberrant est un signal
+d'alarme sur le modèle de coûts, pas une bizarrerie à contourner.
+
+Deuxième tentative — centrer la prime sur sa moyenne de calibration — reportait
+le même biais dans le niveau (+62 %/an). La cause de fond : **le niveau de la
+prime n'est pas comparable d'une période à l'autre**, OKX calculant son indice de
+prime sur des cotations pondérées par la profondeur et non sur le dernier prix
+traité.
+
+**Décision finale.** Le niveau est une hypothèse documentée
+(`execution.funding.base_rate` = 0,01 %/8h, la composante d'intérêt standard des
+perpétuels), et la prime ne sert plus qu'à ses **écarts de court terme**, centrés
+sur une moyenne glissante de 90 jours. Résultat : ~10,2 %/an de portage implicite
+pour un long, variation calibrée à R² 0,78-0,82.
+
+Deux conséquences à assumer :
+
+* le funding reconstruit **n'est pas une mesure** — le rapport le dit, et le
+  stress des coûts (×1,5, ×2) borne la sensibilité à ce choix ;
+* les exécutions antérieures à cette correction ont été **écartées du registre
+  d'essais** (conservées dans `reports_out/trials_pre_funding_fix.json`) : elles
+  reposaient sur un autre modèle de coûts et n'appartiennent pas à la recherche
+  finale. Les compter aurait gonflé artificiellement le dénominateur du Deflated
+  Sharpe Ratio.
+
+Enfin, un benchmark « buy & hold » à levier 1 est désormais traité comme un
+**achat au comptant** : la question « aurais-je fait mieux qu'acheter et
+attendre ? » se compare au spot, qui ne paie pas de funding. À partir du levier
+2, la position exige un perpétuel et le funding s'applique.
+
+*Code : `data/funding.py`, `validation/benchmarks.py::buy_and_hold_equity`.*
