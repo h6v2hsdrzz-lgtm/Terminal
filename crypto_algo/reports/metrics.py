@@ -130,12 +130,17 @@ def conditional_var(returns: pd.Series, level: float = 0.95) -> float:
 
 
 def monthly_returns(equity: pd.Series) -> pd.Series:
+    """Rendements mensuels ; le premier mois est mesuré depuis l'equity initiale."""
     if len(equity) == 0:
         return pd.Series(dtype=float)
     monthly = equity.resample("ME").last().ffill()
-    first = equity.iloc[0]
-    prev = pd.concat([pd.Series([first], index=[monthly.index[0] - pd.offsets.MonthEnd(1)]), monthly])
-    return monthly.pct_change().fillna(monthly.iloc[0] / first - 1.0) if len(monthly) else pd.Series(dtype=float)
+    if monthly.empty:
+        return pd.Series(dtype=float)
+    returns = monthly.pct_change()
+    first_equity = float(equity.iloc[0])
+    if first_equity > 0:
+        returns.iloc[0] = float(monthly.iloc[0]) / first_equity - 1.0
+    return returns.dropna()
 
 
 def monthly_table(equity: pd.Series) -> pd.DataFrame:

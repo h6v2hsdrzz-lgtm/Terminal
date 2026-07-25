@@ -86,7 +86,7 @@ class RoutedMultiFamilyStrategy(Strategy):
 
     # ------------------------------------------------------------------ prepare
     def prepare(self, md: MarketData, cfg: Config) -> None:
-        if self.core_cache.get("ready"):
+        if self.core_cache.get("ready") and self.core_cache.get("symbols"):
             self._decisions = {
                 symbol: self._build_decisions(
                     core["ctx"], core["df"], core["routed"], core["regimes"], core["scores"]

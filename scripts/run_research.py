@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import pickle
 import sys
 from pathlib import Path
 
@@ -54,6 +55,34 @@ def save_table(df: pd.DataFrame, cfg, name: str) -> None:
         return
     path = ensure_dir(out_dir(cfg) / "tables") / f"{name}.csv"
     df.to_csv(path, index=False)
+
+
+def research_cache_path(cfg) -> Path:
+    return out_dir(cfg) / "research_cache.pkl"
+
+
+def save_research_cache(cfg, research: dict) -> None:
+    """Persiste les résultats in-sample pour que l'ouverture de l'OOS ne
+    réexécute pas une heure de validation déjà faite (et déjà comptée dans le
+    registre d'essais)."""
+    payload = {k: v for k, v in research.items() if k not in ("market_data", "registry")}
+    payload["_n_trials"] = research["registry"].n_trials
+    payload["_trial_sharpes"] = research["registry"].sharpes()
+    with open(research_cache_path(cfg), "wb") as fh:
+        pickle.dump(payload, fh)
+    log.info("Cache de recherche écrit : %s", research_cache_path(cfg))
+
+
+def load_research_cache(cfg) -> dict | None:
+    path = research_cache_path(cfg)
+    if not path.exists():
+        return None
+    with open(path, "rb") as fh:
+        payload = pickle.load(fh)
+    registry = TrialRegistry.load(out_dir(cfg) / "trials.json")
+    payload["registry"] = registry
+    log.info("Cache de recherche relu (%d essais enregistrés)", registry.n_trials)
+    return payload
 
 
 def phase_quality(cfg) -> pd.DataFrame:
@@ -212,6 +241,7 @@ def phase_research(cfg, quick: bool = False) -> dict:
         save_table(data["windows"], cfg, f"walk_forward_{mode}")
     save_table(baseline.trades, cfg, "trades_in_sample")
     baseline.equity.to_frame("equity").to_csv(out_dir(cfg) / "tables" / "equity_in_sample.csv")
+    save_research_cache(cfg, result)
     return result
 
 
@@ -579,6 +609,8 @@ def main() -> int:
     ap.add_argument("--quick", action="store_true", help="grilles réduites (mise au point)")
     ap.add_argument("--unlock-oos", default=None,
                     help="motif d'ouverture de l'out-of-sample (obligatoire pour --phase oos)")
+    ap.add_argument("--reuse-research", action="store_true",
+                    help="repartir du cache in-sample au lieu de tout réexécuter")
     args = ap.parse_args()
 
     setup_logging("INFO", logfile="logs/research.log")
@@ -590,7 +622,9 @@ def main() -> int:
     if args.phase == "quality":
         return 0
 
-    research = phase_research(cfg, quick=args.quick)
+    research = load_research_cache(cfg) if args.reuse_research else None
+    if research is None:
+        research = phase_research(cfg, quick=args.quick)
 
     oos = None
     if args.phase in ("oos", "all"):

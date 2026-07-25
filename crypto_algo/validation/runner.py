@@ -25,6 +25,16 @@ from .splits import Window, purged_kfold_windows, train_segments, walk_forward_w
 
 log = get_logger("validation.runner")
 
+# Paramètres qui changent le **cœur** du calcul (features, scores de familles,
+# régimes, routage) et non seulement la couche de décision. Ils doivent entrer
+# dans la clé de cache, sinon deux variantes différentes se partagent le même
+# cœur et donnent des résultats identiques — une erreur silencieuse.
+CORE_AFFECTING_PARAMS = ("invert_signals", "families")
+
+# Sections de configuration dont dépend le cœur : un cache partagé entre deux
+# configurations qui diffèrent sur l'une d'elles serait invalide.
+CORE_CONFIG_SECTIONS = ("features", "signals", "regime", "routing", "statarb", "data")
+
 # paramètres explorés par défaut : peu nombreux et interprétables.
 # Une grille large sur beaucoup d'axes ne « trouve » qu'un pic de surajustement.
 DEFAULT_GRID = {
@@ -82,13 +92,23 @@ class ValidationRunner:
         if start is not None:
             pad_start = to_utc(start) - self._warmup_pad()
         md = self.md.slice(pad_start, end) if (start is not None or end is not None) else self.md
-        key = cache_key if cache_key is not None else (to_utc(start), to_utc(end))
+        core_signature = tuple(
+            (k, repr(params[k])) for k in CORE_AFFECTING_PARAMS if k in params
+        )
+        base_key = cache_key if cache_key is not None else (to_utc(start), to_utc(end))
+        key = (base_key, core_signature) if core_signature else base_key
         # plafond mémoire : chaque fenêtre conserve ~200 colonnes de features par
         # symbole ; sans plafond, un walk-forward de 20 fenêtres sature la RAM.
         if key not in self._cache_by_window and len(self._cache_by_window) >= self.max_cached_windows:
             oldest = next(iter(self._cache_by_window))
             self._cache_by_window.pop(oldest, None)
         cache = self._cache_by_window.setdefault(key, {})
+        fingerprint = self._config_fingerprint()
+        if cache.get("_fingerprint") not in (None, fingerprint):
+            # deux configurations aux features différentes ne peuvent pas
+            # partager un cache : on repart de zéro plutôt que de mélanger
+            cache.clear()
+        cache["_fingerprint"] = fingerprint
 
         strategy = RoutedMultiFamilyStrategy(self.cfg, core_cache=cache, **params)
         result = BacktestEngine(self.cfg, md, strategy, cost_stress=self.cost_stress).run()
@@ -111,6 +131,12 @@ class ValidationRunner:
                                  report.metrics.get("trades", 0), md.split)
         return RunOutcome(params=params, metrics=report.metrics,
                           equity=equity, trades=trades, stats=result.stats)
+
+    def _config_fingerprint(self) -> int:
+        import json
+
+        payload = {s: self.cfg.get_path(s, {}) for s in CORE_CONFIG_SECTIONS}
+        return hash(json.dumps(payload, sort_keys=True, default=str))
 
     def _warmup_pad(self) -> pd.Timedelta:
         from ..features.pipeline import effective_warmup
