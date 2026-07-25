@@ -162,7 +162,9 @@ class PaperTrader:
             for tf in timeframes:
                 self.downloader.download_ohlcv(symbol, tf)
             self.downloader.download_ohlcv(symbol, self.exec_tf, kind="mark")
-            self.downloader.download_funding(symbol)
+            # en direct, seule la page la plus récente est utile : repaginer
+            # tout l'historique à chaque cycle de 30 s serait du gaspillage
+            self.downloader.download_funding(symbol, max_pages=1)
 
         pad = effective_warmup(self.cfg) * timeframe_to_timedelta(self.exec_tf)
         start = pd.Timestamp.now("UTC") - pad * 1.2

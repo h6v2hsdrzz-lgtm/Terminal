@@ -132,7 +132,8 @@ class Downloader:
         return added
 
     # ---------------------------------------------------------------- funding
-    def download_funding(self, symbol: str, start=None, end=None, batch_limit: int = 100) -> int:
+    def download_funding(self, symbol: str, start=None, end=None, batch_limit: int = 100,
+                         max_pages: int | None = None) -> int:
         """Historique réel des taux de funding (cycles 8h), pagination **descendante**.
 
         OKX inverse la convention habituelle sur cet endpoint : ``after`` renvoie
@@ -143,7 +144,8 @@ class Downloader:
         start_ms = to_ms(start) if start is not None else to_ms(self.cfg.get_path("data.start"))
         end_ms = to_ms(end) or int(now_utc().value // 1_000_000)
         added, cursor, pages = 0, end_ms, 0
-        while pages < 5000:
+        page_cap = max_pages if max_pages is not None else 5000
+        while pages < page_cap:
             params = {"after": str(int(cursor))} if cursor else {}
             raw = self._retry(
                 self.ex.fetch_funding_rate_history, symbol, since=None, limit=batch_limit, params=params
