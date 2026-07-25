@@ -79,7 +79,17 @@ class RoutedMultiFamilyStrategy(Strategy):
         # normalement. Si la version inversée gagne nettement, la perte vient
         # d'une erreur de signe et non d'une absence d'edge ; si elle perd aussi,
         # les signaux sont du bruit que les coûts achèvent.
-        self.invert_signals = bool(overrides.get("invert_signals", False))
+        # "pre"  : inverse l'opinion des familles **avant** le routage. Les
+        #          contraintes de régime s'appliquent donc normalement — et
+        #          annulent presque tout, ce qui montre que les entrées viennent
+        #          surtout du suivi de tendance dans les régimes directionnels.
+        # "post" : inverse la décision finale, en violant délibérément la
+        #          contrainte de direction. C'est le test « et si on faisait
+        #          exactement l'inverse ? », qui isole une éventuelle erreur de
+        #          signe. À ne lire que comme un diagnostic.
+        invert = overrides.get("invert_signals", False)
+        self.invert_mode = "pre" if invert is True else (str(invert) if invert else None)
+        self.invert_signals = self.invert_mode == "pre"
         self.diagnostics: dict[str, pd.DataFrame] = {}
         self.routing_log: dict[str, pd.DataFrame] = {}
         self.regime_shares: dict[str, pd.DataFrame] = {}
@@ -180,6 +190,9 @@ class RoutedMultiFamilyStrategy(Strategy):
         direction = routed.direction_mask.reindex(idx)
         signal = signal.where(~(direction == 1.0) | (signal >= 0), 0.0)
         signal = signal.where(~(direction == -1.0) | (signal <= 0), 0.0)
+
+        if self.invert_mode == "post":
+            signal = -signal
 
         # --- stop obligatoire et objectif, en ATR du timeframe d'exécution ---
         atr = ctx.col("atr", exec_tf)

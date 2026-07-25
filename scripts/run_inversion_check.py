@@ -41,7 +41,12 @@ def main() -> int:
 
     runner = ValidationRunner(cfg, md, registry=None)
     rows = []
-    for label, params in (("normal", {}), ("inversé", {"invert_signals": True})):
+    variants = (
+        ("normal", {}),
+        ("inversé avant routage", {"invert_signals": "pre"}),
+        ("inversé après routage", {"invert_signals": "post"}),
+    )
+    for label, params in variants:
         outcome = runner.run_once(params, start, end, label=f"inversion_{label}", record=False)
         m = outcome.metrics
         rows.append(
