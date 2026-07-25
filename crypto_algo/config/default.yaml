@@ -221,6 +221,16 @@ signals:
   entry_threshold: 0.35
   exit_threshold: 0.10
   min_families_agreeing: 2
+  # --- échelles de normalisation des composantes (aucune constante en dur) ---
+  trend_slope_scale: 0.0008        # pente d'EMA par barre -> tanh
+  momentum_roc_scale: 0.02         # ROC -> tanh
+  rel_volume_scale: 1.5
+  rsi_overbought: 72.0
+  rsi_oversold: 28.0
+  volume_climax_ratio: 3.0
+  rejection_wick_ratio: 0.6
+  min_mean_crossings: 6.0          # stationnarité d'un ratio (franchissements)
+  max_decorrelation_bars: 96       # au-delà : changement de régime, pas un signal
 
 statarb:
   funding_extreme_pctile: 0.90      # funding au-delà du 90e centile = surchauffe
@@ -258,13 +268,29 @@ routing:
   high_vol_chaos: {allow: [], direction: "flat"}
 
 # -----------------------------------------------------------------------------
+# Stratégie assemblée (§5 du plan de construction)
+# -----------------------------------------------------------------------------
+strategy:
+  families: ["trend", "breakout", "momentum", "range", "reversal", "volume", "correlation", "statarb"]
+  # stops et objectifs en multiples d'ATR du timeframe d'exécution
+  atr_stop_mult: 2.0
+  atr_tp_mult: 3.0
+  # bornes de sécurité sur la distance au stop (cohérentes avec risk.*)
+  min_stop_pct: 0.004
+  max_stop_pct: 0.09
+  # hystérésis : on entre au-dessus de entry_threshold, on tient tant que
+  # |score| > exit_threshold, on sort en dessous
+  use_hysteresis: true
+
+# -----------------------------------------------------------------------------
 # Backtest
 # -----------------------------------------------------------------------------
 backtest:
   start: null                       # null => borne du split actif
   end: null
   seed: 20200101
-  warmup_bars: 500
+  warmup_bars: 500              # plancher ; le warmup réel est dérivé des
+  auto_warmup: true             # lookbacks les plus longs (EMA200 4h, etc.)
   log_level: "INFO"
   save_trades: true
   save_equity: true

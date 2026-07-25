@@ -145,6 +145,43 @@ def align_to_execution(
     return merged
 
 
+def required_warmup_bars(cfg: Config) -> int:
+    """Nombre de barres d'exécution à ignorer avant toute décision.
+
+    Une EMA 200 sur 4h demande 800 heures d'historique : si le backtest commence
+    à trader avant, ses features valent NaN, le régime retombe par défaut sur
+    ``range`` et les premiers mois du test sont du bruit déguisé en résultat.
+    Le warmup est donc **dérivé** des paramètres, pas choisi à la main.
+    """
+    f = cfg.sub("features")
+    exec_tf = str(cfg.get_path("data.execution_timeframe"))
+    exec_ms = timeframe_to_ms(exec_tf)
+    timeframes = list(cfg.get_path("data.signal_timeframes"))
+    if exec_tf not in timeframes:
+        timeframes.append(exec_tf)
+
+    base_lookback = max(
+        [int(max(f["ema_periods"])), int(f["atr_percentile_window"]),
+         int(f["sr_cluster"]["lookback"]), int(f["divergence_lookback"]),
+         int(f["bollinger"]["period"]), int(f["choppiness_period"])]
+    )
+    heavy_lookback = max(base_lookback, int(f["volume_profile"]["window"]))
+
+    needed = 0
+    for tf in timeframes:
+        ratio = timeframe_to_ms(tf) / exec_ms
+        lookback = heavy_lookback if timeframe_to_ms(tf) >= timeframe_to_ms("1h") else base_lookback
+        needed = max(needed, int(lookback * ratio))
+    return needed
+
+
+def effective_warmup(cfg: Config) -> int:
+    configured = int(cfg.get_path("backtest.warmup_bars"))
+    if not bool(cfg.get_path("backtest.auto_warmup", True)):
+        return configured
+    return max(configured, required_warmup_bars(cfg))
+
+
 class FeatureStore:
     """Calcule et met en cache les features de chaque (symbole, timeframe)."""
 

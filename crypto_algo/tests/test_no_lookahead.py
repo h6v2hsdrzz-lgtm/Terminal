@@ -102,6 +102,7 @@ def test_strategy_decisions_do_not_change_when_the_future_changes():
         overrides={
             "universe.symbols": ["BTC/USDT:USDT"],
             "backtest.warmup_bars": 50,
+            "backtest.auto_warmup": False,
             "execution.rejects.enabled": False,
             "execution.latency.enabled": False,
             "data.execution_timeframe": "15m",
@@ -147,6 +148,7 @@ def test_execution_never_fills_at_the_signal_price():
         overrides={
             "universe.symbols": ["BTC/USDT:USDT"],
             "backtest.warmup_bars": 20,
+            "backtest.auto_warmup": False,
             "execution.rejects.enabled": False,
             "execution.latency.enabled": False,
             "execution.slippage.spread_bps": 0.0,

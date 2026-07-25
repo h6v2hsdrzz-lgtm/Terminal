@@ -44,6 +44,7 @@ def base_cfg(**overrides):
     base = {
         "universe.symbols": ["BTC/USDT:USDT"],
         "backtest.warmup_bars": 0,
+        "backtest.auto_warmup": False,
         "risk.initial_equity": 10_000.0,
         "execution.rejects.enabled": False,
         "execution.latency.enabled": False,

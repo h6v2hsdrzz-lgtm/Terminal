@@ -21,6 +21,7 @@ def make_cfg(**overrides):
     base = {
         "universe.symbols": ["BTC/USDT:USDT"],
         "backtest.warmup_bars": 50,
+        "backtest.auto_warmup": False,
         "risk.initial_equity": 10_000.0,
         "data.execution_timeframe": "15m",
         "data.intrabar_timeframe": "5m",

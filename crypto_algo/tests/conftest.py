@@ -18,6 +18,7 @@ def cfg():
         overrides={
             "universe.symbols": ["BTC/USDT:USDT"],
             "backtest.warmup_bars": 50,
+            "backtest.auto_warmup": False,
             "risk.initial_equity": 10_000.0,
             "execution.rejects.enabled": False,   # déterminisme des tests
             "execution.latency.enabled": False,

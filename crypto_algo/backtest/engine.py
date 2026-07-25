@@ -26,6 +26,7 @@ import pandas as pd
 from ..config import Config
 from ..data.loader import MarketData
 from ..execution.costs import CostModel, FundingModel
+from ..features.pipeline import effective_warmup
 from ..execution.simulator import ExecutionSimulator, Order
 from ..risk.engine import RiskEngine
 from ..utils import get_logger, timeframe_to_ms, to_utc
@@ -144,7 +145,7 @@ class BacktestEngine:
         decisions = self._decision_arrays(symbols, timeline)
         symbols = [s for s in symbols if s in arrays]
 
-        warmup = int(self.cfg.get_path("backtest.warmup_bars"))
+        warmup = effective_warmup(self.cfg)
         self.risk.start(timeline[0], self.portfolio.initial_equity)
         equity_ts: list[pd.Timestamp] = []
         equity_val: list[float] = []
