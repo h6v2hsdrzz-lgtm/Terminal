@@ -118,7 +118,10 @@
     "dl:ohlcv:BTC-USDT-SWAP:1m:202007-202010",
     "dl:ohlcv:BTC-USDT-SWAP:1m:202010-202101",
     "dl:ohlcv:BTC-USDT-SWAP:1m:202101-202104",
-    "dl:ohlcv:BTC-USDT-SWAP:1m:202104-202107"
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202104-202107",
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202107-202110",
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202110-202201",
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202201-202204"
   ],
   "current_hypothesis": null,
   "config_index": 0,
@@ -481,9 +484,18 @@
     },
     "dl:ohlcv:BTC-USDT-SWAP:1m:202104-202107": {
       "rows": 131041
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202107-202110": {
+      "rows": 132481
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202110-202201": {
+      "rows": 132481
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202201-202204": {
+      "rows": 129601
     }
   },
-  "updated_at": "2026-07-25T20:01:24.076875+00:00",
+  "updated_at": "2026-07-25T20:04:44.966199+00:00",
   "oos_opened": false,
   "oos_opened_at": null
 }

@@ -33,7 +33,8 @@ def equal_weight_basket(panel: Panel, initial_equity: float, i0: int = 0,
     R = pd.DataFrame(rets).fillna(0.0)
     live = pd.DataFrame({s: np.isfinite(panel.data[s].close[i0:i1]) for s in panel.symbols},
                         index=idx)
-    groups = idx.to_period("M") if rebalance == "MS" else idx.to_period("D")
+    naive = idx.tz_localize(None) if idx.tz is not None else idx
+    groups = naive.to_period("M") if rebalance == "MS" else naive.to_period("D")
 
     equity = np.empty(len(idx))
     eq = initial_equity

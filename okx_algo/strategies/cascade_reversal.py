@@ -56,6 +56,7 @@ class CascadeReversal(Brick):
         stops = np.full((n, m), np.nan)
         exit_by = np.full((n, m), -1, dtype=np.int64)
         events: list[dict] = []
+        funnel: dict[str, dict] = {}
 
         # ---- 1. detection vectorisee, par actif -------------------------
         triggers: list[tuple[int, int, int, float, float, float]] = []
@@ -77,25 +78,38 @@ class CascadeReversal(Brick):
 
             a1h = atr(d.high, d.low, d.close, max(2, bars_per_hour))
 
-            cond = (
-                (np.abs(r) > float(p["return_threshold"]))
-                & (volwin > float(p["volume_multiple"]) * med)
-                & (basis > float(p["basis_dislocation"]))
-                & (oi_chg < float(p["oi_drop_1h"]))
-                & d.valid
-            )
-            cond &= np.isfinite(med) & np.isfinite(oi_chg) & np.isfinite(basis) & np.isfinite(a1h)
+            # Entonnoir des conditions : indispensable pour savoir LAQUELLE
+            # bloque quand la brique ne se declenche pas. Sans cette mesure, un
+            # resultat vide serait ininterpretable.
+            c_ret = np.abs(r) > float(p["return_threshold"])
+            c_vol = volwin > float(p["volume_multiple"]) * med
+            c_bas = basis > float(p["basis_dislocation"])
+            c_oi = oi_chg < float(p["oi_drop_1h"])
+            usable = (d.valid & np.isfinite(med) & np.isfinite(oi_chg)
+                      & np.isfinite(basis) & np.isfinite(a1h))
+            funnel[sym] = {
+                "barres_exploitables": int(usable.sum()),
+                "1_rendement": int((c_ret & usable).sum()),
+                "2_+volume": int((c_ret & c_vol & usable).sum()),
+                "3_+basis": int((c_ret & c_vol & c_bas & usable).sum()),
+                "4_+open_interest": int((c_ret & c_vol & c_bas & c_oi & usable).sum()),
+                "open_interest_disponible": int(np.isfinite(oi_chg).sum()),
+            }
+            cond = c_ret & c_vol & c_bas & c_oi & usable
 
+            n_wick_ok = 0
             for i in np.where(cond)[0]:
                 direction = -int(np.sign(r[i]))     # contrarien
                 wick_ok, extreme = _wick_check(d, i, win_bars, direction,
                                                float(p["wick_ratio_min"]))
                 if not wick_ok:
                     continue
+                n_wick_ok += 1
                 vwap = _window_vwap(d, i, win_bars)
                 if not np.isfinite(vwap) or not np.isfinite(extreme):
                     continue
                 triggers.append((i, j, direction, extreme, vwap, a1h[i]))
+            funnel[sym]["5_+meche_1m"] = n_wick_ok
 
         triggers.sort(key=lambda t: t[0])
 
@@ -134,6 +148,7 @@ class CascadeReversal(Brick):
         out.stops = stops
         out.exit_by = exit_by
         out.diagnostics = {
+            "funnel_conditions": funnel,
             "n_candidate_triggers": len(triggers),
             "n_taken": len(events),
             "events": events[:200],

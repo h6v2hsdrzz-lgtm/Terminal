@@ -44,11 +44,15 @@ def realized_vol(returns: np.ndarray, window_bars: int) -> np.ndarray:
 def atr(high: np.ndarray, low: np.ndarray, close: np.ndarray, window: int) -> np.ndarray:
     """ATR de Wilder, en unites de prix."""
     prev_close = np.concatenate([[np.nan], close[:-1]])
-    tr = np.nanmax(np.column_stack([
-        high - low,
-        np.abs(high - prev_close),
-        np.abs(low - prev_close),
-    ]), axis=1)
+    stack = np.column_stack([high - low,
+                             np.abs(high - prev_close),
+                             np.abs(low - prev_close)])
+    # une ligne entierement NaN (actif non encore cote) est un cas legitime :
+    # nanmax y emettrait un avertissement et renverrait NaN, ce qu'on veut deja
+    all_nan = np.isnan(stack).all(axis=1)
+    tr = np.full(len(close), np.nan)
+    if (~all_nan).any():
+        tr[~all_nan] = np.nanmax(stack[~all_nan], axis=1)
     return pd.Series(tr).ewm(alpha=1.0 / window, min_periods=window).mean().to_numpy()
 
 
