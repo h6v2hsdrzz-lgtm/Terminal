@@ -38,6 +38,18 @@ directionnel dans cet assemblage de signaux sur cet échantillon. Aucun réglage
 d'exécution (ordres limites, réduction de fréquence, taille) ne peut corriger
 cela.
 
+### Contexte de marché sur la période testée
+
+| Actif | Prix début | Prix fin | Variation brute |
+|---|---|---|---|
+| BTC | 7 182 | 42 298 | **+489 %** |
+| ETH | 128,94 | 2 282,75 | **+1 670 %** |
+| SOL | 3,02 | 101,74 | **+3 269 %** |
+
+Autrement dit, la stratégie perd 60 % pendant que ses sous-jacents sont
+multipliés par 5 à 33. Le coût d'opportunité n'est pas un détail de présentation :
+c'est la mesure de ce que la complexité a détruit par rapport à ne rien faire.
+
 ## 2. Sensibilité des paramètres — 18 combinaisons
 
 | entry_threshold | atr_stop_mult | familles requises | Sharpe | trades |
