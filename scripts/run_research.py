@@ -62,9 +62,11 @@ def research_cache_path(cfg) -> Path:
 
 
 def save_research_cache(cfg, research: dict) -> None:
-    """Persiste les résultats in-sample pour que l'ouverture de l'OOS ne
-    réexécute pas une heure de validation déjà faite (et déjà comptée dans le
-    registre d'essais)."""
+    """Persiste les résultats in-sample après **chaque phase**.
+
+    Une validation complète dure plus d'une heure : sans point de reprise, un
+    redémarrage du conteneur fait tout recommencer. Chaque phase terminée est
+    donc écrite sur disque et sautée à la reprise (``--reuse-research``)."""
     payload = {k: v for k, v in research.items() if k not in ("market_data", "registry")}
     payload["_n_trials"] = research["registry"].n_trials
     payload["_trial_sharpes"] = research["registry"].sharpes()
@@ -96,13 +98,26 @@ def phase_quality(cfg) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-def phase_research(cfg, quick: bool = False) -> dict:
+def phase_research(cfg, quick: bool = False, resume: bool = True) -> dict:
     log.info("=== Phases 5-6 : in-sample et validation ===")
     md = load_market_data(cfg, split="in_sample", include_intrabar=True)
     is_start, is_end = split_bounds(cfg, "in_sample")
 
     registry = TrialRegistry.load(out_dir(cfg) / "trials.json")
     runner = ValidationRunner(cfg, md, registry=registry)
+
+    # reprise : les phases déjà terminées ne sont pas rejouées
+    done: dict = (load_research_cache(cfg) or {}) if resume else {}
+    if done:
+        log.info("Reprise : phases déjà disponibles -> %s",
+                 sorted(k for k in done if not k.startswith("_")))
+
+    def checkpoint(**parts):
+        done.update(parts)
+        payload = dict(done)
+        payload["market_data"] = None
+        payload["registry"] = registry
+        save_research_cache(cfg, payload)
 
     grid = DEFAULT_GRID if not quick else {"entry_threshold": [0.35], "atr_stop_mult": [2.0]}
     # Grille réduite pour le walk-forward et le k-fold : chaque fenêtre est
@@ -115,32 +130,42 @@ def phase_research(cfg, quick: bool = False) -> dict:
 
     # ---- 1. référence : configuration par défaut, in-sample ----------------
     log.info("-- backtest de référence (paramètres du YAML) --")
-    baseline = runner.run_once({}, is_start, is_end, label="baseline_is")
+    baseline = done.get("baseline") or runner.run_once({}, is_start, is_end, label="baseline_is")
+    checkpoint(baseline=baseline)
     log.info("baseline in-sample : %s", {k: round(v, 4) for k, v in baseline.metrics.items()
                                          if isinstance(v, float) and np.isfinite(v)
                                          and k in {"cagr", "sharpe", "max_drawdown", "total_return"}})
 
     # ---- 2. sensibilité des paramètres (plateau ou pic ?) ------------------
     log.info("-- étude de sensibilité --")
-    grid_outcomes = runner.grid(grid, is_start, is_end, label="sensitivity")
-    sens = sensitivity_table(grid_outcomes)
+    if "sensitivity" in done and "best" in done:
+        sens, best = done["sensitivity"], done["best"]
+    else:
+        grid_outcomes = runner.grid(grid, is_start, is_end, label="sensitivity")
+        sens = sensitivity_table(grid_outcomes)
+        best = runner.best_of(grid_outcomes)
     plateau = plateau_score(sens)
-    best = runner.best_of(grid_outcomes)
+    checkpoint(sensitivity=sens, best=best, plateau=plateau)
     heat_entry_stop = heatmap(sens, "entry_threshold", "atr_stop_mult")
     heat_entry_fam = heatmap(sens, "entry_threshold", "min_families_agreeing") if "min_families_agreeing" in sens else pd.DataFrame()
 
     # ---- 3. walk-forward ancré et glissant ---------------------------------
-    wf = {}
+    wf = dict(done.get("walk_forward") or {})
     if not quick:
         for mode in list(cfg.get_path("validation.walk_forward.modes")):
+            if mode in wf:
+                log.info("-- walk-forward %s : déjà fait, ignoré --", mode)
+                continue
             log.info("-- walk-forward %s --", mode)
             wf[mode] = runner.walk_forward(is_start, is_end, mode=mode, grid=wf_grid)
+            checkpoint(walk_forward=wf)
 
     # ---- 4. k-fold purgé avec embargo --------------------------------------
-    kfold = pd.DataFrame()
-    if not quick:
+    kfold = done.get("kfold", pd.DataFrame())
+    if not quick and (kfold is None or len(kfold) == 0):
         log.info("-- purged k-fold --")
         kfold = runner.purged_kfold(is_start, is_end, grid=wf_grid)
+    checkpoint(kfold=kfold)
 
     # ---- 5. Monte Carlo et probabilité de ruine ----------------------------
     log.info("-- Monte Carlo --")
@@ -680,6 +705,8 @@ def main() -> int:
                     help="motif d'ouverture de l'out-of-sample (obligatoire pour --phase oos)")
     ap.add_argument("--reuse-research", action="store_true",
                     help="repartir du cache in-sample au lieu de tout réexécuter")
+    ap.add_argument("--no-resume", action="store_true",
+                    help="ignorer les phases déjà terminées et tout recalculer")
     args = ap.parse_args()
 
     setup_logging("INFO", logfile="logs/research.log")
@@ -692,8 +719,8 @@ def main() -> int:
         return 0
 
     research = load_research_cache(cfg) if args.reuse_research else None
-    if research is None:
-        research = phase_research(cfg, quick=args.quick)
+    if research is None or "dsr" not in research:
+        research = phase_research(cfg, quick=args.quick, resume=not args.no_resume)
 
     oos = None
     if args.phase in ("oos", "all"):
