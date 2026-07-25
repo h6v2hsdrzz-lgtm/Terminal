@@ -314,6 +314,8 @@ validation:
   cost_stress:
     multipliers: [1.0, 1.5, 2.0]
   min_trades_per_regime: 200
+  # nombre de fenetres de features gardees en cache (plafond memoire)
+  max_cached_windows: 4
   deflated_sharpe:
     enabled: true
     annualization_factor: 365       # crypto : 365 jours

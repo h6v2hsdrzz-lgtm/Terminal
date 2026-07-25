@@ -167,7 +167,7 @@ def ruin_probability_by_risk(
         rows.append(
             {
                 "risk_per_trade": risk,
-                "trades": 0 if trades is None or trades.empty else len(trades),
+                "mc_trades": 0 if trades is None or trades.empty else len(trades),
                 "ruin_probability": mc.ruin_probability,
                 "median_cagr": mc.quantiles.get("cagr", {}).get("p50", float("nan")),
                 "p05_cagr": mc.quantiles.get("cagr", {}).get("p05", float("nan")),

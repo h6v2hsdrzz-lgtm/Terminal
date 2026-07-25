@@ -502,7 +502,7 @@ live n'est disponible. 60 jours minimum sont requis avant tout capital réel.</l
     subtitle = (
         f"Univers {', '.join(cfg.get_path('universe.symbols'))} — perpétuels OKX — "
         f"levier max {cfg.get_path('risk.leverage_max'):g} — "
-        f"généré le {pd.Timestamp.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
+        f"généré le {pd.Timestamp.now("UTC").strftime('%Y-%m-%d %H:%M UTC')}"
     )
     return render_report("Audit de stratégie — perpétuels crypto en levier x10", subtitle, sections, path)
 

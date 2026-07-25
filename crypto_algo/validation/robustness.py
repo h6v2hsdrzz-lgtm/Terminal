@@ -57,12 +57,14 @@ def plateau_score(table: pd.DataFrame, metric: str = "sharpe", top_share: float 
     if values.empty:
         return {"best": float("nan"), "plateau_ratio": float("nan"), "top_share": top_share}
     best = float(values.max())
-    n_top = max(2, int(np.ceil(len(values) * top_share)))
-    top = values.nlargest(n_top)
-    ratio = float(top.median() / best) if best != 0 else float("nan")
+    # « voisins du meilleur point » : le sommet est exclu de sa propre mesure de
+    # voisinage, sinon un pic isolé obtient mécaniquement un ratio proche de 0,5.
+    n_top = max(3, int(np.ceil(len(values) * top_share)))
+    neighbours = values.nlargest(n_top).iloc[1:]
+    ratio = float(neighbours.median() / best) if best != 0 and len(neighbours) else float("nan")
     return {
         "best": best,
-        "median_top": float(top.median()),
+        "median_neighbours": float(neighbours.median()) if len(neighbours) else float("nan"),
         "median_all": float(values.median()),
         "plateau_ratio": ratio,
         "dispersion": float(values.std(ddof=1)) if len(values) > 1 else float("nan"),

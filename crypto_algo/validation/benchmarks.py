@@ -99,7 +99,9 @@ def equal_weight_basket_equity(
     prices = prices.ffill()
     returns = prices.pct_change().fillna(0.0)
 
-    periods = returns.index.to_period(rebalance[0] if rebalance else "M")
+    freq = {"ME": "MS", "M": "MS", "W": "W"}.get(rebalance, "MS")
+    periods = returns.index.floor("D").to_series().dt.to_period(
+        "M" if freq == "MS" else "W").to_numpy()
     weights = pd.Series(1.0 / prices.notna().sum(axis=1).replace(0, np.nan), index=prices.index)
 
     equity = np.empty(len(returns))

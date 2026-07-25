@@ -65,6 +65,7 @@ class ValidationRunner:
         # seuils d'entrée. Sans partage, une étude à 5 niveaux de risque
         # recalcule 5 fois les mêmes 200 colonnes de features.
         self._cache_by_window: dict[tuple, dict] = shared_cache if shared_cache is not None else {}
+        self.max_cached_windows = int(cfg.get_path("validation.max_cached_windows", 4))
 
     # ------------------------------------------------------------------ unitaire
     def run_once(
@@ -82,6 +83,11 @@ class ValidationRunner:
             pad_start = to_utc(start) - self._warmup_pad()
         md = self.md.slice(pad_start, end) if (start is not None or end is not None) else self.md
         key = cache_key if cache_key is not None else (to_utc(start), to_utc(end))
+        # plafond mémoire : chaque fenêtre conserve ~200 colonnes de features par
+        # symbole ; sans plafond, un walk-forward de 20 fenêtres sature la RAM.
+        if key not in self._cache_by_window and len(self._cache_by_window) >= self.max_cached_windows:
+            oldest = next(iter(self._cache_by_window))
+            self._cache_by_window.pop(oldest, None)
         cache = self._cache_by_window.setdefault(key, {})
 
         strategy = RoutedMultiFamilyStrategy(self.cfg, core_cache=cache, **params)

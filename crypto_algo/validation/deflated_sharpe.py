@@ -56,7 +56,7 @@ class TrialRegistry:
                 "sharpe": float(sharpe) if np.isfinite(sharpe) else None,
                 "trades": int(trades),
                 "split": split,
-                "ts": pd.Timestamp.utcnow().isoformat(),
+                "ts": pd.Timestamp.now("UTC").isoformat(),
             }
         )
         self.flush()

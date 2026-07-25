@@ -90,7 +90,7 @@ class PaperTrader:
         self.costs = CostModel(cfg)
         self.funding = FundingModel(cfg)
         self.sim = ExecutionSimulator(cfg, cost_model=self.costs, funding_model=self.funding)
-        self.state = PaperState(started_at=str(pd.Timestamp.utcnow()), cash=self.portfolio.cash,
+        self.state = PaperState(started_at=str(pd.Timestamp.now("UTC")), cash=self.portfolio.cash,
                                 equity=self.portfolio.initial_equity, hwm_global=self.portfolio.initial_equity)
         self._pending: list[Order] = []
         self._restore()
@@ -165,7 +165,7 @@ class PaperTrader:
             self.downloader.download_funding(symbol)
 
         pad = effective_warmup(self.cfg) * timeframe_to_timedelta(self.exec_tf)
-        start = pd.Timestamp.utcnow().tz_localize(None).tz_localize("UTC") - pad * 1.2
+        start = pd.Timestamp.now("UTC") - pad * 1.2
         md = MarketData(symbols=list(self.symbols), split="paper")
         for symbol in self.symbols:
             for tf in timeframes:
