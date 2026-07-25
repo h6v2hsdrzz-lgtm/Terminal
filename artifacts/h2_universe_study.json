@@ -1,0 +1,88 @@
+{
+  "results": [
+    {
+      "universe": "base",
+      "n_symbols": 3,
+      "lookback_hours": 72,
+      "sharpe": -1.5730324735799717,
+      "monthly_median": 0.0,
+      "max_drawdown": -0.4019633098813489,
+      "n_trades": 683,
+      "corr_with_brick1": 0.12922742867242537
+    },
+    {
+      "universe": "base",
+      "n_symbols": 3,
+      "lookback_hours": 168,
+      "sharpe": -1.8073344296427893,
+      "monthly_median": 0.0,
+      "max_drawdown": -0.40082306783156973,
+      "n_trades": 438,
+      "corr_with_brick1": 0.08743757506792026
+    },
+    {
+      "universe": "base",
+      "n_symbols": 3,
+      "lookback_hours": 336,
+      "sharpe": -1.7631336748185118,
+      "monthly_median": 0.0,
+      "max_drawdown": -0.4009189200635266,
+      "n_trades": 308,
+      "corr_with_brick1": 0.10293653473110628
+    },
+    {
+      "universe": "extended",
+      "n_symbols": 10,
+      "lookback_hours": 72,
+      "sharpe": -1.536562195465939,
+      "monthly_median": -0.00020741426660886297,
+      "max_drawdown": -0.40045376004480493,
+      "n_trades": 1659,
+      "corr_with_brick1": 0.1576344928356377
+    },
+    {
+      "universe": "extended",
+      "n_symbols": 10,
+      "lookback_hours": 168,
+      "sharpe": -1.5628348468839577,
+      "monthly_median": -0.0022231886290531855,
+      "max_drawdown": -0.4005181274680366,
+      "n_trades": 1459,
+      "corr_with_brick1": 0.1415803249549538
+    },
+    {
+      "universe": "extended",
+      "n_symbols": 10,
+      "lookback_hours": 336,
+      "sharpe": -1.7533933082720747,
+      "monthly_median": -0.0027669195429445015,
+      "max_drawdown": -0.4020588242093146,
+      "n_trades": 1049,
+      "corr_with_brick1": 0.1307864173679515
+    }
+  ],
+  "verdict": {
+    "best_sharpe_base": -1.5730324735799717,
+    "best_sharpe_extended": -1.536562195465939,
+    "sharpe_gain": 0.036470278114032695,
+    "corr_with_brick1_base": 0.12922742867242537,
+    "corr_with_brick1_extended": 0.1576344928356377,
+    "improves_sharpe": false,
+    "keeps_decorrelation": true,
+    "recommended": false,
+    "recommendation": "Extension NON recommandee sur ces mesures : le gain de Sharpe est insuffisant. "
+  },
+  "extended_symbols_available": [
+    "BTC-USDT-SWAP",
+    "ETH-USDT-SWAP",
+    "SOL-USDT-SWAP",
+    "XRP-USDT-SWAP",
+    "DOGE-USDT-SWAP",
+    "ADA-USDT-SWAP",
+    "LTC-USDT-SWAP",
+    "LINK-USDT-SWAP",
+    "AVAX-USDT-SWAP",
+    "DOT-USDT-SWAP"
+  ],
+  "n_extended": 10
+}
