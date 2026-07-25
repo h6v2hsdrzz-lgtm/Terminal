@@ -171,13 +171,73 @@ passe.
 
 ---
 
-## Prochaine action
+## Résultat final — projet terminé
 
-Attendre la fin du téléchargement 1 m, puis :
+Toutes les étapes du §14 sont exécutées. L'out-of-sample a été ouvert **une
+seule fois**, le 2026-07-25 à 21:54 UTC, et est désormais scellé.
 
-```bash
-python -m okx_algo.run --resume
-```
+### Verdict
 
-qui enchaînera baselines → recherche → levier → out-of-sample → rapport, en
-sautant tout ce qui est déjà terminé.
+**L'objectif de 5 %/mois n'est pas atteignable**, et il ne l'est pas de peu.
+
+| | |
+|---|---|
+| Levier requis pour 80 %/an | **13,69×** |
+| Levier admissible (formule §8, DD Monte Carlo) | **5,53×** |
+| Levier admissible (chemin réellement observé) | **≤ 1,5×** |
+| Plafond du mandat | 10× |
+| Meilleur rendement réellement atteignable | **+2,06 %/an** au levier 1× |
+
+Trois contraintes indépendantes sont violées. La limite de drawdown n'a pas été
+relevée, et aucun paramètre n'a été touché après l'ouverture de l'OOS.
+
+### Go / no-go (§13) : 2 critères sur 6
+
+| Critère | Exigé | Observé | |
+|---|---|---|---|
+| Sharpe OOS | ≥ 1,8 | −0,95 | échec |
+| DSR significatif | p < 0,05 | p = 1,000 | échec |
+| Trades OOS | ≥ 300 | 313 | **OK** |
+| Dégradation Sharpe | < 35 % | 29,2 % | **OK** |
+| Régimes profitables | ≥ 2 sur 3 | 0 | échec |
+| Survie aux coûts ×2 | rendement > 0 | −27,6 % | échec |
+
+**Passage en paper trading refusé.**
+
+### Ce que les mesures disent vraiment
+
+1. **Le signal existe mais ne paie pas les coûts.** Le PnL brut du portefeuille
+   est positif (+18 958 sur l'in-sample) ; frais et funding en consomment 123 %.
+   C'est le fait central du projet.
+
+2. **Le turnover était la contrainte, pas la qualité du signal.** H5
+   (rééquilibrage quotidien) fait passer le Sharpe de −0,038 à 0,149 sans
+   toucher au signal. Mais 0,149 reste très loin de ce qu'exige un Calmar > 3.
+
+3. **Le Monte Carlo par blocs sous-estime le drawdown d'un facteur 5 à 8.**
+   Estimation ~5 % mensuel, réalité 24 % à 40 %. Le bootstrap par blocs de 24 h
+   détruit la persistance des tendances sur plusieurs semaines, or ce sont les
+   séries de pertes longues qui tuent un compte. **C'est le défaut
+   méthodologique le plus important trouvé pendant ce projet** : une formule de
+   levier fondée sur ce bootstrap autorise 5,53×, alors que le chemin réel tue
+   le compte dès 2×.
+
+4. **La stratégie est réellement neutre au marché** : bêta −0,002, R² = 0,000.
+   Ce n'est donc pas un pari directionnel déguisé. Mais l'alpha est **négatif**
+   (−7,67 %/an, t = −2,39).
+
+5. **La brique 3 ne se déclenche presque jamais** : 5 candidats en 5 ans sur
+   3 actifs, la condition de mèche 1 minute étant contraignante. Relâcher les
+   seuils (H3) ne l'améliore pas.
+
+6. **L'étroitesse de l'univers n'est pas le problème** : passer de 3 à 10
+   perpétuels ne gagne que +0,036 de Sharpe (H2).
+
+### Prochaine action
+
+Aucune sur ces données. Le §16.5 est explicite : un edge absent des données
+OHLCV ne sortira pas d'une 201ᵉ configuration. Les trois pistes nécessitant de
+**nouvelles données** sont détaillées en §7 du rapport final — carnet d'ordres
+niveau 2, flux on-chain, volatilité implicite des options.
+
+Livrable : `artifacts/RAPPORT_FINAL.md`.

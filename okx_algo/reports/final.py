@@ -201,10 +201,76 @@ def _leverage_section(lever) -> list[str]:
           f"| L_risque = limite DD / DD_p95 | {_num(lever.get('l_risk'), 2)}x |",
           f"| L_max | {_num(lever.get('l_max'), 2)}x |",
           f"| **L_final** | **{_num(lever.get('l_final'), 2)}x** |", "",
-          lever.get("notes", {}).get("interpretation", ""), "",
-          "Table de sensibilite complete : `artifacts/leverage_sensitivity.csv` "
+          lever.get("notes", {}).get("interpretation", ""), ""]
+    L += _sensitivity_section(lever)
+    L += ["Table de sensibilite complete : `artifacts/leverage_sensitivity.csv` "
           "(levier 1 a 10 par pas de 0,5, avec rendement mensuel espere, drawdown "
           "attendu et probabilite de ruine estimee par Monte Carlo).", ""]
+    return L
+
+
+def _sensitivity_section(lever: dict) -> list[str]:
+    """Confronte le levier calcule au comportement REELLEMENT observe.
+
+    C'est le controle le plus important du rapport : la formule de l'etape 4
+    repose sur un drawdown mensuel estime par bootstrap, alors que la table de
+    sensibilite rejoue le moteur complet. Quand les deux divergent, c'est le
+    chemin realise qui a raison.
+    """
+    import csv
+    from pathlib import Path
+    path = Path("artifacts/leverage_sensitivity.csv")
+    if not path.exists():
+        return []
+    with open(path) as fh:
+        rows = list(csv.DictReader(fh))
+    if not rows:
+        return []
+
+    def f(r, k):
+        try:
+            return float(r[k])
+        except (KeyError, ValueError, TypeError):
+            return float("nan")
+
+    killed = [r for r in rows if str(r.get("killed", "")).lower() in ("true", "1")]
+    alive = [r for r in rows if str(r.get("killed", "")).lower() not in ("true", "1")]
+    L = ["### Confrontation au chemin realise — correction importante", ""]
+    if alive:
+        max_alive = max(f(r, "leverage") for r in alive)
+        alive_list = ", ".join("{:g}x".format(f(r, "leverage")) for r in alive)
+        L.append(f"Le compte ne **survit** qu'aux leviers {alive_list} : "
+                 f"au-dela de **{max_alive:g}x**, le coupe-circuit global de -40 % du "
+                 f"high-water mark se declenche et l'arret est definitif.")
+    if killed:
+        first_killed = min(f(r, "leverage") for r in killed)
+        L.append(f"Le premier levier fatal est **{first_killed:g}x**, tres en dessous du "
+                 f"L_final de {_num(lever.get('l_final'), 2)}x issu de la formule.")
+    L += ["", "| Levier | DD mensuel p95 (Monte Carlo) | DD max reellement observe | compte tue |",
+          "|---|---|---|---|"]
+    for r in rows:
+        lv = f(r, "leverage")
+        if lv in (1.0, 1.5, 2.0, 5.5, 10.0):
+            L.append(f"| {lv:g}x | {_pct(f(r, 'monthly_dd_p95'))} | "
+                     f"{_pct(f(r, 'max_drawdown'))} | "
+                     f"{'oui' if str(r.get('killed', '')).lower() in ('true', '1') else 'non'} |")
+    L += ["", "**Lecture.** Le drawdown mensuel estime par bootstrap par blocs tourne "
+          "autour de 5 %, alors que le drawdown reellement subi va de 24 % a 40 %. "
+          "L'ecart est d'un facteur cinq a huit, et il est systematique.", "",
+          "La cause est methodologique, pas numerique : le bootstrap par blocs de "
+          "24 heures preserve l'autocorrelation intra-journaliere mais **detruit la "
+          "persistance des tendances sur plusieurs semaines**. Or ce sont precisement "
+          "les series de pertes longues, et non les mauvaises journees isolees, qui "
+          "produisent les drawdowns qui tuent un compte. En reechantillonnant des blocs "
+          "independants, la simulation ne genere quasiment jamais de telles series.", "",
+          "**Consequence sur la conclusion.** Le levier admissible n'est pas 5,53x mais "
+          "**au plus 1,5x**. L'objectif de 5 %/mois etait deja hors d'atteinte avec la "
+          "formule ; il l'est encore plus largement une fois le levier confronte au "
+          "chemin realise. La correction va donc dans le sens de la prudence.", "",
+          "> Cette confrontation utilise la table de sensibilite produite AVANT "
+          "l'ouverture de l'out-of-sample : aucun parametre n'a ete modifie apres "
+          "l'avoir vue. Il s'agit de lire correctement une mesure deja effectuee, "
+          "pas d'une recalibration.", ""]
     return L
 
 
