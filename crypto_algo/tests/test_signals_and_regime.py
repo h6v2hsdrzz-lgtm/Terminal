@@ -232,3 +232,60 @@ def test_composite_strategy_respects_routing_end_to_end():
         # tout signal non nul est accompagné d'un stop
         active = dec[dec["signal"] != 0]
         assert active["stop_price"].notna().all(), "signal sans stop"
+
+
+def test_inverted_strategy_produces_opposite_signals():
+    """Le contrôle d'inversion doit réellement inverser.
+
+    Régression : le cache partagé entre points de grille était indexé sur la
+    seule fenêtre temporelle, si bien que la variante inversée relisait le cœur
+    non inversé et rendait des résultats identiques — un diagnostic qui ne
+    diagnostique rien.
+    """
+    from crypto_algo.strategies.composite import RoutedMultiFamilyStrategy
+
+    cfg = load_config(
+        overrides={"universe.symbols": SYMBOLS, "data.signal_timeframes": TFS,
+                   "data.execution_timeframe": "15m", "backtest.warmup_bars": 200,
+                   "backtest.auto_warmup": False}
+    )
+    md = synthetic_market_data(symbols=SYMBOLS, timeframes=TFS, n_bars=4000,
+                               exec_timeframe="15m", seed=77)
+    normal = RoutedMultiFamilyStrategy(cfg)
+    normal.prepare(md, cfg)
+    inverted = RoutedMultiFamilyStrategy(cfg, invert_signals=True)
+    inverted.prepare(md, cfg)
+
+    n_diff = 0
+    for symbol in SYMBOLS:
+        a = normal.decisions(symbol)["signal"]
+        b = inverted.decisions(symbol)["signal"]
+        n_diff += int((a != b).sum())
+        # en régime range (les deux sens autorisés), un signal inversé doit
+        # être l'opposé ; ailleurs le routage peut l'annuler, jamais le conserver
+        both_active = (a != 0) & (b != 0)
+        assert (a[both_active] == -b[both_active]).all()
+    assert n_diff > 0, "l'inversion n'a produit aucune différence"
+
+
+def test_shared_cache_is_invalidated_by_a_different_core_configuration():
+    """Deux configurations aux features différentes ne partagent pas un cache."""
+    from crypto_algo.validation.runner import ValidationRunner
+
+    base = load_config(
+        overrides={"universe.symbols": [SYMBOLS[0]], "data.signal_timeframes": ["15m", "1h"],
+                   "data.execution_timeframe": "15m", "backtest.warmup_bars": 200,
+                   "backtest.auto_warmup": False, "execution.rejects.enabled": False}
+    )
+    other = base.with_overrides({"features.ema_periods": [10, 30, 100]})
+    md = synthetic_market_data(symbols=[SYMBOLS[0]], timeframes=["15m", "1h"],
+                               n_bars=2500, exec_timeframe="15m", seed=91)
+    shared: dict = {}
+    r1 = ValidationRunner(base, md, shared_cache=shared)
+    r1.run_once({}, None, None, label="a", record=False)
+    fingerprint_a = next(iter(shared.values()))["_fingerprint"]
+
+    r2 = ValidationRunner(other, md, shared_cache=shared)
+    r2.run_once({}, None, None, label="b", record=False)
+    fingerprint_b = next(iter(shared.values()))["_fingerprint"]
+    assert fingerprint_a != fingerprint_b
