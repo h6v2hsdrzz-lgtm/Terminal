@@ -68,7 +68,7 @@ crypto_algo/
 ├── validation/      walk-forward, k-fold purgé, Monte Carlo, DSR, robustesse
 ├── reports/         métriques, graphiques, rapport HTML
 ├── live/            paper trading, comparaison live vs backtest
-└── tests/           129 tests — priorité au risk engine et à l'anti-lookahead
+└── tests/           143 tests — priorité au risk engine et à l'anti-lookahead
 ```
 
 ---

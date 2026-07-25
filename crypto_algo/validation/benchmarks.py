@@ -99,9 +99,9 @@ def equal_weight_basket_equity(
     prices = prices.ffill()
     returns = prices.pct_change().fillna(0.0)
 
-    freq = {"ME": "MS", "M": "MS", "W": "W"}.get(rebalance, "MS")
-    periods = returns.index.floor("D").to_series().dt.to_period(
-        "M" if freq == "MS" else "W").to_numpy()
+    freq = "W" if str(rebalance).upper().startswith("W") else "M"
+    naive = returns.index.tz_convert("UTC").tz_localize(None)
+    periods = pd.PeriodIndex(naive, freq=freq).to_numpy()
     weights = pd.Series(1.0 / prices.notna().sum(axis=1).replace(0, np.nan), index=prices.index)
 
     equity = np.empty(len(returns))

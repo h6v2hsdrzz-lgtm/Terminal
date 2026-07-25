@@ -298,6 +298,13 @@ def phase_oos(cfg, research: dict) -> dict:
 def build_report(cfg, quality, research: dict, oos: dict | None, path: Path) -> Path:
     from crypto_algo.reports.metrics import to_returns
 
+    def _label(split: str) -> str:
+        start, end = split_bounds(cfg, split)
+        fin = end.strftime("%Y-%m") if end is not None else "aujourd'hui"
+        return f"{start.strftime('%Y-%m')} → {fin}"
+
+    is_label = _label("in_sample")
+    oos_label = _label("out_of_sample")
     figs = ensure_dir(out_dir(cfg) / "figures")
     # Recalcul des métriques depuis les résultats bruts : un cache produit par
     # une version antérieure du module de métriques ne doit pas priver le
@@ -435,7 +442,7 @@ dérivé des lookbacks les plus longs (EMA 200 en 4h, percentiles d'ATR).</p>
     metric_rows.index.name = "métrique"
 
     sections.append(
-        ("Performance in-sample (2020-2023)",
+        (f"Performance in-sample ({is_label})",
          image(eq_img, "courbe d'equity") + image(uw_img, "underwater")
          + image(heat_img, "rendements mensuels") + image(r_img, "distribution des R")
          + "<h3>Métriques complètes</h3>"
@@ -589,7 +596,7 @@ Aucune modification n'a été faite après consultation de l'out-of-sample.</p>
                 "bad")
 
         sections.append(
-            ("Out-of-sample (2024-2026) — ouvert une seule fois",
+            (f"Out-of-sample ({oos_label}) — ouvert une seule fois",
              callout(deg_text, "good" if degradation > -0.3 else "bad") + oos_kill
              + image(oos_eq, "equity OOS") + image(oos_uw, "underwater OOS")
              + kpi_grid([
@@ -713,8 +720,17 @@ def main() -> int:
     if oos is not None:
         summary["out_of_sample"] = {k: oos["report"].metrics.get(k)
                                     for k in ("cagr", "sharpe", "max_drawdown", "monthly_median", "trades")}
+    def _json_safe(obj):
+        if isinstance(obj, dict):
+            return {k: _json_safe(v) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple)):
+            return [_json_safe(v) for v in obj]
+        if isinstance(obj, float) and not np.isfinite(obj):
+            return None            # NaN et inf ne sont pas du JSON valide
+        return obj
+
     with open(out_dir(cfg) / "summary.json", "w", encoding="utf-8") as fh:
-        json.dump(summary, fh, indent=2, default=str)
+        json.dump(_json_safe(summary), fh, indent=2, default=str, allow_nan=False)
     log.info("Résumé :\n%s", json.dumps(summary, indent=2, default=str))
     log.info("Rapport : %s", path)
     return 0
