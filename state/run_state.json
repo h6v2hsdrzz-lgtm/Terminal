@@ -1,5 +1,5 @@
 {
-  "phase": "leverage",
+  "phase": "validation_oos",
   "completed_steps": [
     "dl:instruments",
     "dl:funding:BTC-USDT-SWAP",
@@ -246,7 +246,9 @@
     "h2_universe_study",
     "step:universe_h2",
     "research_loop",
-    "step:research"
+    "step:research",
+    "leverage_calibration",
+    "step:leverage"
   ],
   "current_hypothesis": null,
   "config_index": 0,
@@ -994,9 +996,14 @@
       "n_trials": 71,
       "max_trials": 200,
       "remaining": 129
+    },
+    "leverage_calibration": {
+      "l_final": 5.526273496722178,
+      "reachable": false
     }
   },
-  "updated_at": "2026-07-25T21:51:46.410489+00:00",
+  "updated_at": "2026-07-25T21:53:41.510119+00:00",
   "oos_opened": false,
-  "oos_opened_at": null
+  "oos_opened_at": null,
+  "leverage_final": 5.526273496722178
 }

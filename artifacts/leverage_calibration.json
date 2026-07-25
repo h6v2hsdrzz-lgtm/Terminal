@@ -1,0 +1,174 @@
+{
+  "sharpe_unlevered": 0.3751747497956771,
+  "annual_return_unlevered": 0.05845327153209934,
+  "max_dd_unlevered": -0.13861859530540688,
+  "monthly_dd_p95": 0.04523844144671514,
+  "l_target": 13.686145856877896,
+  "l_risk": 5.526273496722178,
+  "l_max": 10.0,
+  "l_final": 5.526273496722178,
+  "objective_reachable": false,
+  "achievable_monthly_return": 0.0,
+  "achievable_monthly_ci": [
+    0.0,
+    0.0
+  ],
+  "binding_constraint": "limite_de_drawdown",
+  "notes": {
+    "monte_carlo": {
+      "status": "ok",
+      "n_draws": 10000,
+      "block_hours": 24,
+      "bars_per_month": 2920,
+      "monthly_dd_median": -0.022577179522927426,
+      "monthly_dd_p95": -0.04523844144671514,
+      "monthly_dd_p99": -0.05695103956837666,
+      "monthly_dd_worst": -0.09003405425514033,
+      "monthly_return_median": 0.004446808661931034,
+      "monthly_return_p05": -0.03271917672553296,
+      "monthly_return_p95": 0.04657520800645669,
+      "prob_month_negative": 0.4184
+    },
+    "sensitivity_method": "moteur_rejoue",
+    "target_annual_return": 0.8,
+    "monthly_dd_limit": 0.25,
+    "interpretation": "L'objectif de 5 %/mois N'EST PAS atteignable sous ces contraintes. Levier requis 13.69x, levier admissible 5.53x. Cause : la limite de drawdown mensuel de 25 % est la contrainte bloquante : le levier requis pour atteindre 80 %/an ferait sortir le drawdown mensuel attendu de son enveloppe autorisee. Rendement mensuel median reellement atteignable a 5.53x : 0.00 %. La limite de drawdown n'a pas ete relevee pour faire passer l'objectif."
+  },
+  "walk_forward": {
+    "folds": [
+      {
+        "test_start": "2021-01-01 00:00:00+00:00",
+        "test_end": "2021-04-01 00:00:00+00:00",
+        "sharpe": -0.8871058166274962,
+        "monthly_median": -0.007175873183911052,
+        "max_dd": -0.07405242103230181,
+        "n_trades": 71
+      },
+      {
+        "test_start": "2021-04-01 00:00:00+00:00",
+        "test_end": "2021-07-01 00:00:00+00:00",
+        "sharpe": -0.9959994164777163,
+        "monthly_median": -0.010463288560110529,
+        "max_dd": -0.057718829210529066,
+        "n_trades": 79
+      },
+      {
+        "test_start": "2021-07-01 00:00:00+00:00",
+        "test_end": "2021-10-01 00:00:00+00:00",
+        "sharpe": 1.8042897666689681,
+        "monthly_median": 0.01995880806781236,
+        "max_dd": -0.01832580373164905,
+        "n_trades": 72
+      },
+      {
+        "test_start": "2021-10-01 00:00:00+00:00",
+        "test_end": "2022-01-01 00:00:00+00:00",
+        "sharpe": -1.6145855357303198,
+        "monthly_median": -0.008854518479369633,
+        "max_dd": -0.10002998641794791,
+        "n_trades": 67
+      },
+      {
+        "test_start": "2022-01-01 00:00:00+00:00",
+        "test_end": "2022-04-01 00:00:00+00:00",
+        "sharpe": 0.16254774765596222,
+        "monthly_median": 0.0032487346459164623,
+        "max_dd": -0.03608810357926773,
+        "n_trades": 79
+      },
+      {
+        "test_start": "2022-04-01 00:00:00+00:00",
+        "test_end": "2022-07-01 00:00:00+00:00",
+        "sharpe": 0.7465250645272808,
+        "monthly_median": 0.008392882615908981,
+        "max_dd": -0.052747401523568715,
+        "n_trades": 71
+      },
+      {
+        "test_start": "2022-07-01 00:00:00+00:00",
+        "test_end": "2022-10-01 00:00:00+00:00",
+        "sharpe": 0.524421278788816,
+        "monthly_median": -0.0007245103993963609,
+        "max_dd": -0.04458552271860772,
+        "n_trades": 79
+      },
+      {
+        "test_start": "2022-10-01 00:00:00+00:00",
+        "test_end": "2023-01-01 00:00:00+00:00",
+        "sharpe": -0.02010375228672063,
+        "monthly_median": -0.0037926659872965507,
+        "max_dd": -0.03969481409193598,
+        "n_trades": 80
+      },
+      {
+        "test_start": "2023-01-01 00:00:00+00:00",
+        "test_end": "2023-04-01 00:00:00+00:00",
+        "sharpe": 2.0066150914429635,
+        "monthly_median": 0.015450060409330335,
+        "max_dd": -0.03853370225616903,
+        "n_trades": 75
+      },
+      {
+        "test_start": "2023-04-01 00:00:00+00:00",
+        "test_end": "2023-07-01 00:00:00+00:00",
+        "sharpe": -1.3847682242812573,
+        "monthly_median": -0.006502939012832776,
+        "max_dd": -0.07965680895530824,
+        "n_trades": 83
+      },
+      {
+        "test_start": "2023-07-01 00:00:00+00:00",
+        "test_end": "2023-10-01 00:00:00+00:00",
+        "sharpe": 0.705948524755028,
+        "monthly_median": 0.005656652051291733,
+        "max_dd": -0.027813447350738874,
+        "n_trades": 74
+      },
+      {
+        "test_start": "2023-10-01 00:00:00+00:00",
+        "test_end": "2024-01-01 00:00:00+00:00",
+        "sharpe": 2.1816813104069688,
+        "monthly_median": 0.012872860235998373,
+        "max_dd": -0.026473778396624126,
+        "n_trades": 73
+      },
+      {
+        "test_start": "2024-01-01 00:00:00+00:00",
+        "test_end": "2024-04-01 00:00:00+00:00",
+        "sharpe": 1.578230161482349,
+        "monthly_median": 0.005459574022364411,
+        "max_dd": -0.02388848495040563,
+        "n_trades": 71
+      },
+      {
+        "test_start": "2024-04-01 00:00:00+00:00",
+        "test_end": "2024-07-01 00:00:00+00:00",
+        "sharpe": 0.24268282071085145,
+        "monthly_median": 0.0006253007878793682,
+        "max_dd": -0.025321529828577827,
+        "n_trades": 76
+      },
+      {
+        "test_start": "2024-07-01 00:00:00+00:00",
+        "test_end": "2024-10-01 00:00:00+00:00",
+        "sharpe": 0.6722646295182172,
+        "monthly_median": 0.006486004771698084,
+        "max_dd": -0.0410791677975727,
+        "n_trades": 78
+      }
+    ],
+    "n_folds": 15,
+    "mean_fold_sharpe": 0.381509576703593,
+    "pct_folds_positive": 0.6
+  },
+  "config_used": {
+    "label": "H5_db0.1_rb1D",
+    "overrides": {
+      "strategies.ts_momentum.deadband": 0.1,
+      "strategies.ts_momentum.rebalance_timeframe": "1D"
+    },
+    "trial_id": 46,
+    "is_sharpe": 0.14891372631578628,
+    "source": "meilleure_configuration_du_registre"
+  }
+}
