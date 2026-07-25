@@ -226,6 +226,11 @@ def phase_oos(cfg, research: dict) -> dict:
     runner = ValidationRunner(cfg, md_oos, registry=None)   # aucun essai enregistré ici
     outcome = runner.run_once(params, oos_start, oos_end, label="oos_final", record=False)
 
+    # Deuxième lecture, décidée **avant** l'ouverture : la configuration par
+    # défaut du YAML, conçue a priori. Publier les deux évite de faire passer
+    # un choix de grille in-sample pour une prédiction hors échantillon.
+    default_outcome = runner.run_once({}, oos_start, oos_end, label="oos_default", record=False)
+
     md_slice = md_oos.slice(pd.Timestamp(oos_start) - pd.Timedelta(days=1), oos_end)
     benchmarks = build_benchmarks(md_slice, cfg)
     benchmarks = {k: v[v.index >= pd.Timestamp(oos_start)] for k, v in benchmarks.items()
@@ -245,10 +250,17 @@ def phase_oos(cfg, research: dict) -> dict:
 
     save_table(outcome.trades, cfg, "trades_out_of_sample")
     outcome.equity.to_frame("equity").to_csv(out_dir(cfg) / "tables" / "equity_out_of_sample.csv")
+    default_report = compute_metrics(
+        default_outcome.equity, default_outcome.trades, benchmark_equity=btc,
+        stats=default_outcome.stats,
+        days_per_year=int(cfg.get_path("reports.annualization_days")), name="oos_default",
+    )
+    save_table(default_outcome.trades, cfg, "trades_out_of_sample_default")
     return {
         "outcome": outcome, "report": report, "benchmarks": benchmarks,
         "benchmark_table": pd.DataFrame(bench_rows), "alpha_beta": ab, "params": params,
         "by_regime": regime_breakdown(outcome.trades, int(cfg.get_path("validation.min_trades_per_regime"))),
+        "default_report": default_report, "default_outcome": default_outcome,
     }
 
 
@@ -275,9 +287,46 @@ contrainte de conception. Sur cet échantillon, elle est atteinte
 {m.get('months_above_38pct', 0)} mois sur {m.get('months', 0)}. Aucun paramètre
 n'a été ajusté pour s'en approcher.</p>
 """
+    gross = m.get("gross_pnl", 0.0) or 0.0
+    net = m.get("net_pnl", 0.0) or 0.0
+    costs = m.get("costs_total", 0.0) or 0.0
+    if gross > 0 and net <= 0:
+        edge_text = f"""
+<p><strong>Le signal a une espérance brute positive ({gross:,.0f} USDT) mais les coûts
+({costs:,.0f} USDT) la dépassent : le PnL net est de {net:,.0f} USDT.</strong> Autrement dit,
+l'edge existe mais il est plus petit que le prix de son exécution. Les leviers
+d'action sont alors la fréquence, la taille et le type d'ordre — pas les seuils
+de signal.</p>"""
+        edge_kind = "warn"
+    elif gross <= 0:
+        edge_text = f"""
+<p><strong>Le signal a une espérance brute négative ({gross:,.0f} USDT), avant même
+les coûts ({costs:,.0f} USDT).</strong> Aucun réglage d'exécution ne peut sauver cela :
+sur cet échantillon, les familles de signaux telles qu'assemblées ici n'ont pas
+d'edge directionnel.</p>"""
+        edge_kind = "bad"
+    else:
+        edge_text = f"""
+<p>PnL brut {gross:,.0f} USDT, coûts {costs:,.0f} USDT, PnL net {net:,.0f} USDT
+(soit {m.get('net_over_gross', float('nan')) * 100:.0f} % du brut conservé).</p>"""
+        edge_kind = "good"
+
+    kill_html = ""
+    if m.get("killed"):
+        kill_html = callout(f"""
+<p><strong>Le kill switch global (-60 % sur le high-water mark) s'est déclenché le
+{m.get('killed_at')}</strong>, soit après {m.get('days_before_kill_switch', float('nan')):.0f} jours
+({m.get('active_share_of_period', float('nan')) * 100:.0f} % de la période testée). La stratégie
+est ensuite définitivement arrêtée : l'equity du reste de la période est plate.</p>
+<p>Conséquence de lecture : le CAGR et le Sharpe affichés ci-dessous décrivent une
+equity gelée sur la majorité de l'échantillon. Ils ne sont pas comparables à ceux
+d'une stratégie qui aurait tradé tout du long — la seule conclusion recevable est
+que <em>la configuration testée détruit le capital avant la fin de la première année</em>.</p>""",
+                             "bad")
+
     sections.append(
         ("Verdict",
-         callout(verdict, verdict_kind)
+         callout(verdict, verdict_kind) + kill_html + callout(edge_text, edge_kind)
          + kpi_grid([
              ("CAGR", m.get("cagr"), "cagr"),
              ("Sharpe", m.get("sharpe"), "sharpe"),
@@ -467,6 +516,14 @@ Aucune modification n'a été faite après consultation de l'out-of-sample.</p>
                  ("Liquidations", om.get("liquidations"), "trades"),
                  ("Coûts / PnL brut", om.get("costs_over_gross_pnl"), "costs_over_gross_pnl"),
              ])
+             + "<h3>Deux lectures figées avant ouverture</h3>"
+             + table_html(pd.DataFrame([
+                 {"configuration": f"meilleure grille in-sample {oos['params']}",
+                  **{k: om.get(k) for k in ("cagr", "sharpe", "max_drawdown", "total_return", "trades")}},
+                 {"configuration": "paramètres par défaut du YAML (conçus a priori)",
+                  **{k: oos["default_report"].metrics.get(k) for k in
+                     ("cagr", "sharpe", "max_drawdown", "total_return", "trades")}},
+             ]))
              + "<h3>Benchmarks sur la même période</h3>" + table_html(oos["benchmark_table"])
              + "<h3>Alpha / beta OOS</h3>" + table_html(pd.DataFrame([oos["alpha_beta"]]))
              + "<h3>Par régime</h3>" + table_html(oos["by_regime"]))
@@ -549,7 +606,9 @@ def main() -> int:
         "in_sample": {k: research["baseline_report"].metrics.get(k)
                       for k in ("cagr", "sharpe", "sortino", "calmar", "max_drawdown",
                                 "monthly_median", "trades", "win_rate", "profit_factor",
-                                "liquidations", "costs_over_gross_pnl")},
+                                "liquidations", "costs_over_gross_pnl", "killed",
+                                "killed_at", "days_before_kill_switch", "gross_pnl",
+                                "net_pnl", "costs_total")},
         "trials": research["registry"].n_trials,
         "deflated_sharpe": research["dsr"].get("dsr"),
         "ruin_probability": research["monte_carlo"].ruin_probability,

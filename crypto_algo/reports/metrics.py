@@ -273,6 +273,18 @@ def compute_metrics(
         m["intrabar_resolved"] = stats.get("exec_resolved_intrabar", 0)
         m["intrabar_assumed"] = stats.get("exec_resolved_assumption", 0)
         m["order_rejects_exchange"] = stats.get("exec_rejected", 0)
+        m["killed"] = bool(stats.get("killed", False))
+        m["killed_at"] = stats.get("killed_at")
+        m["first_halt_at"] = stats.get("first_halt_at")
+        # Un kill switch arrête définitivement la stratégie : le reste de la
+        # période est plat. Sans cette information, CAGR et Sharpe sont lus
+        # comme une performance alors qu'ils décrivent surtout une equity gelée.
+        if m["killed"] and m["killed_at"] and len(equity) > 1:
+            killed_ts = pd.Timestamp(m["killed_at"])
+            total_days = (equity.index[-1] - equity.index[0]).total_seconds() / 86400
+            active_days = (killed_ts - equity.index[0]).total_seconds() / 86400
+            m["days_before_kill_switch"] = float(active_days)
+            m["active_share_of_period"] = float(active_days / total_days) if total_days > 0 else float("nan")
 
     if benchmark_equity is not None and len(benchmark_equity) > 1:
         bench_monthly = monthly_returns(benchmark_equity.dropna())

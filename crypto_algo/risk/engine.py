@@ -161,6 +161,8 @@ class RiskEngine:
         self.halts: dict[str, Halt] = {p: Halt(scope=p) for p in PERIODS}
         self.halts["global"] = Halt(scope="global")
         self.killed = False
+        self.killed_at: pd.Timestamp | None = None
+        self.first_halt_at: pd.Timestamp | None = None
         self.events: list[RiskEvent] = []
         self._started = False
 
@@ -265,6 +267,7 @@ class RiskEngine:
         global_dd = self.equity / self.hwm_global - 1.0 if self.hwm_global > 0 else 0.0
         if not self.killed and global_dd <= self.kill_switch:
             self.killed = True
+            self.killed_at = ts
             self.halts["global"] = Halt(
                 active=True, until=None, reason=f"kill switch {global_dd:.2%}",
                 scope="global", permanent=True,
@@ -303,6 +306,8 @@ class RiskEngine:
         return actions
 
     def _activate_halt(self, ts: pd.Timestamp, period: str, reason: str) -> None:
+        if self.first_halt_at is None:
+            self.first_halt_at = to_utc(ts)
         until = self._period_boundary_end(ts, period)
         self.halts[period] = Halt(active=True, until=until, reason=reason, scope=period)
         self._log_event(ts, "halt", period, f"{reason} — halte jusqu'à {until}", {"until": str(until)})
@@ -545,5 +550,7 @@ class RiskEngine:
             "halts_week": int(((ev.get("kind") == "halt") & (ev.get("scope") == "week")).sum()) if not ev.empty else 0,
             "halts_month": int(((ev.get("kind") == "halt") & (ev.get("scope") == "month")).sum()) if not ev.empty else 0,
             "killed": self.killed,
+            "killed_at": str(self.killed_at) if self.killed_at is not None else None,
+            "first_halt_at": str(self.first_halt_at) if self.first_halt_at is not None else None,
             "event_counts": counts,
         }
