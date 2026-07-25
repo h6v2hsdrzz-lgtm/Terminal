@@ -1,5 +1,5 @@
 {
-  "phase": "brique3",
+  "phase": "portfolio",
   "completed_steps": [
     "dl:instruments",
     "dl:funding:BTC-USDT-SWAP",
@@ -198,7 +198,9 @@
     "baseline:ts_momentum",
     "step:brique1",
     "baseline:cross_sectional",
-    "step:brique2"
+    "step:brique2",
+    "baseline:cascade_reversal",
+    "step:brique3"
   ],
   "current_hypothesis": null,
   "config_index": 0,
@@ -789,9 +791,13 @@
     "baseline:cross_sectional": {
       "sharpe": -0.36893972112886136,
       "n_trades": 1347
+    },
+    "baseline:cascade_reversal": {
+      "sharpe": -0.2114235573284309,
+      "n_trades": 1
     }
   },
-  "updated_at": "2026-07-25T21:27:17.362403+00:00",
+  "updated_at": "2026-07-25T21:27:52.911116+00:00",
   "oos_opened": false,
   "oos_opened_at": null
 }

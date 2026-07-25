@@ -1,0 +1,68 @@
+{
+  "brick": "cascade_reversal",
+  "metrics": {
+    "cagr": -0.0012090277734273513,
+    "monthly_return_mean": -0.00010054956460271991,
+    "monthly_return_median": 0.0,
+    "monthly_return_ci95_low": 0.0,
+    "monthly_return_ci95_high": 0.0,
+    "monthly_return_std": 0.0007788535783494819,
+    "pct_months_positive": 0.0,
+    "sharpe": -0.2114235573284309,
+    "sortino": -0.0023358740409689487,
+    "max_drawdown": -0.007557780684367965,
+    "max_drawdown_hours": 19892,
+    "calmar": -0.15997126986339097,
+    "var95": 0.0,
+    "cvar95": -6.661756801523913e-08,
+    "var99": 0.0,
+    "cvar99": -6.661756801523913e-08,
+    "gross_pnl": -561.3190379127392,
+    "net_pnl": -603.297387616316,
+    "fees_total": 48.711494265910424,
+    "funding_total": -6.733144562314374,
+    "costs_pct_of_gross_pnl": 0.09877562506056321,
+    "n_months": 60,
+    "n_trades": 1,
+    "win_rate": 0.0,
+    "profit_factor": 0.0,
+    "expectancy_r": -9.594684663335672,
+    "avg_bars_held": 30.0,
+    "n_long": 0,
+    "n_short": 1,
+    "avg_win": 0.0,
+    "avg_loss": -603.2973876163353,
+    "n_liquidations": 0,
+    "maker_fill_rate": 0.5,
+    "maker_attempts": 10,
+    "mean_gross_leverage": 0.00011170529573218221,
+    "max_gross_leverage": 0.6871257881572466,
+    "leverage_applied": 1.0,
+    "killed": false,
+    "n_netting_events": 0,
+    "pct_months_beating_benchmark": 0.4166666666666667
+  },
+  "portfolio_diagnostics": {
+    "allocation_mean": {
+      "cascade_reversal": 1.0
+    },
+    "allocation_last": {
+      "cascade_reversal": 1.0
+    },
+    "netting_hours": 0,
+    "netting_gross_saved_mean": 0.0,
+    "mean_gross_weight": 8.809802075296899e-05,
+    "mean_vol_scale": 1.0338838738824838,
+    "funding_damped_hours": 41992,
+    "cascade_hours": 31
+  },
+  "per_symbol": {
+    "SOL-USDT-SWAP": {
+      "n_trades": 1,
+      "net_pnl": -603.2973876163353,
+      "win_rate": 0.0,
+      "fees": 48.711494265910424,
+      "funding": -6.733144562314374
+    }
+  }
+}
