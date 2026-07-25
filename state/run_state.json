@@ -123,7 +123,18 @@
     "dl:ohlcv:BTC-USDT-SWAP:1m:202110-202201",
     "dl:ohlcv:BTC-USDT-SWAP:1m:202201-202204",
     "dl:ohlcv:BTC-USDT-SWAP:1m:202204-202207",
-    "dl:ohlcv:BTC-USDT-SWAP:1m:202207-202210"
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202207-202210",
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202210-202301",
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202301-202304",
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202304-202307",
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202307-202310",
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202310-202401",
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202401-202404",
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202404-202407",
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202407-202410",
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202410-202501",
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202501-202504",
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202504-202507"
   ],
   "current_hypothesis": null,
   "config_index": 0,
@@ -501,9 +512,42 @@
     },
     "dl:ohlcv:BTC-USDT-SWAP:1m:202207-202210": {
       "rows": 132481
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202210-202301": {
+      "rows": 132481
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202301-202304": {
+      "rows": 129601
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202304-202307": {
+      "rows": 131041
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202307-202310": {
+      "rows": 132481
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202310-202401": {
+      "rows": 132481
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202401-202404": {
+      "rows": 131041
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202404-202407": {
+      "rows": 131041
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202407-202410": {
+      "rows": 132481
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202410-202501": {
+      "rows": 132481
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202501-202504": {
+      "rows": 129601
+    },
+    "dl:ohlcv:BTC-USDT-SWAP:1m:202504-202507": {
+      "rows": 131041
     }
   },
-  "updated_at": "2026-07-25T20:07:01.167315+00:00",
+  "updated_at": "2026-07-25T20:19:46.292117+00:00",
   "oos_opened": false,
   "oos_opened_at": null
 }
