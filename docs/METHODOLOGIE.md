@@ -165,3 +165,28 @@ lieu de faire confiance au code.
 `test_timestamps_round_trip_in_milliseconds` garde le comportement.
 
 *Code : `utils.py::dt_to_ms`, `tests/test_no_lookahead.py`, `tests/test_data_quality.py`.*
+
+
+---
+
+## 10. Un incident de protocole, déclaré
+
+Lors de la validation du harnais de paper trading contre l'API OKX en direct,
+la version alors en place a **rejoué 9 599 bougies historiques** au démarrage
+(comportement corrigé depuis : le démarrage à froid est désormais purement
+prospectif, cf. §7 du README). Ces bougies couvrent le 2026-05-20 → 2026-07-25,
+c'est-à-dire une fenêtre **située dans la période out-of-sample**.
+
+Résultat observé lors de cet incident : 144 trades, equity 10 000 → 6 747 USDT
+(−32,5 %), coupe-circuit mensuel déclenché.
+
+Ce que cela implique, et ce que cela n'implique pas :
+
+* **Déclaré** parce que la règle « l'OOS n'est regardé qu'une fois » vaut aussi
+  quand la lecture est accidentelle. Passer l'incident sous silence rendrait la
+  discipline d'audit décorative.
+* **Aucun paramètre n'a été modifié** à la suite de cette observation. Les
+  configurations soumises à l'out-of-sample formel ont été figées avant, à
+  partir de la seule grille in-sample.
+* Le chiffre va dans le même sens que l'in-sample, ce qui ne le rend ni plus ni
+  moins valable : il est rapporté ici, pas utilisé comme argument.

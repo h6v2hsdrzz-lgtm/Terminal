@@ -645,6 +645,12 @@ gère pas encore la couverture beta simultanée sans consommer les deux emplacem
 contient que BTC et ETH.</li>
 <li><strong>Le paper trading (phase 7) n'a pas encore tourné</strong> : aucune conclusion
 live n'est disponible. 60 jours minimum sont requis avant tout capital réel.</li>
+<li><strong>Incident de protocole déclaré</strong> : la validation du harnais de paper
+trading a, avant correction, rejoué 9 599 bougies dont une partie tombe dans la
+fenêtre out-of-sample (2026-05-20 → 2026-07-25 ; 144 trades, −32,5 %). Aucun
+paramètre n'a été modifié à la suite de cette observation, et les configurations
+soumises à l'OOS formel ont été figées auparavant à partir de la seule grille
+in-sample. Voir <code>docs/METHODOLOGIE.md</code> §10.</li>
 </ul>
 """
     sections.append(("Limites et réserves", callout(limits, "warn")))
