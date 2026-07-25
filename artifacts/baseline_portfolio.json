@@ -1,0 +1,85 @@
+{
+  "metrics": {
+    "cagr": -0.009189463104506523,
+    "monthly_return_mean": -0.0005024347965104776,
+    "monthly_return_median": -0.003145976178546117,
+    "monthly_return_ci95_low": -0.008682596650447016,
+    "monthly_return_ci95_high": 0.005367402388391323,
+    "monthly_return_std": 0.023259498273335302,
+    "pct_months_positive": 0.4666666666666667,
+    "sharpe": -0.03808124102621198,
+    "sortino": -0.030695626541736305,
+    "max_drawdown": -0.2408876082839373,
+    "max_drawdown_hours": 160145,
+    "calmar": -0.03814834299685016,
+    "var95": -0.00043189297527670316,
+    "cvar95": -0.001005510807815513,
+    "var99": -0.0012927014784404878,
+    "cvar99": -0.0021029676609330707,
+    "gross_pnl": 18957.92300369653,
+    "net_pnl": -4512.842780644132,
+    "fees_total": 22184.635325894826,
+    "funding_total": 1192.9124806404982,
+    "costs_pct_of_gross_pnl": 1.2331281122925242,
+    "n_months": 60,
+    "n_trades": 1797,
+    "win_rate": 0.3105175292153589,
+    "profit_factor": 0.9799653190532186,
+    "expectancy_r": 0.5218561527026615,
+    "avg_bars_held": 164.13800779076237,
+    "n_long": 905,
+    "n_short": 892,
+    "avg_win": 470.0001711492501,
+    "avg_loss": -215.99823498142072,
+    "n_liquidations": 0,
+    "maker_fill_rate": 0.6174794982500064,
+    "maker_attempts": 39143,
+    "mean_gross_leverage": 0.169559632142554,
+    "max_gross_leverage": 1.0719416523392769,
+    "leverage_applied": 1.0,
+    "killed": false,
+    "n_netting_events": 50454,
+    "pct_months_beating_benchmark": 0.45
+  },
+  "diagnostics": {
+    "allocation_mean": {
+      "ts_momentum": 0.5864459980244222,
+      "cross_sectional": 0.2191906872212511,
+      "cascade_reversal": 0.19436331475432678
+    },
+    "allocation_last": {
+      "ts_momentum": 0.5689655172413792,
+      "cross_sectional": 0.25862068965517243,
+      "cascade_reversal": 0.1724137931034483
+    },
+    "netting_hours": 183874,
+    "netting_gross_saved_mean": 0.015894452904372962,
+    "mean_gross_weight": 0.2526187569540266,
+    "mean_vol_scale": 1.0450791307211085,
+    "funding_damped_hours": 41992,
+    "cascade_hours": 31
+  },
+  "per_symbol": {
+    "BTC-USDT-SWAP": {
+      "n_trades": 633,
+      "net_pnl": 16030.604230081386,
+      "win_rate": 0.2812006319115324,
+      "fees": 8784.488622327766,
+      "funding": 64.49687068291831
+    },
+    "ETH-USDT-SWAP": {
+      "n_trades": 653,
+      "net_pnl": -31625.6112852021,
+      "win_rate": 0.29402756508422667,
+      "fees": 8916.766038592232,
+      "funding": 1038.1808546881377
+    },
+    "SOL-USDT-SWAP": {
+      "n_trades": 511,
+      "net_pnl": 10233.28941442198,
+      "win_rate": 0.3679060665362035,
+      "fees": 5414.494998275407,
+      "funding": 101.21325982880387
+    }
+  }
+}

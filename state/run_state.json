@@ -1,5 +1,5 @@
 {
-  "phase": "portfolio",
+  "phase": "universe_h2",
   "completed_steps": [
     "dl:instruments",
     "dl:funding:BTC-USDT-SWAP",
@@ -200,7 +200,14 @@
     "baseline:cross_sectional",
     "step:brique2",
     "baseline:cascade_reversal",
-    "step:brique3"
+    "step:brique3",
+    "baseline:portfolio",
+    "step:portfolio",
+    "dl:ohlcv:XRP-USDT-SWAP:1H:202001-202201",
+    "dl:ohlcv:XRP-USDT-SWAP:1H:202201-202401",
+    "dl:ohlcv:XRP-USDT-SWAP:1H:202401-202601",
+    "dl:ohlcv:XRP-USDT-SWAP:1H:202601-202607",
+    "dl:ohlcv:DOGE-USDT-SWAP:1H:202004-202204"
   ],
   "current_hypothesis": null,
   "config_index": 0,
@@ -795,9 +802,27 @@
     "baseline:cascade_reversal": {
       "sharpe": -0.2114235573284309,
       "n_trades": 1
+    },
+    "baseline:portfolio": {
+      "sharpe": -0.03808124102621198
+    },
+    "dl:ohlcv:XRP-USDT-SWAP:1H:202001-202201": {
+      "rows": 17545
+    },
+    "dl:ohlcv:XRP-USDT-SWAP:1H:202201-202401": {
+      "rows": 17521
+    },
+    "dl:ohlcv:XRP-USDT-SWAP:1H:202401-202601": {
+      "rows": 17545
+    },
+    "dl:ohlcv:XRP-USDT-SWAP:1H:202601-202607": {
+      "rows": 4942
+    },
+    "dl:ohlcv:DOGE-USDT-SWAP:1H:202004-202204": {
+      "rows": 15118
     }
   },
-  "updated_at": "2026-07-25T21:27:52.911116+00:00",
+  "updated_at": "2026-07-25T21:29:15.033809+00:00",
   "oos_opened": false,
   "oos_opened_at": null
 }
