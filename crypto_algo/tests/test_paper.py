@@ -47,25 +47,50 @@ def test_paper_state_round_trip(tmp_path):
     assert loaded.cash == 9_000.0 and loaded.bars_processed == 42
 
 
-def test_paper_step_processes_bars_and_persists(cfg, md, tmp_path):
+def test_cold_start_does_not_replay_history(cfg, md, tmp_path):
+    """Les 60 jours de paper trading doivent être intégralement prospectifs."""
     trader = PaperTrader(cfg, state_path=tmp_path)
     status = trader.step(md)
-    assert status["processed"] > 0
-    assert (tmp_path / "state.json").exists()
+    assert status["processed"] == 0
+    assert not trader.portfolio.trades
     assert trader.state.last_bar_ts is not None
+    assert (tmp_path / "state.json").exists()
+
+
+def test_paper_step_processes_new_bars_only(cfg, md, tmp_path):
+    """Après le démarrage à froid, seules les bougies nouvelles sont traitées."""
+    trader = PaperTrader(cfg, state_path=tmp_path)
+    exec_tf = cfg.get_path("data.execution_timeframe")
+    key = ("BTC/USDT:USDT", exec_tf)
+    full = md.ohlcv[key]
+    cut = len(full) - 200
+
+    partial = md.slice(end=full.index[cut])
+    trader.step(partial)                      # démarrage à froid sur l'historique tronqué
+    assert trader.state.bars_processed == 0
+
+    status = trader.step(md)                  # 200 nouvelles bougies
+    assert status["processed"] == 200
+    assert (tmp_path / "state.json").exists()
 
 
 def test_paper_step_is_idempotent(cfg, md, tmp_path):
     """Rejouer la même fenêtre ne doit traiter aucune bougie déjà vue."""
     trader = PaperTrader(cfg, state_path=tmp_path)
+    exec_tf = cfg.get_path("data.execution_timeframe")
+    full = md.ohlcv[("BTC/USDT:USDT", exec_tf)]
+    trader.step(md.slice(end=full.index[len(full) - 200]))
     first = trader.step(md)
     second = trader.step(md)
-    assert first["processed"] > 0
+    assert first["processed"] == 200
     assert second["processed"] == 0
 
 
 def test_paper_restores_positions_after_restart(cfg, md, tmp_path):
     trader = PaperTrader(cfg, state_path=tmp_path)
+    exec_tf = cfg.get_path("data.execution_timeframe")
+    full = md.ohlcv[("BTC/USDT:USDT", exec_tf)]
+    trader.step(md.slice(end=full.index[len(full) - 400]))
     trader.step(md)
     equity_before = trader.portfolio.equity({})
     n_positions = len(trader.portfolio.positions)
@@ -81,6 +106,9 @@ def test_paper_restores_positions_after_restart(cfg, md, tmp_path):
 
 def test_paper_respects_risk_invariants(cfg, md, tmp_path):
     trader = PaperTrader(cfg, state_path=tmp_path)
+    exec_tf = cfg.get_path("data.execution_timeframe")
+    full = md.ohlcv[("BTC/USDT:USDT", exec_tf)]
+    trader.step(md.slice(end=full.index[len(full) - 400]))
     trader.step(md)
     assert len(trader.portfolio.positions) <= int(cfg.get_path("risk.max_concurrent_positions"))
     for pos in trader.portfolio.positions.values():

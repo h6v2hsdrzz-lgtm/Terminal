@@ -195,8 +195,20 @@ class PaperTrader:
         if not frames:
             return {"processed": 0, "equity": equity, "reason": "aucune donnée"}
         timeline = sorted(set().union(*[set(f.index) for f in frames.values()]))
-        if last_done is not None:
-            timeline = [ts for ts in timeline if ts > last_done]
+
+        # Démarrage à froid : on **ne rejoue pas** l'historique récent. Un compte
+        # papier qui commence par simuler 100 jours de bougies déjà connues
+        # n'est pas du paper trading : les 60 jours exigés avant tout capital
+        # réel doivent être intégralement prospectifs. On se contente donc de
+        # marquer la dernière bougie close comme point de départ.
+        if last_done is None:
+            if timeline:
+                self._persist(self.portfolio.equity({}), timeline[-1])
+                log.info("[paper] démarrage à froid : suivi à partir de %s "
+                         "(aucune bougie historique rejouée)", timeline[-1])
+            return {"processed": 0, "equity": equity, "reason": "démarrage à froid"}
+
+        timeline = [ts for ts in timeline if ts > last_done]
 
         for ts in timeline:
             prices = {s: float(f.loc[ts, "close"]) for s, f in frames.items() if ts in f.index}
