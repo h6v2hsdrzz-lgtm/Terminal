@@ -1,5 +1,5 @@
 {
-  "phase": "brique1",
+  "phase": "brique2",
   "completed_steps": [
     "dl:instruments",
     "dl:funding:BTC-USDT-SWAP",
@@ -194,7 +194,9 @@
     "data_quality_report",
     "step:data_quality",
     "engine_selftest_report",
-    "step:engine_selftest"
+    "step:engine_selftest",
+    "baseline:ts_momentum",
+    "step:brique1"
   ],
   "current_hypothesis": null,
   "config_index": 0,
@@ -777,9 +779,13 @@
     },
     "engine_selftest_report": {
       "all_passed": true
+    },
+    "baseline:ts_momentum": {
+      "sharpe": 0.19682200939785494,
+      "n_trades": 4717
     }
   },
-  "updated_at": "2026-07-25T21:25:48.737557+00:00",
+  "updated_at": "2026-07-25T21:26:32.399112+00:00",
   "oos_opened": false,
   "oos_opened_at": null
 }
