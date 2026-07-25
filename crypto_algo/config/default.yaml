@@ -1,0 +1,320 @@
+# =============================================================================
+# crypto_algo — configuration de référence
+# Tous les paramètres du framework vivent ici. Aucun hardcode dans le code.
+# Toutes les dates / heures sont en UTC.
+# =============================================================================
+
+meta:
+  name: "perp_x10_research"
+  version: "0.1.0"
+  base_currency: "USDT"
+
+# -----------------------------------------------------------------------------
+# Univers et données
+# -----------------------------------------------------------------------------
+universe:
+  # symboles ccxt unifiés (perpétuels USDT-margined)
+  symbols:
+    - "BTC/USDT:USDT"
+    - "ETH/USDT:USDT"
+    - "SOL/USDT:USDT"
+  benchmark_symbol: "BTC/USDT:USDT"
+
+data:
+  exchange: "okx"              # priorité OKX ; binance/bybit en repli si accessibles
+  fallback_exchanges: ["binance", "bybit"]
+  store_path: "data_store"
+  start: "2020-01-01T00:00:00Z"
+  end: null                    # null = maintenant
+  # timeframe d'exécution de la boucle event-driven
+  #
+  # Choix contraint par l'API OKX (documenté dans le rapport) : la série de
+  # mark price est indispensable au test de liquidation et se télécharge par
+  # lots de 300 barres. En 1m sur 2020->2026 cela représente ~11 500 requêtes
+  # par symbole ; en 15m, ~770. On exécute donc en 15m — cohérent avec un
+  # horizon « quelques minutes à quelques jours » — et on résout l'intrabar en
+  # 5m sur tout l'historique, le 1m servant à mesurer le biais résiduel de
+  # cette approximation sur une sous-période (cf. reports/intrabar_bias).
+  execution_timeframe: "15m"
+  # timeframe de résolution intrabar (SL/TP touchés dans la même barre)
+  intrabar_timeframe: "5m"
+  # timeframe de contrôle du biais de résolution intrabar (sous-période)
+  intrabar_audit_timeframe: "1m"
+  # timeframes utilisés par les signaux
+  signal_timeframes: ["5m", "15m", "1h", "4h"]
+  # séries annexes
+  fetch_funding: true
+  fetch_mark: true
+  fetch_index: true
+  fetch_open_interest: true    # best-effort : OKX ne conserve qu'un historique court
+  # téléchargement
+  max_retries: 6
+  retry_backoff_seconds: [2, 4, 8, 16, 32, 60]
+  request_pause_seconds: 0.12
+
+quality:
+  # tolérances du contrôle qualité (Phase 1)
+  max_gap_ratio: 0.02          # > 2 % de barres manquantes => échec du contrôle
+  max_duplicate_ratio: 0.0     # aucun doublon toléré
+  zero_volume_warn_ratio: 0.05
+  # outlier : rendement 1 barre au-delà de N écarts-types robustes (MAD)
+  outlier_mad_sigma: 12.0
+  # une "période de maintenance" = trou >= N barres consécutives
+  maintenance_min_missing_bars: 5
+  # écart max toléré entre le mark price et le close du perp (fraction)
+  mark_vs_close_max_dev: 0.05
+
+# -----------------------------------------------------------------------------
+# Découpage temporel de l'audit — cf. §8.1 du protocole
+# -----------------------------------------------------------------------------
+splits:
+  in_sample:
+    start: "2020-01-01T00:00:00Z"
+    end: "2024-01-01T00:00:00Z"
+  out_of_sample:
+    start: "2024-01-01T00:00:00Z"
+    end: null
+  # verrou : le moteur refuse de lire l'OOS tant que ce drapeau est false.
+  # Il ne doit être basculé qu'une seule fois, à la fin de la recherche.
+  oos_unlocked: false
+  oos_unlock_reason: ""
+
+# -----------------------------------------------------------------------------
+# Moteur de risque — contraintes dures (§6)
+# -----------------------------------------------------------------------------
+risk:
+  initial_equity: 10000.0
+  leverage_max: 10.0
+  max_margin_per_trade: 0.20        # 20 % de l'equity, marge engagée
+  max_total_margin: 0.40            # somme des marges (2 x 20 %)
+  max_concurrent_positions: 2
+  max_positions_per_symbol: 1
+  max_holding_days: 5.0             # horizon max (§1)
+
+  # --- sizing risk-based (§6.1) ---
+  sizing_mode: "risk_based"         # "risk_based" | "margin_based" (déconseillé)
+  risk_per_trade: 0.015             # 1.5 % de l'equity risqués au stop
+  risk_per_trade_grid: [0.005, 0.01, 0.015, 0.02, 0.03]   # étude de sensibilité
+  min_stop_distance_pct: 0.003      # garde-fou : stop < 0.3 % => refus (bruit)
+  max_stop_distance_pct: 0.10
+  min_notional: 10.0
+  # le prix de liquidation doit rester au-delà du stop d'au moins ce facteur :
+  # levier effectif = min(10, 1 / (distance_stop * buffer + mmr + frais))
+  liquidation_buffer: 1.5
+
+  # --- budgets de risque résiduels ---
+  # le moteur refuse toute position dont la perte au stop dépasse le budget restant
+  risk_budget:
+    daily: 0.06                     # aligné sur daily_dd_stop
+    weekly: 0.15
+    monthly: 0.25
+    enabled: true
+
+  # --- coupe-circuits de drawdown ---
+  drawdown:
+    reference: "high_water_mark"    # "high_water_mark" | "period_start" | "worst_of"
+    daily_dd_stop: -0.06
+    weekly_dd_stop: -0.15
+    monthly_dd_stop: -0.25
+    global_kill_switch: -0.60       # sur le HWM global, arrêt définitif
+    week_start: "monday"
+    day_boundary_utc: "00:00"
+
+  # --- verrou de profit mensuel ---
+  profit_lock:
+    enabled: true
+    trigger: 0.38                   # +38 % mensuel => armement
+    floor: 0.25                     # retour à +25 % => flat + halt du mois
+  monthly_take_profit: 1.10         # +110 % => flat + halt jusqu'au mois suivant
+
+  # --- stop loss obligatoire ---
+  require_stop_loss: true
+  # invariants vérifiés à chaque tick ; toute violation lève une exception
+  enforce_invariants: true
+
+# -----------------------------------------------------------------------------
+# Exécution / coûts (§7)
+# -----------------------------------------------------------------------------
+execution:
+  fees:
+    taker: 0.0005                   # 0.05 %
+    maker: 0.0002                   # 0.02 %
+    default_order_type: "taker"
+  slippage:
+    model: "composite"
+    spread_bps: 3.0                 # composante spread fixe (2-5 bps)
+    vol_coefficient: 0.10           # fraction de l'ATR% de la barre
+    impact_coefficient: 0.15        # impact = coef * (taille / volume de barre)
+    max_slippage_pct: 0.02          # garde-fou
+  latency:
+    enabled: true
+    min_ms: 200
+    max_ms: 500
+  rejects:
+    enabled: true
+    probability: 0.002              # rejets d'ordre occasionnels
+  funding:
+    enabled: true
+    hours_utc: [0, 8, 16]
+    use_real_rates: true
+    fallback_rate: 0.0001           # utilisé seulement si l'historique manque
+  liquidation:
+    enabled: true
+    use_mark_price: true
+    # paliers de marge de maintenance (approximation documentée du barème OKX
+    # USDT-margined perp ; notional en USDT, mmr = maintenance margin rate)
+    tiers:
+      - {max_notional: 50000,     mmr: 0.004}
+      - {max_notional: 250000,    mmr: 0.005}
+      - {max_notional: 1000000,   mmr: 0.010}
+      - {max_notional: 5000000,   mmr: 0.020}
+      - {max_notional: 20000000,  mmr: 0.035}
+      - {max_notional: null,      mmr: 0.050}
+    taker_fee_buffer: true          # inclure les frais de clôture dans le seuil
+    lose_full_margin: true          # hypothèse pessimiste : marge isolée perdue en totalité
+  intrabar:
+    # SL et TP touchés dans la même barre : descendre en 1m, sinon pessimiste
+    resolve_with_intrabar: true
+    pessimistic_fallback: true      # SL d'abord
+  # signal en clôture de barre N -> exécution à l'ouverture de la barre N+1
+  fill_delay_bars: 1
+
+# -----------------------------------------------------------------------------
+# Features / signaux (§4)
+# -----------------------------------------------------------------------------
+features:
+  ema_periods: [20, 50, 200]
+  ema_slope_lookback: 10
+  adx_period: 14
+  atr_period: 14
+  atr_percentile_window: 500
+  rsi_period: 14
+  macd: {fast: 12, slow: 26, signal: 9}
+  roc_period: 10
+  bollinger: {period: 20, k: 2.0}
+  keltner: {period: 20, atr_mult: 1.5}
+  supertrend: {period: 10, multiplier: 3.0}
+  choppiness_period: 14
+  volume_ma_period: 20
+  obv_smooth: 20
+  vwap_anchor: "day"                # "day" | "week"
+  vwap_bands: [1.0, 2.0]
+  volume_profile: {window: 500, bins: 50, value_area: 0.70}
+  swing_lookback: 5                 # structure de marché HH/LL
+  sr_cluster: {lookback: 300, tolerance_pct: 0.004, min_touches: 3}
+  divergence_lookback: 40
+  correlation_windows: [30, 90]
+  beta_window: 90
+  ratio_zscore_window: 200
+
+signals:
+  # pondération des familles dans le score agrégé (par régime, cf. routing)
+  weights:
+    trend: 1.0
+    momentum: 1.0
+    range: 1.0
+    reversal: 1.0
+    volume: 0.5
+    correlation: 0.5
+    statarb: 0.5
+  # seuil d'entrée sur le score agrégé [-1, 1]
+  entry_threshold: 0.35
+  exit_threshold: 0.10
+  min_families_agreeing: 2
+
+statarb:
+  funding_extreme_pctile: 0.90      # funding au-delà du 90e centile = surchauffe
+  funding_zscore_window: 90         # en périodes de funding (8h)
+  basis_zscore_window: 500
+  pair_zscore_window: 200
+  pair_entry_z: 2.0
+  pair_exit_z: 0.5
+  pairs:
+    - ["ETH/USDT:USDT", "BTC/USDT:USDT"]
+    - ["SOL/USDT:USDT", "BTC/USDT:USDT"]
+
+# -----------------------------------------------------------------------------
+# Régime de marché (§5)
+# -----------------------------------------------------------------------------
+regime:
+  timeframes: ["4h", "1h"]
+  primary_timeframe: "4h"
+  adx_trend_threshold: 22.0
+  adx_range_threshold: 18.0
+  ema_align_tolerance: 0.0
+  chop_range_threshold: 55.0
+  # chaos : ATR% au-delà du centile N sur la fenêtre
+  chaos_atr_percentile: 0.95
+  chaos_atr_window: 500
+  # persistance minimale d'un régime avant bascule (barres du TF primaire)
+  min_regime_persistence: 2
+  log_routing_decisions: true
+
+routing:
+  # routage strict : famille autorisée par régime. Toute autre est interdite.
+  trend_up:      {allow: ["trend", "momentum", "volume", "statarb"], direction: "long_only"}
+  trend_down:    {allow: ["trend", "momentum", "volume", "statarb"], direction: "short_only"}
+  range:         {allow: ["range", "reversal", "correlation", "statarb"], direction: "both"}
+  high_vol_chaos: {allow: [], direction: "flat"}
+
+# -----------------------------------------------------------------------------
+# Backtest
+# -----------------------------------------------------------------------------
+backtest:
+  start: null                       # null => borne du split actif
+  end: null
+  seed: 20200101
+  warmup_bars: 500
+  log_level: "INFO"
+  save_trades: true
+  save_equity: true
+
+# -----------------------------------------------------------------------------
+# Validation (§8)
+# -----------------------------------------------------------------------------
+validation:
+  walk_forward:
+    train_months: 6
+    test_months: 2
+    modes: ["anchored", "rolling"]
+  purged_kfold:
+    n_splits: 5
+    embargo_pct: 0.01
+  monte_carlo:
+    n_simulations: 10000
+    method: "bootstrap_trades"      # rééchantillonnage de l'ordre des trades
+    ruin_threshold: -0.60           # ruine = DD <= kill switch
+    seed: 12345
+  cost_stress:
+    multipliers: [1.0, 1.5, 2.0]
+  min_trades_per_regime: 200
+  deflated_sharpe:
+    enabled: true
+    annualization_factor: 365       # crypto : 365 jours
+  benchmarks:
+    - "btc_buy_hold"
+    - "btc_buy_hold_2x"
+    - "equal_weight_basket"
+    - "random_entries"
+  alpha_beta:
+    frequency: "daily"
+
+# -----------------------------------------------------------------------------
+# Rapports (§9)
+# -----------------------------------------------------------------------------
+reports:
+  output_dir: "reports_out"
+  var_levels: [0.95, 0.99]
+  risk_free_rate: 0.0
+  annualization_days: 365
+  make_plots: true
+  html: true
+
+# -----------------------------------------------------------------------------
+# Paper trading (§10, phase 7)
+# -----------------------------------------------------------------------------
+paper:
+  enabled: false
+  min_days: 60
+  poll_seconds: 30
+  state_path: "paper_state"
