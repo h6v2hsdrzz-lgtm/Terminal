@@ -289,3 +289,64 @@ def test_shared_cache_is_invalidated_by_a_different_core_configuration():
     r2.run_once({}, None, None, label="b", record=False)
     fingerprint_b = next(iter(shared.values()))["_fingerprint"]
     assert fingerprint_a != fingerprint_b
+
+
+# ------------------------------------------------- hypothèse « cassure 4h »
+def test_donchian_breakout_is_causal():
+    """Bruit injecté dans le futur : les décisions passées ne bougent pas."""
+    from crypto_algo.strategies.breakout import DonchianBreakoutStrategy
+
+    cfg = load_config(overrides={"universe.symbols": [SYMBOLS[0]],
+                                 "data.signal_timeframes": TFS,
+                                 "data.execution_timeframe": "15m"})
+    md = synthetic_market_data(symbols=[SYMBOLS[0]], timeframes=TFS, n_bars=6000,
+                               exec_timeframe="15m", seed=5)
+    clean = DonchianBreakoutStrategy(cfg)
+    clean.prepare(md, cfg)
+    a = clean.decisions(SYMBOLS[0])["signal"]
+
+    dirty_md = synthetic_market_data(symbols=[SYMBOLS[0]], timeframes=TFS, n_bars=6000,
+                                     exec_timeframe="15m", seed=5)
+    for key in list(dirty_md.ohlcv):
+        dirty_md.ohlcv[key] = _corrupt_future(dirty_md.ohlcv[key], cut_ratio=0.6)
+    dirty = DonchianBreakoutStrategy(cfg)
+    dirty.prepare(dirty_md, cfg)
+    b = dirty.decisions(SYMBOLS[0])["signal"]
+
+    cut = int(len(a) * 0.6)
+    assert np.allclose(a.iloc[:cut].to_numpy(), b.iloc[:cut].to_numpy())
+
+
+def test_donchian_channel_excludes_the_current_bar():
+    """Le canal ne doit pas contenir la bougie qui déclenche la cassure —
+    sinon le prix ne peut jamais franchir son propre plus haut."""
+    from crypto_algo.strategies.breakout import DonchianBreakoutStrategy
+
+    cfg = load_config(overrides={"universe.symbols": [SYMBOLS[0]],
+                                 "data.signal_timeframes": TFS,
+                                 "data.execution_timeframe": "15m"})
+    md = synthetic_market_data(symbols=[SYMBOLS[0]], timeframes=TFS, n_bars=6000,
+                               exec_timeframe="15m", seed=9, regime="trend")
+    strat = DonchianBreakoutStrategy(cfg, entry_period=20, exit_period=10)
+    strat.prepare(md, cfg)
+    signal = strat.decisions(SYMBOLS[0])["signal"]
+    assert (signal != 0).any(), "aucune cassure détectée sur une série en tendance"
+
+
+def test_breakout_signal_always_carries_a_stop():
+    from crypto_algo.strategies.breakout import DonchianBreakoutStrategy
+
+    cfg = load_config(overrides={"universe.symbols": [SYMBOLS[0]],
+                                 "data.signal_timeframes": TFS,
+                                 "data.execution_timeframe": "15m"})
+    md = synthetic_market_data(symbols=[SYMBOLS[0]], timeframes=TFS, n_bars=6000,
+                               exec_timeframe="15m", seed=12)
+    strat = DonchianBreakoutStrategy(cfg)
+    strat.prepare(md, cfg)
+    dec = strat.decisions(SYMBOLS[0])
+    active = dec[dec["signal"] != 0]
+    assert len(active) > 0
+    assert active["stop_price"].notna().all()
+    long_rows = active[active["signal"] > 0]
+    assert (long_rows["stop_price"] < long_rows.index.map(
+        lambda ts: md.get(SYMBOLS[0], "15m").loc[ts, "close"])).all()
