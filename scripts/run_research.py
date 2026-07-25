@@ -299,6 +299,17 @@ def build_report(cfg, quality, research: dict, oos: dict | None, path: Path) -> 
     from crypto_algo.reports.metrics import to_returns
 
     figs = ensure_dir(out_dir(cfg) / "figures")
+    # Recalcul des métriques depuis les résultats bruts : un cache produit par
+    # une version antérieure du module de métriques ne doit pas priver le
+    # rapport final des indicateurs ajoutés depuis (médiane active, kill switch…).
+    baseline_outcome = research.get("baseline")
+    if baseline_outcome is not None and len(getattr(baseline_outcome, "equity", [])):
+        research["baseline_report"] = compute_metrics(
+            baseline_outcome.equity, baseline_outcome.trades,
+            benchmark_equity=research.get("benchmarks", {}).get("btc_buy_hold"),
+            stats=baseline_outcome.stats,
+            days_per_year=int(cfg.get_path("reports.annualization_days")), name="in_sample",
+        )
     m = research["baseline_report"].metrics
     equity = research["baseline"].equity
     sections: list[tuple[str, str]] = []
@@ -307,6 +318,15 @@ def build_report(cfg, quality, research: dict, oos: dict | None, path: Path) -> 
     target = float(cfg.get_path("risk.profit_lock.trigger"))
     median_m = m.get("monthly_median", float("nan"))
     ci_low, ci_high = m.get("monthly_median_ci_low"), m.get("monthly_median_ci_high")
+    active_note = ""
+    if m.get("killed") and m.get("monthly_median_active") is not None:
+        active_note = (
+            f"<p>Sur la seule période réellement tradée (avant l'arrêt définitif,"
+            f" {m.get('months_active', 0)} mois), la médiane mensuelle est de"
+            f" <strong>{m['monthly_median_active'] * 100:.2f} %</strong>. La médiane sur"
+            f" toute la période ci-dessus est diluée par les mois plats qui suivent"
+            f" le kill switch.</p>"
+        )
     verdict_kind = "good" if (np.isfinite(median_m) and median_m > 0) else "bad"
     verdict = f"""
 <p><strong>Rendement mensuel médian réellement atteint (in-sample) :
@@ -316,6 +336,7 @@ def build_report(cfg, quality, research: dict, oos: dict | None, path: Path) -> 
 contrainte de conception. Sur cet échantillon, elle est atteinte
 {m.get('months_above_38pct', 0)} mois sur {m.get('months', 0)}. Aucun paramètre
 n'a été ajusté pour s'en approcher.</p>
+{active_note}
 """
     gross = m.get("gross_pnl", 0.0) or 0.0
     net = m.get("net_pnl", 0.0) or 0.0

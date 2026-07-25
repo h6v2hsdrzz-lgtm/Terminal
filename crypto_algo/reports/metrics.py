@@ -290,6 +290,16 @@ def compute_metrics(
             active_days = (killed_ts - equity.index[0]).total_seconds() / 86400
             m["days_before_kill_switch"] = float(active_days)
             m["active_share_of_period"] = float(active_days / total_days) if total_days > 0 else float("nan")
+            # La médiane mensuelle sur toute la période serait dominée par les
+            # mois plats postérieurs à l'arrêt : elle afficherait 0 % là où le
+            # compte a en réalité perdu 60 % avant d'être coupé. On publie donc
+            # aussi la médiane sur la seule période réellement tradée.
+            active_equity = equity[equity.index <= killed_ts]
+            if len(active_equity) > 2:
+                active_monthly = monthly_returns(active_equity)
+                if len(active_monthly):
+                    m["monthly_median_active"] = float(active_monthly.median())
+                    m["months_active"] = int(len(active_monthly))
 
     if benchmark_equity is not None and len(benchmark_equity) > 1:
         bench_monthly = monthly_returns(benchmark_equity.dropna())
