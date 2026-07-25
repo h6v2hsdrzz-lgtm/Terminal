@@ -27,6 +27,7 @@ PIPELINE: list[tuple[str, str]] = [
     ("brique2", "Brique 2 — momentum cross-sectionnel, in-sample"),
     ("brique3", "Brique 3 — reversal post-cascade, in-sample"),
     ("portfolio", "Modulateur funding + combinaison risk parity"),
+    ("universe_h2", "H2 — etude d'extension de l'univers cross-sectionnel"),
     ("research", "Boucle de recherche sous protocole (§16)"),
     ("leverage", "Calibration du levier (§8)"),
     ("validation_oos", "Ouverture unique de l'out-of-sample + validation"),
@@ -87,6 +88,11 @@ def step_portfolio(cfg: Config, state: RunState) -> None:
     run_portfolio_baseline(cfg, state)
 
 
+def step_universe_h2(cfg: Config, state: RunState) -> None:
+    from .research.universe_study import run_universe_study
+    run_universe_study(cfg, state)
+
+
 def step_research(cfg: Config, state: RunState) -> None:
     from .research.pipeline import run_research_loop
     run_research_loop(cfg, state)
@@ -116,6 +122,7 @@ STEPS: dict[str, Callable[[Config, RunState], None]] = {
     "brique2": step_brique2,
     "brique3": step_brique3,
     "portfolio": step_portfolio,
+    "universe_h2": step_universe_h2,
     "research": step_research,
     "leverage": step_leverage,
     "validation_oos": step_validation_oos,

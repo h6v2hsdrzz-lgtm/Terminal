@@ -109,14 +109,23 @@ def monte_carlo_trade_order(trade_pnl: np.ndarray, initial_equity: float,
                                 {"status": "trop_peu_de_trades", "n": int(len(pnl))})
     rng = np.random.default_rng(seed)
     n = len(pnl)
-    idx = rng.permuted(np.tile(np.arange(n), (n_draws, 1)), axis=1)
-    paths = initial_equity + np.cumsum(pnl[idx], axis=1)
-    running_max = np.maximum.accumulate(np.column_stack(
-        [np.full(n_draws, initial_equity), paths]), axis=1)
-    with np.errstate(divide="ignore", invalid="ignore"):
-        dd = np.column_stack([np.full(n_draws, initial_equity), paths]) / running_max - 1.0
-    max_dd = dd.min(axis=1)
-    total_ret = paths[:, -1] / initial_equity - 1.0
+    # Le produit tirages x trades peut depasser le milliard d'elements : on
+    # traite par lots pour borner la memoire a quelques dizaines de Mo.
+    chunk = max(1, min(n_draws, int(4e6 // max(n, 1))))
+    max_dd = np.empty(n_draws)
+    total_ret = np.empty(n_draws)
+    done = 0
+    while done < n_draws:
+        m = min(chunk, n_draws - done)
+        idx = rng.permuted(np.tile(np.arange(n), (m, 1)), axis=1)
+        paths = initial_equity + np.cumsum(pnl[idx], axis=1)
+        paths = np.column_stack([np.full(m, initial_equity), paths])
+        running_max = np.maximum.accumulate(paths, axis=1)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            dd = paths / running_max - 1.0
+        max_dd[done:done + m] = dd.min(axis=1)
+        total_ret[done:done + m] = paths[:, -1] / initial_equity - 1.0
+        done += m
     ruin = float((max_dd <= ruin_threshold).mean())
     return MonteCarloResult(
         max_dd, total_ret, ruin,
@@ -131,6 +140,22 @@ def monte_carlo_trade_order(trade_pnl: np.ndarray, initial_equity: float,
          "ruin_threshold": ruin_threshold})
 
 
+def bars_per_hour(returns: pd.Series, default: float = 1.0) -> float:
+    """Deduit la resolution de la serie a partir de son index temporel.
+
+    Indispensable : sur une grille 15 minutes, supposer des barres horaires
+    ferait mesurer le drawdown « mensuel » sur 7,6 jours, ce qui le
+    sous-estimerait massivement et gonflerait d'autant le levier juge
+    compatible avec la limite de risque.
+    """
+    idx = getattr(returns, "index", None)
+    if isinstance(idx, pd.DatetimeIndex) and len(idx) > 2:
+        delta = pd.Series(idx).diff().median()
+        if pd.notna(delta) and delta.total_seconds() > 0:
+            return 3600.0 / delta.total_seconds()
+    return default
+
+
 def monthly_drawdown_distribution(returns: pd.Series, n_draws: int,
                                   block_hours: int = 24, seed: int = 0) -> dict:
     """Distribution du drawdown MENSUEL par bootstrap par blocs.
@@ -139,16 +164,18 @@ def monthly_drawdown_distribution(returns: pd.Series, n_draws: int,
     rendements ; un bootstrap i.i.d. sous-estimerait gravement le drawdown.
     Fournit DD_p95 pour l'etape 2 du module de levier (§8).
     """
+    bph = bars_per_hour(returns)
     r = pd.Series(returns).dropna().to_numpy(dtype=float)
-    if len(r) < block_hours * 10:
+    block = max(2, int(round(block_hours * bph)))
+    bars_month = max(block * 2, int(round(730 * bph)))
+    if len(r) < block * 10 or len(r) <= block + 1:
         return {"status": "historique_insuffisant", "n_obs": int(len(r))}
     rng = np.random.default_rng(seed)
-    hours_per_month = 730
-    n_blocks = int(np.ceil(hours_per_month / block_hours))
-    starts = rng.integers(0, len(r) - block_hours, size=(n_draws, n_blocks))
-    offsets = np.arange(block_hours)
+    n_blocks = int(np.ceil(bars_month / block))
+    starts = rng.integers(0, len(r) - block, size=(n_draws, n_blocks))
+    offsets = np.arange(block)
     paths = r[(starts[:, :, None] + offsets[None, None, :])].reshape(n_draws, -1)
-    paths = paths[:, :hours_per_month]
+    paths = paths[:, :bars_month]
 
     equity = np.cumprod(1.0 + paths, axis=1)
     running_max = np.maximum.accumulate(
@@ -160,6 +187,7 @@ def monthly_drawdown_distribution(returns: pd.Series, n_draws: int,
         "status": "ok",
         "n_draws": n_draws,
         "block_hours": block_hours,
+        "bars_per_month": int(bars_month),
         "monthly_dd_median": float(np.median(month_dd)),
         "monthly_dd_p95": float(np.quantile(month_dd, 0.05)),   # 95e percentile de perte
         "monthly_dd_p99": float(np.quantile(month_dd, 0.01)),
@@ -233,7 +261,7 @@ def market_regimes(btc_close: pd.Series, window_days: int = 30) -> pd.Series:
     rapportee a la volatilite 30 jours. Un decoupage sophistique serait lui-meme
     un parametre a surajuster.
     """
-    w = window_days * 24
+    w = max(2, int(round(window_days * 24 * bars_per_hour(btc_close))))
     ret = np.log(btc_close / btc_close.shift(w))
     vol = np.log(btc_close / btc_close.shift(1)).rolling(w).std() * np.sqrt(w)
     z = (ret / vol).replace([np.inf, -np.inf], np.nan)

@@ -30,8 +30,8 @@ data:
   use_minute_resolution: true   # false => repli pessimiste sur les stops intrabar
   okx_base: https://www.okx.com
   binance_vision_base: https://data.binance.vision
-  max_requests_per_second: 8.0
-  download_threads: 10
+  max_requests_per_second: 20.0
+  download_threads: 24
   request_timeout_s: 30
   request_retries: 5
 

@@ -297,9 +297,15 @@ def _walk_forward_returns(cfg: Config, panel, targets, i0: int, i1: int) -> dict
 def _best_config(cfg: Config) -> dict:
     reg = ResearchRegistry(cfg.research_root / "research_log.jsonl",
                            cfg.get("research.max_trials"))
-    best = reg.best("is_sharpe")
-    if best is None:
+    # Seules les configurations issues de la recherche sont eligibles : une
+    # baseline de brique isolee n'est pas une configuration de portefeuille et
+    # ne doit pas pouvoir etre retenue comme configuration finale.
+    candidates = [r for r in reg.rows()
+                  if isinstance(r.get("params"), dict) and "overrides" in r["params"]
+                  and r.get("is_sharpe") is not None and r.get("status") != "invalid"]
+    if not candidates:
         return {"label": "mandat", "overrides": {}, "source": "parametres_du_mandat"}
+    best = max(candidates, key=lambda r: r["is_sharpe"])
     params = best.get("params", {})
     return {"label": params.get("label", "best"),
             "overrides": params.get("overrides", {}),
