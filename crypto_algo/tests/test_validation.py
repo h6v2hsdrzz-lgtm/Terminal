@@ -245,3 +245,17 @@ def test_alpha_is_detected_when_it_exists():
     result = alpha_beta(strat, bench)
     assert result["alpha_period"] > 0.002
     assert result["alpha_significant_5pct"]
+
+
+def test_plateau_score_refuses_to_qualify_a_negative_region():
+    """Toutes les combinaisons perdantes : le ratio de plateau n'a pas de sens.
+
+    Sans ce garde-fou, des voisins « plus mauvais » que le meilleur point
+    donneraient un ratio supérieur à 1, qui se lirait comme un plateau robuste
+    alors qu'aucune configuration ne gagne.
+    """
+    all_negative = pd.DataFrame({"sharpe": [-1.1, -1.4, -1.8, -2.0, -1.6, -1.3]})
+    result = plateau_score(all_negative)
+    assert result["has_positive_region"] is False
+    assert np.isnan(result["plateau_ratio"])
+    assert result["best"] == pytest.approx(-1.1)

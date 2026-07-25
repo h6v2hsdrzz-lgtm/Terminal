@@ -454,14 +454,27 @@ exploitable sur cet échantillon.</p>""", "warn")
 
     # ------------------------------------------------------------ validation
     plateau = research["plateau"]
+    if "has_positive_region" not in plateau:      # cache produit par une version antérieure
+        plateau = plateau_score(research["sensitivity"])
     heat1 = plots.parameter_heatmap(research["heatmaps"]["entry_stop"],
                                     "Sharpe : seuil d'entrée x multiple d'ATR", figs / "heatmap_entry_stop.png")
     heat2 = plots.parameter_heatmap(research["heatmaps"]["entry_families"],
                                     "Sharpe : seuil d'entrée x familles requises", figs / "heatmap_entry_families.png")
-    plateau_kind = "good" if plateau.get("plateau_ratio", 0) > 0.6 else "bad"
-    plateau_text = f"""
+    if not plateau.get("has_positive_region", False):
+        plateau_kind = "bad"
+        plateau_text = f"""
+<p><strong>Aucune combinaison de la grille n'obtient un Sharpe positif</strong>
+({plateau.get('n_points', 0)} combinaisons testées, meilleur point
+{plateau.get('best', float('nan')):.2f}, médiane {plateau.get('median_all', float('nan')):.2f}).
+La question « plateau ou pic ? » ne se pose donc pas : il n'y a pas de zone de
+performance à qualifier. C'est un résultat plus net qu'un surajustement — la
+sensibilité aux paramètres n'est pas le problème.</p>
+"""
+    else:
+        plateau_kind = "good" if plateau.get("plateau_ratio", 0) > 0.6 else "bad"
+        plateau_text = f"""
 <p>Ratio de plateau : <strong>{plateau.get('plateau_ratio', float('nan')):.2f}</strong>
-(médiane du quart supérieur / meilleur point, sur {plateau.get('n_points', 0)} combinaisons).
+(médiane des voisins du sommet / meilleur point, sur {plateau.get('n_points', 0)} combinaisons).
 Proche de 1 = plateau robuste ; proche de 0 = pic isolé, donc surajustement.</p>
 """
     wf_html = ""

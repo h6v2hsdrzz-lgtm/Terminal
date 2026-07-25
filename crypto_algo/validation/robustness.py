@@ -61,7 +61,14 @@ def plateau_score(table: pd.DataFrame, metric: str = "sharpe", top_share: float 
     # voisinage, sinon un pic isolé obtient mécaniquement un ratio proche de 0,5.
     n_top = max(3, int(np.ceil(len(values) * top_share)))
     neighbours = values.nlargest(n_top).iloc[1:]
-    ratio = float(neighbours.median() / best) if best != 0 and len(neighbours) else float("nan")
+    if best <= 0:
+        # Aucune zone de performance positive : un ratio de « planéité » calculé
+        # sur des valeurs négatives serait trompeur (des voisins plus mauvais
+        # donneraient un ratio supérieur à 1, qui se lirait comme un plateau
+        # robuste). La question du plateau ne se pose pas.
+        ratio = float("nan")
+    else:
+        ratio = float(neighbours.median() / best) if len(neighbours) else float("nan")
     return {
         "best": best,
         "median_neighbours": float(neighbours.median()) if len(neighbours) else float("nan"),
@@ -70,6 +77,7 @@ def plateau_score(table: pd.DataFrame, metric: str = "sharpe", top_share: float 
         "dispersion": float(values.std(ddof=1)) if len(values) > 1 else float("nan"),
         "n_points": int(len(values)),
         "top_share": top_share,
+        "has_positive_region": bool(best > 0),
     }
 
 
