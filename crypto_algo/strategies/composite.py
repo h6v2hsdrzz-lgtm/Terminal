@@ -57,9 +57,15 @@ def _hysteresis_state(score: np.ndarray, entry: float, exit_: float) -> np.ndarr
 class RoutedMultiFamilyStrategy(Strategy):
     name = "routed_multi_family"
 
-    def __init__(self, cfg: Config, families: list[str] | None = None, **overrides):
+    def __init__(self, cfg: Config, families: list[str] | None = None,
+                 core_cache: dict | None = None, **overrides):
         super().__init__(cfg, **overrides)
         self.family_names = families or list(cfg.get_path("strategy.families"))
+        # Cache partagé entre points de grille : features, scores de familles,
+        # régimes et routage ne dépendent que des données, pas des seuils
+        # d'entrée/sortie. Le recalculer à chaque combinaison multiplierait le
+        # temps d'une étude de sensibilité par 20 sans rien changer au résultat.
+        self.core_cache = core_cache if core_cache is not None else {}
         self.entry_threshold = float(overrides.get("entry_threshold", cfg.get_path("signals.entry_threshold")))
         self.exit_threshold = float(overrides.get("exit_threshold", cfg.get_path("signals.exit_threshold")))
         self.min_families = int(overrides.get("min_families_agreeing", cfg.get_path("signals.min_families_agreeing")))
@@ -74,6 +80,15 @@ class RoutedMultiFamilyStrategy(Strategy):
 
     # ------------------------------------------------------------------ prepare
     def prepare(self, md: MarketData, cfg: Config) -> None:
+        if self.core_cache.get("ready"):
+            self._decisions = {
+                symbol: self._build_decisions(
+                    core["ctx"], core["df"], core["routed"], core["regimes"], core["scores"]
+                )
+                for symbol, core in self.core_cache["symbols"].items()
+            }
+            return
+
         exec_tf = str(cfg.get_path("data.execution_timeframe"))
         benchmark = str(cfg.get_path("universe.benchmark_symbol"))
         store = FeatureStore(cfg)
@@ -81,6 +96,7 @@ class RoutedMultiFamilyStrategy(Strategy):
         families = build_families(cfg, self.family_names)
         classifier = RegimeClassifier(cfg)
         router = SignalRouter(cfg)
+        self.core_cache["symbols"] = {}
 
         for symbol in md.symbols:
             df = md.get(symbol, exec_tf)
@@ -106,6 +122,9 @@ class RoutedMultiFamilyStrategy(Strategy):
             # contrôle dur : le routage doit être respecté, sinon on s'arrête
             router.assert_no_forbidden_contribution(routed, regimes)
 
+            self.core_cache["symbols"][symbol] = {
+                "ctx": ctx, "df": df, "routed": routed, "regimes": regimes, "scores": scores,
+            }
             decisions = self._build_decisions(ctx, df, routed, regimes, scores)
             self._decisions[symbol] = decisions
             diag = diagnostics.frame()
@@ -121,6 +140,7 @@ class RoutedMultiFamilyStrategy(Strategy):
                 symbol, int((decisions["signal"].diff().abs() > 0).sum()),
                 dict(self.regime_shares[symbol]["share"].round(3)),
             )
+        self.core_cache["ready"] = True
 
     # -------------------------------------------------------------- décisions
     def _build_decisions(self, ctx, df, routed, regimes, scores) -> pd.DataFrame:

@@ -127,10 +127,24 @@ def load_market_data(
     timeframes: list[str] | None = None,
     include_intrabar: bool = False,
     store: ParquetStore | None = None,
+    warmup_pad: bool = True,
 ) -> MarketData:
-    """Charge les séries du cache pour un split donné."""
+    """Charge les séries du cache pour un split donné.
+
+    ``warmup_pad`` charge en plus l'historique nécessaire au calcul des
+    features (EMA 200 en 4h = 33 jours, percentiles d'ATR = 83 jours). Sans ce
+    pré-chargement, les premiers mois de chaque split seraient tradés sur des
+    indicateurs incomplets — ou pas tradés du tout, ce qui fausse la
+    comparaison entre splits.
+    """
     assert_split_allowed(cfg, split)
     start, end = split_bounds(cfg, split)
+    if warmup_pad and start is not None:
+        from ..features.pipeline import effective_warmup
+        from ..utils import timeframe_to_timedelta
+
+        pad = effective_warmup(cfg) * timeframe_to_timedelta(str(cfg.get_path("data.execution_timeframe")))
+        start = start - pad
 
     store = store or ParquetStore(resolve_path(cfg, cfg.get_path("data.store_path")))
     symbols = symbols or list(cfg.get_path("universe.symbols"))
@@ -152,7 +166,9 @@ def load_market_data(
             md.ohlcv[(sym, tf)] = df
         for kind, target in (("mark", md.mark), ("index", md.index)):
             target[sym] = _prepare(store.read(kind, sym, exec_tf, start=start, end=end))
-        md.funding[sym] = _prepare(store.read("funding", sym, start=start, end=end))
+        # la série 'funding_full' (réel + reconstruit) prime sur le brut d'API
+        full = _prepare(store.read("funding_full", sym, start=start, end=end))
+        md.funding[sym] = full if not full.empty else _prepare(store.read("funding", sym, start=start, end=end))
         md.open_interest[sym] = _prepare(store.read("open_interest", sym, start=start, end=end))
     log.info("Données chargées (%s) :\n%s", split, md.describe().to_string(index=False))
     return md
