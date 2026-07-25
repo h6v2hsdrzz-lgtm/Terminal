@@ -12,7 +12,7 @@ cd "$(dirname "$0")/.."
 SYMBOLS=("BTC/USDT:USDT" "ETH/USDT:USDT" "SOL/USDT:USDT")
 OOS_REASON=""
 if [[ "${1:-}" == "--with-oos" ]]; then
-  OOS_REASON="${2:?motif d'ouverture requis}"
+  OOS_REASON="${2:?un motif explicite est requis pour ouvrir l out-of-sample}"
 fi
 
 echo "=== 0. tests (aucune recherche sans moteur validé) ==="
@@ -37,7 +37,7 @@ if [[ -n "$OOS_REASON" ]]; then
   echo "=== 5. ouverture de l'out-of-sample (une seule fois) ==="
   python3 scripts/run_research.py --phase oos --reuse-research --unlock-oos "$OOS_REASON"
 else
-  echo "=== 5. out-of-sample non ouvert (relancer avec --with-oos \"motif\") ==="
+  echo '=== 5. out-of-sample non ouvert (relancer avec --with-oos "motif") ==='
 fi
 
 echo
