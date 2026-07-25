@@ -15,6 +15,8 @@ l'hypothese H2.
 """
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pandas as pd
 
@@ -75,9 +77,13 @@ def _rank_weights(x: np.ndarray, valid: np.ndarray, gross: float) -> np.ndarray:
     xm = np.where(valid, x, np.nan)
     counts = valid.sum(axis=1)
 
-    # z-score en coupe, conserve pour la ponderation quand l'univers est large
-    mu = np.nanmean(xm, axis=1, keepdims=True)
-    sd = np.nanstd(xm, axis=1, keepdims=True)
+    # z-score en coupe, conserve pour la ponderation quand l'univers est large.
+    # Une ligne entierement NaN (aucun actif cote) est un cas legitime : on
+    # neutralise l'avertissement plutot que de masquer le calcul.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        mu = np.nanmean(xm, axis=1, keepdims=True)
+        sd = np.nanstd(xm, axis=1, keepdims=True)
     with np.errstate(invalid="ignore", divide="ignore"):
         z = np.where(sd > 0, (xm - mu) / sd, 0.0)
     z = np.where(np.isfinite(z), z, np.nan)

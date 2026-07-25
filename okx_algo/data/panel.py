@@ -66,9 +66,9 @@ class Panel:
     def slice(self, start: dt.datetime | str | None,
               end: dt.datetime | str | None) -> tuple[int, int]:
         """Bornes [i0, i1) de la fenetre demandee."""
-        i0 = 0 if start is None else int(self.index.searchsorted(pd.Timestamp(start, tz="UTC")))
-        i1 = self.n if end is None else int(self.index.searchsorted(pd.Timestamp(end, tz="UTC"),
-                                                                    side="right"))
+        i0 = 0 if start is None else int(self.index.searchsorted(_as_utc(start)))
+        i1 = (self.n if end is None
+              else int(self.index.searchsorted(_as_utc(end), side="right")))
         return i0, i1
 
     def close_matrix(self) -> np.ndarray:
@@ -76,6 +76,12 @@ class Panel:
 
     def valid_matrix(self) -> np.ndarray:
         return np.column_stack([self.data[s].valid for s in self.symbols])
+
+
+def _as_utc(value) -> pd.Timestamp:
+    """Accepte indifferemment une chaine, un datetime naif ou deja localise."""
+    t = pd.Timestamp(value)
+    return t.tz_localize("UTC") if t.tz is None else t.tz_convert("UTC")
 
 
 # ----------------------------------------------------------------------

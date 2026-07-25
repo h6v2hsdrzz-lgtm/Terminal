@@ -27,6 +27,7 @@ data:
   timeframes: [1m, 15m, 1H, 4H, 1D]
   signal_timeframe: 15m     # barre de decision du moteur (brique 3 exige mieux que 1H)
   execution_timeframe: 1m   # resolution intrabar / cascade
+  use_minute_resolution: true   # false => repli pessimiste sur les stops intrabar
   okx_base: https://www.okx.com
   binance_vision_base: https://data.binance.vision
   max_requests_per_second: 8.0

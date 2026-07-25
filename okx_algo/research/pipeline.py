@@ -42,7 +42,7 @@ BRICKS = {"ts_momentum": TSMomentum,
 def get_panel(cfg: Config, symbols: list[str] | None = None):
     return build_panel(cfg, symbols=symbols,
                        timeframe=cfg.get("data.signal_timeframe"),
-                       with_minute=True)
+                       with_minute=cfg.get("data.use_minute_resolution", True))
 
 
 def brick_params(cfg: Config, name: str) -> dict:
