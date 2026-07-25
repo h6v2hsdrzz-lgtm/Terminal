@@ -118,3 +118,29 @@ def test_timestamps_round_trip_in_milliseconds():
     back = pd.to_datetime(ms, unit="ms", utc=True)
     assert (back == idx).all()
     assert int(ms[1] - ms[0]) == timeframe_to_ms("15m")
+
+
+# --------------------------------------------------------- verrou out-of-sample
+def test_out_of_sample_is_locked_by_default(cfg):
+    """La discipline « on ne regarde l'OOS qu'une fois » est appliquée par le code."""
+    from crypto_algo.data.loader import OutOfSampleLocked, load_market_data
+
+    assert cfg.get_path("splits.oos_unlocked") is False
+    with pytest.raises(OutOfSampleLocked):
+        load_market_data(cfg, split="out_of_sample")
+    with pytest.raises(OutOfSampleLocked):
+        load_market_data(cfg, split="full")
+
+
+def test_in_sample_is_always_readable(cfg):
+    from crypto_algo.data.loader import assert_split_allowed
+
+    assert_split_allowed(cfg, "in_sample")     # ne lève pas
+
+
+def test_unlocking_requires_an_explicit_flag(cfg):
+    from crypto_algo.data.loader import assert_split_allowed
+
+    unlocked = cfg.with_overrides({"splits.oos_unlocked": True,
+                                   "splits.oos_unlock_reason": "audit terminé"})
+    assert_split_allowed(unlocked, "out_of_sample")   # ne lève pas
