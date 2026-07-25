@@ -111,6 +111,24 @@ Ces 17 trades perdent également en brut. Aucun indice d'erreur de signe.
 Une seule bougie ambiguë sur 343 trades : l'approximation 5m est **sans effet**
 ici, et l'hypothèse pessimiste coûte 0,19 de Sharpe. Mesuré, pas supposé.
 
+### Ce qui a été téléchargé, et ce qui ne l'a pas été
+
+| Série | Couverture | Statut |
+|---|---|---|
+| OHLCV 15m / 1h / 4h / 5m | 2020-01 → 2026-07 (SOL : 2021-01) | complet |
+| Mark price 15m | 2020-01 → 2026-07 | complet |
+| Index 1h | 2020-01 → 2026-07 | complet |
+| Funding réel | ~3 mois | limite de rétention de l'API OKX |
+| Open interest | ~1 mois | limite de rétention ; non utilisé par les signaux |
+| 1m | 2023-10 → 2024-01, puis 2024-01 → 2026-07 | **partiel, par décision** |
+
+Le 1m n'existe que sur les fenêtres où il sert : mesurer le biais de résolution
+intrabar. Le couvrir de 2020 à 2026 représenterait ~34 000 requêtes pour
+quantifier un écart déjà mesuré comme nul sur 343 trades. Il a donc été
+téléchargé sur une fenêtre in-sample (pour la mesure ci-dessus) puis sur toute la
+fenêtre out-of-sample (pour refaire la mesure là où se joue la conclusion
+finale). Aucune série lue par le moteur de backtest n'est tronquée.
+
 ---
 
 ## 6. Réponse à la cible de +38 % mensuel
