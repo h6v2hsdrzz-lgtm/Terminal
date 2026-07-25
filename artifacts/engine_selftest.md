@@ -1,6 +1,6 @@
 # Validation du moteur de backtest
 
-Genere le 2026-07-25T19:50:47.115329+00:00
+Genere le 2026-07-25T21:25:48.725807+00:00
 Fenetre de test : 2022-01-01 -> 2023-01-01
 
 **Resultat global : TOUS LES TESTS PASSENT**

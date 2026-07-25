@@ -1,5 +1,5 @@
 {
-  "phase": "engine_selftest",
+  "phase": "brique1",
   "completed_steps": [
     "dl:instruments",
     "dl:funding:BTC-USDT-SWAP",
@@ -192,7 +192,9 @@
     "dl:ohlcv:SOL-USDT-SWAP:1m:202607-202607",
     "step:data_minute",
     "data_quality_report",
-    "step:data_quality"
+    "step:data_quality",
+    "engine_selftest_report",
+    "step:engine_selftest"
   ],
   "current_hypothesis": null,
   "config_index": 0,
@@ -772,9 +774,12 @@
     "data_quality_report": {
       "path": "/home/user/Terminal/artifacts/data_quality_report.json",
       "blocking": 0
+    },
+    "engine_selftest_report": {
+      "all_passed": true
     }
   },
-  "updated_at": "2026-07-25T21:24:59.279067+00:00",
+  "updated_at": "2026-07-25T21:25:48.737557+00:00",
   "oos_opened": false,
   "oos_opened_at": null
 }
