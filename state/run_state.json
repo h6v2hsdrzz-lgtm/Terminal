@@ -1,5 +1,5 @@
 {
-  "phase": "research",
+  "phase": "leverage",
   "completed_steps": [
     "dl:instruments",
     "dl:funding:BTC-USDT-SWAP",
@@ -244,9 +244,11 @@
     "dl:funding:DOT-USDT-SWAP",
     "dl:funding_okx:DOT-USDT-SWAP",
     "h2_universe_study",
-    "step:universe_h2"
+    "step:universe_h2",
+    "research_loop",
+    "step:research"
   ],
-  "current_hypothesis": "H8",
+  "current_hypothesis": null,
   "config_index": 0,
   "seed": 20260725,
   "downloaded": {},
@@ -987,9 +989,14 @@
       "keeps_decorrelation": true,
       "recommended": false,
       "recommendation": "Extension NON recommandee sur ces mesures : le gain de Sharpe est insuffisant. "
+    },
+    "research_loop": {
+      "n_trials": 71,
+      "max_trials": 200,
+      "remaining": 129
     }
   },
-  "updated_at": "2026-07-25T21:49:22.550276+00:00",
+  "updated_at": "2026-07-25T21:51:46.410489+00:00",
   "oos_opened": false,
   "oos_opened_at": null
 }

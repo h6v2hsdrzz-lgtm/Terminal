@@ -1,0 +1,54 @@
+{
+  "stop_reason": "hypotheses_epuisees",
+  "registry": {
+    "n_trials": 71,
+    "max_trials": 200,
+    "remaining": 129,
+    "by_hypothesis": {
+      "baseline": 4,
+      "H2": 6,
+      "H1": 12,
+      "H3": 15,
+      "H4": 6,
+      "H5": 11,
+      "H6": 7,
+      "H7": 2,
+      "H8": 8
+    }
+  },
+  "best": {
+    "trial_id": 1,
+    "hypothesis": "baseline",
+    "timestamp": "2026-07-25T21:26:32.363935+00:00",
+    "params": {
+      "brick": "ts_momentum",
+      "params": {
+        "enabled": true,
+        "horizons_hours": [
+          24,
+          72,
+          168
+        ],
+        "k": 1.0,
+        "vol_halflife_days": 20,
+        "deadband": 0.2,
+        "rebalance_timeframe": "1H",
+        "max_abs_position": 1.0,
+        "target_vol_annualized": 0.1,
+        "vol_estimator_window_days": 20
+      }
+    },
+    "params_hash": "755bb9c34d8663ad",
+    "is_sharpe": 0.19682200939785494,
+    "is_monthly_return": 0.0016731730790336963,
+    "is_monthly_return_mean": 0.0025539911791077137,
+    "max_drawdown": -0.10563811136579249,
+    "calmar": 0.2712031033716277,
+    "n_trades": 4717,
+    "costs_pct_of_gross_pnl": 0.665594462945967,
+    "n_liquidations": 0,
+    "status": "baseline",
+    "note": "brique ts_momentum seule, parametres du mandat, in-sample"
+  },
+  "n_results": 61
+}
