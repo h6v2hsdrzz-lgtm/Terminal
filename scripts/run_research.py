@@ -427,9 +427,24 @@ dérivé des lookbacks les plus longs (EMA 200 en 4h, percentiles d'ATR).</p>
 mêmes coûts et le même dimensionnement que la stratégie : il doit perdre de
 l'argent. S'il gagne, le moteur est faux et tout le reste est nul et non avenu.</p>
 """
+    inversion_html = ""
+    inversion_path = out_dir(cfg) / "tables" / "inversion_check.csv"
+    if inversion_path.exists():
+        inv = pd.read_csv(inversion_path)
+        inversion_html = (
+            "<h3>Contrôle d'inversion</h3>"
+            + table_html(inv)
+            + callout("""
+<p>La même stratégie est rejouée avec l'opinion de <strong>toutes</strong> les familles
+retournée, régimes, routage, risque et coûts inchangés. Si la version inversée
+gagnait nettement, la perte viendrait d'une erreur de signe et non d'une absence
+d'edge. Si les deux perdent, les signaux n'ont pas de contenu directionnel
+exploitable sur cet échantillon.</p>""", "warn")
+        )
+
     sections.append(
         ("Benchmarks et contrôle négatif",
-         callout(bench_note) + table_html(research["benchmark_table"])
+         callout(bench_note) + table_html(research["benchmark_table"]) + inversion_html
          + "<h3>Régression alpha / beta contre BTC</h3>"
          + table_html(pd.DataFrame([research["alpha_beta"]]))
          + callout(

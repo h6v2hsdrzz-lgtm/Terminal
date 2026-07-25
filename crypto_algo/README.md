@@ -39,6 +39,10 @@ python scripts/run_research.py --phase oos --unlock-oos "audit terminé le ..."
 python scripts/paper_trade.py --iterations 1     # une passe, pour cron
 python scripts/paper_trade.py --report           # comparaison live / backtest
 
+# diagnostics complémentaires
+python scripts/run_inversion_check.py     # erreur de signe ou absence d'edge ?
+python scripts/run_intrabar_study.py      # biais de résolution 1m vs 5m vs pessimiste
+
 # tests
 python -m pytest crypto_algo/tests -q
 ```
