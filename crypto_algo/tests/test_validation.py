@@ -319,3 +319,25 @@ def test_monthly_statement_says_when_target_is_missed():
     )
     assert "n'est pas atteinte" in text
     assert "+0.57" in text
+
+
+def test_every_validation_runner_in_the_orchestrator_receives_its_strategy():
+    """Régression : un ``ValidationRunner`` construit sans ``strategy_factory``
+    retombe silencieusement sur la stratégie assemblée par défaut.
+
+    L'étude de ruine a été calculée ainsi pendant un temps : elle décrivait une
+    *autre* stratégie que celle auditée, sans aucun message d'erreur. Le seul
+    garde-fou fiable est de refuser toute construction implicite dans
+    l'orchestrateur.
+    """
+    import re
+    from pathlib import Path
+
+    src = (Path(__file__).resolve().parents[2] / "scripts" / "run_research.py").read_text()
+    calls = re.findall(r"ValidationRunner\((?:[^()]|\([^()]*\))*\)", src)
+    assert calls, "aucun appel à ValidationRunner trouvé — le test ne garde plus rien"
+    manquants = [c for c in calls if "strategy_factory" not in c]
+    assert not manquants, (
+        "ValidationRunner construit sans strategy_factory dans run_research.py : "
+        + " | ".join(" ".join(c.split()) for c in manquants)
+    )

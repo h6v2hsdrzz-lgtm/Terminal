@@ -210,9 +210,13 @@ def phase_research(cfg, quick: bool = False, resume: bool = True,
     risk_metrics = []
     for risk in list(cfg.get_path("risk.risk_per_trade_grid")):
         cfg_risk = cfg.with_overrides({"risk.risk_per_trade": float(risk)})
-        # cache partagé : le sizing ne change ni les features ni les signaux
+        # cache partagé : le sizing ne change ni les features ni les signaux.
+        # `strategy_factory` est obligatoire : sans elle, ce runner retombe sur
+        # la stratégie assemblée par défaut et l'étude de ruine décrit alors une
+        # *autre* stratégie que celle auditée — erreur silencieuse.
         runner_risk = ValidationRunner(cfg_risk, md, registry=registry,
-                                       shared_cache=runner._cache_by_window)
+                                       shared_cache=runner._cache_by_window,
+                                       strategy_factory=factory)
         outcome = runner_risk.run_once({}, is_start, is_end, label=f"risk_{risk}")
         trades_by_risk[float(risk)] = outcome.trades
         risk_metrics.append(
@@ -368,6 +372,11 @@ def build_report(cfg, quality, research: dict, oos: dict | None, path: Path) -> 
         )
     m = research["baseline_report"].metrics
     equity = research["baseline"].equity
+    # Le plateau est résolu ici et non dans la section « validation » : le
+    # verdict, construit en tête de rapport, s'en sert comme contrôle.
+    plateau = research["plateau"]
+    if "has_positive_region" not in plateau:      # cache produit par une version antérieure
+        plateau = plateau_score(research["sensitivity"])
     sections: list[tuple[str, str]] = []
 
     # ------------------------------------------------------------- résumé
@@ -558,9 +567,6 @@ exploitable sur cet échantillon.</p>""", "warn")
     )
 
     # ------------------------------------------------------------ validation
-    plateau = research["plateau"]
-    if "has_positive_region" not in plateau:      # cache produit par une version antérieure
-        plateau = plateau_score(research["sensitivity"])
     heat1 = plots.parameter_heatmap(research["heatmaps"]["entry_stop"],
                                     "Sharpe : seuil d'entrée x multiple d'ATR", figs / "heatmap_entry_stop.png")
     heat2 = plots.parameter_heatmap(research["heatmaps"]["entry_families"],

@@ -235,3 +235,34 @@ attendre ? » se compare au spot, qui ne paie pas de funding. À partir du levie
 2, la position exige un perpétuel et le funding s'applique.
 
 *Code : `data/funding.py`, `validation/benchmarks.py::buy_and_hold_equity`.*
+
+
+---
+
+## 12. Une étude de ruine qui décrivait une autre stratégie
+
+L'étude `risk_per_trade` → probabilité de ruine construit un `ValidationRunner`
+par niveau de risque. Ces runners recevaient bien la configuration modifiée,
+mais **pas la fabrique de stratégie** : `ValidationRunner` retombe alors sur sa
+valeur par défaut, la stratégie multi-familles routée. Lors de l'audit de la
+cassure 4h, cette seule section du rapport décrivait donc une stratégie
+différente de celle auditée — sans le moindre message d'erreur.
+
+Le symptôme qui l'a trahie : à `risk_per_trade = 0,015`, c'est-à-dire exactement
+la valeur du YAML, l'étude annonçait un kill switch et un CAGR de −20 % là où le
+backtest de référence, même configuration, affichait +4 %. Deux chiffres
+incompatibles pour un même réglage : ce n'est pas une nuance de mesure, c'est un
+bug.
+
+**Décision.** La fabrique est passée explicitement, et
+`test_every_validation_runner_in_the_orchestrator_receives_its_strategy` refuse
+désormais toute construction implicite dans l'orchestrateur. Un défaut pratique
+qui se substitue silencieusement à l'objet audité est pire qu'une erreur : il
+produit des chiffres publiables et faux.
+
+Conséquence assumée sur le compteur d'essais : les cinq exécutions erronées
+restent inscrites au registre du Deflated Sharpe. Les retirer supposerait de
+décider après coup quels essais comptent ; les garder ne fait que rendre le
+dénominateur un peu plus sévère, ce qui est le bon sens de l'erreur.
+
+*Code : `scripts/run_research.py::phase_research`, `tests/test_validation.py`.*
