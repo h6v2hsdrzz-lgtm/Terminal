@@ -259,3 +259,63 @@ def test_plateau_score_refuses_to_qualify_a_negative_region():
     assert result["has_positive_region"] is False
     assert np.isnan(result["plateau_ratio"])
     assert result["best"] == pytest.approx(-1.1)
+
+
+# ------------------------------------------------------------------- verdict
+def test_verdict_requires_all_core_checks():
+    """Trois contrôles cœur : sans eux, aucun verdict favorable n'est possible."""
+    from crypto_algo.validation.verdict import build_verdict
+
+    good_is = {"sharpe": 0.9, "cagr": 0.6, "trades": 500, "monthly_mean": 0.04}
+    v = build_verdict(
+        is_metrics=good_is,
+        oos_metrics={"total_return": -0.2, "sharpe": 0.8},     # OOS négatif
+        walk_forward={"anchored": {"windows": pd.DataFrame({"test_sharpe": [0.5, 0.6]})}},
+        plateau={"plateau_ratio": 0.9, "has_positive_region": True},
+        cost_stress=pd.DataFrame({"cost_multiplier": [1.0, 2.0], "sharpe_retention": [1.0, 0.8]}),
+        benchmark_cagr=0.3,
+    )
+    assert v.label == "NON VALIDÉ"
+    assert v.n_core_passed == 2 and len(v.core) == 3
+
+
+def test_verdict_is_robust_when_everything_passes():
+    from crypto_algo.validation.verdict import build_verdict
+
+    v = build_verdict(
+        is_metrics={"sharpe": 0.9, "cagr": 0.6, "trades": 500},
+        oos_metrics={"total_return": 0.35, "sharpe": 0.8},
+        walk_forward={"anchored": {"windows": pd.DataFrame({"test_sharpe": [0.4, 0.6]})}},
+        plateau={"plateau_ratio": 0.9, "has_positive_region": True},
+        cost_stress=pd.DataFrame({"cost_multiplier": [1.0, 2.0], "sharpe_retention": [1.0, 0.8]}),
+        benchmark_cagr=0.3,
+    )
+    assert v.label == "ROBUSTE"
+    assert v.n_passed == len(v.checks) == 7
+
+
+def test_verdict_detects_degradation():
+    from crypto_algo.validation.verdict import build_verdict
+
+    v = build_verdict(
+        is_metrics={"sharpe": 1.5, "cagr": 0.6, "trades": 500},
+        oos_metrics={"total_return": 0.05, "sharpe": 0.2},   # -1,3 de Sharpe
+        walk_forward={"anchored": {"windows": pd.DataFrame({"test_sharpe": [0.4]})}},
+        plateau={"plateau_ratio": 0.9, "has_positive_region": True},
+        cost_stress=pd.DataFrame({"cost_multiplier": [1.0, 2.0], "sharpe_retention": [1.0, 0.9]}),
+        benchmark_cagr=0.3,
+    )
+    degradation = [c for c in v.checks if c.key == "dégradation"][0]
+    assert not degradation.passed
+    assert v.label == "NON VALIDÉ"
+
+
+def test_monthly_statement_says_when_target_is_missed():
+    from crypto_algo.validation.verdict import monthly_statement
+
+    text = monthly_statement(
+        {"monthly_mean": 0.0057, "monthly_median": 0.004, "monthly_std": 0.0164, "months": 27},
+        target=0.38,
+    )
+    assert "n'est pas atteinte" in text
+    assert "+0.57" in text

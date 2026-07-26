@@ -41,8 +41,31 @@ from crypto_algo.validation.robustness import (  # noqa: E402
     alpha_beta, cost_stress, heatmap, plateau_score, regime_breakdown, sensitivity_table,
 )
 from crypto_algo.validation.runner import DEFAULT_GRID, ValidationRunner  # noqa: E402
+from crypto_algo.validation.verdict import build_verdict, monthly_statement  # noqa: E402
 
 log = get_logger("scripts.research")
+
+
+def strategy_registry(name: str):
+    """(fabrique, grille de sensibilité, grille de walk-forward) par hypothèse."""
+    if name == "routed":
+        from crypto_algo.strategies.composite import RoutedMultiFamilyStrategy
+
+        return (
+            lambda cfg, cache, **kw: RoutedMultiFamilyStrategy(cfg, core_cache=cache, **kw),
+            DEFAULT_GRID,
+            {"entry_threshold": [0.25, 0.35, 0.45], "atr_stop_mult": [1.5, 2.5]},
+        )
+    if name == "breakout":
+        from crypto_algo.strategies.breakout import DonchianBreakoutStrategy
+
+        return (
+            lambda cfg, cache, **kw: DonchianBreakoutStrategy(cfg, core_cache=cache, **kw),
+            {"entry_period": [10, 20, 55], "exit_period": [5, 10, 20],
+             "atr_stop_mult": [2.0, 3.0], "trend_filter": [False, True]},
+            {"entry_period": [10, 20, 55], "exit_period": [5, 20], "atr_stop_mult": [3.0]},
+        )
+    raise KeyError(f"stratégie inconnue : {name!r}")
 
 
 # ---------------------------------------------------------------------------
@@ -98,13 +121,15 @@ def phase_quality(cfg) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-def phase_research(cfg, quick: bool = False, resume: bool = True) -> dict:
+def phase_research(cfg, quick: bool = False, resume: bool = True,
+                   strategy: str = "routed") -> dict:
     log.info("=== Phases 5-6 : in-sample et validation ===")
     md = load_market_data(cfg, split="in_sample", include_intrabar=True)
     is_start, is_end = split_bounds(cfg, "in_sample")
 
+    factory, sens_grid, wf_default = strategy_registry(strategy)
     registry = TrialRegistry.load(out_dir(cfg) / "trials.json")
-    runner = ValidationRunner(cfg, md, registry=registry)
+    runner = ValidationRunner(cfg, md, registry=registry, strategy_factory=factory)
 
     # reprise : les phases déjà terminées ne sont pas rejouées
     done: dict = (load_research_cache(cfg) or {}) if resume else {}
@@ -119,14 +144,12 @@ def phase_research(cfg, quick: bool = False, resume: bool = True) -> dict:
         payload["registry"] = registry
         save_research_cache(cfg, payload)
 
-    grid = DEFAULT_GRID if not quick else {"entry_threshold": [0.35], "atr_stop_mult": [2.0]}
+    grid = sens_grid if not quick else {k: v[:1] for k, v in sens_grid.items()}
     # Grille réduite pour le walk-forward et le k-fold : chaque fenêtre est
     # réoptimisée, donc explorer trois axes par fenêtre multiplie les essais (et
     # le surajustement local) sans rien apprendre de plus. La grille complète
     # sert à l'étude de sensibilité, qui est faite une fois sur tout l'IS.
-    wf_grid = {"entry_threshold": [0.25, 0.35, 0.45], "atr_stop_mult": [1.5, 2.5]}
-    if quick:
-        wf_grid = grid
+    wf_grid = wf_default if not quick else grid
 
     # ---- 1. référence : configuration par défaut, in-sample ----------------
     log.info("-- backtest de référence (paramètres du YAML) --")
@@ -210,7 +233,7 @@ def phase_research(cfg, quick: bool = False, resume: bool = True) -> dict:
     # ---- 7. stress des coûts ------------------------------------------------
     log.info("-- stress des coûts --")
     stress = cost_stress(cfg, md, start=is_start, end=is_end,
-                         shared_cache=runner._cache_by_window)
+                         shared_cache=runner._cache_by_window, strategy_factory=factory)
     md_is = md.slice(pd.Timestamp(is_start) - pd.Timedelta(days=1), is_end)
 
     # ---- 8. benchmarks et alpha/beta ---------------------------------------
@@ -255,7 +278,7 @@ def phase_research(cfg, quick: bool = False, resume: bool = True) -> dict:
         "ruin_table": ruin_table, "cost_stress": stress, "benchmarks": benchmarks,
         "benchmark_table": bench_table, "alpha_beta": ab, "by_regime": by_regime,
         "by_symbol": by_symbol, "by_exit": by_exit, "dsr": dsr, "registry": registry,
-        "market_data": md, "is_bounds": (is_start, is_end),
+        "market_data": md, "is_bounds": (is_start, is_end), "strategy": strategy,
     }
 
     for name, table in (("sensitivity", sens), ("kfold", kfold), ("cost_stress", stress),
@@ -278,7 +301,8 @@ def phase_oos(cfg, research: dict) -> dict:
     oos_start, oos_end = split_bounds(cfg, "out_of_sample")
 
     params = research["best"].params if research.get("best") else {}
-    runner = ValidationRunner(cfg, md_oos, registry=None)   # aucun essai enregistré ici
+    factory, _, _ = strategy_registry(research.get("strategy", "routed"))
+    runner = ValidationRunner(cfg, md_oos, registry=None, strategy_factory=factory)
     outcome = runner.run_once(params, oos_start, oos_end, label="oos_final", record=False)
 
     # Deuxième lecture, décidée **avant** l'ouverture : la configuration par
@@ -407,9 +431,37 @@ d'une stratégie qui aurait tradé tout du long — la seule conclusion recevabl
 que <em>la configuration testée détruit le capital avant la fin de la première année</em>.</p>""",
                              "bad")
 
+    # --- liste de contrôles explicites -------------------------------------
+    bench_cagr = None
+    bench_table = research.get("benchmark_table")
+    if bench_table is not None and len(bench_table):
+        row = bench_table[bench_table["benchmark"] == "btc_buy_hold"]
+        if len(row):
+            bench_cagr = float(row.iloc[0]["cagr"])
+    audit = build_verdict(
+        is_metrics=m,
+        oos_metrics=(oos["report"].metrics if oos is not None else None),
+        walk_forward=research.get("walk_forward"),
+        plateau=plateau,
+        cost_stress=research.get("cost_stress"),
+        benchmark_cagr=bench_cagr,
+        min_trades=int(cfg.get_path("validation.min_trades_per_regime")),
+    )
+    badge_kind = {"ROBUSTE": "good", "ROBUSTE SOUS RÉSERVE": "warn"}.get(audit.label, "bad")
+    badge = callout(
+        f'<p style="font-size:1.5rem;font-weight:700;margin:0 0 6px">VERDICT : {audit.label}</p>'
+        f"<p style=\"margin:0\">{audit.summary}</p>",
+        badge_kind,
+    )
+    target_pct = float(cfg.get_path("risk.profit_lock.trigger"))
+    monthly_html = callout(
+        "<p>" + monthly_statement(m, target=target_pct).replace("**", "") + "</p>", "warn"
+    )
+
     sections.append(
         ("Verdict",
-         callout(verdict, verdict_kind) + kill_html + callout(edge_text, edge_kind)
+         badge + table_html(audit.to_frame()) + monthly_html
+         + callout(verdict, verdict_kind) + kill_html + callout(edge_text, edge_kind)
          + kpi_grid([
              ("CAGR", m.get("cagr"), "cagr"),
              ("Sharpe", m.get("sharpe"), "sharpe"),
@@ -701,6 +753,8 @@ def main() -> int:
     ap.add_argument("--config", nargs="*", default=None)
     ap.add_argument("--phase", choices=["quality", "research", "oos", "all"], default="research")
     ap.add_argument("--quick", action="store_true", help="grilles réduites (mise au point)")
+    ap.add_argument("--strategy", choices=["routed", "breakout"], default="routed",
+                    help="hypothèse soumise au protocole")
     ap.add_argument("--unlock-oos", default=None,
                     help="motif d'ouverture de l'out-of-sample (obligatoire pour --phase oos)")
     ap.add_argument("--reuse-research", action="store_true",
@@ -720,7 +774,8 @@ def main() -> int:
 
     research = load_research_cache(cfg) if args.reuse_research else None
     if research is None or "dsr" not in research:
-        research = phase_research(cfg, quick=args.quick, resume=not args.no_resume)
+        research = phase_research(cfg, quick=args.quick, resume=not args.no_resume,
+                                  strategy=args.strategy)
 
     oos = None
     if args.phase in ("oos", "all"):
@@ -733,6 +788,7 @@ def main() -> int:
     build_report(cfg, quality, research, oos, path)
 
     summary = {
+        "strategy": research.get("strategy", "routed"),
         "in_sample": {k: research["baseline_report"].metrics.get(k)
                       for k in ("cagr", "sharpe", "sortino", "calmar", "max_drawdown",
                                 "monthly_median", "trades", "win_rate", "profit_factor",

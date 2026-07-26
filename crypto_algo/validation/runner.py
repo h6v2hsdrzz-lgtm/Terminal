@@ -65,8 +65,14 @@ class ValidationRunner:
         registry: TrialRegistry | None = None,
         cost_stress: float = 1.0,
         shared_cache: dict | None = None,
+        strategy_factory=None,
     ):
         self.cfg = cfg
+        # fabrique injectable : le protocole de validation doit pouvoir tourner
+        # sur n'importe quelle hypothèse, pas seulement sur la stratégie assemblée
+        self.strategy_factory = strategy_factory or (
+            lambda c, cache, **kw: RoutedMultiFamilyStrategy(c, core_cache=cache, **kw)
+        )
         self.md = market_data
         self.registry = registry
         self.cost_stress = cost_stress
@@ -110,7 +116,7 @@ class ValidationRunner:
             cache.clear()
         cache["_fingerprint"] = fingerprint
 
-        strategy = RoutedMultiFamilyStrategy(self.cfg, core_cache=cache, **params)
+        strategy = self.strategy_factory(self.cfg, cache, **params)
         result = BacktestEngine(self.cfg, md, strategy, cost_stress=self.cost_stress).run()
 
         # on ne mesure que la fenêtre demandée : le pré-chargement de warmup

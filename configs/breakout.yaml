@@ -1,0 +1,15 @@
+# Hypothèse « cassure de canal 4h », soumise au protocole complet.
+#
+# Écart assumé au cahier des charges, décidé explicitement : le plafond de
+# détention de 5 jours est retiré. Un suivi de tendance vit de quelques trades
+# tenus plusieurs semaines ; couper à 5 jours retire la queue de distribution
+# qui le finance (mesuré : +75 % avec plafond contre +138 % sans).
+#
+# Ce qui NE change pas : stops obligatoires, DD journalier -6 %, hebdomadaire
+# -15 %, mensuel -25 %, kill switch -60 %, levier max 10, marge max par trade,
+# positions simultanées. Aucune contrainte de risque n'est relâchée.
+risk:
+  max_holding_days: 3650.0
+
+reports:
+  output_dir: "reports_out/breakout"

@@ -92,6 +92,7 @@ def cost_stress(
     end=None,
     shared_cache: dict | None = None,
     params: dict | None = None,
+    strategy_factory=None,
 ) -> pd.DataFrame:
     """Rejoue la stratégie avec frais et slippage multipliés.
 
@@ -106,7 +107,7 @@ def cost_stress(
     rows = []
     for mult in multipliers:
         runner = ValidationRunner(cfg, market_data, registry=None, cost_stress=float(mult),
-                                  shared_cache=shared_cache)
+                                  shared_cache=shared_cache, strategy_factory=strategy_factory)
         outcome = runner.run_once(params or {}, start, end,
                                   label=f"stress_x{mult:g}", record=False)
         m = outcome.metrics
