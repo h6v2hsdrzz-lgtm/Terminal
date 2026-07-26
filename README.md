@@ -93,6 +93,29 @@ js/ai.js                rapport TA + chat Claude (API Anthropic côté navigateu
 js/app.js               orchestration
 ```
 
+## `crypto_algo/` — framework de recherche et de backtest (Python)
+
+À côté du terminal web, le dépôt contient un framework **event-driven** de
+recherche et d'audit de stratégie sur perpétuels crypto en levier : téléchargement
+et contrôle qualité des données OKX, moteur de risque à invariants durs, modèle
+de coûts réaliste (frais, slippage composite, funding 8h réel, liquidation sur
+mark price), sept familles de signaux, classifieur de régime avec routage
+strict, et un protocole de validation complet (walk-forward, k-fold purgé,
+Monte Carlo, Deflated Sharpe, stress des coûts, benchmarks avec contrôle
+négatif).
+
+```bash
+pip install -r requirements.txt
+python scripts/fetch_history.py --symbol "BTC/USDT:USDT"
+python scripts/run_research.py --phase research     # -> reports_out/rapport_audit.html
+python -m pytest crypto_algo/tests -q
+```
+
+Documentation détaillée : [`crypto_algo/README.md`](crypto_algo/README.md).
+Le principe directeur y est explicite : **le backtest est un outil d'audit, pas
+un outil de persuasion** — il sert à pouvoir invalider une stratégie, et le
+rapport est publié quelle que soit la conclusion.
+
 ## Avertissements
 
 - Projet indépendant, non affilié à OKX, XTB, TradingView ni Bloomberg.

@@ -1,0 +1,23 @@
+# Test du chemin de code out-of-sample sur une fenêtre inoffensive.
+# La "période OOS" utilisée ici (2023-07 -> 2023-10) reste dans la zone
+# in-sample réelle : il ne s'agit que de valider la mécanique, pas de
+# consommer la vraie fenêtre out-of-sample.
+universe:
+  symbols: ["BTC/USDT:USDT", "ETH/USDT:USDT"]
+data:
+  signal_timeframes: ["15m", "1h", "4h"]
+splits:
+  in_sample:
+    start: "2022-01-01T00:00:00Z"
+    end: "2022-07-01T00:00:00Z"
+  out_of_sample:
+    start: "2023-07-01T00:00:00Z"
+    end: "2023-10-01T00:00:00Z"
+validation:
+  walk_forward:
+    train_months: 2
+    test_months: 1
+  purged_kfold:
+    n_splits: 3
+reports:
+  output_dir: "reports_out/smoke_oos"

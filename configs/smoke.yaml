@@ -1,0 +1,18 @@
+# Configuration de mise au point : fenêtre courte, univers réduit.
+# Ne sert qu'à vérifier que la chaîne complète tourne — aucune conclusion.
+universe:
+  symbols: ["BTC/USDT:USDT", "ETH/USDT:USDT"]
+data:
+  signal_timeframes: ["15m", "1h", "4h"]
+splits:
+  in_sample:
+    start: "2022-01-01T00:00:00Z"
+    end: "2022-07-01T00:00:00Z"
+validation:
+  walk_forward:
+    train_months: 2
+    test_months: 1
+  purged_kfold:
+    n_splits: 3
+reports:
+  output_dir: "reports_out/smoke"
