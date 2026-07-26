@@ -74,6 +74,9 @@ class Brick(ABC):
             is_reset = (minute == 0) & (hour % 4 == 0)
         elif tf in ("1D", "D"):
             is_reset = (minute == 0) & (hour == 0)
+        elif tf in ("1W", "W"):
+            # lundi 00:00 UTC, aligne sur les cycles de funding
+            is_reset = (minute == 0) & (hour == 0) & (index.dayofweek.to_numpy() == 0)
         else:
             return weights
         held = np.where(is_reset[:, None], weights, np.nan)
