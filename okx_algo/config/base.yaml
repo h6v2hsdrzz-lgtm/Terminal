@@ -97,6 +97,12 @@ strategies:
     dollar_neutral: true
     universe: base            # base | extended
     max_abs_position: 1.0
+  positioning:
+    enabled: false            # brique 4, recherche post-OOS
+    k: 1.0
+    zscore_window_days: 30
+    rebalance_timeframe: 1D
+    max_abs_position: 1.0
   cascade_reversal:
     enabled: true
     window_minutes: 15
@@ -132,6 +138,7 @@ portfolio:
     ts_momentum: [0.60, 0.70]
     cross_sectional: [0.20, 0.30]
     cascade_reversal: [0.10, 0.20]
+    positioning: [0.0, 0.50]
   pnl_vol_window_days: 60
   corr_window_days: 90
   target_vol_annualized: 0.10

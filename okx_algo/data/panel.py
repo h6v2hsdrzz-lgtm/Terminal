@@ -40,6 +40,8 @@ class SymbolData:
     funding: np.ndarray         # taux paye a cette heure, 0 sinon
     open_interest: np.ndarray
     valid: np.ndarray           # True quand l'actif est cote et la barre exploitable
+    long_short_ratio: np.ndarray | None = None   # positionnement des comptes
+    taker_ls_ratio: np.ndarray | None = None     # desequilibre du flux agressif
     # 1 minute
     m1_close: np.ndarray = field(default_factory=lambda: np.array([]))
     m1_high: np.ndarray = field(default_factory=lambda: np.array([]))
@@ -165,7 +167,8 @@ def _build_panel_uncached(cfg: Config, store: ParquetStore, symbols: list[str],
         mk = _to_grid(store.try_read("mark", sym, "1H"), grid, ["high", "low", "close"],
                       how="ffill")
         ix = _to_grid(store.try_read("index", sym, "1H"), grid, ["close"], how="ffill")
-        oi = _to_grid(store.try_read("open_interest", sym), grid, ["open_interest"], how="ffill")
+        oi = _to_grid(store.try_read("open_interest", sym), grid,
+                      ["open_interest", "long_short_ratio", "taker_ls_ratio"], how="ffill")
 
         fund_df = store.try_read("funding", sym)
         fund = _to_grid(fund_df, grid, ["funding_rate"], how="exact")["funding_rate"]
@@ -186,6 +189,8 @@ def _build_panel_uncached(cfg: Config, store: ParquetStore, symbols: list[str],
             index_close=np.where(np.isfinite(ix["close"]), ix["close"], mark_close),
             funding=fund,
             open_interest=oi["open_interest"],
+            long_short_ratio=oi.get("long_short_ratio"),
+            taker_ls_ratio=oi.get("taker_ls_ratio"),
             valid=valid,
         )
         if with_minute:
