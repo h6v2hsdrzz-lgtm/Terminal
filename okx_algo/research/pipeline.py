@@ -25,6 +25,7 @@ from ..data.panel import build_panel
 from ..portfolio.combine import combine
 from ..strategies.cascade_reversal import CascadeReversal
 from ..strategies.cross_sectional import CrossSectionalMomentum
+from ..strategies.funding_carry import FundingCarry
 from ..strategies.positioning import PositioningContrarian
 from ..strategies.ts_momentum import TSMomentum
 from ..validation.statistics import (deflated_sharpe, market_regimes,
@@ -37,7 +38,8 @@ log = logging.getLogger("okx_algo.pipeline")
 BRICKS = {"ts_momentum": TSMomentum,
           "cross_sectional": CrossSectionalMomentum,
           "cascade_reversal": CascadeReversal,
-          "positioning": PositioningContrarian}
+          "positioning": PositioningContrarian,
+          "funding_carry": FundingCarry}
 
 
 # ----------------------------------------------------------------------

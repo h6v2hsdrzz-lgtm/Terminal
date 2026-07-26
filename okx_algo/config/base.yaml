@@ -97,6 +97,13 @@ strategies:
     dollar_neutral: true
     universe: base            # base | extended
     max_abs_position: 1.0
+  funding_carry:
+    enabled: false            # brique 5, recherche post-OOS
+    smooth_days: 3
+    min_spread_annual: 0.05
+    rebalance_timeframe: 1D
+    gross_exposure: 1.0
+    max_abs_position: 1.0
   positioning:
     enabled: false            # brique 4, recherche post-OOS
     k: 1.0
@@ -139,6 +146,7 @@ portfolio:
     cross_sectional: [0.20, 0.30]
     cascade_reversal: [0.10, 0.20]
     positioning: [0.0, 0.50]
+    funding_carry: [0.0, 0.50]
   pnl_vol_window_days: 60
   corr_window_days: 90
   target_vol_annualized: 0.10
