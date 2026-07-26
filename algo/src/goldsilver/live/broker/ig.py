@@ -395,7 +395,8 @@ class IgBroker(BrokerAdapter):
             positions.append(BrokerPosition(
                 instrument=epic,
                 units=units,
-                avg_price=float(pos.get("openLevel", 0.0)),
+                # IG renvoie le niveau d'ouverture dans "level" (pas "openLevel")
+                avg_price=float(pos.get("level") or pos.get("openLevel") or 0.0),
                 trade_id=str(pos.get("dealId", "")),
                 sl=float(pos["stopLevel"]) if pos.get("stopLevel") else None,
                 tp=float(pos["limitLevel"]) if pos.get("limitLevel") else None,
