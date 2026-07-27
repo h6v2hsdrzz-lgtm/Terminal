@@ -1,0 +1,28 @@
+# Service systemd de référence pour le bot goldsilver (mode demo/live).
+# Généré automatiquement par deploy/install.sh avec les bons chemins ;
+# ce fichier sert de référence / doc. Emplacement final :
+#   /etc/systemd/system/goldsilver-live.service
+#
+# Le bot tourne en continu, décide à chaque clôture de bougie 4h, et
+# redémarre automatiquement en cas de crash ou de reboot de la machine.
+
+[Unit]
+Description=goldsilver live trading bot (XAU/XAG breakout 4h)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Utilisateur non-root dédié (adapté par install.sh)
+User=goldsilver
+WorkingDirectory=/opt/goldsilver/algo
+# Charge IG_API_KEY / IG_IDENTIFIER / IG_PASSWORD / IG_ENV / IG_ACCOUNT_ID …
+EnvironmentFile=/opt/goldsilver/algo/.env
+ExecStart=/opt/goldsilver/algo/.venv/bin/python -m goldsilver.live run
+Restart=always
+RestartSec=30
+# ne pas abandonner après quelques redémarrages rapides (réseau instable, etc.)
+StartLimitIntervalSec=0
+
+[Install]
+WantedBy=multi-user.target
