@@ -1,0 +1,78 @@
+# Forward test démo goldsilver — 100 % gratuit, dans le cloud GitHub.
+# Un cycle toutes les 4h : réveille un runner, fait UNE décision (run --once),
+# se rendort. Coût : ~1-2 min de calcul par cycle, très loin des 2000 min/mois
+# gratuites d'un dépôt privé. Aucune carte bancaire, aucun VPS, aucun PC allumé.
+#
+# ACTIVATION (2 étapes gratuites) :
+#   1. Ce fichier + le dossier algo/ doivent être sur la branche par défaut (main).
+#   2. Ajouter les identifiants IG dans les "Secrets" du dépôt :
+#      Settings > Secrets and variables > Actions > New repository secret
+#        IG_API_KEY, IG_IDENTIFIER, IG_PASSWORD, IG_ACCOUNT_ID
+#      (optionnel : TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)
+#   Les secrets sont chiffrés par GitHub — jamais visibles, jamais committés.
+
+name: goldsilver forward test (demo)
+
+on:
+  schedule:
+    - cron: "1 */4 * * *"      # toutes les 4h à :01 UTC (après la clôture 4h)
+  workflow_dispatch: {}         # bouton "Run workflow" pour lancer à la main
+
+concurrency:
+  group: goldsilver-live
+  cancel-in-progress: false     # jamais deux cycles en même temps
+
+permissions:
+  contents: read
+
+jobs:
+  cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Installer le paquet
+        run: pip install -e ./algo
+
+      # état persistant (position en cours, kill switches, cache bougies) entre
+      # les cycles — clé roulante : on restaure le plus récent, on sauve le nouveau
+      - name: Restaurer l'état
+        uses: actions/cache/restore@v4
+        with:
+          path: algo/live_state
+          key: goldsilver-state-${{ github.run_id }}
+          restore-keys: goldsilver-state-
+
+      - name: Un cycle (mode demo)
+        working-directory: algo
+        env:
+          IG_API_KEY: ${{ secrets.IG_API_KEY }}
+          IG_IDENTIFIER: ${{ secrets.IG_IDENTIFIER }}
+          IG_PASSWORD: ${{ secrets.IG_PASSWORD }}
+          IG_ENV: demo
+          IG_ACCOUNT_ID: ${{ secrets.IG_ACCOUNT_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python -m goldsilver.live run --once
+
+      - name: Sauvegarder l'état
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: algo/live_state
+          key: goldsilver-state-${{ github.run_id }}
+
+      # le journal des décisions/ordres, récupérable dans l'onglet Actions
+      - name: Publier le journal
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: journal-${{ github.run_id }}
+          path: algo/live_state/journal.jsonl
+          if-no-files-found: ignore
+          retention-days: 30
