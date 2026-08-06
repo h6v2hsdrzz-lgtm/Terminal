@@ -15,7 +15,9 @@ function tfName(tf) { return TF_NAMES[tf] || tf + 'min'; }
 const state = {
   provider: null,
   account: null,
-  broker: 'okx',
+  broker: 'okxkey',
+  okxClient: null,         // client API privée OKX (mode « mon compte »)
+  showTrades: true,        // trace les trades passés sur le graphique
   symbols: new Map(),      // symbol -> info (bid/ask/digits/24h…)
   watchlist: [],
   selected: null,
@@ -157,8 +159,50 @@ document.querySelectorAll('.broker-card').forEach((card) => {
     document.querySelectorAll('.broker-card').forEach((c) => c.classList.toggle('sel', c === card));
     state.broker = card.dataset.broker;
     $('xtb-fields').classList.toggle('hidden', state.broker !== 'xtb');
+    $('okx-fields').classList.toggle('hidden', state.broker !== 'okxkey');
   });
 });
+
+/* mémorisation des identifiants OKX : session ou coffre chiffré */
+$('ok-remember').addEventListener('change', (e) => {
+  $('ok-pw-row').classList.toggle('hidden', !e.target.checked);
+});
+
+(async function restoreOkxKeys() {
+  const hint = $('ok-saved-hint');
+  const sess = Vault.loadSession();
+  if (sess) {
+    $('ok-key').value = sess.apiKey || '';
+    $('ok-secret').value = sess.secret || '';
+    $('ok-pass').value = sess.passphrase || '';
+    $('ok-demo').checked = !!sess.demo;
+    hint.textContent = 'Clé restaurée depuis cette session.';
+    return;
+  }
+  if (Vault.hasEncrypted()) {
+    hint.innerHTML = 'Une clé chiffrée est enregistrée sur cette machine. '
+      + '<a href="#" id="ok-unlock">Déverrouiller</a> · <a href="#" id="ok-forget">oublier</a>';
+    $('ok-unlock').onclick = (e) => {
+      e.preventDefault();
+      showModal('Déverrouiller la clé API',
+        `<p>Saisissez le mot de passe de protection choisi lors de l'enregistrement.</p><br>
+         <input id="m-unlock-pw" type="password" placeholder="mot de passe"
+           style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--txt);padding:8px 10px;font-size:12px;outline:none">`,
+        [{ label: 'Annuler', cls: 'm-cancel' }, {
+          label: 'Déverrouiller', cls: 'm-confirm-buy',
+          fn: async () => {
+            try {
+              const creds = await Vault.loadEncrypted(document.getElementById('m-unlock-pw').value);
+              $('ok-key').value = creds.apiKey; $('ok-secret').value = creds.secret;
+              $('ok-pass').value = creds.passphrase; $('ok-demo').checked = !!creds.demo;
+              hint.textContent = 'Clé déverrouillée.';
+            } catch (ex) { hint.textContent = ex.message; }
+          },
+        }]);
+    };
+    $('ok-forget').onclick = (e) => { e.preventDefault(); Vault.clear(); hint.textContent = 'Clé enregistrée effacée.'; };
+  }
+})();
 
 $('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -167,7 +211,40 @@ $('login-form').addEventListener('submit', async (e) => {
   const btn = $('login-btn');
   btn.disabled = true; btn.textContent = 'Connexion…';
   try {
-    if (state.broker === 'okx') {
+    if (state.broker === 'okxkey') {
+      const creds = {
+        apiKey: $('ok-key').value.trim(),
+        secret: $('ok-secret').value.trim(),
+        passphrase: $('ok-pass').value,
+        demo: $('ok-demo').checked,
+      };
+      if (!creds.apiKey || !creds.secret || !creds.passphrase) {
+        throw new Error('Clé API, clé secrète et phrase secrète sont toutes les trois requises');
+      }
+      const client = new OKXPrivate(creds);
+      btn.textContent = 'Vérification de la clé…';
+      const acct = await client.verify();          // erreur explicite si la clé est invalide
+
+      state.provider = new OKXProvider();
+      btn.textContent = 'Chargement des marchés…';
+      await state.provider.connect();
+      state.okxClient = client;
+      state.account = new OKXLiveAccount(client, state.provider);
+      await state.account.init();
+
+      // mémorisation choisie par l'utilisateur
+      if ($('ok-remember').checked) {
+        const pw = $('ok-pw').value;
+        if (!pw) throw new Error('Choisissez un mot de passe pour protéger la clé enregistrée');
+        await Vault.saveEncrypted(creds, pw);
+      } else {
+        Vault.saveSession(creds);
+      }
+
+      Analysis.meta.uid = acct.uid || 'default';
+      Analysis.meta.acct = acct;
+      await Analysis.attach(client, state.provider, state.account);
+    } else if (state.broker === 'okx') {
       state.provider = new OKXProvider();
       await state.provider.connect();
       state.account = new PaperAccount('okx', 100000, 'USDT');
@@ -202,10 +279,23 @@ $('btn-logout').onclick = () => {
 async function startTerminal() {
   $('login-overlay').classList.add('hidden');
   $('terminal').classList.remove('hidden');
-  $('conn-mode').textContent = state.provider.label;
-  $('ticket-mode').textContent = state.account instanceof PaperAccount ? 'PAPER' : state.provider.label;
+  const readOnly = !!(state.account && state.account.readOnly);
+  $('conn-mode').textContent = readOnly ? state.provider.label + ' · compte réel' : state.provider.label;
+  $('ticket-mode').textContent = readOnly ? 'LECTURE SEULE'
+    : (state.account instanceof PaperAccount ? 'PAPER' : state.provider.label);
   $('t-qty').value = state.provider.defaultQty;
   $('a-extra-label').textContent = state.account instanceof PaperAccount ? 'Trades clos' : 'Marge';
+  $('btn-analysis').classList.toggle('hidden', !state.okxClient && !(Analysis.trades || []).length);
+
+  /* clé en lecture seule : le ticket d'ordre est neutralisé, pas seulement masqué */
+  if (readOnly) {
+    for (const id of ['t-buy', 't-sell', 't-calc']) {
+      const b = $(id);
+      b.disabled = true;
+      b.title = 'Mode analyse : la clé API est en lecture seule, aucun ordre n\'est envoyé.';
+    }
+    $('panel-ticket').classList.add('read-only');
+  }
 
   loadAlerts();
   startClock();
@@ -228,8 +318,28 @@ async function startTerminal() {
   renderAccount();
   renderPositions();
   loadNews();
+  bindAnalysisUI();
   setStatus('Prêt — HELP pour la liste des commandes', 'ok');
-  $('cmd').focus();
+
+  // en mode « mon compte », l'analyse est la raison d'être : on l'ouvre d'emblée
+  if (state.okxClient) Analysis.show();
+  else $('cmd').focus();
+}
+
+/* ─────────────── poste d'analyse : câblage ─────────────── */
+
+function bindAnalysisUI() {
+  $('btn-analysis').onclick = () => Analysis.toggle();
+  $('an-back').onclick = () => Analysis.hide();
+  $('an-sync').onclick = () => Analysis.sync();
+  $('an-import-btn').onclick = () => Analysis.pickCsv();
+  document.querySelectorAll('#an-nav .an-tab').forEach((b) => {
+    b.onclick = () => Analysis.selectPane(b.dataset.an);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'F2') { e.preventDefault(); Analysis.toggle(); }
+    else if (e.key === 'Escape' && Analysis.open) Analysis.hide();
+  });
 }
 
 /* ─────────────── multi-graphiques ─────────────── */
@@ -295,6 +405,7 @@ async function loadCell(i, symbol, tf) {
     c.chart.setData(symbol, c.tf, info.digits, candles, loadDrawings(symbol));
     drawPositionLines();
     drawAlertLines();
+    drawPastTrades(c, symbol);
     if (i === state.activeIdx) { state.selected = symbol; state.tf = c.tf; refreshTA(); }
     return true;
   } catch (ex) {
@@ -536,7 +647,7 @@ async function selectSymbol(symbol, tf) {
   symbol = symbol.toUpperCase();
   if (!state.symbols.has(symbol)) {
     const ok = await addSymbol(symbol, { silent: true });
-    if (!ok) { setStatus(`${symbol}: instrument introuvable`, 'err'); return; }
+    if (!ok) { setStatus(`${symbol}: instrument introuvable`, 'err'); return false; }
   }
   const i = state.activeIdx;
   const cell = state.charts[i];
@@ -787,6 +898,14 @@ function refreshPosPl() {
   }
   const rows = $('pos-body').children.length;
   if (rows !== state.account.getPositions().length) renderPositions();
+}
+
+/* trace les positions déjà clôturées de l'instrument sur une cellule */
+function drawPastTrades(cell, symbol) {
+  if (!cell || !cell.chart) return 0;
+  if (typeof Analysis === 'undefined' || !state.showTrades || !Analysis.trades.length) return 0;
+  const list = Analysis.trades.filter((t) => t.instId === symbol);
+  return cell.chart.setTrades(list);
 }
 
 function drawPositionLines() {
@@ -1115,6 +1234,10 @@ const HELP_HTML = `<div class="help-grid">
   <code>IND RSI</code><span>indicateurs : EMA BB VWAP ST ICHI VOL RSI STOCH MACD</span>
   <code>BTC-USDT-SWAP</code><span>contrats perpétuels (funding, open interest)</span>
   <code>RESET PAPER</code><span>réinitialise le compte paper à 100 000</span>
+  <code>ANALYSE</code><span>poste d'analyse du compte (F2) · <code>ANALYSE PERF|TRADES|SPLIT|COMPORTEMENT|COMPTE|COACH</code></span>
+  <code>SYNC</code><span>synchronise l'historique OKX · <code>SYNC ALL</code> repart de zéro</span>
+  <code>IMPORT</code><span>importe un export CSV OKX (historique de plus de 3 mois)</span>
+  <code>TRADES</code><span>affiche / masque vos positions passées sur le graphique</span>
 </div>
 <div class="m-warn">Disposition : boutons ▣ / ▣▣ / ▦ pour 1, 2 ou 4 graphiques ; cliquez une cellule pour l'activer,
 puis un symbole ou une unité de temps s'y applique. Dessins ─ ╱ Fib persistants par instrument,
@@ -1167,6 +1290,22 @@ function runCommand(raw) {
     case 'TA': showSideTab('ai'); refreshTA(); return;
     case 'AI': aiAskUI(line.slice(3)); return;
     case 'KEY': aiKeyModal(); return;
+    case 'ANALYSE': case 'ANALYSIS': case 'AN': {
+      const panes = { PERF: 'perf', TRADES: 'trades', SPLIT: 'split', REPARTITION: 'split', COMPORTEMENT: 'behav', BEHAV: 'behav', COMPTE: 'acct', COACH: 'coach' };
+      Analysis.show(panes[tk[1]] || 'over');
+      return;
+    }
+    case 'SYNC': Analysis.show(); Analysis.sync({ full: tk[1] === 'ALL' || tk[1] === 'FULL' }); return;
+    case 'IMPORT': Analysis.pickCsv(); return;
+    case 'TRADES': {
+      state.showTrades = !state.showTrades;
+      for (const c of state.charts) {
+        if (!c.symbol) continue;
+        if (state.showTrades) drawPastTrades(c, c.symbol); else c.chart.clearTrades();
+      }
+      setStatus(state.showTrades ? 'Trades passés affichés sur les graphiques' : 'Trades passés masqués', 'ok');
+      return;
+    }
     case 'BOOK': showSideTab('book'); return;
     case 'STATS': showSideTab('stats'); return;
     case 'NEWS': showSideTab('news'); loadNews(); return;

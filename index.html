@@ -18,8 +18,12 @@
     <div class="login-sub">MULTI-BROKER TRADING WORKSTATION</div>
 
     <div class="broker-cards">
-      <button class="broker-card sel" data-broker="okx">
-        <span class="bc-name">OKX</span>
+      <button class="broker-card sel" data-broker="okxkey">
+        <span class="bc-name">OKX — MON COMPTE</span>
+        <span class="bc-desc">Analyse de votre compte réel : positions, historique, statistiques · clé API en lecture seule</span>
+      </button>
+      <button class="broker-card" data-broker="okx">
+        <span class="bc-name">OKX — PUBLIC</span>
         <span class="bc-desc">Crypto · données temps réel publiques · paper trading — aucun compte requis</span>
       </button>
       <button class="broker-card" data-broker="xtb">
@@ -33,6 +37,32 @@
     </div>
 
     <form id="login-form" autocomplete="off">
+      <div id="okx-fields">
+        <label for="ok-key">Clé API (API Key)</label>
+        <input id="ok-key" type="text" spellcheck="false" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+        <label for="ok-secret">Clé secrète (Secret Key)</label>
+        <input id="ok-secret" type="password" spellcheck="false" placeholder="•••••••••••••••••••••••••">
+        <label for="ok-pass">Phrase secrète (Passphrase)</label>
+        <input id="ok-pass" type="password" spellcheck="false" placeholder="celle choisie à la création de la clé">
+
+        <div class="opt-row">
+          <label><input type="checkbox" id="ok-demo"> Compte démo (trading simulé)</label>
+          <label><input type="checkbox" id="ok-remember"> Mémoriser, protégé par mot de passe</label>
+        </div>
+        <div id="ok-pw-row" class="hidden">
+          <label for="ok-pw">Mot de passe de protection</label>
+          <input id="ok-pw" type="password" placeholder="chiffre la clé sur cette machine (AES-256)">
+        </div>
+
+        <div class="key-warn">
+          <b>Créez une clé en lecture seule.</b> Sur okx.com → Paramètres → API, cochez
+          uniquement la permission <b>« Lire »</b> : ce terminal n'envoie aucun ordre et
+          ne demande jamais de droit de retrait. La clé reste dans votre navigateur et
+          n'est transmise qu'à <b>okx.com</b>, jamais à un serveur tiers.
+        </div>
+        <div class="field-hint" id="ok-saved-hint"></div>
+      </div>
+
       <div id="xtb-fields" class="hidden">
         <div class="mode-row">
           <label class="mode-opt"><input type="radio" name="xtbmode" value="demo" checked> Démo</label>
@@ -68,8 +98,32 @@
       <div class="acct-cell" id="a-extra-cell"><label id="a-extra-label">Marge</label><span id="a-extra">—</span></div>
     </div>
     <div id="clock"><span id="clock-utc"></span></div>
+    <button id="btn-analysis" title="Poste d'analyse du compte (F2)">Analyse</button>
     <button id="btn-logout" title="Déconnexion">Quitter</button>
   </header>
+
+  <!-- ═══════════════ POSTE D'ANALYSE ═══════════════ -->
+  <div id="analysis" class="hidden">
+    <div id="an-head">
+      <nav id="an-nav">
+        <button class="an-tab on" data-an="over">Vue d'ensemble</button>
+        <button class="an-tab" data-an="perf">Performance</button>
+        <button class="an-tab" data-an="trades">Trades</button>
+        <button class="an-tab" data-an="split">Répartition</button>
+        <button class="an-tab" data-an="behav">Comportement</button>
+        <button class="an-tab" data-an="acct">Compte</button>
+        <button class="an-tab" data-an="coach">Coach IA</button>
+      </nav>
+      <div id="an-actions">
+        <button id="an-sync" class="primary" title="Récupère les nouveaux trades depuis OKX">Synchroniser</button>
+        <button id="an-import-btn" title="Importer un export CSV OKX (historique au-delà de 3 mois)">Importer CSV</button>
+        <button id="an-back" title="Retour au terminal">← Terminal</button>
+      </div>
+    </div>
+    <div id="an-filters"></div>
+    <div id="an-progress" class="hidden"></div>
+    <div id="an-body"></div>
+  </div>
 
   <div id="market-strip" class="hidden"></div>
 
@@ -265,11 +319,16 @@
 <script src="js/indicators.js"></script>
 <script src="js/xapi.js"></script>
 <script src="js/paper.js"></script>
+<script src="js/store.js"></script>
 <script src="js/providers/okx.js"></script>
+<script src="js/okx-private.js"></script>
 <script src="js/providers/xtb.js"></script>
 <script src="js/providers/sim.js"></script>
+<script src="js/trades.js"></script>
+<script src="js/analytics.js"></script>
 <script src="js/chart.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/app.js"></script>
+<script src="js/analysis.js"></script>
 </body>
 </html>

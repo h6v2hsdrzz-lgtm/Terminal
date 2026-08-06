@@ -113,6 +113,10 @@ class TerminalChart {
     this.price.applyOptions({ priceFormat: pf });
     this.line.applyOptions({ priceFormat: pf });
     this._clearDrawObjs();
+    for (const s of (this._tradeSegs || [])) { try { this.chart.removeSeries(s); } catch {} }
+    this._tradeSegs = [];
+    if (this._markersApi) { try { this._markersApi.setMarkers([]); } catch {} }
+    this.trades = [];
     this.drawings = drawings || [];
     this._render();
     this._applyDrawings();
@@ -452,6 +456,108 @@ class TerminalChart {
     for (const key of [...this.priceLines.keys()]) {
       if (key.startsWith(prefix)) this.removePriceLine(key);
     }
+  }
+
+  /* ─────────────── trades passés sur le graphique ───────────────
+     Marqueur d'entrée (flèche), marqueur de sortie (cercle) et
+     segment entrée→sortie coloré selon le résultat. Les horodatages
+     sont accrochés à la bougie la plus proche : Lightweight Charts
+     exige des temps présents dans la série et strictement croissants. */
+
+  _snapTime(ms) {
+    if (!this.candles.length || !ms) return null;
+    const step = this.tf * 60000;
+    const first = this.candles[0].t;
+    const last = this.candles[this.candles.length - 1].t;
+    if (ms < first - step || ms > last + step) return null;
+    const bucket = first + Math.round((ms - first) / step) * step;
+    return this._t(Math.max(first, Math.min(last, bucket)));
+  }
+
+  setTrades(trades, opts = {}) {
+    const LWC = LightweightCharts;
+    const POS = '#4ade9f', NEG = '#e2394f';
+    for (const s of (this._tradeSegs || [])) { try { this.chart.removeSeries(s); } catch {} }
+    this._tradeSegs = [];
+    this.trades = trades || [];
+
+    if (!this._markersApi) {
+      try { this._markersApi = LWC.createSeriesMarkers(this.price, []); } catch { this._markersApi = null; }
+    }
+    if (!this.trades.length || !this.candles.length) {
+      if (this._markersApi) this._markersApi.setMarkers([]);
+      return 0;
+    }
+
+    const step = this.tf * 60000;
+    const first = this.candles[0].t;
+    const last = this.candles[this.candles.length - 1].t;
+    const vis = this.trades
+      .filter((t) => t.closeTime >= first - step && t.openTime <= last + step)
+      .sort((a, b) => a.openTime - b.openTime);
+
+    const markers = [];
+    const maxSegs = opts.maxSegments == null ? 80 : opts.maxSegments;
+    let segs = 0;
+    /* Étiquettes sélectives : la forme et la couleur portent déjà l'identité
+       (flèche = entrée, cercle = sortie). Au-delà d'une poignée de trades
+       visibles, les textes se chevauchent et deviennent illisibles. */
+    const labels = vis.length <= (opts.labelLimit == null ? 12 : opts.labelLimit);
+
+    for (const tr of vis) {
+      const win = tr.net > 0;
+      const color = win ? POS : NEG;
+      const tIn = this._snapTime(tr.openTime);
+      const tOut = this._snapTime(tr.closeTime);
+      const long = tr.side === 'long';
+
+      if (tIn != null) {
+        markers.push({
+          time: tIn,
+          position: long ? 'belowBar' : 'aboveBar',
+          shape: long ? 'arrowUp' : 'arrowDown',
+          color: long ? POS : NEG,
+        });
+      }
+      if (tOut != null) {
+        markers.push({
+          time: tOut, position: long ? 'aboveBar' : 'belowBar',
+          shape: 'circle', color,
+          text: labels ? (tr.net >= 0 ? '+' : '') + tr.net.toFixed(Math.abs(tr.net) >= 100 ? 0 : 2) : undefined,
+        });
+      }
+
+      // segment entrée → sortie (limité pour ne pas saturer le moteur)
+      if (tIn != null && tOut != null && segs < maxSegs) {
+        const a = { time: tIn, value: tr.openPx };
+        const b = { time: tOut, value: tr.closePx };
+        if (a.time !== b.time) {
+          const s = this.chart.addSeries(LWC.LineSeries, {
+            color, lineWidth: 2, lineStyle: LWC.LineStyle.Dotted,
+            priceLineVisible: false, lastValueVisible: false,
+            crosshairMarkerVisible: false,
+          });
+          s.setData(a.time < b.time ? [a, b] : [b, a]);
+          this._tradeSegs.push(s);
+          segs++;
+        }
+      }
+    }
+
+    markers.sort((x, y) => x.time - y.time);
+    if (this._markersApi) this._markersApi.setMarkers(markers);
+    return vis.length;
+  }
+
+  clearTrades() { this.setTrades([]); }
+
+  /* recentre la vue sur un trade précis */
+  focusTrade(trade, pad = 12) {
+    if (!this.candles.length || !trade) return;
+    const step = this.tf * 60000;
+    const from = this._t(trade.openTime - pad * step);
+    const to = this._t(trade.closeTime + pad * step);
+    try { this.chart.timeScale().setVisibleRange({ from, to }); } catch {}
   }
 
   /* ─────────────── légende ─────────────── */

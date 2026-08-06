@@ -102,8 +102,44 @@ const AIPanel = {
     }
   },
 
+  /* Requête isolée, sans contexte de marché ni historique de conversation :
+     utilisée par le coach du poste d'analyse, qui fournit déjà ses propres
+     statistiques. N'altère pas le fil de discussion du terminal. */
+  async askRaw(prompt, system) {
+    if (!this.key) throw new Error('Aucune clé API — bouton ⚙ ou commande KEY');
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': this.key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: AI_MODEL, max_tokens: 2000,
+        system: system || AI_COACH_SYSTEM,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    if (!res.ok) {
+      let msg = 'HTTP ' + res.status;
+      try { msg = (await res.json()).error.message || msg; } catch {}
+      throw new Error(msg);
+    }
+    const data = await res.json();
+    return (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
+  },
+
   reset() { this.history = []; },
 };
+
+const AI_COACH_SYSTEM = `Tu es un coach de trading professionnel qui analyse les statistiques réelles
+d'un compte OKX. Tu reçois des chiffres déjà calculés : appuie-toi exclusivement dessus, ne les
+recalcule pas et n'invente aucune donnée absente. Réponds en français, structuré pour un écran de
+terminal : titres courts (###), listes à puces, chiffres cités avec leur unité. Sois direct et
+quantifié — chaque recommandation doit s'appuyer sur une statistique fournie. Si l'échantillon est
+trop petit pour conclure, dis-le explicitement. Termine par : "Analyse informative — pas un conseil
+en investissement."`;
 
 /* rendu allégé de la réponse : échappe tout, puis gras / titres / listes */
 function renderAiText(text) {
