@@ -763,9 +763,8 @@ function wire() {
     const cur = document.documentElement.getAttribute('data-theme');
     const next = cur === 'dark' ? 'light' : (cur === 'light' ? 'dark' : 'light');
     document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('gs-theme', next);
-    // les charts ne relisent pas le CSS : on les reconstruit
-    renderPriceChart(); renderPerformance(); renderMacro();
+    try { localStorage.setItem('gs-theme', next); } catch (_) { /* stockage bloqué */ }
+    // le redessin est pris en charge par watchTheme()
   };
 
   document.querySelectorAll('#sourceSeg button').forEach(b => {
@@ -807,9 +806,29 @@ function wire() {
 
 /* ------------------------------------------------------------------ départ */
 
+/* Les charts peignent sur un canvas : ils ne relisent pas les variables CSS
+ * quand le thème bascule. On les reconstruit à chaque changement, d'où qu'il
+ * vienne — bouton local, bascule de la page hôte, ou préférence système. */
+function watchTheme() {
+  const redraw = debounce(() => {
+    if (!state.snapshot) return;
+    renderPriceChart(); renderPerformance(); renderMacro();
+  }, 80);
+  new MutationObserver(redraw).observe(document.documentElement,
+    { attributes: true, attributeFilter: ['data-theme'] });
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  mq.addEventListener?.('change', redraw);
+}
+
 (async function main() {
-  const saved = localStorage.getItem('gs-theme');
-  if (saved) document.documentElement.setAttribute('data-theme', saved);
+  // Si l'hôte a déjà imposé un thème (page publiée, bascule du lecteur), il
+  // commande : on ne le contredit pas avec une préférence locale périmée.
+  if (!document.documentElement.hasAttribute('data-theme')) {
+    let saved = null;
+    try { saved = localStorage.getItem('gs-theme'); } catch (_) { /* bloqué */ }
+    if (saved) document.documentElement.setAttribute('data-theme', saved);
+  }
+  watchTheme();
   wire();
   await loadAll();
   buildAssetSeg();
