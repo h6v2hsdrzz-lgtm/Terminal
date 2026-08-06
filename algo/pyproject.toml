@@ -20,9 +20,16 @@ dev = ["pytest>=8.0"]
 [project.scripts]
 goldsilver = "goldsilver.cli:main"
 goldsilver-live = "goldsilver.live.runner:main"
+goldsilver-dashboard = "goldsilver.dashboard.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# le dashboard sert ses fichiers statiques depuis le paquet installé :
+# sans ceci, `pip install` livrerait un serveur sans interface.
+[tool.setuptools.package-data]
+goldsilver = ["dashboard/static/*.html", "dashboard/static/*.css",
+              "dashboard/static/*.js", "dashboard/static/vendor/*.js"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

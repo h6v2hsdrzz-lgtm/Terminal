@@ -428,6 +428,58 @@ goldsilver-live flatten               # immédiat : ferme tout + halte
 # reprendre plus tard : rm KILL && goldsilver-live reset-halt
 ```
 
+## Dashboard — voir ce que l'algo fait, en temps réel
+
+Interface web locale : état du bot, chart TradingView avec **chaque position
+prise** (entrée, sortie, SL, TP), statistiques, contexte macro et journal
+d'audit.
+
+```bash
+goldsilver-dashboard                     # http://localhost:8765 (ouvre le navigateur)
+goldsilver-dashboard --offline           # sans appel IG : cache disque seul
+goldsilver-dashboard --host 0.0.0.0      # accès depuis le téléphone (réseau local)
+goldsilver-dashboard --export suivi.html # instantané autonome, consultable hors ligne
+```
+
+Aucune dépendance supplémentaire : le serveur est bâti sur la bibliothèque
+standard, la lib de chart (TradingView Lightweight Charts, Apache-2.0) est
+versionnée dans le dépôt.
+
+### Ce que montre le dashboard
+
+| Panneau | Réponse à la question |
+|---|---|
+| **Décision en cours** | *pourquoi l'algo trade — ou attend* : distance au seuil de cassure, filtre de tendance, Efficiency Ratio, et taille du prochain ordre |
+| **Chart** | chaque trade posé sur les bougies 4h ; clic sur une ligne de la table = zoom + lignes entrée/SL/TP/sortie |
+| **Historique des positions** | table filtrable backtest / réel, triable, avec R et PnL |
+| **Equity & drawdown** | courbe de capital et profondeur sous le plus-haut |
+| **Rendements mensuels** | heatmap année × mois, valeurs écrites |
+| **Distribution en R** | la forme réelle de l'edge : beaucoup de −1R, une queue droite |
+| **Corrélations & macro** | or/argent/S&P/WTI/BTC, base 100 en échelle log |
+| **Journal** | flux d'événements du bot (source de vérité de l'audit) |
+| **STOP** | arme le kill switch (confirmation tapée obligatoire) |
+
+### Sources de données et dégradation
+
+Le dashboard ne peut pas être vide : il descend automatiquement la chaîne
+`IG en direct → cache H1 du bot → cache backtest versionné`, et affiche
+l'origine réelle de chaque chiffre en pied de page. Sans identifiants IG, il
+reste pleinement exploitable.
+
+Le cache versionné (`dashboard_data/`, ~1,5 Mo) contient les 264 trades du
+backtest et les bougies 4h : `data/raw/` et `reports/` étant gitignorés, sans
+lui un clone neuf n'aurait rien à afficher. Le régénérer après tout
+changement de stratégie ou de données :
+
+```bash
+python -m goldsilver.dashboard.build_cache -c config/breakout_4h.yaml
+```
+
+> **Lecture seule.** Le dashboard n'ouvre ni ne modifie aucune position. Sa
+> seule écriture est le kill switch — une action *fail-safe*, qui ne peut
+> qu'arrêter le bot. Le serveur écoute `127.0.0.1` par défaut : equity,
+> positions et identifiants de trades ne sortent pas de la machine.
+
 ## Avertissements
 
 Backtest ≠ avenir. Les hypothèses de coûts sont pessimistes mais pas

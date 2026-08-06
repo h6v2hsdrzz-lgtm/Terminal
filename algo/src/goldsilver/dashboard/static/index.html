@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>goldsilver — pilotage de l'algo</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📊</text></svg>">
+</head>
+<body>
+
+<header>
+  <div class="brand">goldsilver <small>XAU · XAG — breakout Donchian 4h</small></div>
+  <span class="badge" id="modeBadge">…</span>
+  <span class="badge" id="connBadge">connexion…</span>
+  <span class="badge" id="haltBadge" hidden></span>
+
+  <div class="spacer"></div>
+
+  <div class="hero">
+    <span class="dim" style="font-size:12px">Equity</span>
+    <span class="value" id="heroEquity">—</span>
+    <span class="delta" id="heroDelta"></span>
+  </div>
+
+  <button class="btn" id="themeBtn" title="Thème clair / sombre">◐</button>
+  <button class="btn" id="refreshBtn" title="Rafraîchir maintenant">↻</button>
+  <button class="btn danger" id="killBtn" title="Arrêt d'urgence : ferme tout et halte le bot">STOP</button>
+</header>
+
+<main>
+
+  <!-- ------------------------------------------------------------- tuiles -->
+  <section class="tiles" id="tiles"></section>
+
+  <!-- ------------------------------------------ pourquoi ça trade ou pas -->
+  <section class="card" style="margin-bottom:var(--gap)">
+    <h2>Décision en cours — pourquoi l'algo trade (ou attend)</h2>
+    <div class="sub">Recalculé sur les dernières bougies closes, avec le code de décision du bot. Une entrée exige <em>toutes</em> les conditions.</div>
+    <div class="sig-grid" id="signals"><div class="empty">chargement…</div></div>
+  </section>
+
+  <!-- --------------------------------------------------- chart + trades -->
+  <section class="card" style="margin-bottom:var(--gap)">
+    <h2>Chart — chaque position prise par l'algo</h2>
+    <div class="sub">Entrées et sorties posées sur les bougies de décision. Clique un trade dans la table pour zoomer dessus.</div>
+    <div class="toolbar">
+      <div class="seg" id="assetSeg"></div>
+      <div class="seg" id="sourceSeg">
+        <button data-src="all" aria-pressed="true">Tous</button>
+        <button data-src="backtest" aria-pressed="false">Backtest</button>
+        <button data-src="live" aria-pressed="false">Réel</button>
+      </div>
+      <div class="seg" id="rangeSeg">
+        <button data-range="3" aria-pressed="false">3 M</button>
+        <button data-range="12" aria-pressed="true">1 an</button>
+        <button data-range="0" aria-pressed="false">Tout</button>
+      </div>
+      <button class="btn" id="fitBtn">Recadrer</button>
+    </div>
+    <div class="chart-wrap"><div id="priceChart"></div></div>
+    <div class="legend">
+      <span class="key"><span class="swatch" style="background:var(--good)"></span>Entrée achat ▲</span>
+      <span class="key"><span class="swatch" style="background:var(--s1)"></span>Sortie gagnante ▼</span>
+      <span class="key"><span class="swatch" style="background:var(--critical)"></span>Sortie perdante ▼</span>
+      <span class="key"><span class="swatch line" style="background:var(--critical)"></span>Stop loss</span>
+      <span class="key"><span class="swatch line" style="background:var(--s3)"></span>Take profit</span>
+    </div>
+    <div class="note" id="chartNote"></div>
+  </section>
+
+  <section class="row side">
+    <div class="card">
+      <h2>Historique des positions</h2>
+      <div class="sub" id="tradesSub">—</div>
+      <div class="tbl-wrap scroll-y">
+        <table id="tradesTable">
+          <thead><tr>
+            <th data-k="entry_time">Entrée</th>
+            <th data-k="asset">Actif</th>
+            <th data-k="side">Sens</th>
+            <th data-k="entry">Prix ent.</th>
+            <th data-k="exit">Prix sort.</th>
+            <th data-k="reason">Sortie</th>
+            <th data-k="r_multiple">R</th>
+            <th data-k="pnl">PnL</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Verdict de validation</h2>
+      <div class="sub">Ce que l'anti-overfitting a réellement conclu.</div>
+      <div id="verdict"></div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------ performance -->
+  <section class="row two">
+    <div class="card">
+      <h2>Courbe d'equity <span class="dim" style="font-weight:400">— backtest</span></h2>
+      <div class="sub" id="equitySub">—</div>
+      <div class="chart-wrap"><div id="equityChart"></div></div>
+    </div>
+    <div class="card">
+      <h2>Drawdown (sous le plus haut)</h2>
+      <div class="sub">Profondeur de la perte depuis le sommet précédent. C'est ce qu'il faut supporter, pas la moyenne.</div>
+      <div class="chart-wrap"><div id="ddChart"></div></div>
+    </div>
+  </section>
+
+  <section class="row two">
+    <div class="card">
+      <h2>Rendements mensuels</h2>
+      <div class="sub">Chaque cellule = un mois. La valeur est écrite : la couleur ne porte jamais seule l'information.</div>
+      <div class="tbl-wrap"><div id="monthly"></div></div>
+      <div class="scale">
+        <span>négatif</span>
+        <span class="bar" id="monthScale"></span>
+        <span>positif</span>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Distribution des résultats (en R)</h2>
+      <div class="sub">R = gain rapporté au risque pris. Une stratégie à faible taux de réussite vit de sa queue droite.</div>
+      <div class="chart-wrap"><div id="rHist"></div></div>
+      <div class="note" id="rNote"></div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------ macro -->
+  <section class="row two">
+    <div class="card">
+      <h2>Corrélations cross-asset</h2>
+      <div class="sub">Rendements journaliers depuis 2019. Deux actifs très corrélés ne diversifient pas le risque.</div>
+      <div class="tbl-wrap"><div id="corr"></div></div>
+    </div>
+    <div class="card">
+      <h2>Contexte marché</h2>
+      <div class="sub">Ratio or/argent et performances indexées base 100 — un seul axe, comparable.</div>
+      <div class="chart-wrap"><div id="macroChart" style="height:230px"></div></div>
+      <div class="legend" id="macroLegend"></div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------- journal -->
+  <section class="card">
+    <h2>Journal du bot</h2>
+    <div class="sub">Source de vérité de l'audit : si ce n'est pas ici, ce n'est pas arrivé.</div>
+    <div class="log" id="journal"></div>
+  </section>
+
+  <p class="note" id="footNote"></p>
+</main>
+
+<dialog id="killDlg">
+  <h3 style="margin:0 0 6px">Arrêt d'urgence</h3>
+  <p style="margin:0;color:var(--ink-2);font-size:13px">
+    Le bot fermera <strong>toutes les positions</strong> au prochain cycle puis se mettra
+    en halte. Il ne redémarrera pas tout seul.<br>
+    Tape <strong>KILL</strong> pour confirmer.
+  </p>
+  <input id="killInput" placeholder="KILL" autocomplete="off">
+  <div style="display:flex;gap:8px;justify-content:flex-end">
+    <button class="btn" id="killCancel">Annuler</button>
+    <button class="btn danger" id="killConfirm">Confirmer l'arrêt</button>
+  </div>
+  <p class="err" id="killErr"></p>
+</dialog>
+
+<script src="/static/vendor/lightweight-charts.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
