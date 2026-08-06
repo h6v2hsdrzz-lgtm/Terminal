@@ -18,9 +18,12 @@ import pandas as pd
 import pytest
 import yaml
 
+from goldsilver.config import load_config
+from goldsilver.dashboard.build_cache import _apply_live_risk
 from goldsilver.dashboard.data import DashboardData
 from goldsilver.dashboard.export import export_html
 from goldsilver.dashboard.server import _Handler
+from goldsilver.live.risk import HARD_MAX_RISK_PCT
 
 STRATEGY_CFG: dict[str, Any] = {
     "seed": 42,
@@ -315,6 +318,34 @@ def test_kill_refuse_sans_confirmation(server: str, algo_root: Path) -> None:
 def test_pas_de_remontee_hors_du_dossier_statique(server: str) -> None:
     status, _ = _fetch(server + "/static/../../config/live.yaml")
     assert status != 200
+
+
+# ------------------------------------------------- alignement du risque
+
+def test_le_cache_reprend_le_risque_reel_du_bot(algo_root: Path) -> None:
+    """Le backtest du dashboard doit décrire le risque RÉELLEMENT pris."""
+    cfg = load_config(algo_root / "config" / "strat.yaml")
+    assert cfg.engine.risk_pct == pytest.approx(0.0075)      # risque de recherche
+    out, source = _apply_live_risk(cfg, str(algo_root / "config" / "live.yaml"))
+    assert out.engine.risk_pct == pytest.approx(0.02)        # risque du bot
+    assert out.engine.max_open_risk_pct == pytest.approx(0.04)
+    assert "config live" in source
+    # la stratégie elle-même ne bouge pas : mêmes signaux, mêmes dates
+    assert out.strategy == cfg.strategy
+    assert out.engine.initial_equity == cfg.engine.initial_equity
+
+
+def test_le_risque_du_cache_ne_depasse_jamais_le_plafond_dur(
+    algo_root: Path, tmp_path: Path
+) -> None:
+    """Une config live trop gourmande ne doit pas produire un backtest menteur."""
+    live = dict(LIVE_CFG)
+    live["risk"] = {"risk_pct": 0.50, "max_open_risk_pct": 0.60, "min_rr": 3.0}
+    p = tmp_path / "live_gourmand.yaml"
+    p.write_text(yaml.safe_dump(live), encoding="utf-8")
+    cfg = load_config(algo_root / "config" / "strat.yaml")
+    out, _ = _apply_live_risk(cfg, str(p))
+    assert out.engine.risk_pct == pytest.approx(HARD_MAX_RISK_PCT)
 
 
 # -------------------------------------------------------------------- export

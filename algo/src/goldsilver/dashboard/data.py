@@ -501,6 +501,8 @@ class DashboardData:
                 "monthly": bt.get("monthly", []),
                 "initial_equity": bt.get("initial_equity"),
                 "risk_pct": bt.get("risk_pct"),
+                "max_open_risk_pct": bt.get("max_open_risk_pct"),
+                "risk_source": bt.get("risk_source"),
                 "params": bt.get("params", {}),
                 "generated_utc": bt.get("generated_utc"),
             },

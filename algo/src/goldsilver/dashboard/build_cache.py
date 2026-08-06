@@ -10,6 +10,16 @@ instantanément et partout.
     python -m goldsilver.dashboard.build_cache            # config par défaut
     python -m goldsilver.dashboard.build_cache -c config/breakout_4h.yaml
 
+NIVEAU DE RISQUE : par défaut le backtest est rejoué au risque RÉELLEMENT
+utilisé par le bot (lu dans ``config/live.yaml``), et non au risque prudent
+de la config de recherche. Sans cela le dashboard afficherait un rendement
+mensuel et un drawdown qui ne correspondent à aucune réalité vécue — le
+rendement n'est pas invariant au risque. ``--no-live-risk`` conserve le
+risque de la config stratégie (utile pour comparer à la validation).
+
+Le risque ne change AUCUN signal : mêmes entrées, mêmes sorties, mêmes dates.
+Seule la taille des positions — donc les montants et le drawdown — change.
+
 Régénérer après tout changement de stratégie, de paramètres ou de données.
 """
 
@@ -19,6 +29,7 @@ import argparse
 import datetime as dt
 import json
 import logging
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +39,7 @@ import pandas as pd
 from goldsilver.config import load_config
 from goldsilver.data.loader import load_market
 from goldsilver.data.timeframes import build_timeframes
+from goldsilver.live.config import load_live_config
 from goldsilver.pipeline import run_backtest
 
 log = logging.getLogger(__name__)
@@ -164,8 +176,31 @@ def _macro_payload(cfg_start: str, out_dir: Path, raw_dir: Path) -> dict[str, An
     }
 
 
-def build(config_path: str, out_dir: Path, candle_tf: str = "4h") -> dict[str, Any]:
+def _apply_live_risk(cfg: Any, live_config: str) -> tuple[Any, str]:
+    """Rejoue le backtest au risque réel du bot plutôt qu'au risque de recherche.
+
+    Le plafond dur du moteur live (``HARD_MAX_RISK_PCT``) borne déjà la valeur
+    configurée ; on applique ici la même borne pour que le backtest ne puisse
+    pas décrire un risque que le bot refuserait de prendre.
+    """
+    from goldsilver.live.risk import HARD_MAX_RISK_PCT
+
+    live = load_live_config(live_config)
+    risk = min(live.risk.risk_pct, HARD_MAX_RISK_PCT)
+    cfg = replace(cfg, engine=replace(
+        cfg.engine, risk_pct=risk, max_open_risk_pct=live.risk.max_open_risk_pct))
+    source = (f"config live ({live_config}) — {100 * risk:.2f} %/trade, "
+              f"{100 * live.risk.max_open_risk_pct:.2f} % cumulé")
+    log.info("Risque aligné sur le bot : %s", source)
+    return cfg, source
+
+
+def build(config_path: str, out_dir: Path, candle_tf: str = "4h",
+          live_config: str | None = None) -> dict[str, Any]:
     cfg = load_config(config_path)
+    risk_source = f"config stratégie ({config_path})"
+    if live_config:
+        cfg, risk_source = _apply_live_risk(cfg, live_config)
     log.info("Chargement des données de marché…")
     market = load_market(cfg)
 
@@ -197,6 +232,8 @@ def build(config_path: str, out_dir: Path, candle_tf: str = "4h") -> dict[str, A
         "candle_timeframe": candle_tf,
         "initial_equity": run.result.initial_equity,
         "risk_pct": cfg.engine.risk_pct,
+        "max_open_risk_pct": cfg.engine.max_open_risk_pct,
+        "risk_source": risk_source,
         "assets": list(market),
         "metrics": {k: _round(v, 6) if isinstance(v, float) else v
                     for k, v in run.metrics.to_dict().items()},
@@ -229,16 +266,24 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("-o", "--out", default=DEFAULT_OUT)
     p.add_argument("--timeframe", default="4h",
                    help="timeframe des bougies du chart (défaut : 4h)")
+    p.add_argument("--live-config", default="config/live.yaml",
+                   help="config du bot dont on reprend le risque réel "
+                        "(défaut : config/live.yaml)")
+    p.add_argument("--no-live-risk", action="store_true",
+                   help="garder le risque de la config stratégie")
     args = p.parse_args(argv)
 
     logging.basicConfig(
         level=logging.INFO, format="%(levelname)-7s %(message)s"
     )
-    bt = build(args.config, Path(args.out), args.timeframe)
+    bt = build(args.config, Path(args.out), args.timeframe,
+               live_config=None if args.no_live_risk else args.live_config)
     m = bt["metrics"]
     print(f"\n✅ Cache écrit dans {args.out}/")
+    print(f"   risque : {bt['risk_source']}")
     print(f"   {m['n_trades']} trades — rendement total "
-          f"{100 * m['total_return']:.1f} % — DD max {100 * m['max_drawdown']:.1f} %")
+          f"{100 * m['total_return']:.1f} % — mensuel moyen "
+          f"{100 * m['monthly_mean']:.2f} % — DD max {100 * m['max_drawdown']:.1f} %")
     return 0
 
 

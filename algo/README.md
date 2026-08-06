@@ -466,14 +466,42 @@ Le dashboard ne peut pas être vide : il descend automatiquement la chaîne
 l'origine réelle de chaque chiffre en pied de page. Sans identifiants IG, il
 reste pleinement exploitable.
 
-Le cache versionné (`dashboard_data/`, ~1,5 Mo) contient les 264 trades du
+Le cache versionné (`dashboard_data/`, ~1,5 Mo) contient les trades du
 backtest et les bougies 4h : `data/raw/` et `reports/` étant gitignorés, sans
 lui un clone neuf n'aurait rien à afficher. Le régénérer après tout
 changement de stratégie ou de données :
 
 ```bash
 python -m goldsilver.dashboard.build_cache -c config/breakout_4h.yaml
+python -m goldsilver.dashboard.build_cache --no-live-risk   # risque de recherche
 ```
+
+### Le backtest du dashboard tourne au risque RÉEL du bot
+
+Par défaut `build_cache` reprend `risk.risk_pct` de `config/live.yaml`
+(borné par le plafond dur du moteur) au lieu du risque prudent de la config
+de recherche. Sans cela le dashboard afficherait un rendement et un drawdown
+ne correspondant à aucune réalité vécue : le rendement **n'est pas invariant
+au risque**. Le risque ne change aucun signal — mêmes entrées, mêmes sorties,
+mêmes dates ; seule la taille des positions bouge.
+
+Effet mesuré sur la stratégie validée (mêmes paramètres, seul le risque change) :
+
+| Risque/trade | Trades | Rendement total | Mensuel moyen | Drawdown max |
+|---|---|---|---|---|
+| 0,75 % (recherche) | 264 | +24,6 % | +0,26 % | −12,6 % |
+| **4 % (bot)** | **290** | **+257,9 %** | **+2,05 %** | **−67,0 %** |
+
+Le nombre de trades diffère : à faible risque, certaines positions sont
+refusées (taille sous le minimum du courtier, budget de risque cumulé
+saturé). Ce n'est donc pas une simple homothétie.
+
+> **Le backtest ne simule pas les kill switches.** À 4 %, le drawdown passe
+> trois fois sous le seuil de halte de −20 % — dont une période de 2020 à
+> 2025. Le bot réel se serait arrêté et n'aurait pas repris sans intervention
+> humaine : la courbe à +257,9 % n'est pas atteignable avec ces réglages. Le
+> dashboard affiche cet avertissement automatiquement dès que le drawdown du
+> backtest dépasse le seuil de halte configuré.
 
 > **Lecture seule.** Le dashboard n'ouvre ni ne modifie aucune position. Sa
 > seule écriture est le kill switch — une action *fail-safe*, qui ne peut

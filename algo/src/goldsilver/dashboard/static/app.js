@@ -177,12 +177,14 @@ function renderTiles() {
   box.append(tile('Trades réels', String(st.forward.n_trades),
     `${nf(st.forward.days_running, 1)} j de forward · PnL ${money(st.forward.total_pnl)}`,
     signCls(st.forward.total_pnl)));
-  // le rendement mensuel N'EST PAS invariant au risque : le backtest tourne à
-  // 0,75 %/trade, le bot à 4 %. On affiche donc le niveau de risque de
-  // référence plutôt que de laisser croire à une prévision transposable.
+  // le rendement mensuel N'EST PAS invariant au risque : on nomme toujours le
+  // niveau auquel il a été mesuré, et on signale s'il correspond au bot réel.
+  const btRisk = 100 * (st.backtest.risk_pct || 0);
+  const aligned = Math.abs(btRisk - s.risk.risk_pct) < 0.01;
   box.append(tile('Attendu (backtest)', `${nf(100 * (bt.monthly_mean || 0), 2)} %/mois`,
-    `au risque backtest ${nf(100 * (st.backtest.risk_pct || 0), 2)} % · `
-    + `${bt.n_trades} trades · réussite ${nf(100 * (bt.win_rate || 0), 1)} % · PF ${nf(bt.profit_factor)}`));
+    `${aligned ? 'au risque réel du bot' : 'au risque backtest'} ${nf(btRisk, 2)} % · `
+    + `DD max ${nf(100 * (bt.max_drawdown || 0), 0)} % · `
+    + `${bt.n_trades} trades · réussite ${nf(100 * (bt.win_rate || 0), 1)} %`));
 }
 
 /* -------------------------------------------------- panneau de décision --- */
@@ -503,7 +505,8 @@ function renderPerformance() {
   const m = bt.metrics || {};
   $('#equitySub').textContent =
     `${money(bt.initial_equity, 0)} de départ · risque ${nf(100 * (bt.risk_pct || 0), 2)} %/trade `
-    + `· ${m.n_trades} trades · ${m.start?.slice(0, 10)} → ${m.end?.slice(0, 10)}`;
+    + `· ${m.n_trades} trades · ${m.start?.slice(0, 10)} → ${m.end?.slice(0, 10)}`
+    + (bt.risk_source ? ` · risque repris de la ${bt.risk_source.split(' —')[0]}` : '');
 
   // equity — une seule série, donc pas de légende (le titre la nomme)
   const eh = $('#equityChart'); disposeChart('equity'); eh.textContent = '';
@@ -530,8 +533,67 @@ function renderPerformance() {
   dc.timeScale().fitContent();
   state.charts.dd = dc;
 
+  renderKillConflict(bt, m);
   renderMonthly(bt.monthly);
   renderRHist();
+}
+
+/* Épisodes durant lesquels l'equity est restée sous le seuil du kill switch.
+ * Un épisode démarre au franchissement du seuil et se termine au retour au
+ * plus-haut (drawdown nul) : c'est exactement la fenêtre pendant laquelle le
+ * bot réel aurait été à l'arrêt. */
+function haltEpisodes(dd, killPct) {
+  const out = [];
+  let cur = null;
+  for (const [t, v] of dd) {
+    if (v == null) continue;
+    if (v <= -killPct && !cur) cur = { from: t, to: t, worst: v };
+    else if (cur) {
+      cur.to = t; cur.worst = Math.min(cur.worst, v);
+      if (v > -0.001) { out.push(cur); cur = null; }
+    }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
+/* Le backtest ne simule PAS les kill switches : si son drawdown dépasse le
+ * seuil de halte du bot, la courbe affichée décrit un scénario que le bot
+ * réel n'aurait pas laissé se dérouler. Le taire serait trompeur. */
+function renderKillConflict(bt, m) {
+  const box = $('#ddWarn'); box.textContent = '';
+  const killPct = state.snapshot?.risk?.max_dd_pct;         // ex. 20
+  const maxDD = 100 * (m.max_drawdown || 0);
+  if (!killPct || maxDD <= killPct) return;
+
+  const eps = haltEpisodes(bt.drawdown || [], killPct / 100);
+  const c = el('div', 'callout');
+  c.append(el('span', 'ico', '⚠'));
+  const body = el('div');
+  const p = el('p');
+  p.style.margin = '0';
+  p.append(el('strong', null,
+    `Cette courbe n'est pas atteignable avec tes réglages actuels.`));
+  body.append(p);
+  body.append(el('div', null,
+    `Le backtest tourne à ${nf(100 * (bt.risk_pct || 0), 2)} % de risque par trade `
+    + `et descend jusqu'à −${nf(maxDD, 1)} %. Or ton kill switch halte le bot `
+    + `à −${nf(killPct, 0)} % : le backtest ne le simule pas.`));
+  const ul = el('ul');
+  ul.append(el('li', null,
+    `${eps.length} période${eps.length > 1 ? 's' : ''} sous le seuil de halte — `
+    + `le bot réel se serait arrêté et n'aurait pas repris sans intervention.`));
+  for (const e of eps.slice(0, 3)) {
+    ul.append(el('li', null,
+      `${dateFmt(e.from, false)} → ${dateFmt(e.to, false)} · pire ${nf(100 * e.worst, 1)} %`));
+  }
+  ul.append(el('li', null,
+    `Lecture honnête : le rendement affiché suppose d'encaisser ce drawdown `
+    + `sans jamais couper. Baisser le risque, ou relever le seuil de halte en `
+    + `acceptant la perte correspondante — les deux se paient.`));
+  body.append(ul);
+  c.append(body);
+  box.append(c);
 }
 
 function renderMonthly(monthly) {
