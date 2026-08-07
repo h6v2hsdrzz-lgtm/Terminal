@@ -265,6 +265,85 @@ const Metrics = {
     return { type: 'none', label: 'Positionnement et prix alignés' };
   },
 
+  /* ── Court terme ────────────────────────────────────────── */
+
+  /* Vitesse de rotation : variations du net sur les horizons courts,
+     rapportées à l'amplitude annuelle pour rester lisibles quand
+     l'open interest change d'échelle. */
+  velocity(series, horizons = [1, 2, 4, 8, 13]) {
+    const values = series.map((p) => p.value);
+    const win = this.tail(values, 52);
+    const span = win.length ? Math.max(...win) - Math.min(...win) : 0;
+    const out = {};
+    for (const h of horizons) {
+      const d = this.change(values, h);
+      out[h] = d == null ? null : { delta: d, share: span > 0 ? (d / span) * 100 : null };
+    }
+    return out;
+  },
+
+  /* Sensibilité historique du positionnement au prix.
+     Régression des variations hebdomadaires du net sur les variations
+     de prix : Δnet = α + β · Δprix%. Le β dit combien de contrats la
+     cohorte ajoute par point de pourcentage, le r² dit à quel point
+     cette relation tient — sans lui le β n'est qu'un chiffre. */
+  priceBeta(joined, lookback = 52) {
+    const w = this.tail(joined, lookback);
+    if (w.length < 12) return null;
+    const x = [], y = [];
+    for (let i = 1; i < w.length; i++) {
+      if (!w[i - 1].price) continue;
+      x.push(((w[i].price - w[i - 1].price) / w[i - 1].price) * 100);
+      y.push(w[i].value - w[i - 1].value);
+    }
+    if (x.length < 10) return null;
+
+    const mx = x.reduce((a, b) => a + b, 0) / x.length;
+    const my = y.reduce((a, b) => a + b, 0) / y.length;
+    let sxy = 0, sxx = 0, syy = 0;
+    for (let i = 0; i < x.length; i++) {
+      sxy += (x[i] - mx) * (y[i] - my);
+      sxx += (x[i] - mx) ** 2;
+      syy += (y[i] - my) ** 2;
+    }
+    if (!sxx || !syy) return null;
+    const beta = sxy / sxx;
+    return { beta, r2: (sxy * sxy) / (sxx * syy), n: x.length };
+  },
+
+  /* Ce qui s'est passé sur le prix depuis l'arrêté du rapport.
+     C'est l'angle mort du COT : entre le mardi d'arrêté et l'instant
+     présent, le positionnement a bougé sans qu'on le voie. */
+  sinceCutoff(rows, priceRows, spotPrice) {
+    if (!rows.length || !priceRows || !priceRows.length) return null;
+    const last = rows[rows.length - 1];
+
+    /* dernier prix connu à la date d'arrêté */
+    let atCutoff = null;
+    for (const p of priceRows) {
+      if (p.ts <= last.ts) atCutoff = p; else break;
+    }
+    const now = spotPrice != null ? spotPrice
+      : (priceRows[priceRows.length - 1] || {}).close;
+    if (!atCutoff || now == null || !atCutoff.close) return null;
+
+    const changePct = ((now - atCutoff.close) / atCutoff.close) * 100;
+    const days = Math.max(0, Math.round((Date.now() / 1000 - last.ts) / 86400));
+
+    /* amplitude parcourue depuis l'arrêté : un aller-retour peut cacher
+       beaucoup de rotation sous une variation nette faible */
+    const after = priceRows.filter((p) => p.ts >= last.ts).map((p) => p.close);
+    const high = after.length ? Math.max(...after, now) : now;
+    const low = after.length ? Math.min(...after, now) : now;
+
+    return {
+      cutoffDate: last.date, cutoffPrice: atCutoff.close, price: now,
+      changePct, days,
+      rangePct: atCutoff.close ? ((high - low) / atCutoff.close) * 100 : null,
+      high, low,
+    };
+  },
+
   /* ── Analogues historiques ──────────────────────────────── */
 
   /* Retrouve les arrêtés passés dont le COT index ressemble à celui

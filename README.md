@@ -74,11 +74,30 @@ Le **score de tension** (±100) agrège ces signaux en une lecture unique, et
 affiche systématiquement ses composantes : un score qu'on ne peut pas décomposer
 ne vaut rien.
 
-## Les sept vues
+### Le court terme, et sa limite
+
+Le COT n'est pas un instrument court terme : il est hebdomadaire, et publié
+trois jours après son arrêté. La vue **Court terme** exploite donc ce qui est
+réellement court dedans — le flux de la semaine par cohorte, la vitesse de
+rotation sur 1 à 13 semaines — et traite explicitement l'**angle mort** : entre
+l'arrêté du mardi et l'instant présent, le positionnement bouge sans qu'aucune
+donnée ne le montre.
+
+Le prix, lui, est en direct. Une régression des variations hebdomadaires du net
+sur celles du prix donne une sensibilité (β, en contrats par point de
+pourcentage) qui permet d'extrapoler la dérive depuis l'arrêté. Deux garde-fous :
+l'estimation n'est affichée que si la relation tient (r² ≥ 0,10), et le r² sur un
+an est comparé à celui sur trois ans — quand il s'effondre, l'écran le dit, parce
+que la cohorte se positionne alors sur autre chose que le prix et que
+l'extrapolation devient fragile. C'est un ordre de grandeur, jamais un chiffre
+publié.
+
+## Les huit vues
 
 | Vue | Contenu |
 |-----|---------|
 | **Vue d'ensemble** | Cartes de synthèse, répartition par cohorte, net contre prix, régime macro, actualité |
+| **Court terme** | Flux de la semaine par cohorte, vitesse de rotation, angle mort depuis l'arrêté, prix quotidien |
 | **Cohortes** | Tableau complet (longs, courts, net, Δ, % OI, biais, index, z, opérateurs, notionnel) + concentration |
 | **Historique** | Nets de toutes les cohortes, open interest, concentration, COT index glissant |
 | **Extrêmes** | Matrice index/z/percentile, rotations à plus de 2σ, basculements du net, configurations comparables |

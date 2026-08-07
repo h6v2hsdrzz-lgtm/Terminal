@@ -180,6 +180,37 @@ const Agent = {
       },
       divergence_prix_positionnement: joined.length
         ? (Metrics.divergence(joined, 26) || {}).label : null,
+      court_terme: (() => {
+        const specKey = report === 'legacy' ? 'noncomm' : 'money';
+        const net = Metrics.series(rows, specKey, 'net');
+        const gap = Metrics.sinceCutoff(rows, Macro.priceSeries(marketKey), px);
+        const beta = joined.length ? Metrics.priceBeta(joined, 52) : null;
+        const vel = Metrics.velocity(net);
+        return {
+          flux_semaine_par_cohorte: Object.fromEntries(
+            CFTC.cohortsFor(report).map((c) => [c.short, {
+              delta_net: last.cohorts[c.key].dNet,
+              delta_longs: last.cohorts[c.key].dLong,
+              delta_courts: last.cohorts[c.key].dShort,
+            }])),
+          vitesse_rotation: Object.fromEntries(Object.entries(vel).map(([h, v]) =>
+            [`${h}_semaines`, v ? { delta: v.delta, pct_amplitude_1an: v.share == null ? null : +v.share.toFixed(0) } : null])),
+          angle_mort: gap ? {
+            jours_depuis_arrete: gap.days,
+            prix_a_larrete: gap.cutoffPrice,
+            prix_actuel: gap.price,
+            variation_pct: +gap.changePct.toFixed(2),
+            amplitude_pct: gap.rangePct == null ? null : +gap.rangePct.toFixed(2),
+          } : null,
+          sensibilite_au_prix: beta ? {
+            contrats_par_point_de_pct: Math.round(beta.beta),
+            r2: +beta.r2.toFixed(2),
+            semaines: beta.n,
+            derive_indicative: (gap && beta.r2 >= 0.15) ? Math.round(beta.beta * gap.changePct) : null,
+            avertissement: 'Extrapolation, pas une donnée publiée. Ne vaut que si r² est correct, et casse lors des retournements.',
+          } : null,
+        };
+      })(),
       analogues_historiques: analogues && analogues.summary ? {
         cot_index_actuel: +analogues.current.toFixed(0),
         echantillon: analogues.sample,

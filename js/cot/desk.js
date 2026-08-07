@@ -286,8 +286,9 @@ function render() {
   renderStamp();
 
   const views = {
-    overview: renderOverview, cohorts: renderCohorts, history: renderHistory,
-    extremes: renderExtremes, ratio: renderRatio, macro: renderMacro, news: renderNews,
+    overview: renderOverview, shortterm: renderShortTerm, cohorts: renderCohorts,
+    history: renderHistory, extremes: renderExtremes, ratio: renderRatio,
+    macro: renderMacro, news: renderNews,
   };
   $$('.view').forEach((v) => v.classList.add('hidden'));
   const host = $(`#view-${state.view}`);
@@ -478,6 +479,221 @@ function renderOverview(host) {
         : corr < 0.1 ? 'le positionnement a décroché du marché.'
           : 'lien modéré entre flux et prix.'}`
     : 'Historique de prix indisponible — impossible de croiser positionnement et cours.';
+}
+
+/* ═══════════════ Vue : court terme ═══════════════
+   Le COT est hebdomadaire et différé — on ne peut pas en faire un flux
+   temps réel. Cette vue exploite donc ce qui est réellement court terme
+   dedans : le flux de la semaine, la vitesse de rotation, et surtout le
+   comblement de l'angle mort entre l'arrêté et l'instant présent, où le
+   prix, lui, est en direct. */
+
+function renderShortTerm(host) {
+  const { market, price, px } = marketCtx();
+  const rows = state.rows;
+  const cohorts = CFTC.cohortsFor(state.report);
+  const specKey = state.report === 'legacy' ? 'noncomm' : 'money';
+  const specDef = cohorts.find((c) => c.key === specKey);
+  const last = rows[rows.length - 1];
+  const prev = rows[rows.length - 2];
+
+  const daily = Macro.priceSeries(state.metal, { full: false });
+  const gap = Metrics.sinceCutoff(rows, daily.length ? daily : Macro.priceSeries(state.metal), px);
+  const rel = CFTC.nextRelease(last.date);
+  const netSeries = Metrics.series(rows, specKey, 'net');
+  const vel = Metrics.velocity(netSeries);
+  /* Deux fenêtres, deux questions différentes. Sur trois ans, la
+     sensibilité est structurelle : combien de contrats la cohorte ajoute
+     par point de prix, en moyenne de cycle. Sur un an, elle dit si elle
+     se comporte encore ainsi *en ce moment*. L'écart entre les deux est
+     lui-même une information. */
+  const beta = state.joined.length ? Metrics.priceBeta(state.joined, 156) : null;
+  const betaNow = state.joined.length ? Metrics.priceBeta(state.joined, 52) : null;
+
+  /* L'extrapolation n'est affichée que si la relation de fond tient un
+     minimum. Un β sans r² correct n'est pas une estimation, c'est un
+     chiffre décoratif. */
+  const drift = (beta && gap && beta.r2 >= 0.10)
+    ? beta.beta * gap.changePct : null;
+  const broken = beta && betaNow && beta.r2 >= 0.10 && betaNow.r2 < beta.r2 / 2;
+
+  const hd = `<div class="grid-4">
+    ${statCard({
+    label: 'Arrêté du rapport',
+    value: fmtDateShort(last.date),
+    cls: 'stat-v sm',
+    sub: gap ? `il y a <b>${gap.days} jour${gap.days > 1 ? 's' : ''}</b>` : '—',
+  })}
+    ${statCard({
+    label: 'Prochaine publication',
+    value: (() => {
+      const h = Math.max(0, Math.floor(rel.msLeft / 3600000));
+      return h >= 24 ? `${Math.floor(h / 24)} j ${h % 24} h` : `${h} h`;
+    })(),
+    cls: 'stat-v sm',
+    sub: `vendredi ~20 h 30 · arrêté au ${fmtDateShort(rel.asOf)}`,
+  })}
+    ${gap ? statCard({
+    label: `Prix depuis l'arrêté`,
+    value: fmtSignedPct(gap.changePct),
+    cls: signClass(gap.changePct),
+    sub: `${fmtNum(gap.cutoffPrice, 2)} $ → <b>${fmtNum(gap.price, 2)} $</b>`
+      + (gap.rangePct != null ? ` · amplitude ${fmtPct(gap.rangePct)}` : ''),
+  }) : ''}
+    ${statCard({
+    label: `Flux hebdo — ${specDef.short.toLowerCase()}`,
+    value: fmtSigned(last.cohorts[specKey].dNet),
+    cls: signClass(last.cohorts[specKey].dNet),
+    sub: prev && prev.cohorts[specKey].net
+      ? `${fmtSignedPct((last.cohorts[specKey].dNet / Math.abs(prev.cohorts[specKey].net)) * 100, 1)} de la position`
+      : '—',
+  })}
+  </div>`;
+
+  /* ── flux de la semaine, par cohorte ── */
+  const maxFlow = Math.max(...cohorts.map((c) => Math.abs(last.cohorts[c.key].dNet))) || 1;
+  const flows = cohorts
+    .map((c) => ({ c, s: last.cohorts[c.key], p: prev ? prev.cohorts[c.key] : null }))
+    .sort((a, b) => Math.abs(b.s.dNet) - Math.abs(a.s.dNet))
+    .map(({ c, s, p }) => {
+      const w = (Math.abs(s.dNet) / maxFlow) * 50;
+      const left = s.dNet >= 0 ? 50 : 50 - w;
+      const rel2 = p && Math.abs(p.net) > 0 ? (s.dNet / Math.abs(p.net)) * 100 : null;
+      return `<tr title="${escapeHtml(c.desc)}">
+        <td><span class="co-name"><span class="co-dot" style="background:${c.color}"></span>${escapeHtml(c.short)}</span></td>
+        <td class="n ${signClass(s.dLong)}">${fmtSigned(s.dLong)}</td>
+        <td class="n ${signClass(-s.dShort)}">${fmtSigned(s.dShort)}</td>
+        <td class="n ${signClass(s.dNet)}"><b>${fmtSigned(s.dNet)}</b></td>
+        <td class="n ${signClass(rel2)}">${rel2 == null ? '—' : fmtSignedPct(rel2, 1)}</td>
+        <td class="n">${last.oi ? fmtPct((s.dNet / last.oi) * 100, 2) : '—'}</td>
+        <td style="width:130px"><div class="contrib-bar wide" style="width:120px">
+          <i style="left:${left}%;width:${w}%;background:${s.dNet >= 0 ? 'var(--up)' : 'var(--dn)'}"></i>
+          <i class="contrib-zero"></i>
+        </div></td>
+      </tr>`;
+    }).join('');
+
+  /* ── vitesse de rotation ── */
+  const velRows = [1, 2, 4, 8, 13].map((h) => {
+    const v = vel[h];
+    return `<tr>
+      <td>${h} semaine${h > 1 ? 's' : ''}</td>
+      <td class="n ${signClass(v && v.delta)}">${v ? fmtSigned(v.delta) : '—'}</td>
+      <td class="n">${v && v.share != null ? fmtSignedPct(v.share, 0) : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  host.innerHTML = `
+    ${hd}
+
+    <div class="panel">
+      <div class="panel-hd">Flux de la semaine
+        <span class="hd-sub">arrêté du ${fmtDate(last.date)}${prev ? ` contre ${fmtDate(prev.date)}` : ''}</span></div>
+      <div class="panel-bd flush"><div class="tbl-wrap"><table class="tbl">
+        <thead><tr>
+          <th>Cohorte</th><th>Δ longs</th><th>Δ courts</th><th>Δ net</th>
+          <th title="Variation rapportée à la position nette de la semaine précédente">% position</th>
+          <th title="Variation rapportée à l'open interest total">% OI</th><th></th>
+        </tr></thead>
+        <tbody>${flows}</tbody>
+      </table></div></div>
+      <div class="note">Trié par ampleur du mouvement. La colonne <b>Δ courts</b> est colorée
+        à l'envers : une baisse des positions courtes est un rachat, donc un flux acheteur.</div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-hd">Vitesse de rotation — ${escapeHtml(specDef.short.toLowerCase())}
+          <span class="hd-sub">horizons courts</span></div>
+        <div class="panel-bd flush"><div class="tbl-wrap"><table class="tbl">
+          <thead><tr><th>Horizon</th><th>Δ net</th>
+            <th title="Part de l'amplitude parcourue sur 52 semaines">% amplitude 1 an</th></tr></thead>
+          <tbody>${velRows}</tbody>
+        </table></div></div>
+        <div class="note">La colonne de droite ramène chaque mouvement à l'amplitude annuelle :
+          c'est ce qui distingue un ajustement de routine d'une vraie rotation.</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-hd">L'angle mort<span class="hd-sub">ce que le rapport ne voit pas encore</span></div>
+        <div class="panel-bd">
+          ${gap ? `
+            <p class="legend-note" style="margin-bottom:12px">
+              Le dernier arrêté date du <b>${fmtDate(gap.cutoffDate)}</b>, soit
+              <b>${gap.days} jour${gap.days > 1 ? 's' : ''}</b>. Depuis, le prix est passé de
+              ${fmtNum(gap.cutoffPrice, 2)} $ à <b>${fmtNum(gap.price, 2)} $</b>
+              (${fmtSignedPct(gap.changePct)}), avec une amplitude de ${fmtPct(gap.rangePct)}.
+              Le positionnement a bougé pendant ce temps, sans qu'aucune donnée ne le montre.
+            </p>
+            <table class="tbl"><tbody>
+              <tr><td style="color:var(--muted)">Sensibilité de fond (3 ans)</td>
+                  <td class="n">${beta ? `${fmtSigned(Math.round(beta.beta))} contrats / point de %` : '—'}</td></tr>
+              <tr><td style="color:var(--muted)">Qualité de cette relation (r²)</td>
+                  <td class="n">${beta ? `${fmtNum(beta.r2, 2)} sur ${beta.n} sem.` : '—'}</td></tr>
+              <tr><td style="color:var(--muted)">Régime actuel (1 an, r²)</td>
+                  <td class="n ${betaNow && beta && betaNow.r2 < beta.r2 / 2 ? 'dn' : ''}">
+                    ${betaNow ? `${fmtNum(betaNow.r2, 2)} sur ${betaNow.n} sem.` : '—'}</td></tr>
+              ${drift != null ? `
+                <tr><td style="color:var(--muted)">Dérive indicative</td>
+                    <td class="n ${signClass(drift)}"><b>${fmtSigned(Math.round(drift))}</b> contrats</td></tr>
+                <tr><td style="color:var(--muted)">Net implicite</td>
+                    <td class="n"><b>${fmtSigned(Math.round(last.cohorts[specKey].net + drift))}</b>
+                    <span class="dim">contre ${fmtSigned(last.cohorts[specKey].net)} publié</span></td></tr>` : ''}
+            </tbody></table>
+            ${drift == null ? `<p class="legend-note" style="margin-top:11px">
+              <b>Aucune extrapolation affichée.</b> La relation entre variation de prix et
+              variation de position est trop lâche${beta ? ` (r² = ${fmtNum(beta.r2, 2)})` : ''}
+              pour qu'un chiffre en soit tiré. C'est un refus délibéré, pas une donnée manquante.</p>` : ''}
+          ` : '<p class="legend-note">Historique de prix indisponible pour ce marché.</p>'}
+        </div>
+        <div class="note">
+          ${broken ? `<b>La relation habituelle s'est rompue.</b> Sur trois ans la cohorte suit le prix
+            (r² = ${fmtNum(beta.r2, 2)}), mais sur un an le lien a quasiment disparu
+            (r² = ${fmtNum(betaNow.r2, 2)}) : elle se positionne actuellement sur autre chose que
+            le mouvement de prix. L'extrapolation ci-dessus est donc à prendre avec des pincettes
+            supplémentaires. ` : ''}
+          ${drift != null ? `<b>C'est une extrapolation, pas une donnée.</b> Elle suppose que la cohorte
+            réagit au prix comme en moyenne sur trois ans — hypothèse qui casse précisément lors des
+            retournements, c'est-à-dire quand on aimerait le plus s'y fier. Ordre de grandeur, jamais
+            un chiffre publié.`
+    : `Un r² faible n'est pas un défaut de mesure : il dit que le positionnement de cette cohorte
+            ne se déduit pas du prix en ce moment. C'est une information en soi.`}
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">Prix quotidien et arrêtés récents
+        <span class="hd-sub">les repères marquent les dates d'arrêté du COT</span></div>
+      <div class="panel-bd flush"><div class="chart-box" id="st-price"></div></div>
+      <div class="note">Entre deux repères, le positionnement est invisible. C'est la limite
+        structurelle du COT, et la raison d'être de cette vue.</div>
+    </div>`;
+
+  /* prix quotidien sur ~6 mois + marqueurs d'arrêté */
+  const cut = Date.now() / 1000 - 190 * 86400;
+  const recent = daily.filter((p) => p.ts >= cut);
+  if (recent.length) {
+    const inst = Charts.timeSeries($('#st-price'), [{
+      label: `${market.label} (fixing quotidien)`, color: '#d9a441',
+      data: recent.map((p) => ({ ts: p.ts, value: p.close })),
+      scale: 'left', type: 'area', precision: 2, minMove: 0.01,
+    }], { height: 300 });
+
+    if (inst && inst.handles[0]) {
+      const marks = rows.filter((r) => r.ts >= cut).map((r) => ({
+        time: r.ts, position: 'belowBar', color: '#4b535e', shape: 'arrowUp',
+        text: fmtDateShort(r.date).slice(0, 5),
+      }));
+      try {
+        const LWC = window.LightweightCharts;
+        if (LWC.createSeriesMarkers) LWC.createSeriesMarkers(inst.handles[0].handle, marks);
+        else if (inst.handles[0].handle.setMarkers) inst.handles[0].handle.setMarkers(marks);
+      } catch { /* marqueurs indisponibles : le graphique reste lisible sans */ }
+    }
+  } else {
+    $('#st-price').innerHTML = '<div class="news-empty">Aucun fixing quotidien pour ce marché.</div>';
+  }
 }
 
 /* ═══════════════ Vue : cohortes ═══════════════ */
