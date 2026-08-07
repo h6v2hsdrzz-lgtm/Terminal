@@ -381,12 +381,12 @@ function renderOverview(host) {
         <span class="co-name"><span class="co-dot" style="background:${c.color}"></span>${escapeHtml(c.short)}</span>
         <small>${fmtInt(s.long)} longs · ${fmtInt(s.short)} courts · ${fmtPct(last.oi ? (s.net / last.oi) * 100 : 0)} de l'OI</small>
       </div>
-      <div style="display:flex;align-items:center;gap:9px">
-        <div class="contrib-bar" style="width:150px">
+      <div class="contrib-side">
+        <div class="contrib-bar wide">
           <i style="left:${left}%;width:${w}%;background:${s.net >= 0 ? 'var(--up)' : 'var(--dn)'}"></i>
-          <i style="left:50%;width:1px;background:var(--border-2);height:10px;top:-3px"></i>
+          <i class="contrib-zero"></i>
         </div>
-        <span class="n ${signClass(s.net)}" style="width:78px;text-align:right">${fmtSigned(s.net)}</span>
+        <span class="contrib-val n ${signClass(s.net)}">${fmtSigned(s.net)}</span>
       </div>
     </div>`;
   }).join('');
@@ -1202,14 +1202,19 @@ function wireEvents() {
     $('#agent-log').innerHTML = `<div class="ag-empty">
       <p>Conversation effacée. Le contexte du poste sera réinjecté à la prochaine question.</p></div>`;
   };
-  $('#agent-collapse').onclick = () => {
-    $('#agent-dock').classList.add('collapsed');
-    $('#agent-reopen').classList.remove('hidden');
+  const showAgent = (on) => {
+    $('#agent-dock').classList.toggle('collapsed', !on);
+    $('#agent-reopen').classList.toggle('hidden', on);
   };
-  $('#agent-reopen').onclick = () => {
-    $('#agent-dock').classList.remove('collapsed');
-    $('#agent-reopen').classList.add('hidden');
-  };
+  $('#agent-collapse').onclick = () => showAgent(false);
+  $('#agent-reopen').onclick = () => showAgent(true);
+
+  /* Sur téléphone l'agent s'affiche en plein écran : il démarre replié,
+     sinon il masquerait le poste dès l'ouverture de la page. */
+  if (window.matchMedia('(max-width: 900px)').matches) {
+    showAgent(false);
+    $('#agent-reopen').textContent = 'AGENT IA';
+  }
 
   /* modal */
   $('#modal-x').onclick = closeModal;
