@@ -170,6 +170,87 @@ const Charts = {
     return inst;
   },
 
+  /* ── Chandeliers + volume ─────────────────────────────────
+     Pour le temps court, où l'on veut voir l'ouverture, les extrêmes
+     et la clôture — pas seulement une ligne de clôture. Le volume
+     occupe un panneau distinct plutôt que d'être écrasé au bas du
+     graphique de prix. */
+  candles(container, data, opts = {}) {
+    if (!container || !data || !data.length) return null;
+    const LWC = window.LightweightCharts;
+    if (!LWC) return null;
+
+    container.innerHTML = '';
+    const chart = LWC.createChart(container, {
+      layout: {
+        background: { color: CHART_THEME.bg }, textColor: CHART_THEME.text,
+        fontSize: 10, fontFamily: 'inherit', attributionLogo: false,
+        panes: { separatorColor: CHART_THEME.border, separatorHoverColor: CHART_THEME.border },
+      },
+      localization: { locale: 'fr-FR' },
+      grid: {
+        vertLines: { color: CHART_THEME.grid },
+        horzLines: { color: CHART_THEME.grid },
+      },
+      rightPriceScale: { borderColor: CHART_THEME.border, scaleMargins: { top: 0.08, bottom: 0.08 } },
+      timeScale: {
+        borderColor: CHART_THEME.border,
+        timeVisible: opts.intraday !== false,
+        secondsVisible: false,
+        rightOffset: 3,
+      },
+      crosshair: {
+        mode: LWC.CrosshairMode.Normal,
+        vertLine: { color: CHART_THEME.crosshair, width: 1, style: 3, labelBackgroundColor: '#1f252e' },
+        horzLine: { color: CHART_THEME.crosshair, width: 1, style: 3, labelBackgroundColor: '#1f252e' },
+      },
+      height: opts.height || 380,
+      width: container.clientWidth || 600,
+    });
+
+    const digits = opts.precision != null ? opts.precision : 2;
+    const price = chart.addSeries(LWC.CandlestickSeries, {
+      upColor: '#2ebd85', downColor: '#f6465d',
+      borderUpColor: '#2ebd85', borderDownColor: '#f6465d',
+      wickUpColor: '#2ebd85', wickDownColor: '#f6465d',
+      priceFormat: { type: 'price', precision: digits, minMove: Math.pow(10, -digits) },
+    }, 0);
+    price.setData(data.map((c) => ({
+      time: c.ts, open: c.open, high: c.high, low: c.low, close: c.close,
+    })));
+
+    let volume = null;
+    if (opts.volume !== false) {
+      volume = chart.addSeries(LWC.HistogramSeries, {
+        priceFormat: { type: 'volume' }, priceLineVisible: false, lastValueVisible: false,
+      }, 1);
+      volume.setData(data.map((c) => ({
+        time: c.ts, value: c.volume,
+        color: c.close >= c.open ? 'rgba(46,189,133,.45)' : 'rgba(246,70,93,.45)',
+      })));
+      try { chart.panes()[1].setHeight(Math.round((opts.height || 380) * 0.22)); } catch {}
+    }
+
+    chart.timeScale().fitContent();
+
+    const ro = new ResizeObserver(() => {
+      const w = container.clientWidth;
+      if (w > 0) chart.applyOptions({ width: w, height: opts.height || 380 });
+    });
+    ro.observe(container);
+
+    const inst = { chart, handles: [{ handle: price, spec: { label: 'prix' } }], ro };
+    this.instances.push(inst);
+
+    if (opts.onCrosshair) {
+      chart.subscribeCrosshairMove((param) => {
+        if (!param.time || !param.seriesData) { opts.onCrosshair(null); return; }
+        opts.onCrosshair({ time: param.time, bar: param.seriesData.get(price) });
+      });
+    }
+    return inst;
+  },
+
   /* ── Sparkline SVG ────────────────────────────────────────
      Pour les tableaux macro : une centaine de points, aucune
      interaction, aucun axe. Un graphique complet serait vingt fois

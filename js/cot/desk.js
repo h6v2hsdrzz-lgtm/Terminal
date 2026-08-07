@@ -18,6 +18,8 @@ const state = {
   joined: [],
   spread: null,
   newsScope: 'all',
+  tapeBar: '1H',
+  tapeBars: 300,
   ready: false,
 };
 
@@ -286,7 +288,7 @@ function render() {
   renderStamp();
 
   const views = {
-    overview: renderOverview, shortterm: renderShortTerm, cohorts: renderCohorts,
+    overview: renderOverview, shortterm: renderShortTerm, tape: renderTape, cohorts: renderCohorts,
     history: renderHistory, extremes: renderExtremes, ratio: renderRatio,
     macro: renderMacro, news: renderNews,
   };
@@ -694,6 +696,218 @@ function renderShortTerm(host) {
   } else {
     $('#st-price').innerHTML = '<div class="news-empty">Aucun fixing quotidien pour ce marché.</div>';
   }
+}
+
+/* ═══════════════ Vue : flux d'ordres ═══════════════
+   La seule vue du poste où l'on descend sous la semaine. Elle ne
+   porte pas sur le COMEX mais sur l'or tokenisé, seul support de l'or
+   dont le carnet et les transactions soient publics et interrogeables
+   depuis un navigateur. Le suivi du spot est étroit ; ce n'est pas
+   pour autant le même marché, et l'écran le rappelle. */
+
+async function renderTape(host) {
+  host.innerHTML = `<div class="panel"><div class="panel-bd">
+    <span class="dim">Connexion au carnet…</span></div></div>`;
+
+  const ok = await Tape.probe().catch(() => false);
+  if (state.view !== 'tape') return;
+  if (!ok) {
+    host.innerHTML = `<div class="panel"><div class="panel-bd">
+      <p class="legend-note">Aucun instrument d'or tokenisé ne répond actuellement.
+      Cette vue dépend de l'API publique OKX ; le reste du poste n'est pas concerné.</p>
+    </div></div>`;
+    return;
+  }
+
+  const bar = TAPE_BARS.find((b) => b.key === state.tapeBar) || TAPE_BARS[2];
+  let candles = [], trades = [], book = null, tick = null;
+  try {
+    [candles, trades, book, tick] = await Promise.all([
+      Tape.candles(bar.key, state.tapeBars || 300),
+      Tape.trades(500).catch(() => []),
+      Tape.book(25).catch(() => null),
+      Tape.ticker().catch(() => null),
+    ]);
+  } catch (e) {
+    host.innerHTML = `<div class="panel"><div class="panel-bd">
+      <span class="dn">Chargement impossible : ${escapeHtml(e.message)}</span></div></div>`;
+    return;
+  }
+  if (state.view !== 'tape') return;
+
+  const flow = Tape.flow(trades);
+  const bs = Tape.bookStats(book);
+  const lastBar = candles[candles.length - 1];
+  const anat = Tape.barAnatomy(lastBar);
+  const vol = Tape.realizedVol(candles, bar.ms);
+  const profile = Tape.volumeProfile(candles.slice(-160));
+  const spotGold = Macro.priceOf('GOLD');
+
+  const barBtns = TAPE_BARS.map((b) =>
+    `<button data-bar="${b.key}"${b.key === bar.key ? ' class="on"' : ''}>${escapeHtml(b.key)}</button>`).join('');
+
+  host.innerHTML = `
+    <div class="grid-4">
+      ${statCard({
+    label: `${Tape.instrument.label} — dernier`,
+    value: tick ? fmtNum(tick.last, 2) + ' $' : '—',
+    cls: tick && tick.changePct != null ? signClass(tick.changePct) : '',
+    sub: tick && tick.changePct != null
+      ? `${fmtSignedPct(tick.changePct, 2)} sur 24 h · haut ${fmtNum(tick.high24h, 2)} / bas ${fmtNum(tick.low24h, 2)}` : '—',
+  })}
+      ${statCard({
+    label: 'Écart au spot',
+    value: (tick && spotGold) ? fmtSignedPct(((tick.last - spotGold.price) / spotGold.price) * 100, 2) : '—',
+    cls: 'stat-v sm',
+    sub: spotGold ? `spot ${fmtNum(spotGold.price, 2)} $ · ${escapeHtml(spotGold.source)}` : '—',
+  })}
+      ${statCard({
+    label: `Delta du flux — ${flow ? flow.n : 0} transactions`,
+    value: flow ? fmtSignedPct(flow.deltaPct, 1) : '—',
+    cls: flow ? signClass(flow.delta) : '',
+    sub: flow
+      ? `${fmtNum(flow.buyVol, 2)} achetés au marché contre ${fmtNum(flow.sellVol, 2)} vendus`
+      : '—',
+  })}
+      ${statCard({
+    label: `Volatilité réalisée (${escapeHtml(bar.label)})`,
+    value: vol == null ? '—' : fmtPct(vol, 1),
+    cls: 'stat-v sm',
+    sub: 'annualisée sur la fenêtre affichée',
+  })}
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">
+        <span>${escapeHtml(Tape.instrument.name)} — ${escapeHtml(bar.label)}
+          <span class="hd-sub" id="tp-hover" style="margin-left:9px">survolez une bougie</span></span>
+        <span class="seg" id="tape-bars">${barBtns}</span>
+      </div>
+      <div class="panel-bd flush"><div class="chart-box" id="tp-chart"></div></div>
+      <div class="note"><b>Or tokenisé, pas le COMEX.</b> ${escapeHtml(Tape.instrument.name)} est adossé à
+        de l'or physique en coffre et se négocie en continu ; son suivi du spot est étroit mais imparfait.
+        C'est le seul support de l'or dont le carnet et les transactions soient publics — les contrats
+        à terme du COMEX ne diffusent rien de tel.</div>
+    </div>
+
+    <div class="grid-3">
+      <div class="panel">
+        <div class="panel-hd">Anatomie de la dernière bougie</div>
+        <div class="panel-bd flush"><div class="tbl-wrap"><table class="tbl"><tbody>
+          ${anat ? `
+          <tr><td style="color:var(--muted)">Sens</td><td class="n ${anat.direction === 'up' ? 'up' : anat.direction === 'down' ? 'dn' : ''}">
+            ${anat.direction === 'up' ? 'haussière' : anat.direction === 'down' ? 'baissière' : 'plate'}</td></tr>
+          <tr><td style="color:var(--muted)">Amplitude</td><td class="n">${fmtNum(anat.range, 2)} $</td></tr>
+          <tr><td style="color:var(--muted)">Corps</td><td class="n">${fmtPct(anat.bodyPct, 0)} de l'amplitude</td></tr>
+          <tr><td style="color:var(--muted)">Mèche haute</td><td class="n">${fmtNum(anat.upperWick, 2)} $</td></tr>
+          <tr><td style="color:var(--muted)">Mèche basse</td><td class="n">${fmtNum(anat.lowerWick, 2)} $</td></tr>
+          <tr><td style="color:var(--muted)">Clôture dans l'amplitude</td><td class="n">${fmtPct(anat.closePos, 0)}</td></tr>
+          <tr><td style="color:var(--muted)">Volume</td><td class="n">${fmtNum(lastBar.volume, 2)}</td></tr>` : ''}
+        </tbody></table></div></div>
+        <div class="note">Un corps étroit entre deux longues mèches dit qu'aucun camp n'a pris
+          le dessus, quel que soit le sens final de la bougie.</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-hd">Ce qu'il y a dans le flux
+          <span class="hd-sub">${flow ? `${new Date(flow.from).toLocaleTimeString('fr-FR')} → ${new Date(flow.to).toLocaleTimeString('fr-FR')}` : ''}</span></div>
+        <div class="panel-bd flush"><div class="tbl-wrap"><table class="tbl"><tbody>
+          ${flow ? `
+          <tr><td style="color:var(--muted)">Delta (achats − ventes au marché)</td>
+              <td class="n ${signClass(flow.delta)}"><b>${fmtSigned(Math.round(flow.delta * 100) / 100)}</b></td></tr>
+          <tr><td style="color:var(--muted)">Déséquilibre</td>
+              <td class="n ${signClass(flow.deltaPct)}">${fmtSignedPct(flow.deltaPct, 1)}</td></tr>
+          <tr><td style="color:var(--muted)">Montant échangé</td><td class="n">${fmtUsd(flow.turnover)}</td></tr>
+          <tr><td style="color:var(--muted)">Taille médiane</td><td class="n">${fmtNum(flow.median, 3)}</td></tr>
+          <tr><td style="color:var(--muted)">Seuil « gros ordre » (90ᵉ centile)</td><td class="n">${fmtNum(flow.p90, 3)}</td></tr>
+          <tr><td style="color:var(--muted)">Gros ordres</td><td class="n">${flow.bigCount}</td></tr>
+          <tr><td style="color:var(--muted)">Delta des gros ordres</td>
+              <td class="n ${signClass(flow.bigDelta)}">${fmtSigned(Math.round(flow.bigDelta * 100) / 100)}</td></tr>` : ''}
+        </tbody></table></div></div>
+        <div class="note">${flow && flow.bigVsAll != null && Math.abs(flow.bigVsAll) > 25
+    ? `<b>Les gros ordres divergent du flux général</b> de ${fmtSignedPct(flow.bigVsAll, 0)} :
+       le flux dominant et les grosses mains ne vont pas dans le même sens.`
+    : 'Le côté « agresseur » de chaque transaction est public : on sait qui a traversé le spread, pas seulement combien a été échangé.'}</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-hd">Carnet d'ordres<span class="hd-sub">profondeur autour du milieu</span></div>
+        <div class="panel-bd flush"><div class="tbl-wrap"><table class="tbl"><tbody>
+          ${bs ? `
+          <tr><td style="color:var(--muted)">Meilleure demande / offre</td>
+              <td class="n">${fmtNum(bs.bid, 2)} / ${fmtNum(bs.ask, 2)}</td></tr>
+          <tr><td style="color:var(--muted)">Écart</td>
+              <td class="n">${fmtNum(bs.spread, 2)} $ · ${fmtNum(bs.spreadBps, 1)} pb</td></tr>
+          ${[[0.0005, '±0,05 %'], [0.001, '±0,1 %'], [0.0025, '±0,25 %']].map(([k, lb]) => {
+      const d = bs.depths[k];
+      return `<tr><td style="color:var(--muted)">Déséquilibre ${lb}</td>
+                <td class="n ${signClass(d.imbalance)}">${fmtSignedPct(d.imbalance, 0)}</td></tr>`;
+    }).join('')}
+          <tr><td style="color:var(--muted)">Total demande / offre</td>
+              <td class="n">${fmtNum(bs.bidTotal, 2)} / ${fmtNum(bs.askTotal, 2)}</td></tr>` : ''}
+        </tbody></table></div></div>
+        <div class="note">Un déséquilibre positif signale plus de volume à l'achat qu'à la vente
+          dans la zone considérée — une pression, pas une garantie : un carnet se retire en une seconde.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">Profil de volume
+        <span class="hd-sub">où les échanges se sont concentrés · ${profile ? '160 dernières bougies' : ''}</span></div>
+      <div class="panel-bd">${profileHtml(profile)}</div>
+      <div class="note">Le <b>point de contrôle</b> est le niveau de prix qui a vu passer le plus de volume.
+        Les zones épaisses ont été acceptées par le marché, les zones fines traversées rapidement —
+        ce sont souvent celles qui se reparcourent vite.</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">Ce que cette vue ne peut pas montrer</div>
+      <div class="panel-bd">
+        <p class="legend-note"><b>Les liquidations sur l'or n'existent pas en accès public.</b>
+        Elles sont publiées sur les contrats perpétuels crypto, où un moteur de liquidation centralisé
+        les diffuse. Ni le COMEX ni le marché de gré à gré de Londres ne publient quoi que ce soit
+        d'équivalent : il n'y a pas de flux à afficher, et j'ai préféré ne rien mettre plutôt
+        qu'un chiffre inventé.</p>
+        <p class="legend-note" style="margin-top:9px"><b>Les stops et objectifs des intervenants
+        ne sont transmis à personne.</b> Un ordre stop reste chez le courtier ou dans le moteur
+        d'appariement jusqu'à son déclenchement ; aucune bourse ne diffuse les niveaux en attente.
+        Ce qui s'en approche le plus est la profondeur du carnet ci-dessus, qui montre les ordres
+        à cours limité effectivement visibles.</p>
+      </div>
+    </div>`;
+
+  Charts.candles($('#tp-chart'), candles, {
+    height: 420, precision: 2,
+    intraday: bar.ms < 86400000,
+    onCrosshair: (info) => {
+      const el = $('#tp-hover');
+      if (!el) return;
+      if (!info || !info.bar) { el.textContent = 'survolez une bougie'; return; }
+      const b = info.bar;
+      el.innerHTML = `O <b>${fmtNum(b.open, 2)}</b> H <b>${fmtNum(b.high, 2)}</b>
+        B <b>${fmtNum(b.low, 2)}</b> C <b>${fmtNum(b.close, 2)}</b>`;
+    },
+  });
+
+  $$('#tape-bars button').forEach((b) => {
+    b.onclick = () => { state.tapeBar = b.dataset.bar; render(); };
+  });
+}
+
+/* profil de volume en barres horizontales : un graphique complet
+   serait disproportionné pour vingt-quatre paliers */
+function profileHtml(p) {
+  if (!p) return '<div class="news-empty">Profil indisponible.</div>';
+  return `<div class="vprofile">${[...p.bins].reverse().map((b) => {
+    const isPoc = b === p.poc;
+    return `<div class="vp-row${isPoc ? ' poc' : ''}" title="${fmtNum(b.low, 2)} – ${fmtNum(b.high, 2)} $">
+      <span class="vp-px">${fmtNum((b.low + b.high) / 2, 2)}</span>
+      <span class="vp-bar"><i style="width:${((b.volume / p.maxVol) * 100).toFixed(1)}%"></i></span>
+      <span class="vp-v">${fmtNum(b.volume, 1)}</span>
+    </div>`;
+  }).join('')}</div>
+  <div class="legend-note" style="margin-top:9px">Point de contrôle :
+    <b>${fmtNum((p.poc.low + p.poc.high) / 2, 2)} $</b> · amplitude ${fmtNum(p.low, 2)} – ${fmtNum(p.high, 2)} $</div>`;
 }
 
 /* ═══════════════ Vue : cohortes ═══════════════ */

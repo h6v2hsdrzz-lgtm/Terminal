@@ -265,6 +265,17 @@ table.tbl tbody tr:last-child td { border-bottom:none; }
 
 .legend-note { color:var(--faint); font-size:10.5px; line-height:1.55; }
 
+/* ═══════════ PROFIL DE VOLUME ═══════════ */
+.vprofile { display:flex; flex-direction:column; gap:1px; }
+.vp-row { display:grid; grid-template-columns:58px 1fr 52px; gap:8px; align-items:center; font-size:10.5px; }
+.vp-row:hover { background:var(--panel-2); }
+.vp-px, .vp-v { color:var(--muted); font-variant-numeric:tabular-nums; }
+.vp-v { text-align:right; }
+.vp-bar { height:9px; background:var(--panel-3); border-radius:2px; overflow:hidden; }
+.vp-bar i { display:block; height:100%; background:linear-gradient(90deg,#3a4657,#6f8fb0); border-radius:2px; }
+.vp-row.poc .vp-bar i { background:linear-gradient(90deg,#8a6b2a,var(--accent)); }
+.vp-row.poc .vp-px, .vp-row.poc .vp-v { color:var(--accent); }
+
 /* ═══════════ NEWS ═══════════ */
 .news-list { display:flex; flex-direction:column; }
 .news-item { padding:10px 13px; border-bottom:1px solid #161b22; display:flex; flex-direction:column; gap:4px; }
