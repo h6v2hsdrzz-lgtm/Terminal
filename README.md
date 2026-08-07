@@ -1,117 +1,26 @@
-# Terminal — poste de trading multi-courtiers
+# Bullion Desk — positionnement institutionnel Or & Argent
 
-Terminal web professionnel (non officiel) : données de marché temps réel,
-graphiques de niveau TradingView, carnet d'ordres, statistiques avancées,
-paper trading et analyste IA — le tout **sans backend** : le navigateur parle
-directement aux API officielles.
+Poste web qui répond à une seule question : **qui détient quoi sur l'or et
+l'argent, et pourquoi ?**
 
-Le dépôt contient **deux postes indépendants** :
+Il n'existe pas de flux public des positions nominatives de telle banque ou de
+tel hedge fund — ce n'est pas publié. La source qui s'en approche le plus est le
+rapport hebdomadaire **Commitments of Traders** de la CFTC : chaque mardi, toutes
+les positions déclarables du COMEX sont agrégées par catégorie d'opérateur et
+publiées le vendredi. C'est la matière première de ce poste.
 
-| Poste | Page | Objet |
-|-------|------|-------|
-| **Terminal** | `index.html` | Trading multi-courtiers : crypto (OKX), CFD (XTB), graphiques, paper trading |
-| **Bullion Desk** | `positions.html` | Positionnement institutionnel sur l'or et l'argent : rapport COT de la CFTC, régime macro, agent d'analyse |
-
-![aperçu](docs/screenshot.png)
-
-## Courtiers / sources de données
-
-| Source | Données | Trading | Identifiants |
-|--------|---------|---------|--------------|
-| **OKX** | Crypto spot temps réel (WebSocket public, repli REST auto) | Paper trading (100 000 USDT fictifs, prix réels) | Aucun |
-| **XTB** | CFD Forex / indices / matières premières (xAPI) | **Réel** sur votre compte démo ou réel | N° de compte + mot de passe xStation |
-| **Simulation** | Marche aléatoire locale | Paper trading | Aucun |
-
-## Fonctionnalités
-
-**Graphiques** — moteur [TradingView Lightweight Charts™](https://github.com/tradingview/lightweight-charts)
-(open source, Apache-2.0), en **disposition 1 / 2 / 4 graphiques synchronisés**
-(chaque cellule son instrument et son unité de temps) : chandeliers /
-Heikin-Ashi / ligne, volume, EMA 20-50-200, Bollinger, VWAP session,
-**SuperTrend, Ichimoku**, RSI, **Stochastique** et MACD en sous-panneaux,
-échelle log, axe en heure locale, zoom/pan fluides, crosshair avec légende
-OHLC, lignes de prix positions (entrée/SL/TP) et alertes. **Outils de dessin**
-(horizontale, tendance, Fibonacci) persistés par instrument. Chargement
-infini de l'historique. Bandeau **marché global** (cap., dominance BTC/ETH).
-
-**Marché** — carnet d'ordres 5 niveaux avec barres de profondeur, flux des
-transactions, statistiques : variation/volumes 24h, **funding rate, open
-interest, prix d'index** (dérivés OKX), ATR 14, volatilité par bougie,
-spread/swap/levier (CFD XTB). Recherche instantanée parmi tous les
-instruments OKX.
-
-**Trading** — ticket achat/vente au marché avec SL/TP, confirmation
-systématique, notionnel affiché. Paper trading exécuté aux prix réels avec
-**SL/TP déclenchés automatiquement**, historique persistant et statistiques
-de portefeuille (taux de réussite, profit factor, gain/perte moyens).
-En mode XTB : ordres réels sur votre compte.
-
-**Alertes de prix** — toast + notification navigateur + ligne sur le
-graphique, persistées localement.
-
-**IA** — rapport d'analyse technique local (score composite, verdict,
-niveaux pivots — fonctionne sans clé) + chat Claude avec contexte marché
-complet (prix, indicateurs, carnet, funding, positions, compte) envoyé
-**directement du navigateur** à l'API Anthropic. Boutons : Analyse, Risque,
-Plan de trade. Clé stockée en localStorage (`KEY`).
-
-**News** — annonces officielles OKX / flux news XTB selon la source.
+**Sans backend.** Le navigateur interroge directement les API publiques ; les
+sources qui n'autorisent pas le CORS sont déposées en instantanés statiques par
+GitHub Actions.
 
 ## Démarrage
-
-Site statique, aucune dépendance :
 
 ```bash
 python3 -m http.server 8000   # puis http://localhost:8000
 ```
 
-ou ouvrez directement la version en ligne, choisissez **OKX** et lancez —
-aucun compte requis.
-
-## Ligne de commande (`/` pour focaliser, ↑↓ historique)
-
-| Commande | Effet |
-|----------|-------|
-| `BTC-USDT` / `ETH-USDT 4H` | sélectionne l'instrument (+ unité de temps) |
-| `BUY 0.05` / `SELL 0.05 98000 92000` | ordre au marché (+ SL + TP) |
-| `CLOSE 3` / `CLOSE ALL` | clôture une / toutes les positions |
-| `ALERT BTC-USDT > 70000` | alerte de prix (`ALERT DEL 1`) |
-| `ADD SOL-USDT` / `DEL SOL-USDT` | watchlist |
-| `TA` / `AI question…` / `KEY` | analyse technique / chat IA / clé API |
-| `BOOK` `STATS` `NEWS` `POS` `HIST` | navigation |
-| `IND RSI` (EMA BB VWAP VOL RSI MACD) | indicateurs |
-| `RESET PAPER` | remet le compte fictif à 100 000 |
-| `HELP` | aide |
-
-## Architecture
-
-```
-index.html              structure
-css/terminal.css        thème sombre sobre (accent doré unique)
-js/vendor/              TradingView Lightweight Charts™ v5 (Apache-2.0)
-js/indicators.js        SMA EMA RSI MACD Bollinger ATR VWAP Heikin-Ashi + moteur TA
-js/chart.js             graphique multi-panneaux (LWC v5)
-js/paper.js             moteur de paper trading (SL/TP auto, stats)
-js/providers/okx.js     OKX v5 public : WS temps réel + repli REST
-js/providers/xtb.js     XTB xAPI : données + compte + ordres réels
-js/providers/sim.js     simulation hors-ligne
-js/xapi.js              client bas niveau xAPI XTB
-js/ai.js                rapport TA + chat Claude (API Anthropic côté navigateur)
-js/app.js               orchestration
-```
-
----
-
-# Bullion Desk — positionnement institutionnel Or & Argent
-
-`positions.html` — un second poste, autonome, qui répond à une seule question :
-**qui détient quoi sur l'or et l'argent, et pourquoi ?**
-
-Il n'existe pas de flux public des positions nominatives de JPMorgan ou d'un
-hedge fund donné. La source qui s'en approche le plus est le rapport
-hebdomadaire **Commitments of Traders** de la CFTC : chaque mardi, toutes les
-positions déclarables du COMEX sont agrégées par catégorie d'opérateur, et
-publiées le vendredi. C'est la matière première de ce poste.
+Aucune installation, aucun compte. Une clé API Anthropic est nécessaire
+uniquement pour l'agent d'analyse ; les sept vues fonctionnent sans.
 
 ## Sources
 
@@ -147,6 +56,8 @@ Le rapport **historique** (depuis 1986) n'a que deux blocs — non-commerciaux e
 commerciaux — mais vingt ans d'historique en plus, indispensables pour situer un
 extrême dans le temps long. Les deux existent en « futures seuls » et
 « futures + options ».
+
+Sept marchés : or, argent, micro or, micro argent, platine, palladium, cuivre.
 
 ## Ce que le poste calcule
 
@@ -186,13 +97,14 @@ Six analyses pré-câblées (lecture du COT, régime macro, interprétation des 
 synthèse & scénarios, cartographie du risque, arbitrage or/argent) et un champ
 libre. Réponses **diffusées en flux**. L'appel part directement du navigateur
 vers l'API Anthropic ; la clé reste en `localStorage` et ne transite par aucun
-serveur intermédiaire. Le reste du poste fonctionne sans clé.
+serveur intermédiaire.
 
 ## Architecture
 
 ```
-positions.html          structure
-css/positions.css       thème partagé avec le terminal
+index.html              structure
+css/positions.css       thème sombre, accent doré
+js/vendor/              TradingView Lightweight Charts™ v5 (Apache-2.0)
 js/cot/cftc.js          client Socrata CFTC : marchés, colonnes, cache local
 js/cot/metrics.js       COT index, z-scores, percentiles, divergences, analogues
 js/cot/macro.js         instantanés FRED/LBMA/news + spot temps réel + régime
@@ -202,15 +114,16 @@ js/cot/desk.js          orchestration et rendu des sept vues
 scripts/refresh_data.py collecte des sources sans CORS → data/*.json
 ```
 
+Le dossier `algo/` contient un paquet Python indépendant (backtest et forward
+test d'une stratégie or/argent), sans lien avec le poste web.
+
 ## Avertissements
 
-- Projet indépendant, non affilié à OKX, XTB, TradingView, la CFTC, la LBMA ni Bloomberg.
+- Projet indépendant, non affilié à la CFTC, à la LBMA ni à TradingView.
 - Le COT est **hebdomadaire et différé** : arrêté le mardi, publié le vendredi.
   Ce n'est jamais une photographie du marché en temps réel, et il ne couvre que
   les contrats à terme américains — ni l'OTC de Londres, ni les ETF, ni les
   achats de banques centrales.
 - Les statistiques sur configurations comparables sont **descriptives**, sur de
   petits échantillons d'épisodes non indépendants. Ce ne sont pas des prévisions.
-- Le paper trading est fictif. En mode **XTB réel**, les ordres sont réels.
-- Les produits à effet de levier comportent un risque élevé de perte rapide
-  en capital. Ceci n'est pas un conseil en investissement.
+- Rien ici n'est un conseil en investissement.
