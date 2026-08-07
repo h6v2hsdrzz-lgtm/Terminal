@@ -351,7 +351,7 @@ function renderPositions() {
     add('Stop', nf(p.sl, 2), 'neg');
     add('Objectif', nf(p.tp, 2), 'pos');
     add('Résultat courant', `${(pr.r_now || 0) >= 0 ? '+' : ''}${nf(pr.r_now, 2)} R`, sgn(pr.r_now));
-    add('Objectif', `${nf(pr.r_target, 2)} R`);
+    add('Gain visé', `${nf(pr.r_target, 2)} R`);
     if (p.sl && p.avg_price) {
       const risk = Math.abs(p.avg_price - p.sl) * Math.abs(p.units);
       add('Risque', `${money(risk)} (${nf(100 * risk / (s.equity || 1), 2)} %)`);
