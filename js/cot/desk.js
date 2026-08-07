@@ -328,6 +328,239 @@ function gaugeHtml(pct, tone, scale = ['0', '50', '100']) {
     <div class="gauge-scale"><span>${scale[0]}</span><span>${scale[1]}</span><span>${scale[2]}</span></div>`;
 }
 
+/* ═══════════════ Tiroir détaillé ═══════════════
+   Un clic sur une cohorte ou une série macro ouvre tout ce que la
+   donnée contient à son sujet, sans quitter la vue d'origine. */
+
+function openDrawer(eyebrow, title, bodyHtml, after) {
+  $('#drawer-eyebrow').textContent = eyebrow;
+  $('#drawer-title').textContent = title;
+  $('#drawer-bd').innerHTML = bodyHtml;
+  $('#drawer-overlay').classList.remove('hidden');
+  $('#drawer-bd').scrollTop = 0;
+  if (after) after();
+}
+
+function closeDrawer() {
+  $('#drawer-overlay').classList.add('hidden');
+  /* les graphiques du tiroir sont détruits avec le reste au prochain
+     rendu ; on vide le corps pour ne pas garder de canvas orphelins */
+  $('#drawer-bd').innerHTML = '';
+}
+
+function kv(label, value, sub, cls = '') {
+  return `<div class="dr-kv"><label>${label}</label>
+    <span class="${cls}">${value}</span>${sub ? `<small>${sub}</small>` : ''}</div>`;
+}
+
+/* Histogramme de répartition : la barre allumée est le décile où se
+   trouve la valeur du jour. Un percentile seul est un chiffre ; la
+   distribution montre s'il est au bord d'une falaise ou au milieu. */
+function distributionHtml(values, current) {
+  if (!values.length) return '';
+  const min = Math.min(...values), max = Math.max(...values);
+  if (!(max > min)) return '';
+  const bins = new Array(20).fill(0);
+  for (const v of values) bins[Math.min(19, Math.floor(((v - min) / (max - min)) * 20))]++;
+  const here = Math.min(19, Math.floor(((current - min) / (max - min)) * 20));
+  const peak = Math.max(...bins) || 1;
+  return `<div class="dr-dist">${bins.map((b, i) =>
+    `<i class="${i === here ? 'here' : ''}" style="height:${Math.max(3, (b / peak) * 100)}%"
+        title="${b} arrêté${b > 1 ? 's' : ''}"></i>`).join('')}</div>
+    <div class="dr-axis"><span>${fmtInt(min)}</span><span>répartition historique</span><span>${fmtInt(max)}</span></div>`;
+}
+
+function openCohortDrawer(cohortKey) {
+  const { market, px } = marketCtx();
+  const rows = state.rows;
+  const cohorts = CFTC.cohortsFor(state.report);
+  const c = cohorts.find((x) => x.key === cohortKey);
+  if (!c) return;
+  const s = Metrics.cohortStats(rows, cohortKey, market, px);
+  const last = rows[rows.length - 1];
+  const net = Metrics.series(rows, cohortKey, 'net');
+  const values = net.map((p) => p.value);
+  const flips = Metrics.flips(net, 0);
+  const moves = Metrics.bigMoves(net, 260, 2).slice(0, 8);
+  const joined = Metrics.alignPrice(net, Macro.priceSeries(state.metal));
+  const corr = joined.length ? Metrics.correlation(joined, 52) : null;
+  const vel = Metrics.velocity(net);
+
+  const body = `
+    <div class="dr-sec">
+      <div class="dr-h">QUI SONT-ILS</div>
+      <p class="dr-p">${escapeHtml(c.desc)}</p>
+      <p class="dr-p"><b>Rôle de marché :</b> ${c.side === 'spec'
+      ? 'spéculatif — la position exprime une opinion directionnelle.'
+      : c.side === 'hedge'
+        ? 'couverture — la position compense une exposition prise ailleurs (physique, OTC, indices). Elle ne traduit pas un avis de marché.'
+        : 'petits porteurs — sous le seuil de déclaration, agrégés sans détail.'}</p>
+    </div>
+
+    <div class="dr-sec">
+      <div class="dr-h">POSITION AU ${fmtDate(last.date).toUpperCase()}</div>
+      <div class="dr-grid">
+        ${kv('Longs', fmtInt(s.long), `${fmtPct(s.pctLong)} de l'OI`)}
+        ${kv('Courts', fmtInt(s.short), `${fmtPct(s.pctShort)} de l'OI`)}
+        ${kv('Net', fmtSigned(s.net), `${fmtPct(s.pctOi)} de l'OI`, signClass(s.net))}
+        ${kv('Spread', fmtInt(s.spread), 'positions appariées')}
+        ${kv('Notionnel', fmtUsd(s.notional), `${fmtInt(s.ounces)} ${escapeHtml(market.unit)}`)}
+        ${kv('Biais long / court', fmtPct(s.bias, 0), 'borné à ±100')}
+      </div>
+    </div>
+
+    <div class="dr-sec">
+      <div class="dr-h">OPÉRATEURS</div>
+      <div class="dr-grid">
+        ${kv('Déclarants', s.traders || '—', `${s.tradersLong} longs · ${s.tradersShort} courts`)}
+        ${kv('Net par opérateur', s.netPerTrader == null ? '—' : fmtSigned(Math.round(s.netPerTrader)),
+    'plus il est élevé, plus un débouclage est brutal')}
+        ${kv('Part des 4 premiers', `${fmtPct(last.conc.net4Long)} / ${fmtPct(last.conc.net4Short)}`, 'long / court, tous opérateurs')}
+      </div>
+      <p class="dr-p">La CFTC agrège volontairement : elle publie des catégories et des nombres
+        d'opérateurs, jamais les positions nominatives. Le net par opérateur est la mesure la plus
+        fine accessible — elle dit si la position est portée par beaucoup de mains ou par quelques-unes.</p>
+    </div>
+
+    <div class="dr-sec">
+      <div class="dr-h">OÙ SE SITUE CETTE POSITION</div>
+      <div class="dr-grid">
+        ${kv('COT index 1 an', s.index[52] == null ? '—' : Math.round(s.index[52]), '0 = plancher · 100 = sommet')}
+        ${kv('COT index 3 ans', s.index[156] == null ? '—' : Math.round(s.index[156]))}
+        ${kv('Z-score 5 ans', s.z[260] == null ? '—' : fmtNum(s.z[260], 2) + 'σ')}
+        ${kv('Percentile historique', s.pct[0] == null ? '—' : fmtPct(s.pct[0], 0), `${rows.length} arrêtés`)}
+      </div>
+      ${distributionHtml(values, s.net)}
+    </div>
+
+    <div class="dr-sec">
+      <div class="dr-h">HISTORIQUE COMPLET</div>
+      <div class="chart-box" id="dr-chart"></div>
+    </div>
+
+    <div class="dr-sec">
+      <div class="dr-h">RYTHME</div>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Horizon</th><th>Δ net</th><th>% amplitude 1 an</th></tr></thead>
+        <tbody>${[1, 2, 4, 8, 13].map((h) => {
+      const v = vel[h];
+      return `<tr><td>${h} sem.</td>
+        <td class="n ${signClass(v && v.delta)}">${v ? fmtSigned(v.delta) : '—'}</td>
+        <td class="n">${v && v.share != null ? fmtSignedPct(v.share, 0) : '—'}</td></tr>`;
+    }).join('')}</tbody>
+      </table></div>
+    </div>
+
+    <div class="dr-sec">
+      <div class="dr-h">RELATION AU PRIX</div>
+      <p class="dr-p">Corrélation entre variations hebdomadaires de position et de prix sur 52 semaines :
+        <b>${corr == null ? '—' : fmtNum(corr, 2)}</b>${corr == null ? '.'
+      : corr > 0.4 ? ' — cette cohorte suit le prix.'
+        : corr < -0.2 ? ' — elle va à contre-courant du prix, comportement typique d\'une contrepartie.'
+          : ' — lien faible : sa position ne se déduit pas du prix.'}</p>
+    </div>
+
+    <div class="dr-sec">
+      <div class="dr-h">MOUVEMENTS NOTABLES</div>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Arrêté</th><th>Variation</th><th>Ampleur</th></tr></thead>
+        <tbody>${moves.length ? moves.map((m) => `<tr>
+          <td>${fmtDate(m.date)}</td>
+          <td class="n ${signClass(m.delta)}">${fmtSigned(m.delta)}</td>
+          <td class="n">${fmtNum(m.sigma, 1)}σ</td></tr>`).join('')
+      : '<tr><td colspan="3" class="dim">Aucun mouvement au-delà de 2σ sur la période.</td></tr>'}</tbody>
+      </table></div>
+      ${flips.length ? `<p class="dr-p">Le net a changé de signe <b>${flips.length} fois</b>
+        depuis ${fmtDate(rows[0].date)} — dernier basculement le ${fmtDate(flips[flips.length - 1].date)}
+        vers ${flips[flips.length - 1].to === 'long' ? 'acheteur' : 'vendeur'}.</p>` : ''}
+    </div>
+
+    <div class="dr-sec">
+      <div class="dr-h">CE QUI N'EST PAS PUBLIÉ</div>
+      <p class="dr-p">Aucune source publique ne donne les positions nominatives d'un établissement,
+        ses prix d'entrée, ses stops ou ses objectifs. La CFTC agrège précisément pour que ces
+        informations ne soient pas identifiables, et les seuls chiffres qu'une banque diffuse sur
+        l'or sont ses notes de recherche — une opinion publiée, pas son livre. Tout écran affichant
+        « JPMorgan : long 4 200 lots, stop à 4 180 » serait une invention.</p>
+    </div>`;
+
+  openDrawer(`COHORTE · ${market.label.toUpperCase()}`, c.label, body, () => {
+    Charts.timeSeries($('#dr-chart'), [
+      { label: c.short, color: c.color, data: net, scale: 'left', type: 'area', width: 2 },
+      ...(joined.length ? [{
+        label: 'Prix', color: '#8892a0',
+        data: joined.map((p) => ({ ts: p.ts, value: p.price })),
+        scale: 'right', width: 1, dashed: true, precision: 2, minMove: 0.01,
+      }] : []),
+    ], { height: 260, zeroLine: true });
+  });
+}
+
+function openMacroDrawer(id) {
+  const s = Macro.snapshot(id);
+  if (!s) return;
+  const values = s.obs.map((o) => o[1]);
+  const g = Macro.correlation('GOLD', id);
+  const si = Macro.correlation('SILVER', id);
+
+  const body = `
+    <div class="dr-sec">
+      <div class="dr-h">CE QUE MESURE CETTE SÉRIE</div>
+      <p class="dr-p">${escapeHtml(s.desc || '')}</p>
+      <p class="dr-p"><b>Sens pour l'or :</b> ${s.sign === -1
+      ? 'une hausse pèse sur le métal.' : s.sign === 1
+        ? 'une hausse le soutient.' : 'pas de sens directionnel simple.'}
+        Code FRED <b>${escapeHtml(s.id)}</b>, dernière observation le ${fmtDate(s.date)}.</p>
+    </div>
+
+    <div class="dr-sec">
+      <div class="dr-h">NIVEAU ET VARIATIONS</div>
+      <div class="dr-grid">
+        ${kv('Niveau', fmtNum(s.last, 2) + (s.unit === 'idx' ? '' : ' ' + escapeHtml(s.unit)))}
+        ${kv('1 semaine', s.d5 == null ? '—' : fmtNum(s.d5, 2))}
+        ${kv('1 mois', s.d21 == null ? '—' : fmtNum(s.d21, 2))}
+        ${kv('3 mois', s.d63 == null ? '—' : fmtNum(s.d63, 2))}
+        ${kv('1 an', s.d252 == null ? '—' : fmtNum(s.d252, 2))}
+        ${kv('Dans son amplitude 1 an', s.range1y ? fmtPct(s.range1y.pct, 0) : '—',
+      s.range1y ? `${fmtNum(s.range1y.min, 2)} – ${fmtNum(s.range1y.max, 2)}` : '')}
+      </div>
+      <p class="dr-p">Les variations sont brutes, sans couleur : sur ces séries, « en hausse »
+        ne veut pas dire « favorable ». Le sens propre à chaque moteur est indiqué ci-dessus.</p>
+    </div>
+
+    <div class="dr-sec">
+      <div class="dr-h">HISTORIQUE</div>
+      <div class="chart-box" id="dr-chart"></div>
+    </div>
+
+    <div class="dr-sec">
+      <div class="dr-h">RÉPARTITION</div>
+      ${distributionHtml(values, s.last)}
+    </div>
+
+    <div class="dr-sec">
+      <div class="dr-h">LIEN AVEC LES MÉTAUX</div>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Métal</th><th>Corrélation 52 sem.</th><th>Observations</th></tr></thead>
+        <tbody>
+          <tr><td>Or</td><td class="n">${g ? fmtNum(g.r, 2) : '—'}</td><td class="n dim">${g ? g.n : '—'}</td></tr>
+          <tr><td>Argent</td><td class="n">${si ? fmtNum(si.r, 2) : '—'}</td><td class="n dim">${si ? si.n : '—'}</td></tr>
+        </tbody>
+      </table></div>
+      <p class="dr-p">Corrélation des variations hebdomadaires, pas des niveaux. Une valeur proche
+        de zéro ne veut pas dire que la série est sans importance : elle dit que sur cette fenêtre,
+        le métal n'a pas suivi ce moteur — ce qui est en soi une information sur le régime en cours.</p>
+    </div>`;
+
+  openDrawer('SÉRIE MACRO · FRED', s.label, body, () => {
+    const pts = s.obs.map(([d, v]) => ({ ts: Math.floor(Date.parse(d + 'T00:00:00Z') / 1000), value: v }));
+    Charts.timeSeries($('#dr-chart'), [{
+      label: s.label, color: '#6f8fb0', data: pts, scale: 'left', type: 'area',
+      precision: 2, minMove: 0.01,
+    }], { height: 260 });
+  });
+}
+
 /* ═══════════════ Vue : ensemble ═══════════════ */
 
 function renderOverview(host) {
@@ -379,7 +612,7 @@ function renderOverview(host) {
     const s = last.cohorts[c.key];
     const w = (Math.abs(s.net) / maxAbs) * 50;
     const left = s.net >= 0 ? 50 : 50 - w;
-    return `<div class="contrib-row" title="${escapeHtml(c.desc)}">
+    return `<div class="contrib-row clickable" data-cohort="${c.key}" title="${escapeHtml(c.desc)} — cliquer pour le détail">
       <div class="contrib-lb">
         <span class="co-name"><span class="co-dot" style="background:${c.color}"></span>${escapeHtml(c.short)}</span>
         <small>${fmtInt(s.long)} longs · ${fmtInt(s.short)} courts · ${fmtPct(last.oi ? (s.net / last.oi) * 100 : 0)} de l'OI</small>
@@ -561,7 +794,7 @@ function renderShortTerm(host) {
       const w = (Math.abs(s.dNet) / maxFlow) * 50;
       const left = s.dNet >= 0 ? 50 : 50 - w;
       const rel2 = p && Math.abs(p.net) > 0 ? (s.dNet / Math.abs(p.net)) * 100 : null;
-      return `<tr title="${escapeHtml(c.desc)}">
+      return `<tr class="clickable" data-cohort="${c.key}" title="${escapeHtml(c.desc)} — cliquer pour le détail">
         <td><span class="co-name"><span class="co-dot" style="background:${c.color}"></span>${escapeHtml(c.short)}</span></td>
         <td class="n ${signClass(s.dLong)}">${fmtSigned(s.dLong)}</td>
         <td class="n ${signClass(-s.dShort)}">${fmtSigned(s.dShort)}</td>
@@ -922,7 +1155,7 @@ function renderCohorts(host) {
     const s = Metrics.cohortStats(rows, c.key, market, px);
     const gross = s.long + s.short || 1;
     const idx = s.index[156];
-    return `<tr title="${escapeHtml(c.desc)}">
+    return `<tr class="clickable" data-cohort="${c.key}" title="${escapeHtml(c.desc)} — cliquer pour le détail">
       <td><span class="co-name">
         <span class="co-dot" style="background:${c.color}"></span>
         <span>${escapeHtml(c.label)}</span>
@@ -1119,7 +1352,7 @@ function renderExtremes(host) {
 
   const matrix = cohorts.map((c) => {
     const s = Metrics.cohortStats(rows, c.key, market, px);
-    return `<tr title="${escapeHtml(c.desc)}">
+    return `<tr class="clickable" data-cohort="${c.key}" title="${escapeHtml(c.desc)} — cliquer pour le détail">
       <td><span class="co-name"><span class="co-dot" style="background:${c.color}"></span>${escapeHtml(c.short)}</span></td>
       ${cell(s.index[26], 'idx')}${cell(s.index[52], 'idx')}${cell(s.index[156], 'idx')}${cell(s.index[260], 'idx')}${cell(s.index[0], 'idx')}
       ${cell(s.z[52], 'z')}${cell(s.z[156], 'z')}${cell(s.z[260], 'z')}
@@ -1329,7 +1562,7 @@ function renderMacro(host) {
     if (!s) return '';
     const dir = s.sign === 0 ? '' : (s.d21 || 0) * s.sign > 0 ? 'up' : (s.d21 || 0) * s.sign < 0 ? 'dn' : '';
     const spark = Charts.sparkline(s.obs.slice(-120).map((o) => o[1]));
-    return `<tr title="${escapeHtml(s.desc || '')}">
+    return `<tr class="clickable" data-macro="${escapeHtml(s.id)}" title="${escapeHtml(s.desc || '')} — cliquer pour le détail">
       <td>${escapeHtml(s.label)}<br><small class="dim">${escapeHtml(s.id)} · ${fmtDate(s.date)}</small></td>
       <td class="n"><b>${fmtNum(s.last, 2)}</b> <span class="dim">${escapeHtml(s.unit === 'idx' ? '' : s.unit)}</span></td>
       <td class="n">${s.d5 == null ? '—' : fmtNum(s.d5, 2)}</td>
@@ -1646,11 +1879,25 @@ function wireEvents() {
     $('#agent-reopen').textContent = 'AGENT IA';
   }
 
+  /* tiroir détaillé — délégation : les vues sont redessinées à chaque
+     changement d'état, donc on écoute au niveau du conteneur plutôt que
+     de recâbler des poignées à chaque rendu */
+  $('#main').addEventListener('click', (e) => {
+    const co = e.target.closest('[data-cohort]');
+    if (co) { openCohortDrawer(co.dataset.cohort); return; }
+    const mc = e.target.closest('[data-macro]');
+    if (mc) openMacroDrawer(mc.dataset.macro);
+  });
+  $('#drawer-x').onclick = closeDrawer;
+  $('#drawer-overlay').onclick = (e) => { if (e.target.id === 'drawer-overlay') closeDrawer(); };
+
   /* modal */
   $('#modal-x').onclick = closeModal;
   $('#modal-overlay').onclick = (e) => { if (e.target.id === 'modal-overlay') closeModal(); };
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !$('#modal-overlay').classList.contains('hidden')) closeModal();
+    if (e.key !== 'Escape') return;
+    if (!$('#drawer-overlay').classList.contains('hidden')) closeDrawer();
+    else if (!$('#modal-overlay').classList.contains('hidden')) closeModal();
   });
 }
 

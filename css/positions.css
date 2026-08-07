@@ -384,6 +384,58 @@ table.tbl tbody tr:last-child td { border-bottom:none; }
 #status-msg.warn { color:var(--accent); }
 #status-msg.err { color:var(--dn); }
 
+/* ═══════════ PANNEAU DÉTAILLÉ ═══════════
+   Un tiroir plutôt qu'une page : on inspecte une cohorte ou une série
+   sans perdre l'écran qui a motivé le clic. */
+#drawer-overlay {
+  position:fixed; inset:0; z-index:110; background:rgba(6,8,11,.62);
+  display:flex; justify-content:flex-end;
+}
+#drawer {
+  width:min(880px, 92vw); height:100%; background:var(--panel);
+  border-left:1px solid var(--border-2); display:flex; flex-direction:column;
+  box-shadow:-30px 0 80px rgba(0,0,0,.55); animation:drawer-in .18s ease-out;
+}
+@keyframes drawer-in { from { transform:translateX(28px); opacity:.4; } to { transform:none; opacity:1; } }
+@media (prefers-reduced-motion:reduce) { #drawer { animation:none; } }
+
+#drawer-hd {
+  flex:0 0 auto; display:flex; align-items:flex-start; justify-content:space-between; gap:14px;
+  padding:15px 18px; border-bottom:1px solid var(--border);
+}
+#drawer-eyebrow { color:var(--faint); font-size:9.5px; letter-spacing:1.6px; margin-bottom:4px; }
+#drawer-title { font-size:16px; font-weight:650; letter-spacing:.2px; }
+#drawer-x { background:none; border:none; color:var(--muted); font-size:14px; padding:2px 5px; }
+#drawer-x:hover { color:var(--txt); }
+#drawer-bd { flex:1; overflow-y:auto; padding:16px 18px; display:flex; flex-direction:column; gap:15px; }
+
+.dr-sec { display:flex; flex-direction:column; gap:9px; }
+.dr-h { font-size:10.5px; letter-spacing:1.3px; color:var(--accent); font-weight:650; }
+.dr-p { color:var(--muted); font-size:11.5px; line-height:1.65; }
+.dr-p b { color:var(--txt); }
+.dr-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:9px; }
+.dr-kv {
+  background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:9px 11px;
+  display:flex; flex-direction:column; gap:3px; min-width:0;
+}
+.dr-kv label { color:var(--faint); font-size:9.5px; letter-spacing:.5px; }
+.dr-kv span { font-size:14px; font-weight:600; font-variant-numeric:tabular-nums; }
+.dr-kv small { color:var(--faint); font-size:10px; }
+
+/* répartition en centiles : où se situe la valeur du jour dans son histoire */
+.dr-dist { display:flex; align-items:flex-end; gap:2px; height:64px; }
+.dr-dist i { flex:1; background:var(--panel-3); border-radius:1px 1px 0 0; min-height:2px; }
+.dr-dist i.here { background:var(--accent); }
+.dr-axis { display:flex; justify-content:space-between; color:var(--faint); font-size:9.5px; margin-top:4px; }
+
+/* rendre cliquable ce qui ouvre un tiroir */
+.clickable { cursor:pointer; }
+tr.clickable:hover td, .stat.clickable:hover { background:var(--panel-2); }
+.clickable .co-name::after {
+  content:"›"; color:var(--faint); margin-left:5px; font-size:12px;
+}
+.clickable:hover .co-name::after { color:var(--accent); }
+
 /* ═══════════ MODAL & TOASTS ═══════════ */
 #modal-overlay {
   position:fixed; inset:0; z-index:120; background:rgba(6,8,11,.72);
