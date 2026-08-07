@@ -139,14 +139,37 @@ function closeModal() { $('#modal-overlay').classList.add('hidden'); }
 
 /* ═══════════════ Chargement ═══════════════ */
 
+/* Ouvrir la page par double-clic la charge en file:// — un contexte où
+   le navigateur refuse tout fetch, y compris vers les fichiers voisins.
+   Le poste ne peut alors rien charger. Autant le dire franchement, avec
+   la commande qui règle le problème, plutôt que de tourner sans fin. */
+function fileProtocolNotice() {
+  const err = $('#boot-error');
+  $('#boot-msg').textContent = '';
+  err.classList.remove('hidden');
+  err.innerHTML = `<b>Il faut servir le poste par HTTP.</b><br>
+    La page est ouverte en <code>file://</code> : dans ce mode, le navigateur
+    bloque toute requête réseau, y compris vers les fichiers du dossier.<br><br>
+    Depuis le dossier du projet :<br>
+    <code>python3 -m http.server 8000</code><br>
+    puis ouvrez <b>http://localhost:8000</b>`;
+}
+
 async function boot() {
   const msg = $('#boot-msg');
+  if (location.protocol === 'file:') { fileProtocolNotice(); return; }
+
   try {
     msg.textContent = 'Chargement des instantanés macro, prix et news…';
     const snap = await Macro.loadSnapshots();
 
     msg.textContent = 'Cotations spot…';
-    await Macro.refreshSpot().catch(() => null);
+    /* le spot est un agrément, pas une dépendance : on ne laisse pas une
+       API lente retenir tout le démarrage */
+    await Promise.race([
+      Macro.refreshSpot().catch(() => null),
+      new Promise((r) => setTimeout(r, 6000)),
+    ]);
 
     msg.textContent = 'Rapport COT de la CFTC…';
     await loadSeries();
