@@ -288,7 +288,8 @@ function render() {
   renderStamp();
 
   const views = {
-    overview: renderOverview, shortterm: renderShortTerm, tape: renderTape, cohorts: renderCohorts,
+    overview: renderOverview, gold: renderGold, shortterm: renderShortTerm,
+    tape: renderTape, cohorts: renderCohorts,
     history: renderHistory, extremes: renderExtremes, ratio: renderRatio,
     macro: renderMacro, news: renderNews,
   };
@@ -714,6 +715,237 @@ function renderOverview(host) {
         : corr < 0.1 ? 'le positionnement a décroché du marché.'
           : 'lien modéré entre flux et prix.'}`
     : 'Historique de prix indisponible — impossible de croiser positionnement et cours.';
+}
+
+/* ═══════════════ Vue : analyse Or ═══════════════
+   Une lecture d'ensemble de l'or, indépendante du métal sélectionné
+   ailleurs. Elle assemble les quatre plans qui décident du métal —
+   positionnement, macro, structure de prix, contexte inter-métaux —
+   et affiche chaque conclusion avec le chiffre qui la porte. */
+
+async function renderGold(host) {
+  host.innerHTML = `<div class="panel"><div class="panel-bd">
+    <span class="dim">Assemblage de l'analyse…</span></div></div>`;
+
+  let rows;
+  try {
+    rows = await CFTC.series('GOLD', { report: state.report, basis: state.basis });
+  } catch (e) {
+    host.innerHTML = `<div class="panel"><div class="panel-bd">
+      <span class="dn">Chargement impossible : ${escapeHtml(e.message)}</span></div></div>`;
+    return;
+  }
+  if (state.view !== 'gold') return;
+
+  const market = CFTC.markets.GOLD;
+  const price = Macro.priceOf('GOLD');
+  const px = price ? price.price : null;
+  const cohorts = CFTC.cohortsFor(state.report);
+  const specKey = state.report === 'legacy' ? 'noncomm' : 'money';
+  const last = rows[rows.length - 1];
+  const spec = Metrics.cohortStats(rows, specKey, market, px);
+  const netSeries = Metrics.series(rows, specKey, 'net');
+  const joined = Metrics.alignPrice(netSeries, Macro.priceSeries('GOLD'));
+  const tension = Metrics.tension(rows, state.report, market, joined);
+  const regime = Macro.regime();
+  const gap = Metrics.sinceCutoff(rows, Macro.priceSeries('GOLD'), px);
+  const daily = Macro.priceSeries('GOLD', { full: false });
+  const spread = await ensureSpread().catch(() => null);
+
+  /* structure de prix à partir des fixings quotidiens : où se situe le
+     cours dans ses amplitudes, et à quelle distance de ses moyennes */
+  const closes = daily.map((p) => p.close);
+  const cur = px != null ? px : closes[closes.length - 1];
+  const stat = (n) => {
+    const w = closes.slice(-n);
+    if (w.length < 5) return null;
+    /* Le cours courant vient du spot temps réel, l'amplitude des fixings
+       quotidiens : sans l'inclure, un spot au-delà du dernier fixing
+       produit une position supérieure à 100 %. */
+    const hi = Math.max(...w, cur), lo = Math.min(...w, cur);
+    const ma = w.reduce((a, b) => a + b, 0) / w.length;
+    return { hi, lo, ma, pos: hi > lo ? ((cur - lo) / (hi - lo)) * 100 : 50, vsMa: ((cur - ma) / ma) * 100 };
+  };
+  const s20 = stat(20), s60 = stat(60), s250 = stat(250);
+
+  /* volatilité réalisée sur les fixings quotidiens */
+  const rv = (n) => {
+    const w = closes.slice(-(n + 1));
+    if (w.length < 10) return null;
+    const r = [];
+    for (let i = 1; i < w.length; i++) r.push(Math.log(w[i] / w[i - 1]));
+    const m = r.reduce((a, b) => a + b, 0) / r.length;
+    return Math.sqrt(r.reduce((a, b) => a + (b - m) ** 2, 0) / (r.length - 1) * 252) * 100;
+  };
+
+  /* les quatre plans, chacun avec son verdict et le chiffre qui le porte */
+  const planes = [
+    {
+      name: 'Positionnement', tone: tension ? tension.tone : 'neutral',
+      verdict: tension ? tension.verdict : '—',
+      detail: `Net ${cohorts.find((c) => c.key === specKey).short.toLowerCase()} à `
+        + `<b>${fmtSigned(spec.net)}</b> contrats (${fmtPct(spec.pctOi)} de l'open interest), `
+        + `COT index ${spec.index[156] == null ? '—' : Math.round(spec.index[156])}/100 sur trois ans, `
+        + `z = ${spec.z[260] == null ? '—' : fmtNum(spec.z[260], 2)}σ sur cinq ans.`,
+    },
+    {
+      name: 'Macro', tone: regime ? regime.tone : 'neutral',
+      verdict: regime ? regime.verdict : 'Instantané macro indisponible',
+      detail: regime
+        ? regime.parts.slice(0, 3).map((p) => `${escapeHtml(p.label)} ${escapeHtml(p.detail)}`).join(' · ')
+        : '—',
+    },
+    {
+      name: 'Structure de prix',
+      tone: s60 ? (s60.pos > 80 ? 'hot' : s60.pos > 60 ? 'warm' : s60.pos < 20 ? 'cold' : s60.pos < 40 ? 'cool' : 'neutral') : 'neutral',
+      verdict: s60 ? (s60.pos > 80 ? 'Haut de son amplitude trimestrielle'
+        : s60.pos < 20 ? 'Bas de son amplitude trimestrielle'
+          : 'Milieu de son amplitude trimestrielle') : '—',
+      detail: s60
+        ? `À <b>${fmtPct(s60.pos, 0)}</b> de l'amplitude 60 jours, `
+        + `${fmtSignedPct(s60.vsMa)} par rapport à sa moyenne, `
+        + `volatilité réalisée ${fmtPct(rv(60), 1)} annualisée.`
+        : '—',
+    },
+    {
+      name: 'Or contre argent',
+      tone: spread && spread.last ? (spread.last.value > 20 ? 'warm' : spread.last.value < -20 ? 'cool' : 'neutral') : 'neutral',
+      verdict: spread && spread.reading ? spread.reading : 'Comparaison indisponible',
+      detail: spread && spread.last
+        ? `Écart de positionnement normalisé <b>${(spread.last.value > 0 ? '+' : '') + Math.round(spread.last.value)}</b>, `
+        + `${spread.z == null ? '' : `soit ${fmtNum(spread.z, 2)}σ, `}`
+        + `ratio or/argent ${(() => { const s = Macro.priceOf('SILVER'); return s && s.price ? fmtNum(cur / s.price, 1) : '—'; })()}.`
+        : '—',
+    },
+  ];
+
+  /* concordance : combien de plans tirent dans le même sens */
+  const dirOf = (t) => (t === 'hot' || t === 'warm' ? 1 : t === 'cold' || t === 'cool' ? -1 : 0);
+  const dirs = planes.map((p) => dirOf(p.tone));
+  const agree = dirs.filter((d) => d > 0).length - dirs.filter((d) => d < 0).length;
+
+  host.innerHTML = `
+    <div class="grid-4">
+      ${statCard({
+    label: 'Or — cours',
+    value: cur == null ? '—' : fmtNum(cur, 2) + ' $',
+    sub: price ? `${escapeHtml(price.source)}${price.live ? ' · temps réel' : ''}` : '—',
+  })}
+      ${statCard({
+    label: 'Amplitude 250 jours',
+    value: s250 ? fmtPct(s250.pos, 0) : '—',
+    cls: 'stat-v sm',
+    gauge: s250 ? gaugeHtml(s250.pos, s250.pos > 70 ? 'warm' : s250.pos < 30 ? 'cool' : 'neutral', ['bas', '', 'haut']) : '',
+    sub: s250 ? `${fmtNum(s250.lo, 0)} – ${fmtNum(s250.hi, 0)} $` : '—',
+  })}
+      ${statCard({
+    label: 'Volatilité réalisée',
+    value: rv(20) == null ? '—' : fmtPct(rv(20), 1),
+    cls: 'stat-v sm',
+    sub: `20 jours · ${rv(60) == null ? '—' : fmtPct(rv(60), 1)} sur 60 jours`,
+  })}
+      ${statCard({
+    label: 'Concordance des plans',
+    value: `${agree > 0 ? '+' : ''}${agree} / 4`,
+    cls: `stat-v sm tone-${agree >= 2 ? 'warm' : agree <= -2 ? 'cool' : 'neutral'}`,
+    sub: agree >= 2 ? 'plans majoritairement porteurs'
+      : agree <= -2 ? 'plans majoritairement contraires'
+        : 'plans partagés — pas de lecture dominante',
+  })}
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">Les quatre plans
+        <span class="hd-sub">chaque verdict avec le chiffre qui le porte</span></div>
+      <div class="panel-bd flush">
+        ${planes.map((p) => `<div class="plane">
+          <div class="plane-hd">
+            <span class="plane-name">${escapeHtml(p.name)}</span>
+            <span class="plane-verdict tone-${p.tone}">${escapeHtml(p.verdict)}</span>
+          </div>
+          <div class="plane-detail">${p.detail}</div>
+        </div>`).join('')}
+      </div>
+      <div class="note">${agree === 0
+    ? `<b>Les plans ne convergent pas.</b> C'est l'état le plus fréquent, et le plus honnête à afficher :
+       une lecture unique n'émerge que lorsque positionnement, macro et prix pointent ensemble.`
+    : `<b>${Math.abs(agree)} plan${Math.abs(agree) > 1 ? 's' : ''} sur quatre</b> penche${Math.abs(agree) > 1 ? 'nt' : ''}
+       ${agree > 0 ? 'du côté porteur' : 'du côté contraire'}. La concordance n'est pas une prévision :
+       elle dit seulement que les angles d'analyse racontent la même histoire en ce moment.`}</div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-hd">Structure de prix<span class="hd-sub">fixings quotidiens LBMA</span></div>
+        <div class="panel-bd flush"><div class="tbl-wrap"><table class="tbl">
+          <thead><tr><th>Fenêtre</th><th>Bas</th><th>Haut</th><th>Position</th><th>Écart moyenne</th></tr></thead>
+          <tbody>
+            ${[['20 jours', s20], ['60 jours', s60], ['250 jours', s250]].map(([lb, st]) => st ? `
+              <tr><td>${lb}</td>
+                <td class="n">${fmtNum(st.lo, 2)}</td>
+                <td class="n">${fmtNum(st.hi, 2)}</td>
+                <td class="n">${fmtPct(st.pos, 0)}</td>
+                <td class="n ${signClass(st.vsMa)}">${fmtSignedPct(st.vsMa)}</td></tr>` : '').join('')}
+          </tbody>
+        </table></div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-hd">Moteurs macro de l'or
+          <span class="hd-sub">classés par contribution · cliquez pour le détail</span></div>
+        <div class="panel-bd flush"><div class="tbl-wrap"><table class="tbl">
+          <thead><tr><th>Moteur</th><th>Niveau</th><th>Variation</th><th>Effet</th></tr></thead>
+          <tbody>${regime ? regime.parts.map((p) => `
+            <tr class="clickable" data-macro="${escapeHtml(p.id)}" title="${escapeHtml(p.why)}">
+              <td>${escapeHtml(p.label)}</td>
+              <td class="n">${fmtNum(p.last, 2)}</td>
+              <td class="n">${escapeHtml(p.detail)}</td>
+              <td class="${p.value > 0.1 ? 'up' : p.value < -0.1 ? 'dn' : 'dim'}">
+                ${p.value > 0.1 ? 'favorable' : p.value < -0.1 ? 'défavorable' : 'neutre'}</td>
+            </tr>`).join('') : '<tr><td colspan="4" class="dim">Instantané macro indisponible.</td></tr>'}</tbody>
+        </table></div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">Positionnement contre cours — historique complet
+        <span class="hd-sub" id="gd-hover">survolez le graphique</span></div>
+      <div class="panel-bd flush"><div class="chart-box" id="gd-chart"></div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">Ce que cette analyse ne couvre pas</div>
+      <div class="panel-bd">
+        <p class="legend-note">Le COT ne voit que les contrats à terme américains. Trois moteurs
+        majeurs de l'or lui échappent entièrement : le marché de gré à gré de Londres, où se traite
+        l'essentiel du volume mondial et qui ne publie pas de positions ; les <b>achats de banques
+        centrales</b>, déclarés au FMI avec plusieurs mois de retard ; et les <b>flux des ETF
+        adossés au physique</b>, publiés quotidiennement par les émetteurs mais sans interface
+        exploitable depuis un navigateur.</p>
+        <p class="legend-note" style="margin-top:9px">Quand le cours de l'or décroche de ses moteurs
+        habituels — taux réels, dollar — c'est très souvent l'un de ces trois canaux qui agit.
+        L'absence de corrélation visible à l'écran est alors une information : elle indique que la
+        cause est ailleurs, pas qu'il n'y en a pas.</p>
+      </div>
+    </div>`;
+
+  Charts.timeSeries($('#gd-chart'), [
+    { label: 'Net spéculatif', color: '#d9a441', data: netSeries, scale: 'left', type: 'area', width: 2 },
+    ...(joined.length ? [{
+      label: 'Or', color: '#8892a0',
+      data: joined.map((p) => ({ ts: p.ts, value: p.price })),
+      scale: 'right', width: 1.5, precision: 2, minMove: 0.01,
+    }] : []),
+  ], {
+    height: 340, zeroLine: true,
+    onCrosshair: (info) => {
+      const el = $('#gd-hover');
+      if (!el) return;
+      if (!info) { el.textContent = 'survolez le graphique'; return; }
+      el.innerHTML = info.values.filter((v) => v.value != null)
+        .map((v) => `${escapeHtml(v.label)} <b>${fmtInt(v.value)}</b>`).join(' · ');
+    },
+  });
 }
 
 /* ═══════════════ Vue : court terme ═══════════════

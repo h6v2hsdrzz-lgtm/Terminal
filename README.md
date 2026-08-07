@@ -74,6 +74,30 @@ Le **score de tension** (±100) agrège ces signaux en une lecture unique, et
 affiche systématiquement ses composantes : un score qu'on ne peut pas décomposer
 ne vaut rien.
 
+### Panneaux détaillés
+
+Cohortes et séries macro sont **cliquables** partout où elles apparaissent : un
+tiroir latéral ouvre tout ce que la donnée contient — position complète, nombre
+d'opérateurs et net par opérateur, place dans l'histoire avec la distribution
+des déciles, historique contre prix, rythme, corrélations, mouvements au-delà
+de 2σ. Chaque tiroir de cohorte se termine par ce qui **n'est pas** publié.
+
+### Le temps court, et ce qu'il faut pour l'atteindre
+
+Descendre sous la semaine demande un instrument coté en continu avec un carnet
+public. C'est l'**or tokenisé** (XAUT, PAXG) : adossé à du physique en coffre,
+négocié 24 h/24, et servi par une API qui autorise le CORS. La vue **Flux
+d'ordres** en tire des chandeliers de 5 minutes à 1 semaine, et surtout le
+contenu des bougies — chaque transaction porte son côté agresseur, donc le
+delta sépare ce qui a été acheté au marché de ce qui a été vendu. Le suivi du
+spot est étroit mais imparfait : ce n'est pas le COMEX, et l'écran le rappelle.
+
+**Ce qui n'existe pas et n'est pas simulé** : les liquidations sur l'or (aucun
+marché public ne les publie pour ce sous-jacent), les stops et objectifs des
+intervenants (transmis à personne), et les positions nominatives d'un
+établissement (la CFTC agrège précisément pour qu'elles ne soient pas
+identifiables).
+
 ### Le court terme, et sa limite
 
 Le COT n'est pas un instrument court terme : il est hebdomadaire, et publié
@@ -92,12 +116,14 @@ que la cohorte se positionne alors sur autre chose que le prix et que
 l'extrapolation devient fragile. C'est un ordre de grandeur, jamais un chiffre
 publié.
 
-## Les huit vues
+## Les dix vues
 
 | Vue | Contenu |
 |-----|---------|
 | **Vue d'ensemble** | Cartes de synthèse, répartition par cohorte, net contre prix, régime macro, actualité |
+| **Analyse Or** | Les quatre plans (positionnement, macro, structure de prix, inter-métaux) avec leur concordance |
 | **Court terme** | Flux de la semaine par cohorte, vitesse de rotation, angle mort depuis l'arrêté, prix quotidien |
+| **Flux d'ordres** | Chandeliers 5m à 1W, delta acheteur/vendeur, carnet, profil de volume — sur or tokenisé |
 | **Cohortes** | Tableau complet (longs, courts, net, Δ, % OI, biais, index, z, opérateurs, notionnel) + concentration |
 | **Historique** | Nets de toutes les cohortes, open interest, concentration, COT index glissant |
 | **Extrêmes** | Matrice index/z/percentile, rotations à plus de 2σ, basculements du net, configurations comparables |
@@ -127,7 +153,8 @@ js/vendor/              TradingView Lightweight Charts™ v5 (Apache-2.0)
 js/cot/cftc.js          client Socrata CFTC : marchés, colonnes, cache local
 js/cot/metrics.js       COT index, z-scores, percentiles, divergences, analogues
 js/cot/macro.js         instantanés FRED/LBMA/news + spot temps réel + régime
-js/cot/charts.js        graphiques temporels (LWC v5)
+js/cot/charts.js        graphiques temporels et chandeliers (LWC v5)
+js/cot/tape.js          bougies multi-échelles et flux d'ordres (OKX)
 js/cot/agent.js         contexte structuré + API Anthropic en flux
 js/cot/desk.js          orchestration et rendu des sept vues
 scripts/refresh_data.py collecte des sources sans CORS → data/*.json
