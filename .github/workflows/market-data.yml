@@ -1,0 +1,59 @@
+# Instantanés de données pour le poste « positions » (data/*.json).
+#
+# Le navigateur interroge la CFTC en direct — son API publique autorise le
+# CORS. FRED, la LBMA et les flux RSS ne l'autorisent pas : ils sont donc
+# récupérés ici, côté runner, et committés sous forme de JSON statiques que
+# GitHub Pages sert au navigateur. Aucun backend, aucun proxy tiers.
+#
+# Cadence : deux fois par jour en semaine. Les fixings LBMA tombent en
+# matinée et en début d'après-midi à Londres, FRED publie en cours de
+# journée américaine.
+
+name: instantanés de marché
+
+on:
+  schedule:
+    - cron: "20 7 * * 1-5"     # 07h20 UTC — après le fixing du matin
+    - cron: "20 21 * * 1-5"    # 21h20 UTC — après la clôture américaine
+  workflow_dispatch: {}
+
+concurrency:
+  group: market-data
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Rafraîchir les instantanés
+        run: python3 scripts/refresh_data.py --out data
+
+      - name: Committer si quelque chose a bougé
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "Aucun changement — rien à committer."
+            exit 0
+          fi
+          git commit -m "data: instantané macro / prix / news du $(date -u '+%Y-%m-%d %H:%M UTC')"
+          # le cron peut croiser un push manuel : on rejoue par-dessus
+          for attempt in 1 2 3 4; do
+            if git push; then exit 0; fi
+            sleep $((attempt * 3))
+            git pull --rebase --autostash
+          done
+          echo "Push impossible après 4 tentatives." >&2
+          exit 1
