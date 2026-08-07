@@ -108,6 +108,7 @@ def _trades_payload(trades: pd.DataFrame) -> list[dict[str, Any]]:
             "reason": str(t.reason),
             "bars_held": int(t.bars_held),
             "risk_amount": _round(t.risk_amount),
+            "swap_paid": _round(t.swap_paid),
         })
     return out
 

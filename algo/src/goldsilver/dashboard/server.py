@@ -107,6 +107,8 @@ class _Handler(BaseHTTPRequestHandler):
                     self._json(self.dash.candles(asset))
             elif route == "/api/stats":
                 self._json(self.dash.stats())
+            elif route == "/api/analytics":
+                self._json(self.dash.analytics())
             elif route == "/api/macro":
                 self._json(self.dash.macro())
             elif route == "/api/journal":
@@ -120,6 +122,7 @@ class _Handler(BaseHTTPRequestHandler):
                     "stats": self.dash.stats(),
                     "macro": self.dash.macro(),
                     "journal": self.dash.journal(200),
+                    "analytics": self.dash.analytics(),
                 })
             else:
                 self._json({"error": "not found"}, 404)

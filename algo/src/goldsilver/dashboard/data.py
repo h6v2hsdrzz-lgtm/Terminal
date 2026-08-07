@@ -31,6 +31,7 @@ import numpy as np
 import pandas as pd
 
 from goldsilver.config import load_config
+from goldsilver.dashboard import analytics
 from goldsilver.data.cleaning import clean_ohlcv
 from goldsilver.data.timeframes import build_timeframes
 from goldsilver.engine.sizing import position_size
@@ -359,6 +360,16 @@ class DashboardData:
             except Exception as exc:  # noqa: BLE001
                 diagnostics.append({"asset": a, "error": str(exc)})
 
+        # progression de chaque position entre son stop et son objectif
+        instr_to_asset = {v: k for k, v in self.cfg.broker.instruments.items()}
+        for p in positions:
+            a = instr_to_asset.get(p["instrument"])
+            q = quotes.get(a) if a else None
+            if not q:
+                continue
+            mark = q["bid"] if (p["units"] or 0) > 0 else q["ask"]
+            p["progress"] = analytics.position_progress(p, mark)
+
         day = state.get("day") or {}
         day_start = float(day.get("start_equity") or equity or 0.0)
         hwm = float(state.get("hwm_equity") or equity or 0.0)
@@ -517,6 +528,20 @@ class DashboardData:
                 "days_running": _round(fwd.days_running, 2),
             },
         }
+
+    # --------------------------------------------------------------- analytics
+
+    def analytics(self) -> dict[str, Any]:
+        """Analyses avancées (MAE/MFE, séries, Monte-Carlo…), TTL long : ces
+        calculs ne bougent qu'au changement de cache backtest."""
+        def _build() -> dict[str, Any]:
+            bt = self.backtest()
+            tf = bt.get("candle_timeframe") or "4h"
+            candles = {a: (self._load_json(f"candles_{a}_{tf}.json") or [])
+                       for a in self.assets}
+            return analytics.compute(bt, candles, self.live_trades())
+
+        return self._ttl.get("analytics", 600.0, _build)
 
     # ------------------------------------------------------------------- macro
 

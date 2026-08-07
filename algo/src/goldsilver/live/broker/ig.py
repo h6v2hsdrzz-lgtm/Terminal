@@ -392,15 +392,24 @@ class IgBroker(BrokerAdapter):
             size = float(pos.get("dealSize") or pos.get("size", 0.0))
             sign = 1.0 if str(pos.get("direction")) == "BUY" else -1.0
             units = size * (spec.oz_per_contract if spec else 1.0) * sign
+            # IG renvoie le niveau d'ouverture dans "level" (pas "openLevel")
+            entry = float(pos.get("level") or pos.get("openLevel") or 0.0)
+            # IG ne fournit PAS le PnL latent : on le calcule au prix de
+            # DÉBOUCLAGE (un long se solde au bid, un short à l'offer), sinon
+            # l'interface afficherait 0 sur une position en cours.
+            mark = market.get("bid") if units > 0 else market.get("offer")
+            unrealized = (
+                (float(mark) - entry) * units
+                if mark is not None and entry else 0.0
+            )
             positions.append(BrokerPosition(
                 instrument=epic,
                 units=units,
-                # IG renvoie le niveau d'ouverture dans "level" (pas "openLevel")
-                avg_price=float(pos.get("level") or pos.get("openLevel") or 0.0),
+                avg_price=entry,
                 trade_id=str(pos.get("dealId", "")),
                 sl=float(pos["stopLevel"]) if pos.get("stopLevel") else None,
                 tp=float(pos["limitLevel"]) if pos.get("limitLevel") else None,
-                unrealized_pnl=0.0,
+                unrealized_pnl=unrealized,
             ))
         return positions
 

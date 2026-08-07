@@ -27,6 +27,7 @@ def _payload(dash: DashboardData) -> dict:
             "stats": dash.stats(),
             "macro": dash.macro(),
             "journal": dash.journal(200),
+            "analytics": dash.analytics(),
         },
         "candles": {a: dash.candles(a) for a in dash.assets},
     }

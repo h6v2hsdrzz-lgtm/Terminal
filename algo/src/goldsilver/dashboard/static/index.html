@@ -5,165 +5,260 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>goldsilver — pilotage de l'algo</title>
 <link rel="stylesheet" href="/static/style.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📊</text></svg>">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%93%8A%3C/text%3E%3C/svg%3E">
 </head>
 <body>
 
 <header>
-  <div class="brand">goldsilver <small>XAU · XAG — breakout Donchian 4h</small></div>
-  <span class="badge" id="modeBadge">…</span>
-  <span class="badge" id="connBadge">connexion…</span>
-  <span class="badge" id="haltBadge" hidden></span>
+  <div class="brand">
+    <b>gold<i>silver</i></b>
+    <span>XAU · XAG — breakout Donchian 4h</span>
+  </div>
+  <span class="chip" id="modeChip">…</span>
+  <span class="chip" id="connChip"><span class="led"></span>connexion</span>
+  <span class="chip bad" id="haltChip" hidden>halte</span>
 
-  <div class="spacer"></div>
+  <div class="grow"></div>
 
-  <div class="hero">
-    <span class="dim" style="font-size:12px">Equity</span>
-    <span class="value" id="heroEquity">—</span>
-    <span class="delta" id="heroDelta"></span>
+  <div class="readout">
+    <span class="k">Equity</span>
+    <span class="v" id="heroEquity">—</span>
+    <span class="d" id="heroDelta"></span>
   </div>
 
-  <button class="btn" id="themeBtn" title="Thème clair / sombre">◐</button>
-  <button class="btn" id="refreshBtn" title="Rafraîchir maintenant">↻</button>
-  <button class="btn danger" id="killBtn" title="Arrêt d'urgence : ferme tout et halte le bot">STOP</button>
+  <button class="btn" id="themeBtn" title="Thème clair / sombre" aria-label="Basculer le thème">◐</button>
+  <button class="btn" id="refreshBtn" title="Rafraîchir" aria-label="Rafraîchir">↻</button>
+  <button class="btn danger" id="killBtn" title="Arrêt d'urgence">STOP</button>
 </header>
+
+<nav class="sections" id="nav">
+  <a href="#etat">État</a>
+  <a href="#position">Position</a>
+  <a href="#decision">Décision</a>
+  <a href="#chart">Chart &amp; trades</a>
+  <a href="#perf">Performance</a>
+  <a href="#comportement">Comportement</a>
+  <a href="#projection">Projection</a>
+  <a href="#marche">Marché</a>
+  <a href="#journal">Journal</a>
+</nav>
 
 <main>
 
-  <!-- ------------------------------------------------------------- tuiles -->
-  <section class="tiles" id="tiles"></section>
-
-  <!-- ------------------------------------------ pourquoi ça trade ou pas -->
-  <section class="card" style="margin-bottom:var(--gap)">
-    <h2>Décision en cours — pourquoi l'algo trade (ou attend)</h2>
-    <div class="sub">Recalculé sur les dernières bougies closes, avec le code de décision du bot. Une entrée exige <em>toutes</em> les conditions.</div>
-    <div class="sig-grid" id="signals"><div class="empty">chargement…</div></div>
-  </section>
-
-  <!-- --------------------------------------------------- chart + trades -->
-  <section class="card" style="margin-bottom:var(--gap)">
-    <h2>Chart — chaque position prise par l'algo</h2>
-    <div class="sub">Entrées et sorties posées sur les bougies de décision. Clique un trade dans la table pour zoomer dessus.</div>
-    <div class="toolbar">
-      <div class="seg" id="assetSeg"></div>
-      <div class="seg" id="sourceSeg">
-        <button data-src="all" aria-pressed="true">Tous</button>
-        <button data-src="backtest" aria-pressed="false">Backtest</button>
-        <button data-src="live" aria-pressed="false">Réel</button>
+  <!-- ================================================================ état -->
+  <section id="etat">
+    <div class="hd"><h2>État du système</h2><p id="etatSub"></p></div>
+    <div class="grid g4" id="tiles"></div>
+    <div class="grid g3" style="margin-top:var(--gap)">
+      <div class="card reveal">
+        <h3>Distance aux coupe-circuits</h3>
+        <div class="sub">Trois seuils indépendants. Le premier atteint ferme tout et met le bot en halte, définitivement, jusqu'à intervention humaine.</div>
+        <div id="killGauges"></div>
       </div>
-      <div class="seg" id="rangeSeg">
-        <button data-range="3" aria-pressed="false">3 M</button>
-        <button data-range="12" aria-pressed="true">1 an</button>
-        <button data-range="0" aria-pressed="false">Tout</button>
+      <div class="card reveal">
+        <h3>Exposition</h3>
+        <div class="sub">Ce qui est réellement engagé, contre ce que la configuration autorise.</div>
+        <div id="exposure"></div>
       </div>
-      <button class="btn" id="fitBtn">Recadrer</button>
-    </div>
-    <div class="chart-wrap"><div id="priceChart"></div></div>
-    <div class="legend">
-      <span class="key"><span class="swatch" style="background:var(--good)"></span>Entrée achat ▲</span>
-      <span class="key"><span class="swatch" style="background:var(--s1)"></span>Sortie gagnante ▼</span>
-      <span class="key"><span class="swatch" style="background:var(--critical)"></span>Sortie perdante ▼</span>
-      <span class="key"><span class="swatch line" style="background:var(--critical)"></span>Stop loss</span>
-      <span class="key"><span class="swatch line" style="background:var(--s3)"></span>Take profit</span>
-    </div>
-    <div class="note" id="chartNote"></div>
-  </section>
-
-  <section class="row side">
-    <div class="card">
-      <h2>Historique des positions</h2>
-      <div class="sub" id="tradesSub">—</div>
-      <div class="tbl-wrap scroll-y">
-        <table id="tradesTable">
-          <thead><tr>
-            <th data-k="entry_time">Entrée</th>
-            <th data-k="asset">Actif</th>
-            <th data-k="side">Sens</th>
-            <th data-k="entry">Prix ent.</th>
-            <th data-k="exit">Prix sort.</th>
-            <th data-k="reason">Sortie</th>
-            <th data-k="r_multiple">R</th>
-            <th data-k="pnl">PnL</th>
-          </tr></thead>
-          <tbody></tbody>
-        </table>
+      <div class="card reveal">
+        <h3>Verdict de validation</h3>
+        <div class="sub">Ce que l'anti-overfitting a conclu — affiché en permanence, pas rangé dans un rapport.</div>
+        <div id="verdict"></div>
       </div>
     </div>
-
-    <div class="card">
-      <h2>Verdict de validation</h2>
-      <div class="sub">Ce que l'anti-overfitting a réellement conclu.</div>
-      <div id="verdict"></div>
-    </div>
   </section>
 
-  <!-- ------------------------------------------------------ performance -->
-  <section class="row two">
-    <div class="card">
-      <h2>Courbe d'equity <span class="dim" style="font-weight:400">— backtest</span></h2>
-      <div class="sub" id="equitySub">—</div>
-      <div class="chart-wrap"><div id="equityChart"></div></div>
-    </div>
-    <div class="card">
-      <h2>Drawdown (sous le plus haut)</h2>
-      <div class="sub">Profondeur de la perte depuis le sommet précédent. C'est ce qu'il faut supporter, pas la moyenne.</div>
-      <div class="chart-wrap"><div id="ddChart"></div></div>
-      <div id="ddWarn"></div>
-    </div>
+  <!-- ============================================================ position -->
+  <section id="position">
+    <div class="hd"><h2>Position ouverte</h2><p id="positionSub"></p></div>
+    <div id="positions"></div>
   </section>
 
-  <section class="row two">
-    <div class="card">
-      <h2>Rendements mensuels</h2>
-      <div class="sub">Chaque cellule = un mois. La valeur est écrite : la couleur ne porte jamais seule l'information.</div>
-      <div class="tbl-wrap"><div id="monthly"></div></div>
-      <div class="scale">
-        <span>négatif</span>
-        <span class="bar" id="monthScale"></span>
-        <span>positif</span>
+  <!-- ============================================================ décision -->
+  <section id="decision">
+    <div class="hd">
+      <h2>Décision en cours</h2>
+      <p>Recalculé avec le code de décision du bot, sur les dernières bougies closes. Une entrée exige <em>toutes</em> les conditions.</p>
+    </div>
+    <div class="grid g2" id="signals"><div class="empty">chargement…</div></div>
+  </section>
+
+  <!-- =============================================================== chart -->
+  <section id="chart">
+    <div class="hd"><h2>Chart &amp; trades</h2><p>Chaque position de l'algo, posée sur ses bougies de décision.</p></div>
+    <div class="card reveal">
+      <div class="bar-tools">
+        <div class="seg" id="assetSeg"></div>
+        <div class="seg" id="sourceSeg">
+          <button data-src="all" aria-pressed="true">Tous</button>
+          <button data-src="backtest" aria-pressed="false">Backtest</button>
+          <button data-src="live" aria-pressed="false">Réel</button>
+        </div>
+        <div class="seg" id="rangeSeg">
+          <button data-range="3" aria-pressed="false">3 M</button>
+          <button data-range="12" aria-pressed="true">1 an</button>
+          <button data-range="0" aria-pressed="false">Tout</button>
+        </div>
+        <button class="btn" id="fitBtn">Recadrer</button>
+      </div>
+      <div class="chart" id="priceChart"></div>
+      <div class="legend">
+        <span class="key"><span class="sw" style="background:var(--good)"></span>Entrée ▲</span>
+        <span class="key"><span class="sw" style="background:var(--s1)"></span>Sortie gagnante ▼</span>
+        <span class="key"><span class="sw" style="background:var(--critical)"></span>Sortie perdante ▼</span>
+        <span class="key"><span class="sw line" style="background:var(--critical)"></span>Stop</span>
+        <span class="key"><span class="sw line" style="background:var(--s3)"></span>Objectif</span>
+      </div>
+      <div class="note" id="chartNote"></div>
+    </div>
+
+    <div class="grid side" style="margin-top:var(--gap)">
+      <div class="card reveal">
+        <h3>Historique des positions</h3>
+        <div class="sub" id="tradesSub">—</div>
+        <div class="scroll-x scroll-y">
+          <table id="tradesTable">
+            <thead><tr>
+              <th data-k="entry_time">Entrée</th>
+              <th data-k="asset">Actif</th>
+              <th data-k="entry">Prix ent.</th>
+              <th data-k="exit">Prix sort.</th>
+              <th data-k="reason">Sortie</th>
+              <th data-k="bars_held">Durée</th>
+              <th data-k="r_multiple">R</th>
+              <th data-k="pnl">PnL</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card reveal">
+        <h3>Anatomie du trade sélectionné</h3>
+        <div class="sub">Clique une ligne : le chart zoome et les niveaux s'affichent ici.</div>
+        <div id="tradeDetail"><div class="empty">aucun trade sélectionné</div></div>
       </div>
     </div>
-    <div class="card">
-      <h2>Distribution des résultats (en R)</h2>
-      <div class="sub">R = gain rapporté au risque pris. Une stratégie à faible taux de réussite vit de sa queue droite.</div>
-      <div class="chart-wrap"><div id="rHist"></div></div>
-      <div class="note" id="rNote"></div>
+  </section>
+
+  <!-- ========================================================= performance -->
+  <section id="perf">
+    <div class="hd"><h2>Performance</h2><p id="perfSub"></p></div>
+    <div class="grid g2">
+      <div class="card reveal">
+        <h3>Courbe d'equity</h3>
+        <div class="sub" id="equitySub">—</div>
+        <div class="chart" id="equityChart"></div>
+      </div>
+      <div class="card reveal">
+        <h3>Drawdown sous le plus-haut</h3>
+        <div class="sub">Ce qu'il faut supporter, pas la moyenne.</div>
+        <div class="chart" id="ddChart"></div>
+        <div id="ddWarn"></div>
+      </div>
+    </div>
+    <div class="grid g2" style="margin-top:var(--gap)">
+      <div class="card reveal">
+        <h3>Rendements mensuels</h3>
+        <div class="sub">Chaque cellule est un mois, valeur écrite : la couleur ne porte jamais seule l'information.</div>
+        <div class="scroll-x"><div id="monthly"></div></div>
+        <div class="scale"><span>négatif</span><span class="bar" id="monthScale"></span><span>positif</span></div>
+      </div>
+      <div class="card reveal">
+        <h3>Distribution des résultats (R)</h3>
+        <div class="sub">R = gain rapporté au risque. Une stratégie à faible taux de réussite vit de sa queue droite.</div>
+        <div id="rHist"></div>
+        <div class="note" id="rNote"></div>
+      </div>
     </div>
   </section>
 
-  <!-- ------------------------------------------------------------ macro -->
-  <section class="row two">
-    <div class="card">
-      <h2>Corrélations cross-asset</h2>
-      <div class="sub">Rendements journaliers depuis 2019. Deux actifs très corrélés ne diversifient pas le risque.</div>
-      <div class="tbl-wrap"><div id="corr"></div></div>
+  <!-- ======================================================== comportement -->
+  <section id="comportement">
+    <div class="hd">
+      <h2>Comportement des trades</h2>
+      <p>Ce qu'une courbe d'equity ne montre pas : le chemin parcouru à l'intérieur de chaque trade.</p>
     </div>
-    <div class="card">
-      <h2>Contexte marché</h2>
-      <div class="sub">Ratio or/argent et performances indexées base 100 — un seul axe, comparable.</div>
-      <div class="chart-wrap"><div id="macroChart" style="height:230px"></div></div>
-      <div class="legend" id="macroLegend"></div>
+    <div class="grid g2">
+      <div class="card reveal">
+        <h3>Excursions — jusqu'où ça va contre nous</h3>
+        <div class="sub">MAE = pire recul avant la sortie. MFE = meilleur gain atteint. En multiples de R.</div>
+        <div id="excursions"></div>
+      </div>
+      <div class="card reveal">
+        <h3>Séries de pertes consécutives</h3>
+        <div class="sub">Combien de pertes d'affilée faut-il être prêt à encaisser ? Le coupe-circuit se juge là-dessus.</div>
+        <div id="streaks"></div>
+      </div>
+    </div>
+    <div class="grid g2" style="margin-top:var(--gap)">
+      <div class="card reveal">
+        <h3>Espérance glissante (30 trades)</h3>
+        <div class="sub">L'edge se dégrade-t-il avec le temps ? Chaque point est la moyenne des 30 derniers trades.</div>
+        <div class="chart" id="rollChart"></div>
+      </div>
+      <div class="card reveal">
+        <h3>Par jour d'entrée</h3>
+        <div class="sub">Dépendance à une session ? Attention : peu de trades par case, le bruit domine vite.</div>
+        <div id="byDay"></div>
+      </div>
     </div>
   </section>
 
-  <!-- ---------------------------------------------------------- journal -->
-  <section class="card">
-    <h2>Journal du bot</h2>
-    <div class="sub">Source de vérité de l'audit : si ce n'est pas ici, ce n'est pas arrivé.</div>
-    <div class="log" id="journal"></div>
+  <!-- ========================================================== projection -->
+  <section id="projection">
+    <div class="hd"><h2>Projection Monte-Carlo</h2><p id="mcSub"></p></div>
+    <div class="grid side">
+      <div class="card reveal">
+        <h3>Cône des trajectoires possibles</h3>
+        <div class="sub">Rééchantillonnage des R passés. Ce n'est pas une prévision : c'est la dispersion à laquelle s'attendre si le futur ressemble au passé.</div>
+        <div class="chart" id="mcChart"></div>
+        <div class="legend" id="mcLegend"></div>
+      </div>
+      <div class="card reveal">
+        <h3>Ce que dit la simulation</h3>
+        <div class="sub">Percentiles sur l'horizon projeté.</div>
+        <div id="mcStats"></div>
+      </div>
+    </div>
   </section>
 
-  <p class="note" id="footNote"></p>
+  <!-- ============================================================== marché -->
+  <section id="marche">
+    <div class="hd"><h2>Contexte marché</h2><p>Corrélations et performances comparées — un seul axe, échelle log.</p></div>
+    <div class="grid g2">
+      <div class="card reveal">
+        <h3>Corrélations cross-asset</h3>
+        <div class="sub">Rendements journaliers depuis 2019. Deux actifs très corrélés ne diversifient pas le risque.</div>
+        <div class="scroll-x"><div id="corr"></div></div>
+      </div>
+      <div class="card reveal">
+        <h3>Performances indexées base 100</h3>
+        <div class="sub">Échelle logarithmique : une même pente = une même performance en pourcentage.</div>
+        <div class="chart" id="macroChart"></div>
+        <div class="legend" id="macroLegend"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================= journal -->
+  <section id="journal">
+    <div class="hd"><h2>Journal du bot</h2><p>Source de vérité de l'audit : si ce n'est pas ici, ce n'est pas arrivé.</p></div>
+    <div class="card reveal">
+      <div class="log" id="journalLog"></div>
+    </div>
+    <p class="note" id="footNote"></p>
+  </section>
+
 </main>
 
 <dialog id="killDlg">
-  <h3 style="margin:0 0 6px">Arrêt d'urgence</h3>
-  <p style="margin:0;color:var(--ink-2);font-size:13px">
-    Le bot fermera <strong>toutes les positions</strong> au prochain cycle puis se mettra
-    en halte. Il ne redémarrera pas tout seul.<br>
-    Tape <strong>KILL</strong> pour confirmer.
+  <h3>Arrêt d'urgence</h3>
+  <p style="margin:0;color:var(--ink-2);font-size:12.5px;line-height:1.55">
+    Le bot fermera <strong style="color:var(--ink)">toutes les positions</strong> au prochain cycle,
+    puis se mettra en halte. Il ne redémarrera pas seul.<br>
+    Tape <strong style="color:var(--ink)">KILL</strong> pour confirmer.
   </p>
-  <input id="killInput" placeholder="KILL" autocomplete="off">
+  <input id="killInput" placeholder="KILL" autocomplete="off" spellcheck="false">
   <div style="display:flex;gap:8px;justify-content:flex-end">
     <button class="btn" id="killCancel">Annuler</button>
     <button class="btn danger" id="killConfirm">Confirmer l'arrêt</button>

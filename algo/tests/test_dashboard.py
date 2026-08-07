@@ -348,6 +348,78 @@ def test_le_risque_du_cache_ne_depasse_jamais_le_plafond_dur(
     assert out.engine.risk_pct == pytest.approx(HARD_MAX_RISK_PCT)
 
 
+# ----------------------------------------------------------------- analytics
+
+def test_excursions_mesure_le_chemin_parcouru() -> None:
+    """MAE/MFE se lisent sur les bougies TRAVERSÉES, pas sur entrée/sortie."""
+    from goldsilver.dashboard import analytics
+
+    # long entré à 100, stop à 90 (risque 10) : le prix descend à 95 puis monte à 130
+    candles = {"XAUUSD": [
+        [1000, 100, 101, 99, 100],
+        [2000, 100, 102, 95, 96],     # creux à 95 -> MAE = (95-100)/10 = -0.5 R
+        [3000, 96, 130, 96, 128],     # sommet 130 -> MFE = (130-100)/10 = +3.0 R
+    ]}
+    trades = [{"id": "t1", "asset": "XAUUSD", "side": 1, "entry": 100.0, "sl": 90.0,
+               "entry_time": 1000, "exit_time": 3000, "r_multiple": 2.8}]
+    out = analytics.excursions(trades, candles)
+    assert out["n"] == 1
+    assert out["trades"][0]["mae"] == pytest.approx(-0.5)
+    assert out["trades"][0]["mfe"] == pytest.approx(3.0)
+
+
+def test_streaks_compte_les_series_consecutives() -> None:
+    from goldsilver.dashboard import analytics
+
+    rs = [1.0, -1.0, -1.0, -1.0, 2.0, 2.0, -1.0]
+    trades = [{"r_multiple": r} for r in rs]
+    st = analytics.streaks(trades)
+    assert st["max_losses"] == 3
+    assert st["max_wins"] == 2
+    assert {"len": 3, "count": 1} in st["hist_losses"]
+
+
+def test_monte_carlo_borne_les_percentiles() -> None:
+    """Le cône doit être ordonné et refuser un échantillon trop petit."""
+    from goldsilver.dashboard import analytics
+
+    trades = [{"r_multiple": r} for r in ([-1.0] * 60 + [3.0] * 40)]
+    mc = analytics.monte_carlo(trades, risk_pct=0.02, horizon=10, paths=500)
+    assert mc["bands"]["p5"][-1] <= mc["bands"]["p50"][-1] <= mc["bands"]["p95"][-1]
+    assert 0.0 <= mc["prob_negative"] <= 1.0
+    # échantillon insuffisant => pas de projection plutôt qu'une projection fausse
+    assert analytics.monte_carlo([{"r_multiple": 1.0}] * 5, 0.02) == {}
+
+
+def test_progression_de_la_position_en_r() -> None:
+    from goldsilver.dashboard import analytics
+
+    pos = {"avg_price": 100.0, "sl": 90.0, "tp": 130.0, "units": 2.0}
+    p = analytics.position_progress(pos, price=110.0)
+    assert p["r_now"] == pytest.approx(1.0)      # +10 pour 10 de risque
+    assert p["r_target"] == pytest.approx(3.0)
+    assert 0.0 <= p["progress"] <= 1.0
+
+
+def test_esperance_glissante_sans_horodatage_duplique() -> None:
+    """Un graphique temporel exige des temps strictement croissants."""
+    from goldsilver.dashboard import analytics
+
+    trades = [{"r_multiple": 1.0, "exit_time": 1000 + (i // 2)} for i in range(80)]
+    pts = analytics.rolling_expectancy(trades, window=10)
+    times = [p[0] for p in pts]
+    assert times == sorted(times)
+    assert len(set(times)) == len(times)
+
+
+def test_analytics_route_et_payload(dash: DashboardData, server: str) -> None:
+    status, body = _fetch(server + "/api/analytics")
+    assert status == 200
+    payload = json.loads(body)
+    for k in ("excursions", "streaks", "time", "rolling_expectancy", "monte_carlo", "costs"):
+        assert k in payload
+
+
 # -------------------------------------------------------------------- export
 
 def test_export_html_est_autonome(algo_root: Path, tmp_path: Path) -> None:
