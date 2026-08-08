@@ -239,6 +239,14 @@ table.tbl td {
 }
 table.tbl tbody tr:hover td { background:var(--panel-2); }
 table.tbl tbody tr:last-child td { border-bottom:none; }
+/* grille de comparaison : la couleur donne l'intensité d'un coup d'œil,
+   le chiffre reste écrit dedans — une case colorée sans nombre serait
+   une impression, pas une donnée */
+table.tbl.hmt td.hm {
+  font-weight:600; border-left:1px solid var(--bg); border-right:1px solid var(--bg);
+}
+table.tbl.hmt tbody tr:hover td.hm { filter:brightness(1.35); }
+
 .tbl-wrap { overflow-x:auto; }
 .tbl-wrap.tall { max-height:440px; overflow-y:auto; }
 

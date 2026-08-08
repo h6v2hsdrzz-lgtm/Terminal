@@ -19,6 +19,7 @@ const state = {
   spread: null,
   newsScope: 'all',
   newsCat: 'all',
+  compareMetric: 'index156',
   tapeBar: '1H',
   tapeBars: 300,
   ready: false,
@@ -293,7 +294,7 @@ function render() {
     overview: renderOverview, gold: renderGold, shortterm: renderShortTerm,
     tape: renderTape, cohorts: renderCohorts,
     history: renderHistory, extremes: renderExtremes, ratio: renderRatio,
-    macro: renderMacro, world: renderWorld, news: renderNews,
+    macro: renderMacro, compare: renderCompare, world: renderWorld, news: renderNews,
   };
   $$('.view').forEach((v) => v.classList.add('hidden'));
   const host = $(`#view-${state.view}`);
@@ -2003,6 +2004,206 @@ function renderNews(host) {
   });
 }
 
+/* ═══════════════ Vue : comparateur ═══════════════
+   Tout le reste du poste regarde un marché à la fois. Or l'information
+   la plus utile est souvent relative : l'argent est-il plus tendu que
+   l'or, le platine suit-il, le cuivre raconte-t-il autre chose ? Cette
+   vue charge les sept marchés d'un coup et les met sur la même grille.
+
+   Les nets bruts ne sont pas comparables — un contrat d'argent porte
+   5 000 onces, un contrat d'or 100. Toute la comparaison passe donc par
+   des mesures normalisées : COT index, z-score, percentile, % d'open
+   interest. Le notionnel en dollars est la seule mesure absolue qui ait
+   du sens d'un marché à l'autre. */
+
+const COMPARE_METRICS = [
+  { key: 'index156', label: 'COT index 3 ans', unit: 'idx', desc: '0 = plancher de la fenêtre, 100 = sommet' },
+  { key: 'index52', label: 'COT index 1 an', unit: 'idx', desc: 'même mesure, fenêtre courte' },
+  { key: 'z260', label: 'Z-score 5 ans', unit: 'z', desc: 'écarts-types au-dessus ou en dessous de la moyenne' },
+  { key: 'pctHist', label: 'Percentile historique', unit: 'idx', desc: 'rang dans tout l\'historique disponible' },
+  { key: 'pctOi', label: '% de l\'open interest', unit: 'pct', desc: 'poids de la position dans le marché' },
+  { key: 'bias', label: 'Biais long / court', unit: 'pct', desc: 'borné à ±100' },
+];
+
+let compareCache = null;
+
+async function renderCompare(host) {
+  const keys = Object.keys(CFTC.markets);
+  const cohorts = CFTC.cohortsFor(state.report);
+  const specKey = state.report === 'legacy' ? 'noncomm' : 'money';
+  const sig = `${state.report}:${state.basis}`;
+
+  host.innerHTML = `<div class="panel"><div class="panel-bd">
+    <span class="dim">Chargement des ${keys.length} marchés…</span></div></div>`;
+
+  if (!compareCache || compareCache.sig !== sig) {
+    const { series, errors } = await CFTC.multi(keys, { report: state.report, basis: state.basis });
+    compareCache = { sig, series, errors };
+  }
+  const { series, errors } = compareCache;
+
+  /* une ligne par marché, tous les chiffres normalisés */
+  const rowsOut = [];
+  for (const k of keys) {
+    const rows = series[k];
+    if (!rows || !rows.length) continue;
+    const market = CFTC.markets[k];
+    const px = Macro.priceOf(k);
+    const cell = {};
+    for (const c of cohorts) {
+      const s = Metrics.cohortStats(rows, c.key, market, px ? px.price : null);
+      if (!s) continue;
+      cell[c.key] = {
+        index156: s.index[156], index52: s.index[52], z260: s.z[260],
+        pctHist: s.pct[0], pctOi: s.pctOi, bias: s.bias,
+        net: s.net, dNet: s.dNet, notional: s.notional,
+      };
+    }
+    const last = rows[rows.length - 1];
+    /* Un COT index ou un z-score calculés sur quelques relevés ne
+       mesurent rien. La CFTC ne publie le Micro Argent que par
+       intermittence — cinq arrêtés en tout — et un « index 100 » sur
+       cinq points serait un chiffre inventé par la mise en forme. */
+    rowsOut.push({
+      key: k, market, rows, last, cell, n: rows.length,
+      thin: rows.length < 52,
+      stale: (Date.now() / 1000 - last.ts) > 30 * 86400,
+    });
+  }
+
+  if (!rowsOut.length) {
+    host.innerHTML = `<div class="panel"><div class="panel-bd">
+      <span class="dn">Aucun marché chargé.</span></div></div>`;
+    return;
+  }
+
+  const metric = state.compareMetric || 'index156';
+  const md = COMPARE_METRICS.find((m) => m.key === metric) || COMPARE_METRICS[0];
+
+  /* Le fond de chaque case va du bleu (lessivé) au rouge (tendu). Une
+     couleur seule ne dit rien : le chiffre reste écrit dedans. */
+  const paint = (v, unit) => {
+    if (v == null) return { bg: 'transparent', txt: '—', tone: 'neutral' };
+    let p;                              /* position 0→1 sur l'échelle de tension */
+    let txt;
+    if (unit === 'z') { p = (v + 2.5) / 5; txt = fmtNum(v, 2) + 'σ'; }
+    else if (unit === 'pct') { p = (v + 100) / 200; txt = fmtPct(v, 0); }
+    else { p = v / 100; txt = Math.round(v); }
+    p = Math.max(0, Math.min(1, p));
+    const tone = p >= 0.85 ? 'hot' : p >= 0.65 ? 'warm' : p <= 0.15 ? 'cold' : p <= 0.35 ? 'cool' : 'neutral';
+    const a = Math.abs(p - 0.5) * 2;    /* opacité : neutre au centre */
+    const rgb = p > 0.5 ? '246,70,93' : '74,143,199';
+    return { bg: `rgba(${rgb},${(a * 0.34).toFixed(3)})`, txt, tone };
+  };
+
+  const head = cohorts.map((c) =>
+    `<th class="n" title="${escapeHtml(c.desc)}">${escapeHtml(c.short)}</th>`).join('');
+
+  /* les mesures relatives exigent un historique ; le % d'OI et le biais
+     se lisent sur un seul arrêté et restent valides même sur série courte */
+  const needsHistory = !['pctOi', 'bias'].includes(metric);
+
+  const body = rowsOut.map((r) => `<tr>
+      <td class="l"><b>${escapeHtml(r.market.label)}</b>
+        <small class="dim"> ${escapeHtml(r.market.exchange)}</small>
+        ${r.thin ? '<span class="news-tag" title="Historique trop court pour normaliser">série courte</span>' : ''}
+        ${r.stale ? '<span class="news-tag" title="Aucun arrêté récent">périmé</span>' : ''}</td>
+      ${cohorts.map((c) => {
+    const v = (r.thin && needsHistory) || !r.cell[c.key] ? null : r.cell[c.key][metric];
+    const s = paint(v, md.unit);
+    return `<td class="n hm tone-${s.tone}" style="background:${s.bg}"
+      title="${escapeHtml(r.market.label)} · ${escapeHtml(c.short)}${r.thin && needsHistory ? ' — historique insuffisant' : ''}">${s.txt}</td>`;
+  }).join('')}
+      <td class="n dim">${r.n}</td>
+    </tr>`).join('');
+
+  /* classement de tension sur la cohorte spéculative : c'est celle qui
+     marque les extrêmes, les autres sont des contreparties */
+  const ranked = rowsOut
+    .filter((r) => !r.thin && r.cell[specKey] && r.cell[specKey].index156 != null)
+    .sort((a, b) => b.cell[specKey].index156 - a.cell[specKey].index156);
+  const excluded = rowsOut.filter((r) => r.thin || r.stale);
+
+  host.innerHTML = `
+    <div class="panel">
+      <div class="panel-hd">
+        <span>Les ${rowsOut.length} marchés sur la même grille
+          <span class="hd-sub" style="margin-left:9px">${escapeHtml(md.desc)}</span></span>
+        <span class="seg" id="cmp-metric">${COMPARE_METRICS.map((m) =>
+    `<button data-metric="${m.key}"${m.key === metric ? ' class="on"' : ''}>${escapeHtml(m.label)}</button>`).join('')}</span>
+      </div>
+      <div class="panel-bd flush"><div class="tbl-wrap"><table class="tbl hmt">
+        <thead><tr><th>Marché</th>${head}<th class="n">Arrêtés</th></tr></thead>
+        <tbody>${body}</tbody>
+      </table></div></div>
+      <div class="note">Bleu = positionnement lessivé, rouge = positionnement tendu, la couleur suit
+        l'intensité. Les nets bruts sont volontairement absents de cette grille : un contrat d'argent
+        porte 5 000 onces et un contrat d'or 100, les comparer directement n'aurait aucun sens.
+        ${excluded.length ? `<br><b>Séries incomplètes :</b> ${excluded.map((r) =>
+      `${escapeHtml(r.market.label)} (${r.n} arrêté${r.n > 1 ? 's' : ''}${r.stale ? `, dernier le ${fmtDate(r.last.date)}` : ''})`).join(', ')}.
+        La CFTC ne publie un contrat que lorsqu'il compte assez d'opérateurs déclarants ; sur ces
+        marchés les mesures normalisées sont laissées vides plutôt que calculées sur trop peu de points.` : ''}
+        ${errors.length ? `<br><b class="dn">${errors.length} marché(s) indisponible(s) : ${escapeHtml(errors.join(' · '))}</b>` : ''}</div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-hd">Classement de tension
+          <span class="hd-sub">cohorte spéculative, COT index 3 ans</span></div>
+        <div class="panel-bd flush"><div class="tbl-wrap"><table class="tbl">
+          <thead><tr><th>#</th><th class="l">Marché</th><th class="n">Index</th>
+            <th class="n">Z 5 ans</th><th class="n">% OI</th><th class="n">Δ semaine</th></tr></thead>
+          <tbody>${ranked.map((r, i) => {
+    const c = r.cell[specKey];
+    return `<tr class="clickable" data-market="${escapeHtml(r.key)}">
+              <td class="n dim">${i + 1}</td>
+              <td class="l">${escapeHtml(r.market.label)}</td>
+              <td class="n tone-${c.index156 >= 80 ? 'hot' : c.index156 >= 60 ? 'warm' : c.index156 <= 20 ? 'cold' : c.index156 <= 40 ? 'cool' : 'neutral'}">${Math.round(c.index156)}</td>
+              <td class="n">${c.z260 == null ? '—' : fmtNum(c.z260, 2)}</td>
+              <td class="n">${fmtPct(c.pctOi, 1)}</td>
+              <td class="n ${signClass(c.dNet)}">${fmtSigned(c.dNet)}</td>
+            </tr>`;
+  }).join('')}</tbody>
+        </table></div></div>
+        <div class="note">Cliquez sur un marché pour basculer tout le poste dessus.</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-hd">Poids en dollars
+          <span class="hd-sub">notionnel de la cohorte spéculative</span></div>
+        <div class="panel-bd"><div class="contrib">${(() => {
+    const withN = rowsOut.filter((r) => r.cell[specKey] && r.cell[specKey].notional != null);
+    if (!withN.length) return '<span class="dim">Aucun cours disponible pour convertir en dollars.</span>';
+    const max = Math.max(...withN.map((r) => Math.abs(r.cell[specKey].notional)), 1);
+    return withN.sort((a, b) => Math.abs(b.cell[specKey].notional) - Math.abs(a.cell[specKey].notional))
+      .map((r) => {
+        const v = r.cell[specKey].notional;
+        const w = (Math.abs(v) / max) * 100;
+        return `<div class="contrib-row">
+              <div class="contrib-lb">${escapeHtml(r.market.label)}
+                <small>${fmtSigned(r.cell[specKey].net)} contrats</small></div>
+              <div class="contrib-side">
+                <div class="contrib-bar wide"><i style="left:0;width:${Math.max(w, 0.8).toFixed(1)}%;
+                  background:${v >= 0 ? 'var(--up)' : 'var(--dn)'}"></i></div>
+                <span class="contrib-val n ${signClass(v)}">${fmtUsd(v)}</span>
+              </div>
+            </div>`;
+      }).join('');
+  })()}</div></div>
+        <div class="note">Le notionnel est la seule mesure absolue comparable d'un marché à l'autre :
+          il convertit les contrats en dollars réellement engagés. Un net de 30 000 contrats sur l'or
+          et sur le cuivre ne pèsent pas du tout la même chose.
+          ${rowsOut.length > (() => rowsOut.filter((r) => r.cell[specKey] && r.cell[specKey].notional != null).length)()
+      ? ' Le platine, le palladium et le cuivre sont absents de ce classement : le poste ne suit un cours'
+        + ' que pour l\'or et l\'argent, et sans cours il n\'y a pas de conversion en dollars.' : ''}</div>
+      </div>
+    </div>`;
+
+  $$('#cmp-metric button').forEach((b) => {
+    b.onclick = () => { state.compareMetric = b.dataset.metric; render(); };
+  });
+}
+
 /* ═══════════════ Vue : monde ═══════════════
    Le seul endroit du poste où l'on voit le moteur que le COT ne montre
    jamais : les banques centrales. Elles achètent en gré à gré, hors
@@ -2516,7 +2717,18 @@ function wireEvents() {
     const mc = e.target.closest('[data-macro]');
     if (mc) { openMacroDrawer(mc.dataset.macro); return; }
     const hl = e.target.closest('[data-holder]');
-    if (hl) openHolderDrawer(hl.dataset.holder);
+    if (hl) { openHolderDrawer(hl.dataset.holder); return; }
+    /* depuis le comparateur : bascule tout le poste sur ce marché */
+    const mk = e.target.closest('[data-market]');
+    if (mk) {
+      state.metal = mk.dataset.market;
+      buildMetalTabs();
+      setStatus('Chargement…');
+      loadSeries().then(render).catch((err) => {
+        setStatus(err.message, 'err');
+        toast('Chargement impossible', err.message, true);
+      });
+    }
   });
   $('#drawer-x').onclick = closeDrawer;
   $('#drawer-overlay').onclick = (e) => { if (e.target.id === 'drawer-overlay') closeDrawer(); };
