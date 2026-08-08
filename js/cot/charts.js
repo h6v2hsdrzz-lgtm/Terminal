@@ -20,8 +20,21 @@ const CHART_THEME = {
   zero: '#2a323d',
 };
 
+/* Échelles de temps proposées sous chaque graphique. `n` est un nombre
+   de points de la série — semaines pour le COT, jours ou bougies
+   ailleurs — et 0 signifie « tout l'historique disponible ». */
+const CHART_RANGES_WEEKLY = [
+  { n: 13, t: '3M' }, { n: 26, t: '6M' }, { n: 52, t: '1A' },
+  { n: 156, t: '3A' }, { n: 260, t: '5A' }, { n: 520, t: '10A' }, { n: 0, t: 'Tout' },
+];
+const CHART_RANGES_DAILY = [
+  { n: 21, t: '1M' }, { n: 63, t: '3M' }, { n: 126, t: '6M' },
+  { n: 252, t: '1A' }, { n: 0, t: 'Tout' },
+];
+
 const Charts = {
   instances: [],
+  registry: new Map(),
 
   /* détruit tous les graphiques d'un conteneur — appelé à chaque
      changement de vue pour éviter que des observers restent actifs
@@ -32,6 +45,28 @@ const Charts = {
       try { inst.chart.remove(); } catch {}
     }
     this.instances = [];
+    this.registry.clear();
+  },
+
+  byId(id) { return this.registry.get(id) || null; },
+
+  /* ── Plage visible ────────────────────────────────────────
+     Change ce qu'on regarde, jamais ce que le graphique contient :
+     les données restent chargées, on ne fait que déplacer la fenêtre.
+     Zoomer puis revenir sur « Tout » redonne exactement l'historique
+     complet, sans rechargement. */
+  setRange(inst, bars) {
+    if (!inst) return;
+    const total = inst.handles.reduce((m, h) => Math.max(m, h.spec.data.length), 0);
+    if (!total) return;
+    const ts = inst.chart.timeScale();
+    const right = inst.rightOffset || 0;
+    if (!bars || bars >= total) {
+      ts.setVisibleLogicalRange({ from: -0.5, to: total - 0.5 + right });
+    } else {
+      ts.setVisibleLogicalRange({ from: total - bars - 0.5, to: total - 0.5 + right });
+    }
+    inst.range = bars;
   },
 
   /* ── Graphique multi-séries ───────────────────────────────
@@ -81,8 +116,15 @@ const Charts = {
         borderColor: CHART_THEME.border,
         timeVisible: false,
         secondsVisible: false,
-        rightOffset: 4,
+        rightOffset: opts.rightOffset != null ? opts.rightOffset : 4,
         fixLeftEdge: true,
+        /* La valeur par défaut de la bibliothèque est 0,5 pixel par point.
+           Vingt ans de COT font 1 050 points : dans un panneau de 300 px
+           — un tiroir sur téléphone — `fitContent()` bute sur ce plancher
+           et n'affiche silencieusement que les 600 dernières semaines,
+           sous un titre qui promet l'historique complet. On descend le
+           plancher pour que « tout » veuille dire tout, à toute largeur. */
+        minBarSpacing: 0.02,
       },
       crosshair: {
         mode: LWC.CrosshairMode.Normal,
@@ -143,18 +185,30 @@ const Charts = {
       });
     }
 
-    chart.timeScale().fitContent();
+    const inst = {
+      chart, handles, ro: null, id: opts.id || null,
+      rightOffset: opts.rightOffset != null ? opts.rightOffset : 4,
+      range: opts.range || 0,
+    };
+    this.setRange(inst, inst.range);
 
     /* le conteneur est en flex/grid : sa largeur change au
-       redimensionnement de la fenêtre et au changement de vue */
+       redimensionnement de la fenêtre et au changement de vue.
+       La plage visible est réappliquée après coup : un graphique créé
+       dans un conteneur pas encore mesuré se retrouverait sinon cadré
+       sur une largeur qui n'est plus la sienne. */
     const ro = new ResizeObserver(() => {
       const w = container.clientWidth;
-      if (w > 0) chart.applyOptions({ width: w, height: opts.height || 320 });
+      if (w > 0) {
+        chart.applyOptions({ width: w, height: opts.height || 320 });
+        this.setRange(inst, inst.range);
+      }
     });
     ro.observe(container);
+    inst.ro = ro;
 
-    const inst = { chart, handles, ro };
     this.instances.push(inst);
+    if (inst.id) this.registry.set(inst.id, inst);
 
     if (opts.onCrosshair) {
       chart.subscribeCrosshairMove((param) => {
@@ -198,6 +252,7 @@ const Charts = {
         timeVisible: opts.intraday !== false,
         secondsVisible: false,
         rightOffset: 3,
+        minBarSpacing: 0.05,
       },
       crosshair: {
         mode: LWC.CrosshairMode.Normal,
@@ -231,16 +286,24 @@ const Charts = {
       try { chart.panes()[1].setHeight(Math.round((opts.height || 380) * 0.22)); } catch {}
     }
 
-    chart.timeScale().fitContent();
+    const inst = {
+      chart, handles: [{ handle: price, spec: { label: 'prix', data } }], ro: null,
+      id: opts.id || null, rightOffset: 3, range: opts.range || 0,
+    };
+    this.setRange(inst, inst.range);
 
     const ro = new ResizeObserver(() => {
       const w = container.clientWidth;
-      if (w > 0) chart.applyOptions({ width: w, height: opts.height || 380 });
+      if (w > 0) {
+        chart.applyOptions({ width: w, height: opts.height || 380 });
+        this.setRange(inst, inst.range);
+      }
     });
     ro.observe(container);
+    inst.ro = ro;
 
-    const inst = { chart, handles: [{ handle: price, spec: { label: 'prix' } }], ro };
     this.instances.push(inst);
+    if (inst.id) this.registry.set(inst.id, inst);
 
     if (opts.onCrosshair) {
       chart.subscribeCrosshairMove((param) => {

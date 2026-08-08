@@ -329,6 +329,45 @@ function gaugeHtml(pct, tone, scale = ['0', '50', '100']) {
     <div class="gauge-scale"><span>${scale[0]}</span><span>${scale[1]}</span><span>${scale[2]}</span></div>`;
 }
 
+/* ═══════════════ Échelles de temps par graphique ═══════════════
+   Chaque graphique porte sa propre barre d'échelles. Le graphique
+   reçoit toujours la série entière ; les boutons ne font que déplacer
+   la fenêtre visible. Conséquence pratique : changer d'échelle est
+   instantané, ne relance aucun calcul, et « Tout » affiche réellement
+   tout — pas ce qui restait après un découpage en amont. */
+
+function chartFrame(id, { height = 300, ranges = CHART_RANGES_WEEKLY, active = 0, hover = '' } = {}) {
+  return `<div class="ch-frame">
+    <div class="ch-bar">
+      <span class="ch-hover" id="${id}-hover">${hover}</span>
+      <span class="ch-ranges" data-chart="${id}">${ranges.map((r) =>
+    `<button class="ch-rb${r.n === active ? ' on' : ''}" data-bars="${r.n}"
+       title="${r.n ? `${r.n} derniers points` : 'tout l\'historique'}">${r.t}</button>`).join('')}</span>
+    </div>
+    <div class="chart-box" id="${id}" style="height:${height}px"></div>
+  </div>`;
+}
+
+/* Choisit l'échelle initiale : la fenêtre globale du poste si elle tient
+   dans la série, sinon tout. */
+function initialRange(len, ranges = CHART_RANGES_WEEKLY) {
+  const lb = state.lookback;
+  if (!lb || lb >= len) return 0;
+  return ranges.some((r) => r.n === lb) ? lb : 0;
+}
+
+function wireChartRanges(root) {
+  root.addEventListener('click', (e) => {
+    const b = e.target.closest('.ch-rb');
+    if (!b) return;
+    const host = b.closest('.ch-ranges');
+    const inst = Charts.byId(host.dataset.chart);
+    if (!inst) return;
+    host.querySelectorAll('.ch-rb').forEach((x) => x.classList.toggle('on', x === b));
+    Charts.setRange(inst, Number(b.dataset.bars));
+  });
+}
+
 /* ═══════════════ Tiroir détaillé ═══════════════
    Un clic sur une cohorte ou une série macro ouvre tout ce que la
    donnée contient à son sujet, sans quitter la vue d'origine. */
@@ -435,8 +474,12 @@ function openCohortDrawer(cohortKey) {
     </div>
 
     <div class="dr-sec">
-      <div class="dr-h">HISTORIQUE COMPLET</div>
-      <div class="chart-box" id="dr-chart"></div>
+      <div class="dr-h">HISTORIQUE — ${fmtDate(rows[0].date)} À AUJOURD'HUI</div>
+      ${chartFrame('dr-chart', { height: 260, active: 0 })}
+      <p class="dr-p dim">Net de la cohorte (échelle de gauche, contrats) contre le prix du métal
+        (pointillés, échelle de droite, dollars). Les deux courbes couvrent les
+        ${rows.length} arrêtés hebdomadaires disponibles ; les boutons ci-dessus ne changent que
+        la fenêtre affichée.</p>
     </div>
 
     <div class="dr-sec">
@@ -493,7 +536,7 @@ function openCohortDrawer(cohortKey) {
         data: joined.map((p) => ({ ts: p.ts, value: p.price })),
         scale: 'right', width: 1, dashed: true, precision: 2, minMove: 0.01,
       }] : []),
-    ], { height: 260, zeroLine: true });
+    ], { id: 'dr-chart', height: 260, zeroLine: true, range: 0 });
   });
 }
 
@@ -531,7 +574,7 @@ function openMacroDrawer(id) {
 
     <div class="dr-sec">
       <div class="dr-h">HISTORIQUE</div>
-      <div class="chart-box" id="dr-chart"></div>
+      ${chartFrame('dr-chart', { height: 260, ranges: CHART_RANGES_DAILY, active: 0 })}
     </div>
 
     <div class="dr-sec">
@@ -558,7 +601,7 @@ function openMacroDrawer(id) {
     Charts.timeSeries($('#dr-chart'), [{
       label: s.label, color: '#6f8fb0', data: pts, scale: 'left', type: 'area',
       precision: 2, minMove: 0.01,
-    }], { height: 260 });
+    }], { id: 'dr-chart', height: 260, range: 0 });
   });
 }
 
@@ -672,9 +715,11 @@ function renderOverview(host) {
     </div>
 
     <div class="panel">
-      <div class="panel-hd">Net ${escapeHtml(specDef.short.toLowerCase())} contre prix
-        <span class="hd-sub" id="ov-hover">glissez le curseur sur le graphique</span></div>
-      <div class="panel-bd flush"><div class="chart-box" id="${chartId}"></div></div>
+      <div class="panel-hd">Net ${escapeHtml(specDef.short.toLowerCase())} contre prix</div>
+      <div class="panel-bd flush">${chartFrame(chartId, {
+      height: 300, active: initialRange(rows.length),
+      hover: 'glissez le curseur sur le graphique',
+    })}</div>
       <div class="note" id="ov-diverge"></div>
     </div>
 
@@ -684,20 +729,19 @@ function renderOverview(host) {
       <div class="panel-bd flush">${newsListHtml(news)}</div>
     </div>`;
 
-  /* graphique */
-  const netSeries = Metrics.tail(Metrics.series(rows, specKey, 'net'), state.lookback);
+  /* graphique — série entière, la fenêtre est réglée par la barre d'échelles */
+  const netSeries = Metrics.series(rows, specKey, 'net');
   const priceSeries = state.joined.length
-    ? Metrics.tail(state.joined, state.lookback).map((p) => ({ ts: p.ts, value: p.price }))
-    : [];
+    ? state.joined.map((p) => ({ ts: p.ts, value: p.price })) : [];
   Charts.timeSeries($(`#${chartId}`), [
     { label: specDef.short, color: specDef.color, data: netSeries, scale: 'left', type: 'area', width: 2 },
     ...(priceSeries.length
       ? [{ label: 'Prix', color: '#8892a0', data: priceSeries, scale: 'right', width: 1, dashed: true, precision: 2, minMove: 0.01 }]
       : []),
   ], {
-    height: 300, zeroLine: true,
+    id: chartId, height: 300, zeroLine: true, range: initialRange(rows.length),
     onCrosshair: (info) => {
-      const el = $('#ov-hover');
+      const el = $(`#${chartId}-hover`);
       if (!el) return;
       if (!info) { el.textContent = 'glissez le curseur sur le graphique'; return; }
       el.innerHTML = info.values.filter((v) => v.value != null)
@@ -908,9 +952,10 @@ async function renderGold(host) {
     </div>
 
     <div class="panel">
-      <div class="panel-hd">Positionnement contre cours — historique complet
-        <span class="hd-sub" id="gd-hover">survolez le graphique</span></div>
-      <div class="panel-bd flush"><div class="chart-box" id="gd-chart"></div></div>
+      <div class="panel-hd">Positionnement contre cours — historique complet</div>
+      <div class="panel-bd flush">${chartFrame('gd-chart', {
+      height: 340, active: 0, hover: 'survolez le graphique',
+    })}</div>
     </div>
 
     <div class="panel">
@@ -937,9 +982,9 @@ async function renderGold(host) {
       scale: 'right', width: 1.5, precision: 2, minMove: 0.01,
     }] : []),
   ], {
-    height: 340, zeroLine: true,
+    id: 'gd-chart', height: 340, zeroLine: true, range: 0,
     onCrosshair: (info) => {
-      const el = $('#gd-hover');
+      const el = $('#gd-chart-hover');
       if (!el) return;
       if (!info) { el.textContent = 'survolez le graphique'; return; }
       el.innerHTML = info.values.filter((v) => v.value != null)
@@ -1132,20 +1177,23 @@ function renderShortTerm(host) {
     <div class="panel">
       <div class="panel-hd">Prix quotidien et arrêtés récents
         <span class="hd-sub">les repères marquent les dates d'arrêté du COT</span></div>
-      <div class="panel-bd flush"><div class="chart-box" id="st-price"></div></div>
+      <div class="panel-bd flush">${chartFrame('st-price', {
+      height: 300, ranges: CHART_RANGES_DAILY, active: 126,
+    })}</div>
       <div class="note">Entre deux repères, le positionnement est invisible. C'est la limite
         structurelle du COT, et la raison d'être de cette vue.</div>
     </div>`;
 
-  /* prix quotidien sur ~6 mois + marqueurs d'arrêté */
-  const cut = Date.now() / 1000 - 190 * 86400;
-  const recent = daily.filter((p) => p.ts >= cut);
+  /* prix quotidien complet + marqueurs d'arrêté ; la fenêtre initiale
+     est de six mois, réglable par la barre d'échelles */
+  const cut = daily.length ? daily[0].ts : 0;
+  const recent = daily;
   if (recent.length) {
     const inst = Charts.timeSeries($('#st-price'), [{
       label: `${market.label} (fixing quotidien)`, color: '#d9a441',
       data: recent.map((p) => ({ ts: p.ts, value: p.close })),
       scale: 'left', type: 'area', precision: 2, minMove: 0.01,
-    }], { height: 300 });
+    }], { id: 'st-price', height: 300, range: 126 });
 
     if (inst && inst.handles[0]) {
       const marks = rows.filter((r) => r.ts >= cut).map((r) => ({
@@ -1483,14 +1531,16 @@ function renderCohorts(host) {
 function renderHistory(host) {
   const rows = state.rows;
   const cohorts = CFTC.cohortsFor(state.report);
-  const lb = state.lookback;
+  const r0 = initialRange(rows.length);
 
   host.innerHTML = `
     <div class="panel">
-      <div class="panel-hd">Positions nettes par cohorte
-        <span class="hd-sub" id="hs-hover">glissez le curseur pour lire les valeurs</span></div>
+      <div class="panel-hd">Positions nettes — toutes les cohortes
+        <span class="hd-sub">${rows.length} arrêtés depuis ${fmtDate(rows[0].date)}</span></div>
       <div class="chart-legend" id="hs-legend"></div>
-      <div class="panel-bd flush"><div class="chart-box" id="hs-nets"></div></div>
+      <div class="panel-bd flush">${chartFrame('hs-nets', {
+      height: 400, active: r0, hover: 'glissez le curseur pour lire les valeurs',
+    })}</div>
       <div class="note">La somme des nets de toutes les cohortes est toujours nulle :
         chaque contrat long a un contrat court en face. Ce graphique montre donc un <b>transfert de risque</b>
         entre catégories d'opérateurs, pas une création de position nette.</div>
@@ -1499,29 +1549,29 @@ function renderHistory(host) {
     <div class="grid-2">
       <div class="panel">
         <div class="panel-hd">Open interest<span class="hd-sub">nombre total de contrats ouverts</span></div>
-        <div class="panel-bd flush"><div class="chart-box" id="hs-oi"></div></div>
+        <div class="panel-bd flush">${chartFrame('hs-oi', { height: 200, active: r0 })}</div>
       </div>
       <div class="panel">
         <div class="panel-hd">Concentration des 4 premiers<span class="hd-sub">% du net, par côté</span></div>
-        <div class="panel-bd flush"><div class="chart-box" id="hs-conc"></div></div>
+        <div class="panel-bd flush">${chartFrame('hs-conc', { height: 200, active: r0 })}</div>
       </div>
     </div>
 
     <div class="panel">
       <div class="panel-hd">COT index du positionnement spéculatif
         <span class="hd-sub">0 = plancher de la fenêtre · 100 = sommet</span></div>
-      <div class="panel-bd flush"><div class="chart-box" id="hs-idx"></div></div>
+      <div class="panel-bd flush">${chartFrame('hs-idx', { height: 220, active: r0 })}</div>
       <div class="note">Borné entre 0 et 100, l'index reste lisible quand l'open interest change d'échelle
         au fil des années — contrairement au net brut.</div>
     </div>`;
 
   const series = cohorts.map((c) => ({
     label: c.short, color: c.color,
-    data: Metrics.tail(Metrics.series(rows, c.key, 'net'), lb),
+    data: Metrics.series(rows, c.key, 'net'),
     scale: 'left', width: 1.5,
   }));
   const priceRows = state.joined.length
-    ? Metrics.tail(state.joined, lb).map((p) => ({ ts: p.ts, value: p.price })) : [];
+    ? state.joined.map((p) => ({ ts: p.ts, value: p.price })) : [];
   if (priceRows.length) {
     series.push({ label: 'Prix', color: '#8892a0', data: priceRows, scale: 'right', width: 1, dashed: true, precision: 2, minMove: 0.01 });
   }
@@ -1530,9 +1580,9 @@ function renderHistory(host) {
     `<span class="cl-item"><i class="cl-swatch" style="background:${s.color}"></i>${escapeHtml(s.label)}</span>`).join('');
 
   Charts.timeSeries($('#hs-nets'), series, {
-    height: 360, zeroLine: true,
+    id: 'hs-nets', height: 400, zeroLine: true, range: r0,
     onCrosshair: (info) => {
-      const el = $('#hs-hover');
+      const el = $('#hs-nets-hover');
       if (!el) return;
       if (!info) { el.textContent = 'glissez le curseur pour lire les valeurs'; return; }
       el.innerHTML = info.values.filter((v) => v.value != null)
@@ -1541,13 +1591,13 @@ function renderHistory(host) {
   });
 
   Charts.timeSeries($('#hs-oi'),
-    [{ label: 'OI', color: '#6f8fb0', data: Metrics.tail(Metrics.seriesOf(rows, (r) => r.oi), lb), scale: 'left', type: 'area' }],
-    { height: 200 });
+    [{ label: 'OI', color: '#6f8fb0', data: Metrics.seriesOf(rows, (r) => r.oi), scale: 'left', type: 'area' }],
+    { id: 'hs-oi', height: 200, range: r0 });
 
   Charts.timeSeries($('#hs-conc'), [
-    { label: 'Longs', color: 'var(--up)'.replace('var(--up)', '#2ebd85'), data: Metrics.tail(Metrics.seriesOf(rows, (r) => r.conc.net4Long), lb), scale: 'left', precision: 1, minMove: 0.1 },
-    { label: 'Courts', color: '#f6465d', data: Metrics.tail(Metrics.seriesOf(rows, (r) => r.conc.net4Short), lb), scale: 'left', precision: 1, minMove: 0.1 },
-  ], { height: 200 });
+    { label: 'Longs', color: '#2ebd85', data: Metrics.seriesOf(rows, (r) => r.conc.net4Long), scale: 'left', precision: 1, minMove: 0.1 },
+    { label: 'Courts', color: '#f6465d', data: Metrics.seriesOf(rows, (r) => r.conc.net4Short), scale: 'left', precision: 1, minMove: 0.1 },
+  ], { id: 'hs-conc', height: 200, range: r0 });
 
   /* index glissant sur 52 semaines */
   const specKey = state.report === 'legacy' ? 'noncomm' : 'money';
@@ -1559,8 +1609,8 @@ function renderHistory(host) {
     idxSeries.push({ ts: net[i].ts, value: max === min ? 50 : ((net[i].value - min) / (max - min)) * 100 });
   }
   Charts.timeSeries($('#hs-idx'),
-    [{ label: 'COT index 52 sem.', color: '#d9a441', data: Metrics.tail(idxSeries, lb), scale: 'left', type: 'area', precision: 0 }],
-    { height: 200 });
+    [{ label: 'COT index 52 sem.', color: '#d9a441', data: idxSeries, scale: 'left', type: 'area', precision: 0 }],
+    { id: 'hs-idx', height: 220, range: r0 });
 }
 
 /* ═══════════════ Vue : extrêmes ═══════════════ */
@@ -1711,7 +1761,9 @@ function renderRatio(host) {
           <span class="cl-item"><i class="cl-swatch" style="background:#9fb0c0"></i>Argent</span>
           <span class="cl-item"><i class="cl-swatch" style="background:#8e7ab8"></i>Écart (or − argent)</span>
         </div>
-        <div class="panel-bd flush"><div class="chart-box" id="rt-chart"></div></div>
+        <div class="panel-bd flush">${chartFrame('rt-chart', {
+      height: 340, active: initialRange(spread.series.length),
+    })}</div>
         <div class="note">Les deux métaux sont ramenés à une échelle commune de 0 à 100 avant d'être comparés :
           un contrat d'argent porte 5 000 onces, un contrat d'or seulement 100, donc les nets bruts
           ne sont pas comparables directement. Un écart très positif signale un or nettement plus détenu
@@ -1726,12 +1778,12 @@ function renderRatio(host) {
           il convertit les contrats en dollars réellement engagés.</div>
       </div>`;
 
-    const tail = Metrics.tail(spread.series, state.lookback);
+    const tail = spread.series;
     Charts.timeSeries($('#rt-chart'), [
       { label: 'Or', color: '#d9a441', data: tail.map((p) => ({ ts: p.ts, value: p.gold })), scale: 'left', precision: 0 },
       { label: 'Argent', color: '#9fb0c0', data: tail.map((p) => ({ ts: p.ts, value: p.silver })), scale: 'left', precision: 0 },
       { label: 'Écart', color: '#8e7ab8', data: tail.map((p) => ({ ts: p.ts, value: p.value })), scale: 'right', width: 1.5, precision: 0 },
-    ], { height: 340 });
+    ], { id: 'rt-chart', height: 340, range: initialRange(tail.length) });
   }).catch((e) => {
     host.innerHTML = `<div class="panel"><div class="panel-bd">
       <span class="dn">Chargement impossible : ${escapeHtml(e.message)}</span></div></div>`;
@@ -2012,6 +2064,11 @@ function updateKeyButton() {
 /* ═══════════════ Événements ═══════════════ */
 
 function wireEvents() {
+  /* échelles de temps des graphiques — délégué, les boutons naissent
+     et meurent avec chaque rendu */
+  wireChartRanges($('#main'));
+  wireChartRanges($('#drawer-bd'));
+
   /* navigation */
   $$('.rail-item').forEach((b) => {
     b.onclick = () => {

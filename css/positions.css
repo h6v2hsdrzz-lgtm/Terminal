@@ -254,6 +254,32 @@ table.tbl tbody tr:last-child td { border-bottom:none; }
 
 /* ═══════════ SÉLECTEUR & GRAPHIQUES ═══════════ */
 .chart-box { width:100%; }
+
+/* barre d'échelles propre à chaque graphique : lecture du curseur à
+   gauche, échelles de temps à droite */
+.ch-frame { display:block; }
+.ch-bar {
+  display:flex; align-items:center; gap:10px; justify-content:space-between;
+  padding:7px 11px 6px; border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,rgba(255,255,255,.012),transparent);
+}
+.ch-hover {
+  font-size:10.5px; color:var(--muted); min-height:13px; flex:1;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.ch-ranges { display:flex; gap:2px; flex:none; }
+.ch-rb {
+  background:transparent; border:1px solid transparent; border-radius:3px;
+  color:var(--faint); padding:2px 7px; font-size:10px; font-weight:600;
+  letter-spacing:.04em; cursor:pointer; font-family:inherit;
+  transition:color .12s, background .12s, border-color .12s;
+}
+.ch-rb:hover { color:var(--txt); background:var(--panel-3); }
+.ch-rb.on {
+  color:var(--gold); border-color:rgba(217,164,65,.32);
+  background:rgba(217,164,65,.09);
+}
+
 .chart-legend { display:flex; flex-wrap:wrap; gap:14px; padding:9px 13px 0; font-size:10.5px; }
 .cl-item { display:flex; align-items:center; gap:6px; color:var(--muted); }
 .cl-swatch { width:11px; height:2.5px; border-radius:2px; }
