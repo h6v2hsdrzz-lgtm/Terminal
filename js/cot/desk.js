@@ -2373,6 +2373,21 @@ function updateKeyButton() {
 
 /* ═══════════════ Événements ═══════════════ */
 
+/* Le sélecteur de vue n'existe que sur téléphone (CSS), mais son état
+   est piloté ici pour que le libellé affiché reste toujours celui de la
+   vue courante — y compris quand la vue change autrement qu'au clic. */
+function setPicker(open) {
+  $('#rail').classList.toggle('open', open);
+  $('#view-picker').setAttribute('aria-expanded', String(open));
+}
+
+function syncPicker() {
+  const cur = $(`.rail-item[data-view="${state.view}"]`);
+  if (!cur) return;
+  $('#view-picker .vp-ic').textContent = cur.querySelector('.ri-ic').textContent;
+  $('#view-picker .vp-tx').textContent = cur.querySelector('.ri-tx').textContent;
+}
+
 function wireEvents() {
   /* échelles de temps des graphiques — délégué, les boutons naissent
      et meurent avec chaque rendu */
@@ -2384,9 +2399,23 @@ function wireEvents() {
     b.onclick = () => {
       $$('.rail-item').forEach((x) => x.classList.toggle('on', x === b));
       state.view = b.dataset.view;
+      /* sur téléphone la liste est un panneau déroulant : elle se referme
+         dès qu'on a choisi, sinon elle masque la vue qu'on vient d'ouvrir */
+      setPicker(false);
+      syncPicker();
       render();
     };
   });
+
+  /* sélecteur de vue (téléphone) */
+  $('#view-picker').onclick = () => setPicker(!$('#rail').classList.contains('open'));
+  document.addEventListener('click', (e) => {
+    if (!$('#rail').contains(e.target)) setPicker(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') setPicker(false);
+  });
+  syncPicker();
 
   /* métal */
   $('#metal-tabs').onclick = async (e) => {

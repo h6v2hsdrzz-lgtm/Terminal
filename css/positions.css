@@ -131,6 +131,7 @@ a { color:inherit; text-decoration:none; }
   display:flex; flex-direction:column; padding:8px 0; overflow-y:auto;
 }
 #rail-nav { display:flex; flex-direction:column; }
+#view-picker { display:none; }   /* remplacé par la liste complète sur écran large */
 .rail-item {
   display:flex; align-items:center; gap:10px; width:100%;
   background:none; border:none; border-left:2px solid transparent;
@@ -652,18 +653,42 @@ tr.clickable:hover td, .stat.clickable:hover { background:var(--panel-2); }
   #rail {
     flex:0 0 auto; flex-direction:column; padding:0; overflow:visible;
     border-right:none; border-bottom:1px solid var(--border);
+    position:relative; z-index:60;
   }
+
+  /* Onze vues ne tiennent pas sur une ligne de 390 px. La version
+     précédente les mettait dans un défilement horizontal de 4 290 px
+     avec l'ascenseur masqué : une seule vue était visible, et les dix
+     autres étaient inatteignables faute du moindre indice qu'elles
+     existaient. Un sélecteur qui ouvre la liste entière règle le
+     problème : tout est visible d'un coup, et rien ne se devine. */
+  #view-picker {
+    display:flex; align-items:center; gap:9px; width:100%;
+    background:var(--panel); border:none; border-bottom:1px solid var(--border);
+    color:var(--txt); padding:11px 13px; font-size:13px; font-weight:550; text-align:left;
+  }
+  .vp-ic { color:var(--accent); font-size:12px; }
+  .vp-tx { flex:1; }
+  .vp-caret { color:var(--faint); font-size:11px; transition:transform .18s; }
+  #rail.open .vp-caret { transform:rotate(180deg); }
+  #rail.open #view-picker { border-bottom-color:var(--accent); }
+
   #rail-nav {
-    flex-direction:row; overflow-x:auto; scrollbar-width:none;
-    -webkit-overflow-scrolling:touch; border-bottom:1px solid var(--border);
+    display:none; flex-direction:row; flex-wrap:wrap; gap:1px;
+    padding:1px; background:var(--border);
+    border-bottom:1px solid var(--border);
+    position:absolute; top:100%; left:0; right:0;
+    box-shadow:0 14px 30px rgba(0,0,0,.6);
   }
-  #rail-nav::-webkit-scrollbar { display:none; }
+  #rail.open #rail-nav { display:flex; }
   .rail-item {
-    flex:0 0 auto; border-left:none; border-bottom:2px solid transparent;
-    padding:10px 13px; gap:7px;
+    flex:1 1 calc(50% - 1px); min-width:0;
+    border-left:none; background:var(--panel);
+    padding:13px 12px; gap:8px; font-size:12.5px;
   }
-  .rail-item.on { border-left-color:transparent; border-bottom-color:var(--accent); }
-  .ri-tx { display:inline; }
+  .rail-item.on { border-left-color:transparent; background:var(--panel-3); color:var(--accent); }
+  .rail-item.on .ri-ic { color:var(--accent); }
+  .ri-tx { display:inline; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
   .rail-sep { display:none; }
   .rail-opts {

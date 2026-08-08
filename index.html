@@ -45,6 +45,14 @@
 
     <!-- ═══ NAVIGATION ═══ -->
     <nav id="rail" aria-label="Sections">
+      <!-- sélecteur de vue : visible uniquement sur téléphone, où la liste
+           complète ne tient pas sur une ligne -->
+      <button id="view-picker" aria-expanded="false" aria-controls="rail-nav">
+        <span class="vp-ic">◉</span>
+        <span class="vp-tx">Vue d'ensemble</span>
+        <span class="vp-caret">▾</span>
+      </button>
+
       <div id="rail-nav">
         <button class="rail-item on" data-view="overview">
           <span class="ri-ic">◉</span><span class="ri-tx">Vue d'ensemble</span>
