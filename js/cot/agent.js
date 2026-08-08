@@ -22,11 +22,15 @@ const AGENT_MAX_HISTORY = 10;
 
 const AGENT_SYSTEM = `Tu es l'analyste d'un poste de suivi du positionnement institutionnel sur l'or et l'argent.
 
-Ton matériau : le rapport COT de la CFTC (positions hebdomadaires des producteurs, des swap dealers,
-des hedge funds et des petits porteurs sur le COMEX), un instantané macro (taux réels, dollar, points
-morts d'inflation, spreads de crédit, volatilité), les prix, et un flux de news. Tout t'est fourni en
-JSON à chaque message : ne travaille QUE sur ces chiffres, ne les invente jamais, et ne cite pas de
-donnée absente du contexte.
+Ton matériau, fourni en JSON à chaque message :
+- le rapport COT de la CFTC — positions hebdomadaires des producteurs, des swap dealers, des hedge
+  funds et des petits porteurs sur le COMEX ;
+- un instantané macro — taux réels, dollar, points morts d'inflation, spreads de crédit, volatilité ;
+- les prix, et le comportement du prix depuis l'arrêté du COT ;
+- les réserves d'or officielles des banques centrales, déclarées au FMI ;
+- un fil d'actualité francophone rangé par catégorie.
+
+Ne travaille QUE sur ces chiffres, ne les invente jamais, et ne cite pas de donnée absente du contexte.
 
 Méthode :
 1. Pars du positionnement : qui est chargé, dans quel sens, à quel extrême historique.
@@ -41,6 +45,12 @@ Règles de rigueur :
 - Quand les signaux se contredisent, dis-le au lieu de trancher artificiellement.
 - Une contrepartie institutionnelle n'est pas un « pari » : un swap dealer vendeur couvre un livre,
   ce n'est pas un avis baissier. Ne confonds jamais couverture et spéculation.
+- Le COT ne voit que les contrats à terme américains. Trois moteurs majeurs lui échappent : le gré à
+  gré de Londres, les flux des ETF, et les achats de banques centrales. Quand le prix décroche de ses
+  moteurs habituels sans que le positionnement COMEX ne bouge, dis que la cause est probablement hors
+  champ plutôt que d'inventer une explication dans les données que tu as.
+- Ne parle jamais de positions nominatives, de stops ou d'objectifs d'un établissement : rien de tout
+  cela n'est public, et le contexte ne t'en donne pas. Si on te le demande, explique pourquoi.
 - Pas de prévision de prix chiffrée, pas de recommandation d'achat ou de vente.
 
 Forme : français, dense, orienté écran de trading. Titres courts en ###, listes à puces, chiffres
@@ -75,6 +85,18 @@ const AGENT_PRESETS = [
   {
     id: 'ratio', label: 'Arbitrage or / argent', icon: '◐', effort: 'high', tokens: 4000,
     prompt: 'Compare le positionnement institutionnel sur l\'or et sur l\'argent. Le décalage entre les deux est-il inhabituel au regard de son historique, et qu\'est-ce que cela dit du ratio or/argent ?',
+  },
+  {
+    id: 'banks', label: 'Banques centrales', icon: '✸', effort: 'high', tokens: 4000,
+    prompt: 'Analyse les réserves d\'or officielles fournies. Qui détient quoi, et surtout quelle part de ses réserves de change chaque pays consacre à l\'or : sépare les États dont l\'or EST la réserve de ceux qui en détiennent beaucoup en tonnage mais peu en proportion. Explique ce que cet écart implique pour la demande officielle future, et rappelle pourquoi aucun de ces flux n\'apparaît dans le rapport COT.',
+  },
+  {
+    id: 'shortterm', label: 'Angle mort court terme', icon: '◔', effort: 'high', tokens: 4000,
+    prompt: 'Concentre-toi sur le bloc court_terme. Qu\'a fait le prix depuis l\'arrêté du COT, et que peut-on raisonnablement en déduire sur la dérive du positionnement depuis ? Utilise la sensibilité au prix (bêta) et son r² — dis explicitement si la relation est trop faible pour extrapoler. Termine par ce qui reste strictement invisible sur cet horizon.',
+  },
+  {
+    id: 'contrarian', label: 'Thèse inverse', icon: '◑', effort: 'high', tokens: 4500,
+    prompt: 'Construis l\'argumentaire le plus solide possible CONTRE la lecture que suggèrent les données à l\'écran. Quels chiffres du contexte soutiennent la thèse opposée, quelles hypothèses implicites de la lecture dominante sont fragiles, et quel enchaînement d\'événements donnerait raison à cette thèse inverse ? Reste factuel : n\'invente aucun chiffre pour les besoins de l\'argument.',
   },
 ];
 
@@ -222,13 +244,50 @@ const Agent = {
         lecture: state.spread.reading,
         z_score: state.spread.z == null ? null : +state.spread.z.toFixed(2),
       } : null,
-      news: Macro.newsItems({ limit: 25 }).map((n) => ({
-        titre: n.title, source: n.source, date: n.published, portee: n.scope,
-      })),
+      /* Les réserves officielles sont le moteur que le COT ne montre
+         jamais : elles s'échangent en gré à gré, hors COMEX. Les donner
+         à l'agent lui permet d'expliquer un décrochage prix / macro
+         plutôt que de le forcer dans les seules données de futures. */
+      reserves_officielles: (() => {
+        const holders = Macro.reserveHolders();
+        if (!holders.length) return null;
+        const total = Macro.reserveTotal();
+        const meta = Macro.reserves || {};
+        return {
+          arrete: meta.asOf || null,
+          source: meta.source || null,
+          total_tonnes: Math.round(total),
+          avertissement: 'Réserves officielles déclarées au FMI uniquement. Déclaration volontaire et '
+            + 'différée : un tonnage stable ne prouve pas l\'absence d\'achat. Hors ETF, hors particuliers, '
+            + 'hors stocks des banques commerciales.',
+          principaux_detenteurs: holders.slice(0, 15).map((h) => ({
+            rang: h.rank, nom: h.name, tonnes: Math.round(h.tonnes),
+            pct_du_total_declare: +((h.tonnes / total) * 100).toFixed(1),
+            pct_de_ses_reserves_de_change: h.share,
+            institution: h.institution || undefined,
+          })),
+        };
+      })(),
+      /* Le fil est déjà catégorisé par le collecteur ; transmettre la
+         catégorie évite à l'agent de reclasser à l'aveugle, et lui dit
+         par quel canal chaque dépêche peut agir sur le métal. */
+      news: (() => {
+        const cats = Macro.newsCategories();
+        if (!cats.length) {
+          return Macro.newsItems({ limit: 25 }).map((n) => ({
+            titre: n.title, source: n.source, date: n.published, portee: n.scope,
+          }));
+        }
+        return Object.fromEntries(cats
+          .map((c) => [c.label, Macro.newsItems({ category: c.key, limit: 8 })
+            .map((n) => ({ titre: n.title, source: n.source, date: n.published }))])
+          .filter(([, v]) => v.length));
+      })(),
       fraicheur_donnees: {
         cot: last.date,
         macro: Macro.data ? Macro.data.generated : null,
         news: Macro.news ? Macro.news.generated : null,
+        reserves: Macro.reserves ? Macro.reserves.asOf : null,
       },
     };
   },

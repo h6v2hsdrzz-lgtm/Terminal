@@ -30,14 +30,20 @@ uniquement pour l'agent d'analyse ; les sept vues fonctionnent sans.
 | **LBMA** | Fixings or/argent quotidiens depuis 1968 | ❌ | instantané `data/prices.json` |
 | **FRED** (Fed de Saint-Louis) | 16 séries macro (taux réels, dollar, crédit…) | ❌ | instantané `data/macro.json` |
 | **api.gold-api.com** / OKX | Spot XAU/XAG temps réel | ✅ | direct, avec repli |
-| **RSS** (Fed, BCE, presse) | Fil d'actualité | ❌ | instantané `data/news.json` |
+| **Google Actualités** + fr.investing.com | Fil d'actualité francophone | ❌ | instantané `data/news.json` |
+| **World Gold Council / FMI** | Réserves d'or officielles par pays | ❌ | instantané `data/reserves.json` |
+| **Natural Earth** | Contours des continents | — | `data/land.json`, construit une fois |
 
 Les sources sans CORS ne peuvent pas être lues par un navigateur depuis une page
 GitHub Pages. Plutôt qu'un backend ou un proxy CORS tiers — fragile, et qui
 verrait passer tout le trafic — `scripts/refresh_data.py` les récupère dans
-GitHub Actions et dépose trois JSON statiques dans `data/`. Le site reste
+GitHub Actions et dépose quatre JSON statiques dans `data/`. Le site reste
 entièrement statique ; seule leur fraîcheur dépend du cron
 (`.github/workflows/market-data.yml`, deux fois par jour en semaine).
+
+`data/land.json` fait exception : il est construit une fois par
+`scripts/build_land.py` à partir de Natural Earth. Le contour du monde ne
+change pas deux fois par jour.
 
 ## Cohortes suivies
 
@@ -116,7 +122,27 @@ que la cohorte se positionne alors sur autre chose que le prix et que
 l'extrapolation devient fragile. C'est un ordre de grandeur, jamais un chiffre
 publié.
 
-## Les dix vues
+## Ce que le COT ne voit pas, et où le regarder
+
+Le rapport ne couvre que les contrats à terme américains. Trois moteurs
+majeurs de l'or lui échappent : le gré à gré de Londres, les flux des ETF,
+et les **achats de banques centrales**. Le troisième est le premier acheteur
+structurel du métal depuis 2022, il se traite hors COMEX, et il est déclaré
+au FMI avec plusieurs mois de retard.
+
+La vue **Monde** est le seul endroit du poste où ce moteur est visible :
+les réserves officielles projetées sur un globe orthographique — l'aire de
+chaque disque est proportionnelle au tonnage —, le classement complet, et
+surtout la part que chaque pays consacre à l'or dans ses réserves de
+change. C'est cet écart qui compte : 83 % pour les États-Unis contre 9 %
+pour la Chine ne décrivent pas la même contrainte d'achat future.
+
+Le globe se tourne à la souris ou au doigt, chaque détenteur ouvre son
+tiroir, et le tonnage y est converti en contrats COMEX pour donner l'ordre
+de grandeur — un stock souverain pèse couramment plusieurs fois l'open
+interest de tout le marché à terme.
+
+## Les onze vues
 
 | Vue | Contenu |
 |-----|---------|
@@ -129,18 +155,22 @@ publié.
 | **Extrêmes** | Matrice index/z/percentile, rotations à plus de 2σ, basculements du net, configurations comparables |
 | **Or / Argent** | Écart de positionnement normalisé et comparaison directe des deux métaux |
 | **Macro** | 16 séries FRED avec sparklines, régime, corrélations or et argent |
-| **Actualité** | Fil filtrable métaux / macro |
+| **Monde** | Globe des réserves d'or officielles, classement des détenteurs, places de marché ouvertes |
+| **Actualité** | Fil francophone rangé en six catégories |
 
 ## Agent d'analyse
 
-L'agent reçoit à chaque question un instantané JSON (~9 Ko) de **ce qui est
+L'agent reçoit à chaque question un instantané JSON (~15 Ko) de **ce qui est
 affiché à l'écran** : positionnement complet, score de tension et ses
-composantes, régime macro, corrélations, divergences, analogues, news. Il ne
+composantes, régime macro, corrélations, divergences, analogues, réserves
+officielles et actualité classée par catégorie. Il ne
 devine rien — chaque chiffre qu'il cite se retrouve dans le panneau d'à côté.
 
-Six analyses pré-câblées (lecture du COT, régime macro, interprétation des news,
-synthèse & scénarios, cartographie du risque, arbitrage or/argent) et un champ
-libre. Réponses **diffusées en flux**. L'appel part directement du navigateur
+Neuf analyses pré-câblées — lecture du COT, régime macro, interprétation des
+news, synthèse & scénarios, cartographie du risque, arbitrage or/argent,
+banques centrales, angle mort court terme, et une **thèse inverse** qui
+construit l'argumentaire le plus solide possible contre la lecture que
+suggère l'écran — plus un champ libre. Réponses **diffusées en flux**. L'appel part directement du navigateur
 vers l'API Anthropic ; la clé reste en `localStorage` et ne transite par aucun
 serveur intermédiaire.
 
@@ -154,10 +184,12 @@ js/cot/cftc.js          client Socrata CFTC : marchés, colonnes, cache local
 js/cot/metrics.js       COT index, z-scores, percentiles, divergences, analogues
 js/cot/macro.js         instantanés FRED/LBMA/news + spot temps réel + régime
 js/cot/charts.js        graphiques temporels et chandeliers (LWC v5)
+js/cot/globe.js         projection orthographique, réserves, places de marché
 js/cot/tape.js          bougies multi-échelles et flux d'ordres (OKX)
 js/cot/agent.js         contexte structuré + API Anthropic en flux
-js/cot/desk.js          orchestration et rendu des sept vues
+js/cot/desk.js          orchestration et rendu des onze vues
 scripts/refresh_data.py collecte des sources sans CORS → data/*.json
+scripts/build_land.py   contours des continents → data/land.json (une fois)
 ```
 
 Le dossier `algo/` contient un paquet Python indépendant (backtest et forward
@@ -165,11 +197,17 @@ test d'une stratégie or/argent), sans lien avec le poste web.
 
 ## Avertissements
 
-- Projet indépendant, non affilié à la CFTC, à la LBMA ni à TradingView.
+- Projet indépendant, non affilié à la CFTC, à la LBMA, au World Gold Council
+  ni à TradingView.
 - Le COT est **hebdomadaire et différé** : arrêté le mardi, publié le vendredi.
   Ce n'est jamais une photographie du marché en temps réel, et il ne couvre que
   les contrats à terme américains — ni l'OTC de Londres, ni les ETF, ni les
   achats de banques centrales.
 - Les statistiques sur configurations comparables sont **descriptives**, sur de
   petits échantillons d'épisodes non indépendants. Ce ne sont pas des prévisions.
+- Les **réserves officielles** sont déclarées au FMI de façon volontaire et
+  différée. Un tonnage stable ne prouve pas l'absence d'achat : plusieurs banques
+  centrales ont annoncé des hausses de centaines de tonnes après des années de
+  silence. Elles ne couvrent ni les ETF, ni les particuliers, ni les stocks des
+  banques commerciales — moins d'un cinquième de l'or extrait à ce jour.
 - Rien ici n'est un conseil en investissement.

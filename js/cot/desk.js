@@ -18,6 +18,7 @@ const state = {
   joined: [],
   spread: null,
   newsScope: 'all',
+  newsCat: 'all',
   tapeBar: '1H',
   tapeBars: 300,
   ready: false,
@@ -284,6 +285,7 @@ function renderStamp() {
 function render() {
   if (!state.ready) return;
   Charts.clear();
+  stopGlobe();
   renderSpotStrip();
   renderStamp();
 
@@ -291,7 +293,7 @@ function render() {
     overview: renderOverview, gold: renderGold, shortterm: renderShortTerm,
     tape: renderTape, cohorts: renderCohorts,
     history: renderHistory, extremes: renderExtremes, ratio: renderRatio,
-    macro: renderMacro, news: renderNews,
+    macro: renderMacro, world: renderWorld, news: renderNews,
   };
   $$('.view').forEach((v) => v.classList.add('hidden'));
   const host = $(`#view-${state.view}`);
@@ -327,6 +329,45 @@ function gaugeHtml(pct, tone, scale = ['0', '50', '100']) {
       <div class="gauge-mark" style="left:calc(${p.toFixed(1)}% - 1px)"></div>
     </div>
     <div class="gauge-scale"><span>${scale[0]}</span><span>${scale[1]}</span><span>${scale[2]}</span></div>`;
+}
+
+/* ═══════════════ Échelles de temps par graphique ═══════════════
+   Chaque graphique porte sa propre barre d'échelles. Le graphique
+   reçoit toujours la série entière ; les boutons ne font que déplacer
+   la fenêtre visible. Conséquence pratique : changer d'échelle est
+   instantané, ne relance aucun calcul, et « Tout » affiche réellement
+   tout — pas ce qui restait après un découpage en amont. */
+
+function chartFrame(id, { height = 300, ranges = CHART_RANGES_WEEKLY, active = 0, hover = '' } = {}) {
+  return `<div class="ch-frame">
+    <div class="ch-bar">
+      <span class="ch-hover" id="${id}-hover">${hover}</span>
+      <span class="ch-ranges" data-chart="${id}">${ranges.map((r) =>
+    `<button class="ch-rb${r.n === active ? ' on' : ''}" data-bars="${r.n}"
+       title="${r.n ? `${r.n} derniers points` : 'tout l\'historique'}">${r.t}</button>`).join('')}</span>
+    </div>
+    <div class="chart-box" id="${id}" style="height:${height}px"></div>
+  </div>`;
+}
+
+/* Choisit l'échelle initiale : la fenêtre globale du poste si elle tient
+   dans la série, sinon tout. */
+function initialRange(len, ranges = CHART_RANGES_WEEKLY) {
+  const lb = state.lookback;
+  if (!lb || lb >= len) return 0;
+  return ranges.some((r) => r.n === lb) ? lb : 0;
+}
+
+function wireChartRanges(root) {
+  root.addEventListener('click', (e) => {
+    const b = e.target.closest('.ch-rb');
+    if (!b) return;
+    const host = b.closest('.ch-ranges');
+    const inst = Charts.byId(host.dataset.chart);
+    if (!inst) return;
+    host.querySelectorAll('.ch-rb').forEach((x) => x.classList.toggle('on', x === b));
+    Charts.setRange(inst, Number(b.dataset.bars));
+  });
 }
 
 /* ═══════════════ Tiroir détaillé ═══════════════
@@ -435,8 +476,12 @@ function openCohortDrawer(cohortKey) {
     </div>
 
     <div class="dr-sec">
-      <div class="dr-h">HISTORIQUE COMPLET</div>
-      <div class="chart-box" id="dr-chart"></div>
+      <div class="dr-h">HISTORIQUE — ${fmtDate(rows[0].date)} À AUJOURD'HUI</div>
+      ${chartFrame('dr-chart', { height: 260, active: 0 })}
+      <p class="dr-p dim">Net de la cohorte (échelle de gauche, contrats) contre le prix du métal
+        (pointillés, échelle de droite, dollars). Les deux courbes couvrent les
+        ${rows.length} arrêtés hebdomadaires disponibles ; les boutons ci-dessus ne changent que
+        la fenêtre affichée.</p>
     </div>
 
     <div class="dr-sec">
@@ -493,7 +538,7 @@ function openCohortDrawer(cohortKey) {
         data: joined.map((p) => ({ ts: p.ts, value: p.price })),
         scale: 'right', width: 1, dashed: true, precision: 2, minMove: 0.01,
       }] : []),
-    ], { height: 260, zeroLine: true });
+    ], { id: 'dr-chart', height: 260, zeroLine: true, range: 0 });
   });
 }
 
@@ -531,7 +576,7 @@ function openMacroDrawer(id) {
 
     <div class="dr-sec">
       <div class="dr-h">HISTORIQUE</div>
-      <div class="chart-box" id="dr-chart"></div>
+      ${chartFrame('dr-chart', { height: 260, ranges: CHART_RANGES_DAILY, active: 0 })}
     </div>
 
     <div class="dr-sec">
@@ -558,7 +603,7 @@ function openMacroDrawer(id) {
     Charts.timeSeries($('#dr-chart'), [{
       label: s.label, color: '#6f8fb0', data: pts, scale: 'left', type: 'area',
       precision: 2, minMove: 0.01,
-    }], { height: 260 });
+    }], { id: 'dr-chart', height: 260, range: 0 });
   });
 }
 
@@ -672,9 +717,11 @@ function renderOverview(host) {
     </div>
 
     <div class="panel">
-      <div class="panel-hd">Net ${escapeHtml(specDef.short.toLowerCase())} contre prix
-        <span class="hd-sub" id="ov-hover">glissez le curseur sur le graphique</span></div>
-      <div class="panel-bd flush"><div class="chart-box" id="${chartId}"></div></div>
+      <div class="panel-hd">Net ${escapeHtml(specDef.short.toLowerCase())} contre prix</div>
+      <div class="panel-bd flush">${chartFrame(chartId, {
+      height: 300, active: initialRange(rows.length),
+      hover: 'glissez le curseur sur le graphique',
+    })}</div>
       <div class="note" id="ov-diverge"></div>
     </div>
 
@@ -684,20 +731,19 @@ function renderOverview(host) {
       <div class="panel-bd flush">${newsListHtml(news)}</div>
     </div>`;
 
-  /* graphique */
-  const netSeries = Metrics.tail(Metrics.series(rows, specKey, 'net'), state.lookback);
+  /* graphique — série entière, la fenêtre est réglée par la barre d'échelles */
+  const netSeries = Metrics.series(rows, specKey, 'net');
   const priceSeries = state.joined.length
-    ? Metrics.tail(state.joined, state.lookback).map((p) => ({ ts: p.ts, value: p.price }))
-    : [];
+    ? state.joined.map((p) => ({ ts: p.ts, value: p.price })) : [];
   Charts.timeSeries($(`#${chartId}`), [
     { label: specDef.short, color: specDef.color, data: netSeries, scale: 'left', type: 'area', width: 2 },
     ...(priceSeries.length
       ? [{ label: 'Prix', color: '#8892a0', data: priceSeries, scale: 'right', width: 1, dashed: true, precision: 2, minMove: 0.01 }]
       : []),
   ], {
-    height: 300, zeroLine: true,
+    id: chartId, height: 300, zeroLine: true, range: initialRange(rows.length),
     onCrosshair: (info) => {
-      const el = $('#ov-hover');
+      const el = $(`#${chartId}-hover`);
       if (!el) return;
       if (!info) { el.textContent = 'glissez le curseur sur le graphique'; return; }
       el.innerHTML = info.values.filter((v) => v.value != null)
@@ -908,9 +954,10 @@ async function renderGold(host) {
     </div>
 
     <div class="panel">
-      <div class="panel-hd">Positionnement contre cours — historique complet
-        <span class="hd-sub" id="gd-hover">survolez le graphique</span></div>
-      <div class="panel-bd flush"><div class="chart-box" id="gd-chart"></div></div>
+      <div class="panel-hd">Positionnement contre cours — historique complet</div>
+      <div class="panel-bd flush">${chartFrame('gd-chart', {
+      height: 340, active: 0, hover: 'survolez le graphique',
+    })}</div>
     </div>
 
     <div class="panel">
@@ -937,9 +984,9 @@ async function renderGold(host) {
       scale: 'right', width: 1.5, precision: 2, minMove: 0.01,
     }] : []),
   ], {
-    height: 340, zeroLine: true,
+    id: 'gd-chart', height: 340, zeroLine: true, range: 0,
     onCrosshair: (info) => {
-      const el = $('#gd-hover');
+      const el = $('#gd-chart-hover');
       if (!el) return;
       if (!info) { el.textContent = 'survolez le graphique'; return; }
       el.innerHTML = info.values.filter((v) => v.value != null)
@@ -1132,20 +1179,23 @@ function renderShortTerm(host) {
     <div class="panel">
       <div class="panel-hd">Prix quotidien et arrêtés récents
         <span class="hd-sub">les repères marquent les dates d'arrêté du COT</span></div>
-      <div class="panel-bd flush"><div class="chart-box" id="st-price"></div></div>
+      <div class="panel-bd flush">${chartFrame('st-price', {
+      height: 300, ranges: CHART_RANGES_DAILY, active: 126,
+    })}</div>
       <div class="note">Entre deux repères, le positionnement est invisible. C'est la limite
         structurelle du COT, et la raison d'être de cette vue.</div>
     </div>`;
 
-  /* prix quotidien sur ~6 mois + marqueurs d'arrêté */
-  const cut = Date.now() / 1000 - 190 * 86400;
-  const recent = daily.filter((p) => p.ts >= cut);
+  /* prix quotidien complet + marqueurs d'arrêté ; la fenêtre initiale
+     est de six mois, réglable par la barre d'échelles */
+  const cut = daily.length ? daily[0].ts : 0;
+  const recent = daily;
   if (recent.length) {
     const inst = Charts.timeSeries($('#st-price'), [{
       label: `${market.label} (fixing quotidien)`, color: '#d9a441',
       data: recent.map((p) => ({ ts: p.ts, value: p.close })),
       scale: 'left', type: 'area', precision: 2, minMove: 0.01,
-    }], { height: 300 });
+    }], { id: 'st-price', height: 300, range: 126 });
 
     if (inst && inst.handles[0]) {
       const marks = rows.filter((r) => r.ts >= cut).map((r) => ({
@@ -1483,14 +1533,16 @@ function renderCohorts(host) {
 function renderHistory(host) {
   const rows = state.rows;
   const cohorts = CFTC.cohortsFor(state.report);
-  const lb = state.lookback;
+  const r0 = initialRange(rows.length);
 
   host.innerHTML = `
     <div class="panel">
-      <div class="panel-hd">Positions nettes par cohorte
-        <span class="hd-sub" id="hs-hover">glissez le curseur pour lire les valeurs</span></div>
+      <div class="panel-hd">Positions nettes — toutes les cohortes
+        <span class="hd-sub">${rows.length} arrêtés depuis ${fmtDate(rows[0].date)}</span></div>
       <div class="chart-legend" id="hs-legend"></div>
-      <div class="panel-bd flush"><div class="chart-box" id="hs-nets"></div></div>
+      <div class="panel-bd flush">${chartFrame('hs-nets', {
+      height: 400, active: r0, hover: 'glissez le curseur pour lire les valeurs',
+    })}</div>
       <div class="note">La somme des nets de toutes les cohortes est toujours nulle :
         chaque contrat long a un contrat court en face. Ce graphique montre donc un <b>transfert de risque</b>
         entre catégories d'opérateurs, pas une création de position nette.</div>
@@ -1499,29 +1551,29 @@ function renderHistory(host) {
     <div class="grid-2">
       <div class="panel">
         <div class="panel-hd">Open interest<span class="hd-sub">nombre total de contrats ouverts</span></div>
-        <div class="panel-bd flush"><div class="chart-box" id="hs-oi"></div></div>
+        <div class="panel-bd flush">${chartFrame('hs-oi', { height: 200, active: r0 })}</div>
       </div>
       <div class="panel">
         <div class="panel-hd">Concentration des 4 premiers<span class="hd-sub">% du net, par côté</span></div>
-        <div class="panel-bd flush"><div class="chart-box" id="hs-conc"></div></div>
+        <div class="panel-bd flush">${chartFrame('hs-conc', { height: 200, active: r0 })}</div>
       </div>
     </div>
 
     <div class="panel">
       <div class="panel-hd">COT index du positionnement spéculatif
         <span class="hd-sub">0 = plancher de la fenêtre · 100 = sommet</span></div>
-      <div class="panel-bd flush"><div class="chart-box" id="hs-idx"></div></div>
+      <div class="panel-bd flush">${chartFrame('hs-idx', { height: 220, active: r0 })}</div>
       <div class="note">Borné entre 0 et 100, l'index reste lisible quand l'open interest change d'échelle
         au fil des années — contrairement au net brut.</div>
     </div>`;
 
   const series = cohorts.map((c) => ({
     label: c.short, color: c.color,
-    data: Metrics.tail(Metrics.series(rows, c.key, 'net'), lb),
+    data: Metrics.series(rows, c.key, 'net'),
     scale: 'left', width: 1.5,
   }));
   const priceRows = state.joined.length
-    ? Metrics.tail(state.joined, lb).map((p) => ({ ts: p.ts, value: p.price })) : [];
+    ? state.joined.map((p) => ({ ts: p.ts, value: p.price })) : [];
   if (priceRows.length) {
     series.push({ label: 'Prix', color: '#8892a0', data: priceRows, scale: 'right', width: 1, dashed: true, precision: 2, minMove: 0.01 });
   }
@@ -1530,9 +1582,9 @@ function renderHistory(host) {
     `<span class="cl-item"><i class="cl-swatch" style="background:${s.color}"></i>${escapeHtml(s.label)}</span>`).join('');
 
   Charts.timeSeries($('#hs-nets'), series, {
-    height: 360, zeroLine: true,
+    id: 'hs-nets', height: 400, zeroLine: true, range: r0,
     onCrosshair: (info) => {
-      const el = $('#hs-hover');
+      const el = $('#hs-nets-hover');
       if (!el) return;
       if (!info) { el.textContent = 'glissez le curseur pour lire les valeurs'; return; }
       el.innerHTML = info.values.filter((v) => v.value != null)
@@ -1541,13 +1593,13 @@ function renderHistory(host) {
   });
 
   Charts.timeSeries($('#hs-oi'),
-    [{ label: 'OI', color: '#6f8fb0', data: Metrics.tail(Metrics.seriesOf(rows, (r) => r.oi), lb), scale: 'left', type: 'area' }],
-    { height: 200 });
+    [{ label: 'OI', color: '#6f8fb0', data: Metrics.seriesOf(rows, (r) => r.oi), scale: 'left', type: 'area' }],
+    { id: 'hs-oi', height: 200, range: r0 });
 
   Charts.timeSeries($('#hs-conc'), [
-    { label: 'Longs', color: 'var(--up)'.replace('var(--up)', '#2ebd85'), data: Metrics.tail(Metrics.seriesOf(rows, (r) => r.conc.net4Long), lb), scale: 'left', precision: 1, minMove: 0.1 },
-    { label: 'Courts', color: '#f6465d', data: Metrics.tail(Metrics.seriesOf(rows, (r) => r.conc.net4Short), lb), scale: 'left', precision: 1, minMove: 0.1 },
-  ], { height: 200 });
+    { label: 'Longs', color: '#2ebd85', data: Metrics.seriesOf(rows, (r) => r.conc.net4Long), scale: 'left', precision: 1, minMove: 0.1 },
+    { label: 'Courts', color: '#f6465d', data: Metrics.seriesOf(rows, (r) => r.conc.net4Short), scale: 'left', precision: 1, minMove: 0.1 },
+  ], { id: 'hs-conc', height: 200, range: r0 });
 
   /* index glissant sur 52 semaines */
   const specKey = state.report === 'legacy' ? 'noncomm' : 'money';
@@ -1559,8 +1611,8 @@ function renderHistory(host) {
     idxSeries.push({ ts: net[i].ts, value: max === min ? 50 : ((net[i].value - min) / (max - min)) * 100 });
   }
   Charts.timeSeries($('#hs-idx'),
-    [{ label: 'COT index 52 sem.', color: '#d9a441', data: Metrics.tail(idxSeries, lb), scale: 'left', type: 'area', precision: 0 }],
-    { height: 200 });
+    [{ label: 'COT index 52 sem.', color: '#d9a441', data: idxSeries, scale: 'left', type: 'area', precision: 0 }],
+    { id: 'hs-idx', height: 220, range: r0 });
 }
 
 /* ═══════════════ Vue : extrêmes ═══════════════ */
@@ -1711,7 +1763,9 @@ function renderRatio(host) {
           <span class="cl-item"><i class="cl-swatch" style="background:#9fb0c0"></i>Argent</span>
           <span class="cl-item"><i class="cl-swatch" style="background:#8e7ab8"></i>Écart (or − argent)</span>
         </div>
-        <div class="panel-bd flush"><div class="chart-box" id="rt-chart"></div></div>
+        <div class="panel-bd flush">${chartFrame('rt-chart', {
+      height: 340, active: initialRange(spread.series.length),
+    })}</div>
         <div class="note">Les deux métaux sont ramenés à une échelle commune de 0 à 100 avant d'être comparés :
           un contrat d'argent porte 5 000 onces, un contrat d'or seulement 100, donc les nets bruts
           ne sont pas comparables directement. Un écart très positif signale un or nettement plus détenu
@@ -1726,12 +1780,12 @@ function renderRatio(host) {
           il convertit les contrats en dollars réellement engagés.</div>
       </div>`;
 
-    const tail = Metrics.tail(spread.series, state.lookback);
+    const tail = spread.series;
     Charts.timeSeries($('#rt-chart'), [
       { label: 'Or', color: '#d9a441', data: tail.map((p) => ({ ts: p.ts, value: p.gold })), scale: 'left', precision: 0 },
       { label: 'Argent', color: '#9fb0c0', data: tail.map((p) => ({ ts: p.ts, value: p.silver })), scale: 'left', precision: 0 },
       { label: 'Écart', color: '#8e7ab8', data: tail.map((p) => ({ ts: p.ts, value: p.value })), scale: 'right', width: 1.5, precision: 0 },
-    ], { height: 340 });
+    ], { id: 'rt-chart', height: 340, range: initialRange(tail.length) });
   }).catch((e) => {
     host.innerHTML = `<div class="panel"><div class="panel-bd">
       <span class="dn">Chargement impossible : ${escapeHtml(e.message)}</span></div></div>`;
@@ -1873,45 +1927,353 @@ function renderMacro(host) {
 
 /* ═══════════════ Vue : news ═══════════════ */
 
-function newsListHtml(items) {
+const CAT_LABEL = {
+  metaux: 'Or & Argent', 'banques-centrales': 'Banques centrales',
+  recherche: 'Recherche', macro: 'Macro & taux',
+  geopolitique: 'Géopolitique', mines: 'Mines & physique',
+};
+
+function newsListHtml(items, { showCat = false } = {}) {
   if (!items.length) {
-    return `<div class="news-empty">Aucune dépêche.<br>
-      Le flux est rafraîchi par le workflow « instantanés de marché ».</div>`;
+    return `<div class="news-empty">Aucune dépêche dans cette catégorie.<br>
+      Le fil est rafraîchi deux fois par jour par le workflow « instantanés de marché ».</div>`;
   }
   return `<div class="news-list">${items.map((n) => `
     <div class="news-item">
       <a class="news-t" href="${escapeHtml(n.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(n.title)}</a>
+      ${n.summary ? `<div class="news-s">${escapeHtml(n.summary)}</div>` : ''}
       <div class="news-m">
         <span class="news-src">${escapeHtml(n.source)}</span>
         <span>${n.published ? relTime(n.published) : ''}</span>
-        <span class="news-tag${n.scope === 'metal' ? ' metal' : ''}">${n.scope === 'metal' ? 'métaux' : 'macro'}</span>
+        ${showCat && n.category ? `<span class="news-tag cat-${escapeHtml(n.category)}">${escapeHtml(CAT_LABEL[n.category] || n.category)}</span>` : ''}
         ${(n.tags || []).slice(0, 3).map((t) => `<span class="news-tag">${escapeHtml(t)}</span>`).join('')}
       </div>
     </div>`).join('')}</div>`;
 }
 
+/* ═══════════════ Vue : actualité ═══════════════
+   Le fil est francophone et rangé par catégorie. Deux lectures : « À la
+   une » croise les six catégories dans l'ordre chronologique, et chaque
+   onglet isole une catégorie. Les catégories viennent du collecteur,
+   décomptes compris — l'écran ne réinvente aucun classement. */
+
 function renderNews(host) {
-  const items = Macro.newsItems({ scope: state.newsScope, limit: 60 });
+  const cats = Macro.newsCategories();
+  const total = Macro.news ? Macro.news.items.length : 0;
+  const sel = state.newsCat || 'all';
+  const items = Macro.newsItems({ category: sel, limit: 80 });
+  const cur = cats.find((c) => c.key === sel);
+
+  const tabs = [
+    `<button class="nb${sel === 'all' ? ' on' : ''}" data-cat="all">À la une
+       <i>${total}</i></button>`,
+    ...cats.map((c) => `<button class="nb${sel === c.key ? ' on' : ''}" data-cat="${c.key}">
+       ${escapeHtml(c.label)}<i>${c.count}</i></button>`),
+  ].join('');
+
+  /* aperçu par catégorie, visible seulement sur « À la une » */
+  const digest = sel !== 'all' ? '' : `
+    <div class="grid-2">${Macro.newsByCategory(4).map((c) => `
+      <div class="panel">
+        <div class="panel-hd">${escapeHtml(c.label)}
+          <span class="hd-sub">${c.count} dépêche${c.count > 1 ? 's' : ''}</span></div>
+        <div class="panel-bd flush">${newsListHtml(c.items)}</div>
+        <div class="note">${escapeHtml(c.desc || '')}</div>
+      </div>`).join('')}</div>`;
+
   host.innerHTML = `
     <div class="panel">
       <div class="panel-hd">
-        <span>Fil d'actualité<span class="hd-sub" style="margin-left:9px">
-          ${Macro.news ? `${Macro.news.items.length} dépêches · ${relTime(Macro.news.generated)}` : 'indisponible'}</span></span>
-        <span class="seg" id="news-filter">
-          <button data-scope="all"${state.newsScope === 'all' ? ' class="on"' : ''}>Tout</button>
-          <button data-scope="metal"${state.newsScope === 'metal' ? ' class="on"' : ''}>Métaux</button>
-          <button data-scope="macro"${state.newsScope === 'macro' ? ' class="on"' : ''}>Macro</button>
-        </span>
+        <span>Fil d'actualité — presse francophone<span class="hd-sub" style="margin-left:9px">
+          ${Macro.news ? `${total} dépêches retenues · ${relTime(Macro.news.generated)}` : 'indisponible'}</span></span>
       </div>
-      <div class="panel-bd flush">${newsListHtml(items)}</div>
-      <div class="note">Flux publics agrégés (Réserve fédérale, BCE, presse financière, Google News).
-        Le classement par pertinence est une heuristique de mots-clés : l'interprétation revient à l'agent,
-        onglet de droite.</div>
+      <div class="news-tabs" id="news-cats">${tabs}</div>
+      ${cur ? `<div class="news-desc">${escapeHtml(cur.desc)}</div>` : ''}
+      <div class="panel-bd flush">${newsListHtml(items, { showCat: sel === 'all' })}</div>
+      <div class="note">Sources : Google Actualités en français restreint à la presse
+        économique francophone (Les Échos, Boursorama, Zonebourse, La Tribune, Le Figaro,
+        L'Écho, Le Temps…) et les dépêches de fr.investing.com. Le tri par catégorie et le
+        score de pertinence sont des heuristiques de mots-clés, volontairement simples :
+        l'interprétation revient à l'agent, panneau de droite.</div>
+    </div>
+    ${digest}`;
+
+  $$('#news-cats button').forEach((b) => {
+    b.onclick = () => { state.newsCat = b.dataset.cat; render(); };
+  });
+}
+
+/* ═══════════════ Vue : monde ═══════════════
+   Le seul endroit du poste où l'on voit le moteur que le COT ne montre
+   jamais : les banques centrales. Elles achètent en gré à gré, hors
+   COMEX, et déclarent au FMI avec plusieurs mois de retard — leurs
+   tonnages n'apparaissent dans aucune ligne du rapport hebdomadaire. */
+
+let globeView = { lon: 20, lat: 22, spin: true };
+let globeHits = [];
+let globeRaf = 0;
+
+function stopGlobe() {
+  if (globeRaf) { cancelAnimationFrame(globeRaf); globeRaf = 0; }
+}
+
+function renderWorld(host) {
+  const holders = Macro.reserveHolders();
+  const meta = Macro.reserves || {};
+  const total = Macro.reserveTotal();
+  const px = Macro.priceOf('GOLD');
+  const perTonne = px ? px.price * 32150.7 : null;   /* onces troy par tonne */
+  const hubs = hubStatus();
+
+  if (!holders.length) {
+    host.innerHTML = `<div class="panel"><div class="panel-bd">
+      <span class="dim">Instantané des réserves indisponible — il est déposé par le workflow
+      « instantanés de marché ».</span></div></div>`;
+    return;
+  }
+
+  const top = holders.slice(0, 20);
+  const countries = holders.filter((h) => !h.institution);
+  const top10 = countries.slice(0, 10).reduce((a, h) => a + h.tonnes, 0);
+  const cShare = countries.reduce((a, h) => a + h.tonnes, 0);
+
+  host.innerHTML = `
+    <div class="grid-4">
+      ${statCard({
+    label: 'Or officiel déclaré', value: `${fmtInt(Math.round(total))} t`,
+    sub: `${holders.length} détenteurs · arrêté ${escapeHtml(meta.asOf || '—')}`,
+  })}
+      ${statCard({
+    label: 'Valeur au cours actuel',
+    value: perTonne ? fmtUsd(total * perTonne) : '—',
+    sub: px ? `à ${fmtNum(px.price, 2)} $/oz` : 'cours indisponible',
+  })}
+      ${statCard({
+    label: 'Part des 10 premiers États', value: fmtPct((top10 / cShare) * 100, 1),
+    sub: `${fmtInt(Math.round(top10))} t sur ${fmtInt(Math.round(cShare))} t détenues par des États`,
+    gauge: gaugeHtml((top10 / cShare) * 100, 'warm'),
+  })}
+      ${statCard({
+    label: 'Places ouvertes', value: `${hubs.filter((x) => x.open).length} / ${hubs.length}`,
+    sub: hubs.filter((x) => x.open).map((x) => x.name).join(' · ') || 'aucune',
+  })}
+    </div>
+
+    <div class="grid-globe">
+      <div class="panel">
+        <div class="panel-hd">Réserves d'or officielles
+          <span class="hd-sub">l'aire de chaque disque est proportionnelle au tonnage</span></div>
+        <div class="panel-bd flush">
+          <div class="globe-wrap">
+            <canvas id="globe-cv" title="Faites glisser pour tourner la Terre"></canvas>
+            <div class="globe-tip hidden" id="globe-tip"></div>
+            <div class="globe-ctl">
+              <button id="globe-spin" class="gb${globeView.spin ? ' on' : ''}">Rotation</button>
+              <button class="gb" data-goto="0,25">Europe</button>
+              <button class="gb" data-goto="-90,30">Amériques</button>
+              <button class="gb" data-goto="110,25">Asie</button>
+            </div>
+          </div>
+        </div>
+        <div class="note">Face sombre : la nuit à l'instant présent. L'or se traite en continu par
+          relais entre fuseaux — le carnet passe de Sydney à Tokyo, puis Shanghai, Londres et
+          enfin New York, où se traitent les contrats du rapport COT.</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-hd">Places du marché mondial
+          <span class="hd-sub">${new Date().toUTCString().slice(17, 22)} UTC</span></div>
+        <div class="panel-bd flush"><div class="hub-list">${hubs.map((x) => `
+          <div class="hub${x.open ? ' on' : ''}">
+            <span class="hub-dot"></span>
+            <div class="hub-b">
+              <div class="hub-n">${escapeHtml(x.name)}
+                <em>${String(Math.floor(x.openUtc)).padStart(2, '0')}h–${String(Math.floor(x.closeUtc)).padStart(2, '0')}h UTC</em></div>
+              <div class="hub-d">${escapeHtml(x.note)}</div>
+            </div>
+          </div>`).join('')}</div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">Classement des détenteurs
+        <span class="hd-sub">source ${escapeHtml(meta.source || '—')}</span></div>
+      <div class="panel-bd flush"><div class="tbl-wrap"><table class="tbl">
+        <thead><tr>
+          <th>#</th><th class="l">Détenteur</th><th class="n">Tonnes</th>
+          <th class="n">% du total déclaré</th><th class="n">% de ses réserves de change</th>
+          <th class="n">Valeur au cours</th>
+        </tr></thead>
+        <tbody>${top.map((h) => `<tr class="clickable" data-holder="${escapeHtml(h.iso)}">
+          <td class="n dim">${h.rank}</td>
+          <td class="l">${escapeHtml(h.name)}${h.institution ? ' <span class="news-tag">institution</span>' : ''}</td>
+          <td class="n">${fmtInt(Math.round(h.tonnes))}</td>
+          <td class="n">${fmtPct((h.tonnes / total) * 100, 1)}</td>
+          <td class="n">${h.share == null ? '—' : fmtPct(h.share, 1)}</td>
+          <td class="n">${perTonne ? fmtUsd(h.tonnes * perTonne) : '—'}</td>
+        </tr>`).join('')}</tbody>
+      </table></div></div>
+      <div class="note">La colonne « % de ses réserves de change » est la plus parlante : elle sépare
+        les pays dont l'or <b>est</b> la réserve (États-Unis 83 %, Allemagne 84 %) de ceux qui en
+        détiennent beaucoup en tonnage mais peu en proportion — la Chine autour de 9 %, le Japon
+        aussi. C'est cet écart qui explique pourquoi les achats officiels asiatiques n'ont
+        structurellement pas de raison de s'arrêter.</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">Ce que ces chiffres disent, et ce qu'ils ne disent pas</div>
+      <div class="panel-bd">
+        <p class="legend-note">Ces tonnages sont les <b>réserves officielles déclarées au FMI</b>.
+        Ils ne comptent ni l'or des ETF, ni celui des particuliers, ni les stocks des raffineurs et
+        des banques commerciales. Le total mondial extrait à ce jour dépasse les 210 000 tonnes :
+        les réserves officielles en représentent moins d'un cinquième.</p>
+        <p class="legend-note" style="margin-top:9px">La déclaration est <b>volontaire et
+        différée</b>. Plusieurs banques centrales — la Chine notamment — ont déjà annoncé des
+        hausses de plusieurs centaines de tonnes après des années de silence. Un tonnage stable au
+        tableau ne prouve donc pas l'absence d'achat, et l'arrêté affiché a plusieurs semaines de
+        retard sur le marché.</p>
+        <p class="legend-note" style="margin-top:9px">Le lien avec le reste du poste est direct :
+        quand le cours de l'or décroche de ses moteurs habituels — taux réels, dollar — sans que le
+        positionnement COMEX ne bouge, c'est très souvent ici que se trouve l'acheteur.
+        Aucun de ces achats ne passe par le COMEX, donc aucun n'apparaît dans le rapport COT.</p>
+      </div>
     </div>`;
 
-  $$('#news-filter button').forEach((b) => {
-    b.onclick = () => { state.newsScope = b.dataset.scope; render(); };
+  /* ── globe ── */
+  const cv = $('#globe-cv');
+  const tip = $('#globe-tip');
+  let drag = null;
+
+  const paint = () => { globeHits = Globe.draw(cv, holders, globeView); };
+
+  Globe.loadLand().then(paint);
+  paint();
+
+  const loop = () => {
+    if (globeView.spin && !drag) { globeView.lon = (globeView.lon + 0.12) % 360; paint(); }
+    globeRaf = requestAnimationFrame(loop);
+  };
+  stopGlobe();
+  globeRaf = requestAnimationFrame(loop);
+
+  const at = (e) => {
+    const r = cv.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return { x: t.clientX - r.left, y: t.clientY - r.top };
+  };
+
+  const down = (e) => { drag = { ...at(e), lon: globeView.lon, lat: globeView.lat }; };
+  const move = (e) => {
+    const p = at(e);
+    if (drag) {
+      globeView.lon = drag.lon - (p.x - drag.x) * 0.42;
+      globeView.lat = Math.max(-85, Math.min(85, drag.lat + (p.y - drag.y) * 0.42));
+      paint();
+      if (e.cancelable) e.preventDefault();
+      return;
+    }
+    const hit = globeHits.find((h) => Math.hypot(h.x - p.x, h.y - p.y) <= h.rad);
+    if (hit) {
+      tip.classList.remove('hidden');
+      tip.style.left = `${hit.x}px`;
+      tip.style.top = `${hit.y - hit.rad - 8}px`;
+      tip.innerHTML = `<b>${escapeHtml(hit.name)}</b>
+        <span>${fmtInt(Math.round(hit.tonnes))} t · rang ${hit.rank}</span>
+        ${hit.share == null ? '' : `<span>${fmtPct(hit.share, 1)} de ses réserves de change</span>`}`;
+      cv.style.cursor = 'pointer';
+    } else {
+      tip.classList.add('hidden');
+      cv.style.cursor = 'grab';
+    }
+  };
+  const up = () => { drag = null; };
+
+  cv.addEventListener('mousedown', down);
+  cv.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', up);
+  cv.addEventListener('touchstart', down, { passive: true });
+  cv.addEventListener('touchmove', move, { passive: false });
+  cv.addEventListener('touchend', up);
+  cv.addEventListener('mouseleave', () => { tip.classList.add('hidden'); });
+  cv.addEventListener('click', (e) => {
+    const p = at(e);
+    const hit = globeHits.find((h) => Math.hypot(h.x - p.x, h.y - p.y) <= h.rad);
+    if (hit) openHolderDrawer(hit.iso);
   });
+
+  new ResizeObserver(paint).observe(cv);
+
+  $('#globe-spin').onclick = (e) => {
+    globeView.spin = !globeView.spin;
+    e.currentTarget.classList.toggle('on', globeView.spin);
+  };
+  $$('.gb[data-goto]').forEach((b) => {
+    b.onclick = () => {
+      const [lon, lat] = b.dataset.goto.split(',').map(Number);
+      globeView.lon = lon; globeView.lat = lat; globeView.spin = false;
+      $('#globe-spin').classList.remove('on');
+      paint();
+    };
+  });
+}
+
+function openHolderDrawer(iso) {
+  const holders = Macro.reserveHolders();
+  const h = holders.find((x) => x.iso === iso);
+  if (!h) return;
+  const total = Macro.reserveTotal();
+  const px = Macro.priceOf('GOLD');
+  const perTonne = px ? px.price * 32150.7 : null;
+  const meta = Macro.reserves || {};
+
+  /* le tonnage se lit mieux en contrats COMEX : c'est l'unité de tout
+     le reste du poste, et la comparaison est frappante */
+  const lots = Math.round((h.tonnes * 32150.7) / 100);
+  const oi = state.rows.length ? state.rows[state.rows.length - 1].oi : null;
+
+  const body = `
+    <div class="dr-sec">
+      <div class="dr-h">POSITION DANS LE CLASSEMENT MONDIAL</div>
+      <div class="dr-grid">
+        ${kv('Rang', `${h.rank}ᵉ`, `sur ${holders.length} détenteurs déclarants`)}
+        ${kv('Tonnage', `${fmtInt(Math.round(h.tonnes))} t`, `${fmtPct((h.tonnes / total) * 100, 2)} du total déclaré`)}
+        ${kv('Valeur au cours', perTonne ? fmtUsd(h.tonnes * perTonne) : '—',
+    px ? `à ${fmtNum(px.price, 2)} $/oz` : '')}
+        ${kv('Part de ses réserves de change', h.share == null ? '—' : fmtPct(h.share, 1),
+    h.share == null ? 'non calculable pour une institution'
+      : h.share > 60 ? 'l\'or est le cœur de ses réserves'
+        : h.share > 25 ? 'part significative' : 'part encore faible — marge d\'achat structurelle')}
+      </div>
+      ${h.share == null ? '' : gaugeHtml(h.share, h.share > 60 ? 'hot' : h.share > 25 ? 'warm' : 'cool',
+    ['0 %', '50 %', '100 %'])}
+    </div>
+
+    <div class="dr-sec">
+      <div class="dr-h">RAMENÉ À L'ÉCHELLE DU COMEX</div>
+      <div class="dr-grid">
+        ${kv('Équivalent en contrats', fmtInt(lots), 'contrats or de 100 onces')}
+        ${kv('Rapport à l\'open interest', oi ? `${fmtNum(lots / oi, 1)} ×` : '—',
+    oi ? `OI actuel : ${fmtInt(oi)} contrats` : '')}
+      </div>
+      <p class="dr-p">Cette conversion est une mise à l'échelle, pas une position : ces tonnes sont
+        du métal détenu en coffre, pas des contrats à terme. Elle sert à mesurer un ordre de
+        grandeur — quand un stock souverain pèse plusieurs fois l'open interest de tout le COMEX,
+        on comprend pourquoi une décision de banque centrale déplace le marché sans qu'aucune ligne
+        du rapport COT ne bouge.</p>
+    </div>
+
+    <div class="dr-sec">
+      <div class="dr-h">CE QUI N'EST PAS DANS CE CHIFFRE</div>
+      <p class="dr-p">Le tonnage déclaré ne dit ni où l'or est entreposé — une partie des réserves
+        européennes est historiquement gardée à New York et à Londres —, ni s'il est prêté ou mis
+        en pension sur le marché. Il ne dit pas non plus à quel rythme il a été acquis : la
+        déclaration au FMI est volontaire et différée, et plusieurs banques centrales ont annoncé
+        des hausses de plusieurs centaines de tonnes après des années de silence.</p>
+      <p class="dr-p">Arrêté : <b>${escapeHtml(meta.asOf || '—')}</b>.
+        Source : ${escapeHtml(meta.source || '—')}.</p>
+    </div>`;
+
+  openDrawer('RÉSERVES OFFICIELLES', h.name, body);
 }
 
 /* ═══════════════ Agent ═══════════════ */
@@ -2012,6 +2374,11 @@ function updateKeyButton() {
 /* ═══════════════ Événements ═══════════════ */
 
 function wireEvents() {
+  /* échelles de temps des graphiques — délégué, les boutons naissent
+     et meurent avec chaque rendu */
+  wireChartRanges($('#main'));
+  wireChartRanges($('#drawer-bd'));
+
   /* navigation */
   $$('.rail-item').forEach((b) => {
     b.onclick = () => {
@@ -2118,7 +2485,9 @@ function wireEvents() {
     const co = e.target.closest('[data-cohort]');
     if (co) { openCohortDrawer(co.dataset.cohort); return; }
     const mc = e.target.closest('[data-macro]');
-    if (mc) openMacroDrawer(mc.dataset.macro);
+    if (mc) { openMacroDrawer(mc.dataset.macro); return; }
+    const hl = e.target.closest('[data-holder]');
+    if (hl) openHolderDrawer(hl.dataset.holder);
   });
   $('#drawer-x').onclick = closeDrawer;
   $('#drawer-overlay').onclick = (e) => { if (e.target.id === 'drawer-overlay') closeDrawer(); };

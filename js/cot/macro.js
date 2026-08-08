@@ -63,18 +63,33 @@ const Macro = {
       if (!res.ok) throw new Error(`${file} — HTTP ${res.status}`);
       return res.json();
     };
-    const [macro, prices, news] = await Promise.allSettled([
+    const [macro, prices, news, reserves] = await Promise.allSettled([
       grab('data/macro.json'), grab('data/prices.json'), grab('data/news.json'),
+      grab('data/reserves.json'),
     ]);
     this.data = macro.status === 'fulfilled' ? macro.value : null;
     this.prices = prices.status === 'fulfilled' ? prices.value : null;
     this.news = news.status === 'fulfilled' ? news.value : null;
+    this.reserves = reserves.status === 'fulfilled' ? reserves.value : null;
 
     const missing = [];
     if (!this.data) missing.push('macro');
     if (!this.prices) missing.push('prix');
     if (!this.news) missing.push('news');
+    if (!this.reserves) missing.push('réserves');
     return { missing };
+  },
+
+  /* Détenteurs officiels d'or, du plus gros au plus petit. Le total
+     mondial déclaré sert de dénominateur à toutes les parts affichées :
+     il ne couvre que ce qui est déclaré au FMI, pas l'or détenu hors
+     réserves officielles. */
+  reserveHolders() {
+    return (this.reserves && this.reserves.holders) || [];
+  },
+
+  reserveTotal() {
+    return this.reserveHolders().reduce((a, h) => a + h.tonnes, 0);
   },
 
   /* spot temps réel — source principale, puis repli OKX */
@@ -279,10 +294,31 @@ const Macro = {
 
   /* ── News ─────────────────────────────────────────────── */
 
-  newsItems({ scope = 'all', limit = 40 } = {}) {
+  newsItems({ scope = 'all', category = 'all', limit = 40 } = {}) {
+    let items = (this.news && this.news.items) || [];
+    if (scope !== 'all') items = items.filter((i) => i.scope === scope);
+    if (category !== 'all') items = items.filter((i) => i.category === category);
+    return items.slice(0, limit);
+  },
+
+  /* Catégories du fil, telles que déposées par le collecteur, avec le
+     décompte réellement présent dans l'instantané. Une catégorie vide
+     n'est pas masquée : son onglet à zéro dit que rien n'est tombé
+     dessus, ce qui est une information. */
+  newsCategories() {
+    const cats = (this.news && this.news.categories) || [];
     const items = (this.news && this.news.items) || [];
-    const filtered = scope === 'all' ? items : items.filter((i) => i.scope === scope);
-    return filtered.slice(0, limit);
+    return cats.map((c) => ({
+      ...c,
+      count: items.filter((i) => i.category === c.key).length,
+    }));
+  },
+
+  /* Les n dépêches les plus récentes d'une catégorie donnée. */
+  newsByCategory(limit = 6) {
+    return this.newsCategories().map((c) => ({
+      ...c, items: this.newsItems({ category: c.key, limit }),
+    }));
   },
 
   newsAge() {
