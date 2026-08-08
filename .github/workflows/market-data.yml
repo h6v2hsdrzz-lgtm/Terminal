@@ -1,9 +1,14 @@
 # Instantanés de données pour le poste « positions » (data/*.json).
 #
 # Le navigateur interroge la CFTC en direct — son API publique autorise le
-# CORS. FRED, la LBMA et les flux RSS ne l'autorisent pas : ils sont donc
-# récupérés ici, côté runner, et committés sous forme de JSON statiques que
-# GitHub Pages sert au navigateur. Aucun backend, aucun proxy tiers.
+# CORS. FRED, la LBMA, les flux RSS et le classement des réserves d'or
+# officielles ne l'autorisent pas : ils sont donc récupérés ici, côté
+# runner, et committés sous forme de JSON statiques que GitHub Pages sert
+# au navigateur. Aucun backend, aucun proxy tiers.
+#
+# `data/land.json` — les contours des continents — n'est pas rafraîchi
+# ici : il est construit une fois par `scripts/build_land.py`. La carte du
+# monde ne change pas deux fois par jour.
 #
 # Cadence : deux fois par jour en semaine. Les fixings LBMA tombent en
 # matinée et en début d'après-midi à Londres, FRED publie en cours de
@@ -48,7 +53,7 @@ jobs:
             echo "Aucun changement — rien à committer."
             exit 0
           fi
-          git commit -m "data: instantané macro / prix / news du $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git commit -m "data: instantané macro / prix / news / réserves du $(date -u '+%Y-%m-%d %H:%M UTC')"
           # le cron peut croiser un push manuel : on rejoue par-dessus
           for attempt in 1 2 3 4; do
             if git push; then exit 0; fi

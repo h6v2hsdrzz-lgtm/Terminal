@@ -285,6 +285,7 @@ function renderStamp() {
 function render() {
   if (!state.ready) return;
   Charts.clear();
+  stopGlobe();
   renderSpotStrip();
   renderStamp();
 
@@ -292,7 +293,7 @@ function render() {
     overview: renderOverview, gold: renderGold, shortterm: renderShortTerm,
     tape: renderTape, cohorts: renderCohorts,
     history: renderHistory, extremes: renderExtremes, ratio: renderRatio,
-    macro: renderMacro, news: renderNews,
+    macro: renderMacro, world: renderWorld, news: renderNews,
   };
   $$('.view').forEach((v) => v.classList.add('hidden'));
   const host = $(`#view-${state.view}`);
@@ -2002,6 +2003,279 @@ function renderNews(host) {
   });
 }
 
+/* ═══════════════ Vue : monde ═══════════════
+   Le seul endroit du poste où l'on voit le moteur que le COT ne montre
+   jamais : les banques centrales. Elles achètent en gré à gré, hors
+   COMEX, et déclarent au FMI avec plusieurs mois de retard — leurs
+   tonnages n'apparaissent dans aucune ligne du rapport hebdomadaire. */
+
+let globeView = { lon: 20, lat: 22, spin: true };
+let globeHits = [];
+let globeRaf = 0;
+
+function stopGlobe() {
+  if (globeRaf) { cancelAnimationFrame(globeRaf); globeRaf = 0; }
+}
+
+function renderWorld(host) {
+  const holders = Macro.reserveHolders();
+  const meta = Macro.reserves || {};
+  const total = Macro.reserveTotal();
+  const px = Macro.priceOf('GOLD');
+  const perTonne = px ? px.price * 32150.7 : null;   /* onces troy par tonne */
+  const hubs = hubStatus();
+
+  if (!holders.length) {
+    host.innerHTML = `<div class="panel"><div class="panel-bd">
+      <span class="dim">Instantané des réserves indisponible — il est déposé par le workflow
+      « instantanés de marché ».</span></div></div>`;
+    return;
+  }
+
+  const top = holders.slice(0, 20);
+  const countries = holders.filter((h) => !h.institution);
+  const top10 = countries.slice(0, 10).reduce((a, h) => a + h.tonnes, 0);
+  const cShare = countries.reduce((a, h) => a + h.tonnes, 0);
+
+  host.innerHTML = `
+    <div class="grid-4">
+      ${statCard({
+    label: 'Or officiel déclaré', value: `${fmtInt(Math.round(total))} t`,
+    sub: `${holders.length} détenteurs · arrêté ${escapeHtml(meta.asOf || '—')}`,
+  })}
+      ${statCard({
+    label: 'Valeur au cours actuel',
+    value: perTonne ? fmtUsd(total * perTonne) : '—',
+    sub: px ? `à ${fmtNum(px.price, 2)} $/oz` : 'cours indisponible',
+  })}
+      ${statCard({
+    label: 'Part des 10 premiers États', value: fmtPct((top10 / cShare) * 100, 1),
+    sub: `${fmtInt(Math.round(top10))} t sur ${fmtInt(Math.round(cShare))} t détenues par des États`,
+    gauge: gaugeHtml((top10 / cShare) * 100, 'warm'),
+  })}
+      ${statCard({
+    label: 'Places ouvertes', value: `${hubs.filter((x) => x.open).length} / ${hubs.length}`,
+    sub: hubs.filter((x) => x.open).map((x) => x.name).join(' · ') || 'aucune',
+  })}
+    </div>
+
+    <div class="grid-globe">
+      <div class="panel">
+        <div class="panel-hd">Réserves d'or officielles
+          <span class="hd-sub">l'aire de chaque disque est proportionnelle au tonnage</span></div>
+        <div class="panel-bd flush">
+          <div class="globe-wrap">
+            <canvas id="globe-cv" title="Faites glisser pour tourner la Terre"></canvas>
+            <div class="globe-tip hidden" id="globe-tip"></div>
+            <div class="globe-ctl">
+              <button id="globe-spin" class="gb${globeView.spin ? ' on' : ''}">Rotation</button>
+              <button class="gb" data-goto="0,25">Europe</button>
+              <button class="gb" data-goto="-90,30">Amériques</button>
+              <button class="gb" data-goto="110,25">Asie</button>
+            </div>
+          </div>
+        </div>
+        <div class="note">Face sombre : la nuit à l'instant présent. L'or se traite en continu par
+          relais entre fuseaux — le carnet passe de Sydney à Tokyo, puis Shanghai, Londres et
+          enfin New York, où se traitent les contrats du rapport COT.</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-hd">Places du marché mondial
+          <span class="hd-sub">${new Date().toUTCString().slice(17, 22)} UTC</span></div>
+        <div class="panel-bd flush"><div class="hub-list">${hubs.map((x) => `
+          <div class="hub${x.open ? ' on' : ''}">
+            <span class="hub-dot"></span>
+            <div class="hub-b">
+              <div class="hub-n">${escapeHtml(x.name)}
+                <em>${String(Math.floor(x.openUtc)).padStart(2, '0')}h–${String(Math.floor(x.closeUtc)).padStart(2, '0')}h UTC</em></div>
+              <div class="hub-d">${escapeHtml(x.note)}</div>
+            </div>
+          </div>`).join('')}</div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">Classement des détenteurs
+        <span class="hd-sub">source ${escapeHtml(meta.source || '—')}</span></div>
+      <div class="panel-bd flush"><div class="tbl-wrap"><table class="tbl">
+        <thead><tr>
+          <th>#</th><th class="l">Détenteur</th><th class="n">Tonnes</th>
+          <th class="n">% du total déclaré</th><th class="n">% de ses réserves de change</th>
+          <th class="n">Valeur au cours</th>
+        </tr></thead>
+        <tbody>${top.map((h) => `<tr class="clickable" data-holder="${escapeHtml(h.iso)}">
+          <td class="n dim">${h.rank}</td>
+          <td class="l">${escapeHtml(h.name)}${h.institution ? ' <span class="news-tag">institution</span>' : ''}</td>
+          <td class="n">${fmtInt(Math.round(h.tonnes))}</td>
+          <td class="n">${fmtPct((h.tonnes / total) * 100, 1)}</td>
+          <td class="n">${h.share == null ? '—' : fmtPct(h.share, 1)}</td>
+          <td class="n">${perTonne ? fmtUsd(h.tonnes * perTonne) : '—'}</td>
+        </tr>`).join('')}</tbody>
+      </table></div></div>
+      <div class="note">La colonne « % de ses réserves de change » est la plus parlante : elle sépare
+        les pays dont l'or <b>est</b> la réserve (États-Unis 83 %, Allemagne 84 %) de ceux qui en
+        détiennent beaucoup en tonnage mais peu en proportion — la Chine autour de 9 %, le Japon
+        aussi. C'est cet écart qui explique pourquoi les achats officiels asiatiques n'ont
+        structurellement pas de raison de s'arrêter.</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">Ce que ces chiffres disent, et ce qu'ils ne disent pas</div>
+      <div class="panel-bd">
+        <p class="legend-note">Ces tonnages sont les <b>réserves officielles déclarées au FMI</b>.
+        Ils ne comptent ni l'or des ETF, ni celui des particuliers, ni les stocks des raffineurs et
+        des banques commerciales. Le total mondial extrait à ce jour dépasse les 210 000 tonnes :
+        les réserves officielles en représentent moins d'un cinquième.</p>
+        <p class="legend-note" style="margin-top:9px">La déclaration est <b>volontaire et
+        différée</b>. Plusieurs banques centrales — la Chine notamment — ont déjà annoncé des
+        hausses de plusieurs centaines de tonnes après des années de silence. Un tonnage stable au
+        tableau ne prouve donc pas l'absence d'achat, et l'arrêté affiché a plusieurs semaines de
+        retard sur le marché.</p>
+        <p class="legend-note" style="margin-top:9px">Le lien avec le reste du poste est direct :
+        quand le cours de l'or décroche de ses moteurs habituels — taux réels, dollar — sans que le
+        positionnement COMEX ne bouge, c'est très souvent ici que se trouve l'acheteur.
+        Aucun de ces achats ne passe par le COMEX, donc aucun n'apparaît dans le rapport COT.</p>
+      </div>
+    </div>`;
+
+  /* ── globe ── */
+  const cv = $('#globe-cv');
+  const tip = $('#globe-tip');
+  let drag = null;
+
+  const paint = () => { globeHits = Globe.draw(cv, holders, globeView); };
+
+  Globe.loadLand().then(paint);
+  paint();
+
+  const loop = () => {
+    if (globeView.spin && !drag) { globeView.lon = (globeView.lon + 0.12) % 360; paint(); }
+    globeRaf = requestAnimationFrame(loop);
+  };
+  stopGlobe();
+  globeRaf = requestAnimationFrame(loop);
+
+  const at = (e) => {
+    const r = cv.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return { x: t.clientX - r.left, y: t.clientY - r.top };
+  };
+
+  const down = (e) => { drag = { ...at(e), lon: globeView.lon, lat: globeView.lat }; };
+  const move = (e) => {
+    const p = at(e);
+    if (drag) {
+      globeView.lon = drag.lon - (p.x - drag.x) * 0.42;
+      globeView.lat = Math.max(-85, Math.min(85, drag.lat + (p.y - drag.y) * 0.42));
+      paint();
+      if (e.cancelable) e.preventDefault();
+      return;
+    }
+    const hit = globeHits.find((h) => Math.hypot(h.x - p.x, h.y - p.y) <= h.rad);
+    if (hit) {
+      tip.classList.remove('hidden');
+      tip.style.left = `${hit.x}px`;
+      tip.style.top = `${hit.y - hit.rad - 8}px`;
+      tip.innerHTML = `<b>${escapeHtml(hit.name)}</b>
+        <span>${fmtInt(Math.round(hit.tonnes))} t · rang ${hit.rank}</span>
+        ${hit.share == null ? '' : `<span>${fmtPct(hit.share, 1)} de ses réserves de change</span>`}`;
+      cv.style.cursor = 'pointer';
+    } else {
+      tip.classList.add('hidden');
+      cv.style.cursor = 'grab';
+    }
+  };
+  const up = () => { drag = null; };
+
+  cv.addEventListener('mousedown', down);
+  cv.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', up);
+  cv.addEventListener('touchstart', down, { passive: true });
+  cv.addEventListener('touchmove', move, { passive: false });
+  cv.addEventListener('touchend', up);
+  cv.addEventListener('mouseleave', () => { tip.classList.add('hidden'); });
+  cv.addEventListener('click', (e) => {
+    const p = at(e);
+    const hit = globeHits.find((h) => Math.hypot(h.x - p.x, h.y - p.y) <= h.rad);
+    if (hit) openHolderDrawer(hit.iso);
+  });
+
+  new ResizeObserver(paint).observe(cv);
+
+  $('#globe-spin').onclick = (e) => {
+    globeView.spin = !globeView.spin;
+    e.currentTarget.classList.toggle('on', globeView.spin);
+  };
+  $$('.gb[data-goto]').forEach((b) => {
+    b.onclick = () => {
+      const [lon, lat] = b.dataset.goto.split(',').map(Number);
+      globeView.lon = lon; globeView.lat = lat; globeView.spin = false;
+      $('#globe-spin').classList.remove('on');
+      paint();
+    };
+  });
+}
+
+function openHolderDrawer(iso) {
+  const holders = Macro.reserveHolders();
+  const h = holders.find((x) => x.iso === iso);
+  if (!h) return;
+  const total = Macro.reserveTotal();
+  const px = Macro.priceOf('GOLD');
+  const perTonne = px ? px.price * 32150.7 : null;
+  const meta = Macro.reserves || {};
+
+  /* le tonnage se lit mieux en contrats COMEX : c'est l'unité de tout
+     le reste du poste, et la comparaison est frappante */
+  const lots = Math.round((h.tonnes * 32150.7) / 100);
+  const oi = state.rows.length ? state.rows[state.rows.length - 1].oi : null;
+
+  const body = `
+    <div class="dr-sec">
+      <div class="dr-h">POSITION DANS LE CLASSEMENT MONDIAL</div>
+      <div class="dr-grid">
+        ${kv('Rang', `${h.rank}ᵉ`, `sur ${holders.length} détenteurs déclarants`)}
+        ${kv('Tonnage', `${fmtInt(Math.round(h.tonnes))} t`, `${fmtPct((h.tonnes / total) * 100, 2)} du total déclaré`)}
+        ${kv('Valeur au cours', perTonne ? fmtUsd(h.tonnes * perTonne) : '—',
+    px ? `à ${fmtNum(px.price, 2)} $/oz` : '')}
+        ${kv('Part de ses réserves de change', h.share == null ? '—' : fmtPct(h.share, 1),
+    h.share == null ? 'non calculable pour une institution'
+      : h.share > 60 ? 'l\'or est le cœur de ses réserves'
+        : h.share > 25 ? 'part significative' : 'part encore faible — marge d\'achat structurelle')}
+      </div>
+      ${h.share == null ? '' : gaugeHtml(h.share, h.share > 60 ? 'hot' : h.share > 25 ? 'warm' : 'cool',
+    ['0 %', '50 %', '100 %'])}
+    </div>
+
+    <div class="dr-sec">
+      <div class="dr-h">RAMENÉ À L'ÉCHELLE DU COMEX</div>
+      <div class="dr-grid">
+        ${kv('Équivalent en contrats', fmtInt(lots), 'contrats or de 100 onces')}
+        ${kv('Rapport à l\'open interest', oi ? `${fmtNum(lots / oi, 1)} ×` : '—',
+    oi ? `OI actuel : ${fmtInt(oi)} contrats` : '')}
+      </div>
+      <p class="dr-p">Cette conversion est une mise à l'échelle, pas une position : ces tonnes sont
+        du métal détenu en coffre, pas des contrats à terme. Elle sert à mesurer un ordre de
+        grandeur — quand un stock souverain pèse plusieurs fois l'open interest de tout le COMEX,
+        on comprend pourquoi une décision de banque centrale déplace le marché sans qu'aucune ligne
+        du rapport COT ne bouge.</p>
+    </div>
+
+    <div class="dr-sec">
+      <div class="dr-h">CE QUI N'EST PAS DANS CE CHIFFRE</div>
+      <p class="dr-p">Le tonnage déclaré ne dit ni où l'or est entreposé — une partie des réserves
+        européennes est historiquement gardée à New York et à Londres —, ni s'il est prêté ou mis
+        en pension sur le marché. Il ne dit pas non plus à quel rythme il a été acquis : la
+        déclaration au FMI est volontaire et différée, et plusieurs banques centrales ont annoncé
+        des hausses de plusieurs centaines de tonnes après des années de silence.</p>
+      <p class="dr-p">Arrêté : <b>${escapeHtml(meta.asOf || '—')}</b>.
+        Source : ${escapeHtml(meta.source || '—')}.</p>
+    </div>`;
+
+  openDrawer('RÉSERVES OFFICIELLES', h.name, body);
+}
+
 /* ═══════════════ Agent ═══════════════ */
 
 function buildPresets() {
@@ -2211,7 +2485,9 @@ function wireEvents() {
     const co = e.target.closest('[data-cohort]');
     if (co) { openCohortDrawer(co.dataset.cohort); return; }
     const mc = e.target.closest('[data-macro]');
-    if (mc) openMacroDrawer(mc.dataset.macro);
+    if (mc) { openMacroDrawer(mc.dataset.macro); return; }
+    const hl = e.target.closest('[data-holder]');
+    if (hl) openHolderDrawer(hl.dataset.holder);
   });
   $('#drawer-x').onclick = closeDrawer;
   $('#drawer-overlay').onclick = (e) => { if (e.target.id === 'drawer-overlay') closeDrawer(); };

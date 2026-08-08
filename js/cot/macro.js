@@ -63,18 +63,33 @@ const Macro = {
       if (!res.ok) throw new Error(`${file} — HTTP ${res.status}`);
       return res.json();
     };
-    const [macro, prices, news] = await Promise.allSettled([
+    const [macro, prices, news, reserves] = await Promise.allSettled([
       grab('data/macro.json'), grab('data/prices.json'), grab('data/news.json'),
+      grab('data/reserves.json'),
     ]);
     this.data = macro.status === 'fulfilled' ? macro.value : null;
     this.prices = prices.status === 'fulfilled' ? prices.value : null;
     this.news = news.status === 'fulfilled' ? news.value : null;
+    this.reserves = reserves.status === 'fulfilled' ? reserves.value : null;
 
     const missing = [];
     if (!this.data) missing.push('macro');
     if (!this.prices) missing.push('prix');
     if (!this.news) missing.push('news');
+    if (!this.reserves) missing.push('réserves');
     return { missing };
+  },
+
+  /* Détenteurs officiels d'or, du plus gros au plus petit. Le total
+     mondial déclaré sert de dénominateur à toutes les parts affichées :
+     il ne couvre que ce qui est déclaré au FMI, pas l'or détenu hors
+     réserves officielles. */
+  reserveHolders() {
+    return (this.reserves && this.reserves.holders) || [];
+  },
+
+  reserveTotal() {
+    return this.reserveHolders().reduce((a, h) => a + h.tonnes, 0);
   },
 
   /* spot temps réel — source principale, puis repli OKX */
