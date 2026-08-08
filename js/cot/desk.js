@@ -18,6 +18,7 @@ const state = {
   joined: [],
   spread: null,
   newsScope: 'all',
+  newsCat: 'all',
   tapeBar: '1H',
   tapeBars: 300,
   ready: false,
@@ -1925,44 +1926,79 @@ function renderMacro(host) {
 
 /* ═══════════════ Vue : news ═══════════════ */
 
-function newsListHtml(items) {
+const CAT_LABEL = {
+  metaux: 'Or & Argent', 'banques-centrales': 'Banques centrales',
+  recherche: 'Recherche', macro: 'Macro & taux',
+  geopolitique: 'Géopolitique', mines: 'Mines & physique',
+};
+
+function newsListHtml(items, { showCat = false } = {}) {
   if (!items.length) {
-    return `<div class="news-empty">Aucune dépêche.<br>
-      Le flux est rafraîchi par le workflow « instantanés de marché ».</div>`;
+    return `<div class="news-empty">Aucune dépêche dans cette catégorie.<br>
+      Le fil est rafraîchi deux fois par jour par le workflow « instantanés de marché ».</div>`;
   }
   return `<div class="news-list">${items.map((n) => `
     <div class="news-item">
       <a class="news-t" href="${escapeHtml(n.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(n.title)}</a>
+      ${n.summary ? `<div class="news-s">${escapeHtml(n.summary)}</div>` : ''}
       <div class="news-m">
         <span class="news-src">${escapeHtml(n.source)}</span>
         <span>${n.published ? relTime(n.published) : ''}</span>
-        <span class="news-tag${n.scope === 'metal' ? ' metal' : ''}">${n.scope === 'metal' ? 'métaux' : 'macro'}</span>
+        ${showCat && n.category ? `<span class="news-tag cat-${escapeHtml(n.category)}">${escapeHtml(CAT_LABEL[n.category] || n.category)}</span>` : ''}
         ${(n.tags || []).slice(0, 3).map((t) => `<span class="news-tag">${escapeHtml(t)}</span>`).join('')}
       </div>
     </div>`).join('')}</div>`;
 }
 
+/* ═══════════════ Vue : actualité ═══════════════
+   Le fil est francophone et rangé par catégorie. Deux lectures : « À la
+   une » croise les six catégories dans l'ordre chronologique, et chaque
+   onglet isole une catégorie. Les catégories viennent du collecteur,
+   décomptes compris — l'écran ne réinvente aucun classement. */
+
 function renderNews(host) {
-  const items = Macro.newsItems({ scope: state.newsScope, limit: 60 });
+  const cats = Macro.newsCategories();
+  const total = Macro.news ? Macro.news.items.length : 0;
+  const sel = state.newsCat || 'all';
+  const items = Macro.newsItems({ category: sel, limit: 80 });
+  const cur = cats.find((c) => c.key === sel);
+
+  const tabs = [
+    `<button class="nb${sel === 'all' ? ' on' : ''}" data-cat="all">À la une
+       <i>${total}</i></button>`,
+    ...cats.map((c) => `<button class="nb${sel === c.key ? ' on' : ''}" data-cat="${c.key}">
+       ${escapeHtml(c.label)}<i>${c.count}</i></button>`),
+  ].join('');
+
+  /* aperçu par catégorie, visible seulement sur « À la une » */
+  const digest = sel !== 'all' ? '' : `
+    <div class="grid-2">${Macro.newsByCategory(4).map((c) => `
+      <div class="panel">
+        <div class="panel-hd">${escapeHtml(c.label)}
+          <span class="hd-sub">${c.count} dépêche${c.count > 1 ? 's' : ''}</span></div>
+        <div class="panel-bd flush">${newsListHtml(c.items)}</div>
+        <div class="note">${escapeHtml(c.desc || '')}</div>
+      </div>`).join('')}</div>`;
+
   host.innerHTML = `
     <div class="panel">
       <div class="panel-hd">
-        <span>Fil d'actualité<span class="hd-sub" style="margin-left:9px">
-          ${Macro.news ? `${Macro.news.items.length} dépêches · ${relTime(Macro.news.generated)}` : 'indisponible'}</span></span>
-        <span class="seg" id="news-filter">
-          <button data-scope="all"${state.newsScope === 'all' ? ' class="on"' : ''}>Tout</button>
-          <button data-scope="metal"${state.newsScope === 'metal' ? ' class="on"' : ''}>Métaux</button>
-          <button data-scope="macro"${state.newsScope === 'macro' ? ' class="on"' : ''}>Macro</button>
-        </span>
+        <span>Fil d'actualité — presse francophone<span class="hd-sub" style="margin-left:9px">
+          ${Macro.news ? `${total} dépêches retenues · ${relTime(Macro.news.generated)}` : 'indisponible'}</span></span>
       </div>
-      <div class="panel-bd flush">${newsListHtml(items)}</div>
-      <div class="note">Flux publics agrégés (Réserve fédérale, BCE, presse financière, Google News).
-        Le classement par pertinence est une heuristique de mots-clés : l'interprétation revient à l'agent,
-        onglet de droite.</div>
-    </div>`;
+      <div class="news-tabs" id="news-cats">${tabs}</div>
+      ${cur ? `<div class="news-desc">${escapeHtml(cur.desc)}</div>` : ''}
+      <div class="panel-bd flush">${newsListHtml(items, { showCat: sel === 'all' })}</div>
+      <div class="note">Sources : Google Actualités en français restreint à la presse
+        économique francophone (Les Échos, Boursorama, Zonebourse, La Tribune, Le Figaro,
+        L'Écho, Le Temps…) et les dépêches de fr.investing.com. Le tri par catégorie et le
+        score de pertinence sont des heuristiques de mots-clés, volontairement simples :
+        l'interprétation revient à l'agent, panneau de droite.</div>
+    </div>
+    ${digest}`;
 
-  $$('#news-filter button').forEach((b) => {
-    b.onclick = () => { state.newsScope = b.dataset.scope; render(); };
+  $$('#news-cats button').forEach((b) => {
+    b.onclick = () => { state.newsCat = b.dataset.cat; render(); };
   });
 }
 

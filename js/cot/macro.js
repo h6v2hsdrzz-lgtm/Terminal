@@ -279,10 +279,31 @@ const Macro = {
 
   /* ── News ─────────────────────────────────────────────── */
 
-  newsItems({ scope = 'all', limit = 40 } = {}) {
+  newsItems({ scope = 'all', category = 'all', limit = 40 } = {}) {
+    let items = (this.news && this.news.items) || [];
+    if (scope !== 'all') items = items.filter((i) => i.scope === scope);
+    if (category !== 'all') items = items.filter((i) => i.category === category);
+    return items.slice(0, limit);
+  },
+
+  /* Catégories du fil, telles que déposées par le collecteur, avec le
+     décompte réellement présent dans l'instantané. Une catégorie vide
+     n'est pas masquée : son onglet à zéro dit que rien n'est tombé
+     dessus, ce qui est une information. */
+  newsCategories() {
+    const cats = (this.news && this.news.categories) || [];
     const items = (this.news && this.news.items) || [];
-    const filtered = scope === 'all' ? items : items.filter((i) => i.scope === scope);
-    return filtered.slice(0, limit);
+    return cats.map((c) => ({
+      ...c,
+      count: items.filter((i) => i.category === c.key).length,
+    }));
+  },
+
+  /* Les n dépêches les plus récentes d'une catégorie donnée. */
+  newsByCategory(limit = 6) {
+    return this.newsCategories().map((c) => ({
+      ...c, items: this.newsItems({ category: c.key, limit }),
+    }));
   },
 
   newsAge() {
