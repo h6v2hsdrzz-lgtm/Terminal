@@ -399,6 +399,114 @@ const Metrics = {
     return { current, sample: hits.length, hits: hits.slice(-12).reverse(), summary };
   },
 
+  /* ── Saisonnalité ───────────────────────────────────────────
+     Le poste a quarante ans de fixings hebdomadaires en mémoire. Le
+     mois calendaire est le seul découpage dont on puisse tirer un
+     échantillon décent : quarante observations par mois, contre trois
+     ou quatre pour une semaine donnée.
+
+     Toute la difficulté est de ne pas transformer ça en oracle. Une
+     médiane de +1,2 % en janvier sur quarante ans reste une statistique
+     descriptive sur des années non indépendantes — un marché haussier
+     de dix ans pousse tous les mois vers le haut. D'où trois garde-fous
+     dans ce que renvoie la fonction : l'écart-type est toujours donné à
+     côté de la médiane, le taux de mois positifs permet de voir si la
+     moyenne tient à quelques valeurs extrêmes, et l'échantillon `n` est
+     transmis pour que l'écran refuse d'afficher ce qui est trop mince. */
+  seasonality(priceRows, { minYears = 8 } = {}) {
+    if (!priceRows || priceRows.length < 60) return null;
+
+    /* dernière observation de chaque mois : les rendements mensuels se
+       calculent de clôture de mois à clôture de mois */
+    const byMonth = new Map();
+    for (const p of priceRows) {
+      const d = new Date(p.ts * 1000);
+      const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+      byMonth.set(key, { key, y: d.getUTCFullYear(), m: d.getUTCMonth(), close: p.close });
+    }
+    const months = [...byMonth.values()].sort((a, b) => (a.y - b.y) || (a.m - b.m));
+    if (months.length < 24) return null;
+
+    const buckets = Array.from({ length: 12 }, () => []);
+    for (let i = 1; i < months.length; i++) {
+      const prev = months[i - 1], cur = months[i];
+      /* on saute les trous : un mois manquant ferait passer une
+         variation sur deux mois pour une variation mensuelle */
+      const gap = (cur.y - prev.y) * 12 + (cur.m - prev.m);
+      if (gap !== 1 || !prev.close) continue;
+      buckets[cur.m].push({ year: cur.y, ret: ((cur.close - prev.close) / prev.close) * 100 });
+    }
+
+    const stat = (vals) => {
+      if (!vals.length) return null;
+      const s = [...vals].sort((a, b) => a - b);
+      const mid = Math.floor(s.length / 2);
+      const mean = s.reduce((a, b) => a + b, 0) / s.length;
+      const variance = s.reduce((a, b) => a + (b - mean) ** 2, 0) / s.length;
+      return {
+        n: s.length,
+        median: s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2,
+        mean,
+        sd: Math.sqrt(variance),
+        positive: (s.filter((v) => v > 0).length / s.length) * 100,
+        best: s[s.length - 1],
+        worst: s[0],
+      };
+    };
+
+    const table = buckets.map((b, m) => {
+      const st = stat(b.map((x) => x.ret));
+      return {
+        month: m,
+        ...(st || { n: 0 }),
+        /* `fiable` gouverne l'affichage : sous huit observations, une
+           médiane mensuelle ne veut rien dire et l'écran doit le montrer */
+        fiable: !!st && st.n >= minYears,
+        years: b.map((x) => x.year),
+      };
+    });
+
+    const all = buckets.flat().map((x) => x.ret);
+    return {
+      table,
+      global: stat(all),
+      annees: `${months[0].y}–${months[months.length - 1].y}`,
+      observations: all.length,
+    };
+  },
+
+  /* Saisonnalité du positionnement : même découpage, mais sur la
+     variation du net d'une cohorte plutôt que sur le prix. Répond à une
+     question différente — les hedge funds rechargent-ils toujours au
+     même moment de l'année ? */
+  seasonalityOf(series, { minYears = 8 } = {}) {
+    if (!series || series.length < 60) return null;
+    const byMonth = new Map();
+    for (const p of series) {
+      const d = new Date(p.ts * 1000);
+      byMonth.set(`${d.getUTCFullYear()}-${d.getUTCMonth()}`,
+        { y: d.getUTCFullYear(), m: d.getUTCMonth(), value: p.value });
+    }
+    const months = [...byMonth.values()].sort((a, b) => (a.y - b.y) || (a.m - b.m));
+    const buckets = Array.from({ length: 12 }, () => []);
+    for (let i = 1; i < months.length; i++) {
+      const gap = (months[i].y - months[i - 1].y) * 12 + (months[i].m - months[i - 1].m);
+      if (gap !== 1) continue;
+      buckets[months[i].m].push(months[i].value - months[i - 1].value);
+    }
+    return buckets.map((b, m) => {
+      if (!b.length) return { month: m, n: 0, fiable: false };
+      const s = [...b].sort((a, b2) => a - b2);
+      const mid = Math.floor(s.length / 2);
+      return {
+        month: m, n: s.length,
+        median: s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2,
+        positive: (s.filter((v) => v > 0).length / s.length) * 100,
+        fiable: s.length >= minYears,
+      };
+    });
+  },
+
   /* ── Score de tension ───────────────────────────────────── */
 
   /* Agrège les signaux d'un métal en une lecture unique, bornée à ±100.

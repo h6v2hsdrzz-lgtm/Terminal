@@ -747,3 +747,22 @@ tr.clickable:hover td, .stat.clickable:hover { background:var(--panel-2); }
 .plane-verdict { font-size:13px; font-weight:600; text-align:right; }
 .plane-detail { color:var(--muted); font-size:11.5px; line-height:1.6; }
 .plane-detail b { color:var(--txt); }
+
+/* ═══════════ SAISONNALITÉ ═══════════ */
+.sz-chart { display:flex; gap:5px; align-items:stretch; height:210px; }
+.sz-col { flex:1 1 0; min-width:0; display:flex; flex-direction:column; gap:5px; }
+.sz-plot { flex:1; position:relative; background:var(--bg); border-radius:3px; overflow:hidden; }
+.sz-plot i { position:absolute; left:14%; right:14%; }
+/* la zone claire est l'écart-type : elle doit rester derrière la médiane,
+   et c'est elle qu'on veut voir écraser la barre pleine */
+.sz-sd { background:rgba(120,140,165,.16); border-radius:2px; }
+.sz-bar { border-radius:2px; }
+.sz-bar.up { background:var(--up); }
+.sz-bar.dn { background:var(--dn); }
+.sz-zero { left:0; right:0; top:50%; height:1px; background:var(--border-2); }
+.sz-m { text-align:center; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+.sz-v { text-align:center; font-size:10.5px; font-variant-numeric:tabular-nums; }
+@media (max-width:900px) {
+  .sz-chart { height:170px; gap:3px; }
+  .sz-m, .sz-v { font-size:9px; }
+}

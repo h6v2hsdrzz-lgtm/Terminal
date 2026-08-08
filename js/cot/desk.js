@@ -294,7 +294,7 @@ function render() {
     overview: renderOverview, gold: renderGold, shortterm: renderShortTerm,
     tape: renderTape, cohorts: renderCohorts,
     history: renderHistory, extremes: renderExtremes, ratio: renderRatio,
-    macro: renderMacro, compare: renderCompare, world: renderWorld, news: renderNews,
+    macro: renderMacro, seasonal: renderSeasonal, compare: renderCompare, world: renderWorld, news: renderNews,
   };
   $$('.view').forEach((v) => v.classList.add('hidden'));
   const host = $(`#view-${state.view}`);
@@ -2002,6 +2002,170 @@ function renderNews(host) {
   $$('#news-cats button').forEach((b) => {
     b.onclick = () => { state.newsCat = b.dataset.cat; render(); };
   });
+}
+
+/* ═══════════════ Vue : saisonnalité ═══════════════
+   Quarante ans de fixings sont déjà en mémoire ; le mois calendaire est
+   le seul découpage qui donne un échantillon décent — une quarantaine
+   d'observations par mois.
+
+   Cette vue est celle où il est le plus facile de mentir, alors elle
+   affiche partout de quoi se contredire : l'écart-type à côté de chaque
+   médiane, le rapport signal/bruit, le taux de mois positifs, et le
+   nombre d'observations. Sur l'or, la médiane mensuelle tourne autour
+   du point de pourcentage quand l'écart-type dépasse quatre : le mois
+   de l'année explique une fraction minuscule de ce que fait le prix, et
+   l'écran doit le dire plus fort qu'il n'affiche les moyennes. */
+
+const MONTHS_FR = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+const MONTHS_ABBR = ['jan', 'fév', 'mar', 'avr', 'mai', 'jun',
+  'jul', 'aoû', 'sep', 'oct', 'nov', 'déc'];
+
+function renderSeasonal(host) {
+  const { market } = marketCtx();
+  const priceRows = Macro.priceSeries(state.metal);
+  const season = Metrics.seasonality(priceRows);
+
+  if (!season) {
+    host.innerHTML = `<div class="panel"><div class="panel-bd">
+      <span class="dim">Historique de prix insuffisant pour ce marché — la saisonnalité
+      n'est calculée que sur l'or et l'argent, seuls métaux dont le poste suit les fixings.</span>
+    </div></div>`;
+    return;
+  }
+
+  const specKey = state.report === 'legacy' ? 'noncomm' : 'money';
+  const specDef = CFTC.cohortsFor(state.report).find((c) => c.key === specKey);
+  const posSeason = Metrics.seasonalityOf(Metrics.series(state.rows, specKey, 'net'));
+
+  const fiables = season.table.filter((r) => r.fiable);
+  const best = [...fiables].sort((a, b) => b.median - a.median)[0];
+  const worst = [...fiables].sort((a, b) => a.median - b.median)[0];
+  const maxAbs = Math.max(...fiables.map((r) => Math.abs(r.median) + r.sd), 1);
+
+  /* rapport signal / bruit : la seule mesure qui remette la
+     saisonnalité à sa place, mois par mois */
+  const snr = (r) => (r.sd ? Math.abs(r.median) / r.sd : 0);
+  const bestSnr = [...fiables].sort((a, b) => snr(b) - snr(a))[0];
+
+  const bars = season.table.map((r) => {
+    if (!r.fiable) {
+      return `<div class="sz-col"><div class="sz-plot"></div>
+        <div class="sz-m dim">${MONTHS_ABBR[r.month]}</div><div class="sz-v dim">—</div></div>`;
+    }
+    const h = (Math.abs(r.median) / maxAbs) * 50;          /* % de la hauteur, depuis le centre */
+    const sd = (r.sd / maxAbs) * 50;
+    const up = r.median >= 0;
+    return `<div class="sz-col" title="${MONTHS_FR[r.month]} — médiane ${fmtSignedPct(r.median, 2)}, écart-type ${fmtNum(r.sd, 2)} points, ${r.n} années">
+      <div class="sz-plot">
+        <i class="sz-sd" style="bottom:calc(50% - ${sd.toFixed(1)}%);height:${(sd * 2).toFixed(1)}%"></i>
+        <i class="sz-bar ${up ? 'up' : 'dn'}"
+           style="${up ? 'bottom' : 'top'}:50%;height:${h.toFixed(1)}%"></i>
+        <i class="sz-zero"></i>
+      </div>
+      <div class="sz-m">${MONTHS_ABBR[r.month]}</div>
+      <div class="sz-v ${signClass(r.median)}">${fmtSignedPct(r.median, 1)}</div>
+    </div>`;
+  }).join('');
+
+  host.innerHTML = `
+    <div class="grid-4">
+      ${statCard({
+    label: 'Période couverte', value: escapeHtml(season.annees),
+    sub: `${season.observations} variations mensuelles · ${escapeHtml(market.label)}`,
+  })}
+      ${statCard({
+    label: 'Mois le plus porteur', value: best ? MONTHS_FR[best.month] : '—',
+    sub: best ? `médiane ${fmtSignedPct(best.median, 2)} · ${fmtPct(best.positive, 0)} d'années positives` : '',
+    cls: 'up',
+  })}
+      ${statCard({
+    label: 'Mois le plus lourd', value: worst ? MONTHS_FR[worst.month] : '—',
+    sub: worst ? `médiane ${fmtSignedPct(worst.median, 2)} · ${fmtPct(worst.positive, 0)} d'années positives` : '',
+    cls: 'dn',
+  })}
+      ${statCard({
+    label: 'Signal / bruit du meilleur mois',
+    value: bestSnr ? fmtNum(snr(bestSnr), 2) : '—',
+    sub: bestSnr ? `${MONTHS_FR[bestSnr.month]} : médiane ${fmtNum(Math.abs(bestSnr.median), 2)} contre ${fmtNum(bestSnr.sd, 2)} d'écart-type`
+      : '', cls: 'dim',
+  })}
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">Variation mensuelle médiane — ${escapeHtml(market.label)}
+        <span class="hd-sub">barre pleine : médiane · zone claire : ±1 écart-type</span></div>
+      <div class="panel-bd"><div class="sz-chart">${bars}</div></div>
+      <div class="note">La zone claire écrase la barre pleine dans les douze mois : c'est le message
+        principal de cette vue. Sur ${escapeHtml(season.annees)}, la médiane mensuelle sur
+        ${escapeHtml(market.label.toLowerCase() === 'or' ? "l'or" : market.label.toLowerCase())}
+        vaut ${fmtNum(Math.abs(season.global.median), 2)} point contre
+        ${fmtNum(season.global.sd, 2)} d'écart-type — le mois de l'année explique une fraction
+        minuscule de ce que fait le prix.</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">Détail mois par mois
+        <span class="hd-sub">variations de clôture de mois à clôture de mois</span></div>
+      <div class="panel-bd flush"><div class="tbl-wrap"><table class="tbl">
+        <thead><tr>
+          <th>Mois</th><th class="n">Années</th><th class="n">Médiane</th><th class="n">Moyenne</th>
+          <th class="n">Écart-type</th><th class="n">Signal / bruit</th>
+          <th class="n">% d'années positives</th><th class="n">Meilleure</th><th class="n">Pire</th>
+        </tr></thead>
+        <tbody>${season.table.map((r) => r.n ? `<tr${r.fiable ? '' : ' class="dim"'}>
+          <td>${MONTHS_FR[r.month]}${r.fiable ? '' : ' <span class="news-tag">échantillon mince</span>'}</td>
+          <td class="n">${r.n}</td>
+          <td class="n ${signClass(r.median)}">${fmtSignedPct(r.median, 2)}</td>
+          <td class="n ${signClass(r.mean)}">${fmtSignedPct(r.mean, 2)}</td>
+          <td class="n">${fmtNum(r.sd, 2)}</td>
+          <td class="n ${snr(r) > 0.3 ? '' : 'dim'}">${fmtNum(snr(r), 2)}</td>
+          <td class="n">${fmtPct(r.positive, 0)}</td>
+          <td class="n up">${fmtSignedPct(r.best, 1)}</td>
+          <td class="n dn">${fmtSignedPct(r.worst, 1)}</td>
+        </tr>` : '').join('')}</tbody>
+      </table></div></div>
+      <div class="note">Le <b>signal / bruit</b> est la médiane divisée par l'écart-type. Au-dessus de
+        1, un mois aurait une tendance nette ; ici aucun ne dépasse
+        ${fmtNum(bestSnr ? snr(bestSnr) : 0, 2)}. Le <b>% d'années positives</b> sert de contre-épreuve à
+        la moyenne : une moyenne flatteuse avec 50 % d'années positives tient à quelques valeurs
+        extrêmes, pas à une régularité.</div>
+    </div>
+
+    ${posSeason ? `<div class="panel">
+      <div class="panel-hd">Saisonnalité du positionnement — ${escapeHtml(specDef.short.toLowerCase())}
+        <span class="hd-sub">variation médiane du net par mois, en contrats</span></div>
+      <div class="panel-bd flush"><div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Mois</th><th class="n">Années</th><th class="n">Δ net médian</th>
+          <th class="n">% d'années en hausse</th></tr></thead>
+        <tbody>${posSeason.map((r) => r.n ? `<tr${r.fiable ? '' : ' class="dim"'}>
+          <td>${MONTHS_FR[r.month]}</td><td class="n">${r.n}</td>
+          <td class="n ${signClass(r.median)}">${fmtSigned(Math.round(r.median))}</td>
+          <td class="n">${fmtPct(r.positive, 0)}</td></tr>` : '').join('')}</tbody>
+      </table></div></div>
+      <div class="note">Question différente de celle du prix : les hedge funds rechargent-ils au même
+        moment chaque année ? Le COT ne remonte qu'à ${fmtDate(state.rows[0].date)} sur ce rapport,
+        donc l'échantillon par mois est plus mince que celui des fixings.</div>
+    </div>` : ''}
+
+    <div class="panel">
+      <div class="panel-hd">Comment lire ces chiffres — et comment ne pas les lire</div>
+      <div class="panel-bd">
+        <p class="legend-note">Les quarante années ne sont <b>pas indépendantes</b>. L'or a connu une
+        décennie de baisse puis une décennie de hausse ; un marché durablement haussier pousse
+        mécaniquement tous les mois vers le positif, et une part de ce que montre ce tableau n'est
+        que la tendance longue redistribuée en douze cases.</p>
+        <p class="legend-note" style="margin-top:9px">Un échantillon de quarante observations laisse
+        un intervalle de confiance large : avec un écart-type de ${fmtNum(season.global.sd, 2)} points
+        et 40 années, l'erreur type sur une moyenne mensuelle est d'environ
+        ${fmtNum(season.global.sd / Math.sqrt(40), 2)} point. La plupart des écarts entre mois du
+        tableau sont plus petits que cette erreur.</p>
+        <p class="legend-note" style="margin-top:9px">Ce que la saisonnalité peut légitimement
+        apporter : un contexte quand elle <b>converge</b> avec le positionnement et la macro. Ce
+        qu'elle ne peut pas : justifier une position à elle seule.</p>
+      </div>
+    </div>`;
 }
 
 /* ═══════════════ Vue : comparateur ═══════════════
