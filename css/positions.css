@@ -766,3 +766,36 @@ tr.clickable:hover td, .stat.clickable:hover { background:var(--panel-2); }
   .sz-chart { height:170px; gap:3px; }
   .sz-m, .sz-v { font-size:9px; }
 }
+
+/* ═══════════ ALERTES ═══════════ */
+.al-form { display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; }
+.al-form label {
+  display:flex; flex-direction:column; gap:4px;
+  font-size:9.5px; color:var(--faint); letter-spacing:1px; text-transform:uppercase;
+}
+.al-form select, .al-form input {
+  background:var(--bg); border:1px solid var(--border); border-radius:4px;
+  color:var(--txt); padding:6px 9px; font-size:11.5px; min-width:120px;
+}
+.al-form input { width:100px; min-width:0; }
+.al-form select:focus, .al-form input:focus { outline:none; border-color:var(--accent); }
+.tb.sm { padding:3px 8px; font-size:10px; }
+@media (max-width:900px) {
+  .al-form label, .al-form select { width:100%; }
+  .al-form { gap:8px; }
+}
+
+/* bouton d'export, greffé dans l'en-tête de tout panneau à tableau */
+.ex-btn {
+  background:transparent; border:1px solid var(--border-2); border-radius:3px;
+  color:var(--faint); padding:2px 7px; font-size:9.5px; letter-spacing:.06em;
+  font-family:inherit; margin-left:auto; flex:0 0 auto;
+}
+.ex-btn:hover { color:var(--accent); border-color:rgba(217,164,65,.42); }
+
+/* pastille d'alerte sur l'entrée de navigation */
+.ri-badge {
+  margin-left:auto; background:var(--dn); color:#fff; border-radius:9px;
+  font-size:9.5px; font-weight:700; padding:1px 6px; min-width:17px; text-align:center;
+  font-variant-numeric:tabular-nums;
+}

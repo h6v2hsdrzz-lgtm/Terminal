@@ -283,6 +283,32 @@ function renderStamp() {
 
 /* ═══════════════ Rendu ═══════════════ */
 
+/* Export : un bouton est greffé après coup sur chaque panneau qui
+   contient un tableau, plutôt qu'ajouté à la main dans les quinze
+   endroits qui en produisent un. Un rendu de vue oublié serait sinon un
+   tableau qu'on ne peut pas sortir. */
+function attachExports() {
+  for (const panel of $$('#main .panel')) {
+    const table = panel.querySelector('table.tbl');
+    const head = panel.querySelector('.panel-hd');
+    if (!table || !head || head.querySelector('.ex-btn')) continue;
+    const title = (head.textContent || 'tableau').split('\n')[0].trim().slice(0, 40);
+    const b = document.createElement('button');
+    b.className = 'ex-btn';
+    b.type = 'button';
+    b.textContent = 'CSV';
+    b.title = 'Exporter ce tableau en CSV';
+    b.onclick = (e) => {
+      e.stopPropagation();
+      const slug = title.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'tableau';
+      const stamp = state.rows.length ? state.rows[state.rows.length - 1].date : 'export';
+      downloadCsv(`bullion-${slug}-${stamp}.csv`, tableToCsv(table));
+    };
+    head.appendChild(b);
+  }
+}
+
 function render() {
   if (!state.ready) return;
   Charts.clear();
@@ -292,14 +318,21 @@ function render() {
 
   const views = {
     overview: renderOverview, gold: renderGold, shortterm: renderShortTerm,
-    tape: renderTape, cohorts: renderCohorts,
-    history: renderHistory, extremes: renderExtremes, ratio: renderRatio,
-    macro: renderMacro, seasonal: renderSeasonal, compare: renderCompare, world: renderWorld, news: renderNews,
+    tape: renderTape, cohorts: renderCohorts, history: renderHistory,
+    extremes: renderExtremes, ratio: renderRatio, seasonal: renderSeasonal,
+    compare: renderCompare, macro: renderMacro, world: renderWorld,
+    alerts: renderAlerts, news: renderNews,
   };
   $$('.view').forEach((v) => v.classList.add('hidden'));
   const host = $(`#view-${state.view}`);
   host.classList.remove('hidden');
-  views[state.view](host);
+  /* certaines vues sont asynchrones (chargements CFTC) : les boutons
+     d'export sont greffés après leur résolution, sinon ils manquent */
+  const done = views[state.view](host);
+  if (done && typeof done.then === 'function') done.then(attachExports).catch(() => {});
+  else attachExports();
+  syncPicker();
+  renderAlertBadge();
 
   const m = CFTC.markets[state.metal];
   setStatus(`${m.label} · ${state.report === 'legacy' ? 'rapport historique' : 'rapport détaillé'} · `
@@ -1450,7 +1483,7 @@ function renderCohorts(host) {
       <td class="n ${signClass(s.dNet)}">${fmtSigned(s.dNet)}</td>
       <td class="n ${signClass(s.chg4w)}">${fmtSigned(s.chg4w)}</td>
       <td class="n">${fmtPct(s.pctOi)}</td>
-      <td><div class="bias" title="${fmtPct((s.long / gross) * 100, 0)} longs">
+      <td data-csv="${fmtPct((s.long / gross) * 100, 0)} longs"><div class="bias" title="${fmtPct((s.long / gross) * 100, 0)} longs">
         <div class="bias-l" style="width:${((s.long / gross) * 100).toFixed(1)}%"></div>
         <div class="bias-s" style="width:${((s.short / gross) * 100).toFixed(1)}%"></div>
       </div></td>
@@ -2001,6 +2034,138 @@ function renderNews(host) {
 
   $$('#news-cats button').forEach((b) => {
     b.onclick = () => { state.newsCat = b.dataset.cat; render(); };
+  });
+}
+
+/* ═══════════════ Vue : alertes ═══════════════ */
+
+function renderAlerts(host) {
+  Alerts.load();
+  const cohorts = CFTC.cohortsFor(state.report);
+
+  /* On évalue sur ce qui est déjà en mémoire : le marché affiché, plus
+     tout ce que le comparateur a chargé s'il a été ouvert. Aller
+     chercher les sept marchés à chaque rendu ferait sept requêtes pour
+     une page qu'on ouvre peut-être sans alerte. */
+  const loaded = { [state.metal]: state.rows };
+  if (compareCache && compareCache.sig === `${state.report}:${state.basis}`) {
+    Object.assign(loaded, compareCache.series);
+  }
+  const results = Alerts.evaluate(loaded, state.report, (k) => Macro.priceOf(k));
+  const fired = results.filter((r) => r.state === 'declenchee');
+  const unknown = results.filter((r) => r.state === 'inconnu');
+
+  const rows = results.map((r) => {
+    const tone = r.state === 'declenchee' ? 'hot' : r.state === 'inconnu' ? 'neutral' : 'cool';
+    return `<tr>
+      <td class="l">${escapeHtml(Alerts.describe(r.rule))}</td>
+      <td class="n">${r.value == null ? '—' : fmtNum(r.value, Math.abs(r.value) < 10 ? 2 : 0)}</td>
+      <td class="n">${r.rule.threshold}</td>
+      <td class="n ${r.gap == null ? 'dim' : ''}">${r.gap == null ? '—' : fmtSigned(Math.round(r.gap * 100) / 100)}</td>
+      <td><span class="tone-${tone}">${r.state === 'declenchee' ? 'DÉCLENCHÉE'
+      : r.state === 'inconnu' ? 'marché non chargé' : 'calme'}</span></td>
+      <td class="n dim">${r.date ? fmtDate(r.date) : '—'}</td>
+      <td><button class="tb sm" data-del-alert="${escapeHtml(r.rule.id)}">Supprimer</button></td>
+    </tr>`;
+  }).join('');
+
+  host.innerHTML = `
+    <div class="grid-4">
+      ${statCard({
+    label: 'Règles actives', value: results.length,
+    sub: results.length ? 'évaluées à chaque ouverture' : 'aucune règle définie',
+  })}
+      ${statCard({
+    label: 'Déclenchées', value: fired.length,
+    cls: fired.length ? 'dn' : '',
+    sub: fired.length ? fired.map((r) => escapeHtml(r.market.label)).join(' · ') : 'aucun seuil franchi',
+  })}
+      ${statCard({
+    label: 'Non évaluables', value: unknown.length,
+    sub: unknown.length ? 'ouvrez le comparateur pour charger les autres marchés' : '—',
+    cls: 'dim',
+  })}
+      ${statCard({
+    label: 'Prochaine publication CFTC', value: (() => {
+    const n = CFTC.nextRelease(state.rows[state.rows.length - 1].date);
+    return n ? fmtDate(n.at.toISOString().slice(0, 10)) : '—';
+  })(),
+    sub: 'les seuils ne peuvent bouger qu\'à ce moment-là',
+  })}
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">Nouvelle règle</div>
+      <div class="panel-bd">
+        <form id="alert-form" class="al-form">
+          <label>Marché
+            <select name="market">${Object.entries(CFTC.markets).map(([k, m]) =>
+    `<option value="${k}"${k === state.metal ? ' selected' : ''}>${escapeHtml(m.label)}</option>`).join('')}</select>
+          </label>
+          <label>Cohorte
+            <select name="cohort">${cohorts.map((c) =>
+    `<option value="${c.key}">${escapeHtml(c.short)}</option>`).join('')}</select>
+          </label>
+          <label>Mesure
+            <select name="field">${Alerts.fields.map((f) =>
+    `<option value="${f.key}">${escapeHtml(f.label)}</option>`).join('')}</select>
+          </label>
+          <label>Condition
+            <select name="op">${Alerts.ops.map((o) =>
+    `<option value="${o.key}">${escapeHtml(o.label)}</option>`).join('')}</select>
+          </label>
+          <label>Seuil
+            <input name="threshold" type="number" step="any" value="80" required>
+          </label>
+          <button type="submit" class="tb armed">Ajouter</button>
+        </form>
+      </div>
+      <div class="note">Les mesures proposées sont exactement celles que le poste calcule ailleurs :
+        une alerte ne peut pas porter sur un chiffre qui n'est affiché nulle part.</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">Règles<span class="hd-sub">${results.length} enregistrée${results.length > 1 ? 's' : ''}</span></div>
+      <div class="panel-bd flush">${results.length ? `<div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th class="l">Règle</th><th class="n">Valeur</th><th class="n">Seuil</th>
+          <th class="n">Écart</th><th>État</th><th class="n">Arrêté</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table></div>`
+      : `<div class="news-empty">Aucune règle.<br>
+           Exemple utile : « Or · Hedge funds — COT index 3 ans passe sous 20 »,
+           qui repère les positionnements lessivés.</div>`}</div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">Ce que ces alertes sont, et ne sont pas</div>
+      <div class="panel-bd">
+        <p class="legend-note">Tout est évalué <b>dans votre navigateur</b>, sur les données déjà
+        chargées, et les règles sont stockées localement sur cet appareil. Rien n'est envoyé nulle
+        part, et rien ne vous suit d'un téléphone à un ordinateur.</p>
+        <p class="legend-note" style="margin-top:9px">Conséquence directe : une alerte s'allume
+        <b>quand vous ouvrez le poste</b>, elle ne vous réveille pas la nuit. Un site statique n'a
+        aucun moyen de vous notifier — il faudrait un serveur qui tourne en permanence, ce que ce
+        projet n'a délibérément pas. Ce n'est pas une limite technique contournable en douce, et
+        mieux vaut le savoir que de compter sur une notification qui ne viendra jamais.</p>
+        <p class="legend-note" style="margin-top:9px">Le COT étant hebdomadaire, un seuil ne peut
+        de toute façon changer d'état qu'une fois par semaine, le vendredi à la publication.</p>
+      </div>
+    </div>`;
+
+  $('#alert-form').onsubmit = (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const threshold = parseFloat(f.get('threshold'));
+    if (!Number.isFinite(threshold)) { toast('Seuil invalide', 'Entrez un nombre.', true); return; }
+    Alerts.add({
+      market: f.get('market'), cohort: f.get('cohort'), field: f.get('field'),
+      op: f.get('op'), threshold, report: state.report,
+    });
+    toast('Règle ajoutée', 'Elle est évaluée à chaque ouverture du poste.');
+    render();
+  };
+
+  $$('[data-del-alert]').forEach((b) => {
+    b.onclick = () => { Alerts.remove(b.dataset.delAlert); render(); };
   });
 }
 
@@ -2744,6 +2909,29 @@ function updateKeyButton() {
 function setPicker(open) {
   $('#rail').classList.toggle('open', open);
   $('#view-picker').setAttribute('aria-expanded', String(open));
+}
+
+/* Pastille sur l'entrée « Alertes » : une règle franchie doit se voir
+   depuis n'importe quelle vue, sinon la fonction ne sert à rien. */
+function renderAlertBadge() {
+  const item = $('.rail-item[data-view="alerts"]');
+  if (!item) return;
+  Alerts.load();
+  const loaded = { [state.metal]: state.rows };
+  if (compareCache && compareCache.sig === `${state.report}:${state.basis}`) {
+    Object.assign(loaded, compareCache.series);
+  }
+  const fired = Alerts.evaluate(loaded, state.report, (k) => Macro.priceOf(k))
+    .filter((r) => r.state === 'declenchee').length;
+  let dot = item.querySelector('.ri-badge');
+  if (!fired) { if (dot) dot.remove(); return; }
+  if (!dot) {
+    dot = document.createElement('span');
+    dot.className = 'ri-badge';
+    item.appendChild(dot);
+  }
+  dot.textContent = fired;
+  dot.title = `${fired} alerte${fired > 1 ? 's' : ''} déclenchée${fired > 1 ? 's' : ''}`;
 }
 
 function syncPicker() {

@@ -142,7 +142,7 @@ tiroir, et le tonnage y est converti en contrats COMEX pour donner l'ordre
 de grandeur — un stock souverain pèse couramment plusieurs fois l'open
 interest de tout le marché à terme.
 
-## Les onze vues
+## Les quatorze vues
 
 | Vue | Contenu |
 |-----|---------|
@@ -154,9 +154,27 @@ interest de tout le marché à terme.
 | **Historique** | Nets de toutes les cohortes, open interest, concentration, COT index glissant |
 | **Extrêmes** | Matrice index/z/percentile, rotations à plus de 2σ, basculements du net, configurations comparables |
 | **Or / Argent** | Écart de positionnement normalisé et comparaison directe des deux métaux |
+| **Saisonnalité** | Variation mensuelle sur 40 ans, écart-type, signal/bruit, saisonnalité du positionnement |
+| **Comparateur** | Les 7 marchés sur une grille normalisée, classement de tension, poids en dollars |
 | **Macro** | 16 séries FRED avec sparklines, régime, corrélations or et argent |
 | **Monde** | Globe des réserves d'or officielles, classement des détenteurs, places de marché ouvertes |
+| **Alertes** | Seuils sur les mesures COT, évalués localement |
 | **Actualité** | Fil francophone rangé en six catégories |
+
+## Alertes et export
+
+Les seuils sont évalués **dans le navigateur**, sur les données déjà chargées,
+et stockés en `localStorage` : rien ne part sur un serveur, et rien ne suit
+d'un appareil à l'autre. Conséquence assumée : une alerte s'allume quand on
+ouvre le poste, elle ne réveille pas la nuit — un site statique n'a aucun
+moyen de notifier, et l'écran le dit plutôt que de laisser croire à une
+surveillance continue. Le COT étant hebdomadaire, un seuil ne peut de toute
+façon changer d'état qu'au moment de la publication du vendredi.
+
+Chaque panneau contenant un tableau porte un bouton **CSV**. L'export lit le
+tableau affiché plutôt que de le reconstruire : ce qui sort est exactement ce
+qui est à l'écran. Séparateur point-virgule et BOM UTF-8, pour qu'un tableur
+français l'ouvre sans manipulation.
 
 ## Agent d'analyse
 
@@ -187,7 +205,8 @@ js/cot/charts.js        graphiques temporels et chandeliers (LWC v5)
 js/cot/globe.js         projection orthographique, réserves, places de marché
 js/cot/tape.js          bougies multi-échelles et flux d'ordres (OKX)
 js/cot/agent.js         contexte structuré + API Anthropic en flux
-js/cot/desk.js          orchestration et rendu des onze vues
+js/cot/alerts.js        seuils de surveillance locaux, export CSV
+js/cot/desk.js          orchestration et rendu des quatorze vues
 scripts/refresh_data.py collecte des sources sans CORS → data/*.json
 scripts/build_land.py   contours des continents → data/land.json (une fois)
 ```
