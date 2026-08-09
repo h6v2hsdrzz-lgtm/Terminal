@@ -23,6 +23,44 @@ const LOOKBACKS = [
   { key: 0, label: 'tout l\'historique' },
 ];
 
+/* ── Petits outils statistiques ─────────────────────────────
+   Écrits une fois ici plutôt que réimplémentés dans chaque mesure : la
+   corrélation de Pearson servait déjà à quatre endroits avec quatre
+   variantes légèrement différentes. */
+
+function pearson(a, b) {
+  const n = Math.min(a.length, b.length);
+  if (n < 3) return null;
+  let ma = 0, mb = 0;
+  for (let i = 0; i < n; i++) { ma += a[i]; mb += b[i]; }
+  ma /= n; mb /= n;
+  let cov = 0, va = 0, vb = 0;
+  for (let i = 0; i < n; i++) {
+    cov += (a[i] - ma) * (b[i] - mb);
+    va += (a[i] - ma) ** 2;
+    vb += (b[i] - mb) ** 2;
+  }
+  if (!va || !vb) return null;
+  return cov / Math.sqrt(va * vb);
+}
+
+/* rangs moyens en cas d'ex æquo — sans quoi Spearman est biaisé dès
+   qu'une série contient des valeurs répétées, ce qui arrive sur les
+   petits marchés où le net bouge peu */
+function ranks(values) {
+  const idx = values.map((v, i) => [v, i]).sort((x, y) => x[0] - y[0]);
+  const out = new Array(values.length);
+  let i = 0;
+  while (i < idx.length) {
+    let j = i;
+    while (j + 1 < idx.length && idx[j + 1][0] === idx[i][0]) j++;
+    const rank = (i + j) / 2 + 1;
+    for (let k = i; k <= j; k++) out[idx[k][1]] = rank;
+    i = j + 1;
+  }
+  return out;
+}
+
 const Metrics = {
   LOOKBACKS,
 
@@ -241,6 +279,121 @@ const Metrics = {
     }
     if (!vn || !vp) return null;
     return cov / Math.sqrt(vn * vp);
+  },
+
+  /* ── Corrélation, avec ce qu'il faut pour la juger ──────────
+     Un coefficient nu ne veut rien dire. Sur 52 semaines, une
+     corrélation de 0,25 n'est pas distinguable de zéro, et personne ne
+     le voit si l'écran affiche « 0,25 » tout seul. Cette version rend
+     donc l'intervalle de confiance, le seuil de significativité et le
+     coefficient de rang de Spearman — qui, lui, résiste aux valeurs
+     extrêmes, nombreuses sur des variations hebdomadaires de COT. */
+  correlationFull(joined, lookback = 52) {
+    const w = this.tail(joined, lookback);
+    if (w.length < 12) return null;
+    const dn = [], dp = [];
+    for (let i = 1; i < w.length; i++) {
+      dn.push(w[i].value - w[i - 1].value);
+      dp.push((w[i].price - w[i - 1].price) / w[i - 1].price);
+    }
+    const r = pearson(dn, dp);
+    if (r == null) return null;
+    const n = dn.length;
+
+    /* Intervalle de confiance à 95 % par la transformation z de Fisher :
+       la distribution de r est fortement asymétrique près de ±1, celle
+       de z ne l'est pas. */
+    const z = 0.5 * Math.log((1 + r) / (1 - r));
+    const se = 1 / Math.sqrt(n - 3);
+    const lo = Math.tanh(z - 1.96 * se);
+    const hi = Math.tanh(z + 1.96 * se);
+
+    /* statistique t du test de nullité, et sa valeur critique à 5 % */
+    const t = r * Math.sqrt((n - 2) / (1 - r * r));
+    const critical = 1.96 + 2.4 / Math.max(1, n - 2);   /* approximation de Student, suffisante ici */
+
+    return {
+      r, n, lo, hi, t,
+      significatif: Math.abs(t) > critical && lo * hi > 0,
+      spearman: pearson(ranks(dn), ranks(dp)),
+      /* part de variance expliquée — le chiffre qui dégonfle le plus
+         souvent l'impression donnée par un r « correct » */
+      r2: r * r,
+    };
+  },
+
+  /* ── Demi-vie de retour à la moyenne ────────────────────────
+     Combien de semaines faut-il à un positionnement extrême pour
+     revenir à mi-chemin de sa moyenne ? On l'estime par une régression
+     d'Ornstein-Uhlenbeck en temps discret : Δx = λ(μ − x) + ε, d'où
+     une demi-vie de ln(2)/λ.
+
+     C'est la mesure qui manque le plus quand on lit « COT index à 95 » :
+     savoir que c'est extrême ne dit pas si ça se dénoue en trois
+     semaines ou en huit mois. */
+  halfLife(series, lookback = 260) {
+    const w = this.tail(series.map((p) => p.value), lookback);
+    if (w.length < 40) return null;
+    const x = w.slice(0, -1);
+    const dx = [];
+    for (let i = 1; i < w.length; i++) dx.push(w[i] - w[i - 1]);
+
+    const mx = x.reduce((a, b) => a + b, 0) / x.length;
+    const md = dx.reduce((a, b) => a + b, 0) / dx.length;
+    let cov = 0, vx = 0;
+    for (let i = 0; i < x.length; i++) {
+      cov += (x[i] - mx) * (dx[i] - md);
+      vx += (x[i] - mx) ** 2;
+    }
+    if (!vx) return null;
+    const beta = cov / vx;                 /* pente : négative si retour à la moyenne */
+    if (beta >= 0) {
+      /* pente positive = la série s'éloigne de sa moyenne. Il n'y a
+         alors pas de demi-vie : le dire vaut mieux qu'afficher un
+         nombre négatif sans signification. */
+      return { beta, weeks: null, mean: mx, diverge: true, n: x.length };
+    }
+    return {
+      beta, weeks: Math.log(2) / -beta, mean: mx, diverge: false, n: x.length,
+      /* écart actuel à la moyenne, en semaines de retour attendues */
+      ecart: w[w.length - 1] - mx,
+    };
+  },
+
+  /* ── Forme de la distribution ───────────────────────────────
+     Un z-score suppose une distribution symétrique. Le net d'une
+     cohorte ne l'est presque jamais : les swap dealers sont bornés d'un
+     côté, les hedge funds font des queues longues à la hausse. Donner
+     l'asymétrie et l'aplatissement dit à quel point le z-score est une
+     approximation. */
+  moments(values) {
+    const n = values.length;
+    if (n < 20) return null;
+    const m = values.reduce((a, b) => a + b, 0) / n;
+    let m2 = 0, m3 = 0, m4 = 0;
+    for (const v of values) {
+      const d = v - m;
+      m2 += d * d; m3 += d * d * d; m4 += d * d * d * d;
+    }
+    m2 /= n; m3 /= n; m4 /= n;
+    const sd = Math.sqrt(m2);
+    if (!sd) return null;
+    return {
+      n, mean: m, sd,
+      skew: m3 / (sd ** 3),
+      /* excès d'aplatissement : 0 pour une loi normale */
+      kurt: m4 / (sd ** 4) - 3,
+    };
+  },
+
+  /* Autocorrélation d'ordre 1 des variations : dit si les flux
+     hebdomadaires s'enchaînent (tendance) ou alternent (bruit). */
+  autocorr(series, lag = 1) {
+    const v = series.map((p) => p.value);
+    const d = [];
+    for (let i = 1; i < v.length; i++) d.push(v[i] - v[i - 1]);
+    if (d.length < lag + 20) return null;
+    return pearson(d.slice(0, d.length - lag), d.slice(lag));
   },
 
   /* divergence : le prix fait un plus haut de fenêtre, le net non

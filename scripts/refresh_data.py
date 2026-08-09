@@ -648,6 +648,62 @@ WIKI_API = ("https://en.wikipedia.org/w/api.php"
 # Nom anglais du tableau → (nom français, code ISO, latitude, longitude).
 # Les coordonnées sont celles de la capitale, ou du siège pour les
 # institutions : elles servent uniquement à poser un point sur le globe.
+# Région et population, pour deux mesures que le tonnage brut ne donne
+# pas : le poids par bloc géographique, et les réserves par habitant —
+# qui renversent complètement le classement (la Suisse pèse trente fois
+# les États-Unis par tête, et deux cents fois la Chine).
+#
+# Populations en millions, arrondies, d'après les Perspectives de la
+# population mondiale des Nations unies (révision 2024). Elles bougent
+# de moins de 1 % par an, là où les réserves d'or sont trimestrielles :
+# les figer ici est sans conséquence sur le classement, et évite une
+# dépendance de plus.
+COUNTRY_INFO = {
+    "USA": ("Amérique du Nord", 345.4), "DEU": ("Europe", 84.6),
+    "ITA": ("Europe", 59.3), "FRA": ("Europe", 66.5),
+    "RUS": ("Europe", 144.4), "CHN": ("Asie", 1416.1),
+    "CHE": ("Europe", 8.9), "IND": ("Asie", 1450.9),
+    "JPN": ("Asie", 123.8), "TUR": ("Moyen-Orient", 85.7),
+    "NLD": ("Europe", 18.1), "POL": ("Europe", 38.5),
+    "TWN": ("Asie", 23.2), "PRT": ("Europe", 10.4),
+    "UZB": ("Asie", 35.6), "SAU": ("Moyen-Orient", 33.9),
+    "KAZ": ("Asie", 20.6), "GBR": ("Europe", 69.1),
+    "LBN": ("Moyen-Orient", 5.8), "ESP": ("Europe", 47.9),
+    "AUT": ("Europe", 9.1), "THA": ("Asie", 71.7),
+    "BEL": ("Europe", 11.7), "DZA": ("Afrique", 46.8),
+    "VEN": ("Amérique latine", 28.4), "PHL": ("Asie", 115.8),
+    "SGP": ("Asie", 6.0), "LBY": ("Afrique", 7.4),
+    "BRA": ("Amérique latine", 212.0), "SWE": ("Europe", 10.6),
+    "ZAF": ("Afrique", 64.0), "MEX": ("Amérique latine", 130.9),
+    "IRQ": ("Moyen-Orient", 46.0), "GRC": ("Europe", 10.0),
+    "EGY": ("Afrique", 116.5), "KOR": ("Asie", 51.7),
+    "ROU": ("Europe", 19.0), "QAT": ("Moyen-Orient", 3.0),
+    "AUS": ("Océanie", 26.7), "IDN": ("Asie", 283.5),
+    "HUN": ("Europe", 9.6), "KWT": ("Moyen-Orient", 4.9),
+    "DNK": ("Europe", 6.0), "PAK": ("Asie", 251.3),
+    "ARG": ("Amérique latine", 45.7), "BLR": ("Europe", 9.0),
+    "FIN": ("Europe", 5.6), "JOR": ("Moyen-Orient", 11.5),
+    "BOL": ("Amérique latine", 12.4), "BGR": ("Europe", 6.4),
+    "MYS": ("Asie", 35.6), "PER": ("Amérique latine", 34.2),
+    "SRB": ("Europe", 6.7), "UKR": ("Europe", 37.9),
+    "ECU": ("Amérique latine", 18.1), "SYR": ("Moyen-Orient", 24.7),
+    "MAR": ("Afrique", 38.1), "NGA": ("Afrique", 232.7),
+    "CZE": ("Europe", 10.7), "BGD": ("Asie", 173.6),
+    "CYP": ("Europe", 1.4), "GHA": ("Afrique", 34.4),
+    "KHM": ("Asie", 17.6), "COL": ("Amérique latine", 52.9),
+    "AZE": ("Asie", 10.4), "ARE": ("Moyen-Orient", 11.0),
+    "MNG": ("Asie", 3.5), "IRL": ("Europe", 5.3),
+    "SVK": ("Europe", 5.4), "LKA": ("Asie", 23.1),
+    "NPL": ("Asie", 29.7), "GTM": ("Amérique latine", 18.4),
+    "TUN": ("Afrique", 12.3), "CHL": ("Amérique latine", 19.8),
+    "CAN": ("Amérique du Nord", 39.7), "NOR": ("Europe", 5.6),
+    "NZL": ("Océanie", 5.2),
+    # les institutions n'ont pas de population : elles sont exclues des
+    # ratios par habitant plutôt que rattachées arbitrairement à un pays
+    "FMI": ("Institution", None), "BCE": ("Institution", None),
+    "BRI": ("Institution", None),
+}
+
 COUNTRY_GEO = {
     "United States": ("États-Unis", "USA", 38.9, -77.0),
     "Germany": ("Allemagne", "DEU", 52.5, 13.4),
@@ -801,10 +857,15 @@ def parse_reserves() -> dict:
             missing.append(name)
             continue
         label, iso, lat, lon = geo
+        region, pop = COUNTRY_INFO.get(iso, (None, None))
         holders.append({
             "name": label, "en": name, "iso": iso,
             "tonnes": tonnes, "share": share, "lat": lat, "lon": lon,
             "institution": iso in ("FMI", "BCE", "BRI"),
+            "region": region,
+            "pop": pop,
+            # grammes par habitant : la mesure qui renverse le classement
+            "perCapita": round(tonnes * 1e6 / (pop * 1e6), 2) if pop else None,
         })
 
     holders.sort(key=lambda h: -h["tonnes"])
@@ -813,12 +874,51 @@ def parse_reserves() -> dict:
     if missing:
         print(f"  réserves : {len(missing)} entrées sans coordonnées — {', '.join(missing[:6])}",
               file=sys.stderr)
+    # ── agrégats régionaux ──
+    # Les institutions restent à part : les additionner à un continent
+    # double des tonnes déjà comptées chez les États membres.
+    regions: dict[str, dict] = {}
+    for h in holders:
+        if h["institution"] or not h["region"]:
+            continue
+        r = regions.setdefault(h["region"], {"region": h["region"], "tonnes": 0.0,
+                                             "pays": 0, "pop": 0.0})
+        r["tonnes"] += h["tonnes"]
+        r["pays"] += 1
+        if h["pop"]:
+            r["pop"] += h["pop"]
+    for r in regions.values():
+        r["tonnes"] = round(r["tonnes"], 1)
+        r["perCapita"] = round(r["tonnes"] * 1e6 / (r["pop"] * 1e6), 2) if r["pop"] else None
+    regions_out = sorted(regions.values(), key=lambda r: -r["tonnes"])
+
+    # ── concentration ──
+    # Indice de Herfindahl-Hirschman sur les parts en tonnage : somme des
+    # carrés des parts, sur une échelle de 10 000. Les deux mesures
+    # renvoyées ne disent pas la même chose et c'est voulu : le HHI
+    # tourne autour de 1 000 — « peu concentré » à l'échelle antitrust —
+    # alors que les trois premiers pèsent plus de 40 %. L'écart vient de
+    # la longue traîne : une cinquantaine de petits détenteurs tirent le
+    # HHI vers le bas sans rien changer au fait que trois pays décident.
+    states = [h for h in holders if not h["institution"]]
+    tot = sum(h["tonnes"] for h in states) or 1
+    hhi = sum(((h["tonnes"] / tot) * 100) ** 2 for h in states)
+
     return {
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "asOf": as_of,
         "source": "World Gold Council / FMI — International Financial Statistics",
         "via": "https://en.wikipedia.org/wiki/Gold_reserve",
+        "popSource": "Nations unies — Perspectives de la population mondiale, révision 2024",
         "holders": holders,
+        "regions": regions_out,
+        "concentration": {
+            "hhi": round(hhi),
+            "top3": round(sum(h["tonnes"] for h in states[:3]) / tot * 100, 1),
+            "top5": round(sum(h["tonnes"] for h in states[:5]) / tot * 100, 1),
+            "top10": round(sum(h["tonnes"] for h in states[:10]) / tot * 100, 1),
+            "etats": len(states),
+        },
     }
 
 

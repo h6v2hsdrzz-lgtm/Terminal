@@ -78,7 +78,13 @@ const Globe = {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, w, h);
 
-    const v = { ...view, cx: w / 2, cy: h / 2, r: Math.min(w, h) / 2 - 12 };
+    /* Le zoom agrandit le rayon de la sphère : au-delà de 1 elle déborde
+       du cadre, et c'est exactement ce qu'on veut — l'Europe concentre
+       une vingtaine de détenteurs sur quelques degrés, impossible à
+       distinguer à l'échelle du globe entier. */
+    const zoom = Math.max(1, Math.min(6, view.zoom || 1));
+    const base = Math.min(w, h) / 2 - 12;
+    const v = { ...view, zoom, cx: w / 2, cy: h / 2, r: base * zoom };
 
     /* océan */
     const grad = g.createRadialGradient(v.cx - v.r * 0.3, v.cy - v.r * 0.35, v.r * 0.1, v.cx, v.cy, v.r);
@@ -147,22 +153,39 @@ const Globe = {
     g.beginPath();
     g.arc(v.cx, v.cy, v.r, 0, Math.PI * 2);
     g.clip();
+    /* Le rayon des disques ne suit pas le zoom : à 4× l'or des
+       États-Unis couvrirait tout l'écran. Il grandit en racine, ce qui
+       écarte visuellement les voisins sans les faire enfler. */
+    const rScale = base * 0.155 * Math.sqrt(zoom);
     for (const hd of [...holders].sort((a, b) => a.tonnes - b.tonnes)) {
       const p = this.project(hd.lon, hd.lat, v);
       if (!p || p.z < 0.06) continue;
-      const rad = 3 + Math.sqrt(hd.tonnes / max) * (v.r * 0.155);
+      const rad = 3 + Math.sqrt(hd.tonnes / max) * rScale;
+      const sel = hd.iso === view.selected;
+      const hov = hd.iso === view.hovered;
       const fade = 0.25 + 0.75 * Math.min(1, p.z * 1.6);
       g.beginPath();
       g.arc(p.x, p.y, rad, 0, Math.PI * 2);
       g.fillStyle = hd.institution
-        ? `rgba(142,122,184,${0.2 * fade})` : `rgba(217,164,65,${0.22 * fade})`;
+        ? `rgba(142,122,184,${(sel || hov ? 0.5 : 0.2) * fade})`
+        : `rgba(217,164,65,${(sel || hov ? 0.55 : 0.22) * fade})`;
       g.fill();
-      g.strokeStyle = hd.institution
-        ? `rgba(163,145,203,${0.85 * fade})` : `rgba(230,183,92,${0.9 * fade})`;
-      g.lineWidth = 1.1;
+      g.strokeStyle = sel ? '#ffffff'
+        : hd.institution ? `rgba(163,145,203,${(hov ? 1 : 0.85) * fade})`
+          : `rgba(230,183,92,${(hov ? 1 : 0.9) * fade})`;
+      g.lineWidth = sel ? 2 : hov ? 1.8 : 1.1;
       g.stroke();
-      hit.push({ ...hd, x: p.x, y: p.y, rad: Math.max(rad, 9) });
-      if (hd.rank <= 8 && p.z > 0.3) labels.push({ hd, p, rad, fade });
+      if (sel) {
+        /* halo de repérage : sur une grappe européenne, la bordure
+           blanche seule ne suffit pas à retrouver le pays choisi */
+        g.beginPath();
+        g.arc(p.x, p.y, rad + 6, 0, Math.PI * 2);
+        g.strokeStyle = 'rgba(255,255,255,.35)';
+        g.lineWidth = 1;
+        g.stroke();
+      }
+      hit.push({ ...hd, x: p.x, y: p.y, rad, pick: Math.max(rad, 10) });
+      if ((hd.rank <= 8 || sel || hov || zoom >= 2.2) && p.z > 0.3) labels.push({ hd, p, rad, fade, sel, hov });
     }
 
     /* Un détenteur entièrement recouvert par un plus gros n'est pas
@@ -183,19 +206,47 @@ const Globe = {
     g.font = '600 10px Inter, system-ui, sans-serif';
     g.textAlign = 'center';
     const placed = [];
-    for (const { hd, p, rad, fade } of shown.sort((a, b) => b.hd.tonnes - a.hd.tonnes)) {
+    /* le pays sélectionné puis le survolé passent devant : leur libellé
+       ne doit jamais être celui qu'on sacrifie à l'anti-chevauchement */
+    const order = shown.sort((a, b) =>
+      (b.sel - a.sel) || (b.hov - a.hov) || (b.hd.tonnes - a.hd.tonnes));
+    for (const { hd, p, rad, fade, sel, hov } of order) {
+      /* Un disque sorti du cadre par le zoom n'a pas de libellé : sinon
+         son nom se colle au bord de l'écran, désignant un pays qu'on ne
+         voit pas. */
+      if (p.x < -rad || p.x > w + rad || p.y < -rad || p.y > h + rad) continue;
       const text = hd.institution ? hd.iso : hd.name;
       const wl = g.measureText(text).width;
       const x = Math.max(wl / 2 + 5, Math.min(w - wl / 2 - 5, p.x));
       const y = Math.max(14, p.y - rad - 5);
-      if (placed.some((q) => Math.abs(q.x - x) < (q.w + wl) / 2 + 6 && Math.abs(q.y - y) < 17)) continue;
+      if (!sel && !hov
+        && placed.some((q) => Math.abs(q.x - x) < (q.w + wl) / 2 + 6 && Math.abs(q.y - y) < 17)) continue;
       placed.push({ x, y, w: wl });
-      g.fillStyle = 'rgba(8,10,14,.72)';
+      g.fillStyle = sel ? 'rgba(217,164,65,.92)' : 'rgba(8,10,14,.78)';
       g.fillRect(x - wl / 2 - 3, y - 9, wl + 6, 12);
-      g.fillStyle = `rgba(214,221,229,${fade})`;
+      g.fillStyle = sel ? '#0b0e13' : `rgba(214,221,229,${fade})`;
       g.fillText(text, x, y);
     }
     return hit;
+  },
+
+  /* ── Désignation ──────────────────────────────────────────
+     Choisir « le premier disque touché » revient à désigner celui que
+     l'ordre de tracé a mis dessus, c'est-à-dire le plus petit. Sur la
+     grappe européenne, viser l'Italie donnait le Portugal.
+
+     On prend donc le disque dont le centre est le plus proche du clic,
+     et à distance égale le plus petit — un petit pays posé sur un gros
+     reste atteignable, alors que l'inverse serait impossible. */
+  pick(hits, x, y) {
+    let best = null, bestScore = Infinity;
+    for (const h of hits) {
+      const d = Math.hypot(h.x - x, h.y - y);
+      if (d > h.pick) continue;
+      const score = d + h.rad * 0.12;
+      if (score < bestScore) { bestScore = score; best = h; }
+    }
+    return best;
   },
 
   /* trace une suite de [lon,lat] en coupant aux passages derrière

@@ -460,6 +460,10 @@ function openCohortDrawer(cohortKey) {
   const moves = Metrics.bigMoves(net, 260, 2).slice(0, 8);
   const joined = Metrics.alignPrice(net, Macro.priceSeries(state.metal));
   const corr = joined.length ? Metrics.correlation(joined, 52) : null;
+  const cs = joined.length ? Metrics.correlationFull(joined, 156) : null;
+  const hl = Metrics.halfLife(net, 520);
+  const mo = Metrics.moments(values);
+  const ac = Metrics.autocorr(net);
   const vel = Metrics.velocity(net);
 
   const body = `
@@ -533,11 +537,64 @@ function openCohortDrawer(cohortKey) {
 
     <div class="dr-sec">
       <div class="dr-h">RELATION AU PRIX</div>
-      <p class="dr-p">Corrélation entre variations hebdomadaires de position et de prix sur 52 semaines :
-        <b>${corr == null ? '—' : fmtNum(corr, 2)}</b>${corr == null ? '.'
-      : corr > 0.4 ? ' — cette cohorte suit le prix.'
-        : corr < -0.2 ? ' — elle va à contre-courant du prix, comportement typique d\'une contrepartie.'
-          : ' — lien faible : sa position ne se déduit pas du prix.'}</p>
+      ${cs ? `<div class="dr-grid">
+        ${kv('Corrélation (Pearson)', fmtNum(cs.r, 2),
+    `intervalle 95 % : ${fmtNum(cs.lo, 2)} à ${fmtNum(cs.hi, 2)}`,
+    cs.significatif ? '' : 'dim')}
+        ${kv('Corrélation de rang (Spearman)', cs.spearman == null ? '—' : fmtNum(cs.spearman, 2),
+    'insensible aux semaines extrêmes')}
+        ${kv('Variance expliquée', fmtPct(cs.r2 * 100, 1), `sur ${cs.n} variations hebdomadaires`)}
+        ${kv('Verdict', cs.significatif ? 'significatif' : 'non significatif',
+    cs.significatif ? 'l\'intervalle ne contient pas zéro' : 'l\'intervalle contient zéro',
+    cs.significatif ? '' : 'dim')}
+      </div>
+      <p class="dr-p">${!cs.significatif
+    ? `L'intervalle de confiance va de ${fmtNum(cs.lo, 2)} à ${fmtNum(cs.hi, 2)} : il contient zéro,
+       donc sur cet échantillon on ne peut pas distinguer cette corrélation de l'absence de lien.
+       Un coefficient affiché seul aurait laissé croire le contraire.`
+    : cs.r > 0.4 ? `Cette cohorte suit le prix, et le lien tient statistiquement. Elle n'explique
+       pourtant que ${fmtPct(cs.r2 * 100, 0)} de la variance : « corrélé » ne veut pas dire
+       « déterminé par ».`
+      : cs.r < -0.2 ? `Elle va à contre-courant du prix — comportement typique d'une contrepartie qui
+         absorbe le flux plutôt que de le suivre. Le lien tient statistiquement, pour
+         ${fmtPct(cs.r2 * 100, 0)} de la variance.`
+        : `Le lien tient statistiquement mais reste faible : ${fmtPct(cs.r2 * 100, 0)} de la variance.
+           La position de cette cohorte ne se déduit pas du prix.`}
+      ${cs.spearman != null && Math.abs(cs.spearman - cs.r) > 0.15
+    ? ` L'écart entre Pearson (${fmtNum(cs.r, 2)}) et Spearman (${fmtNum(cs.spearman, 2)}) est notable :
+        quelques semaines extrêmes pèsent lourd dans le coefficient linéaire.` : ''}</p>`
+    : '<p class="dr-p">Historique de prix insuffisant pour mesurer la relation.</p>'}
+    </div>
+
+    <div class="dr-sec">
+      <div class="dr-h">DYNAMIQUE ET FORME</div>
+      <div class="dr-grid">
+        ${kv('Demi-vie du positionnement',
+    hl == null ? '—' : hl.diverge ? 'aucune' : `${fmtNum(hl.weeks, 1)} sem.`,
+    hl == null ? 'série trop courte'
+      : hl.diverge ? 'la position s\'éloigne de sa moyenne au lieu d\'y revenir'
+        : `temps pour effacer la moitié d'un écart, sur ${hl.n} semaines`)}
+        ${kv('Écart actuel à la moyenne',
+    hl == null || hl.diverge ? '—' : fmtSigned(Math.round(hl.ecart)),
+    hl && !hl.diverge ? `moyenne de long terme : ${fmtSigned(Math.round(hl.mean))}` : '')}
+        ${kv('Asymétrie de la distribution', mo == null ? '—' : fmtNum(mo.skew, 2),
+    mo == null ? '' : Math.abs(mo.skew) < 0.5 ? 'quasi symétrique'
+      : mo.skew > 0 ? 'queue longue du côté acheteur' : 'queue longue du côté vendeur')}
+        ${kv('Aplatissement (excès)', mo == null ? '—' : fmtNum(mo.kurt, 2),
+    mo == null ? '' : mo.kurt > 1 ? 'extrêmes plus fréquents qu\'une loi normale'
+      : mo.kurt < -0.5 ? 'distribution plus plate qu\'une loi normale' : 'proche d\'une loi normale')}
+        ${kv('Enchaînement des flux', ac == null ? '—' : fmtNum(ac, 2),
+    ac == null ? '' : ac > 0.15 ? 'les semaines se suivent — flux tendanciel'
+      : ac < -0.15 ? 'les semaines alternent — bruit ou allers-retours'
+        : 'pas de mémoire d\'une semaine à l\'autre')}
+      </div>
+      <p class="dr-p">La <b>demi-vie</b> est ce qui manque le plus quand on lit « index à 95 » : savoir
+        qu'un positionnement est extrême ne dit pas s'il se dénoue en trois semaines ou en huit mois.
+        Elle est estimée par régression du type retour à la moyenne, et n'est publiée que si la pente
+        va effectivement dans ce sens.</p>
+      <p class="dr-p">L'<b>asymétrie</b> et l'<b>aplatissement</b> disent à quel point le z-score
+        affiché plus haut est une approximation : il suppose une distribution symétrique, ce que le
+        net d'une cohorte n'est presque jamais.</p>
     </div>
 
     <div class="dr-sec">
@@ -2539,7 +2596,7 @@ async function renderCompare(host) {
    COMEX, et déclarent au FMI avec plusieurs mois de retard — leurs
    tonnages n'apparaissent dans aucune ligne du rapport hebdomadaire. */
 
-let globeView = { lon: 20, lat: 22, spin: true };
+let globeView = { lon: 20, lat: 22, spin: true, zoom: 1, selected: null, hovered: null };
 let globeHits = [];
 let globeRaf = 0;
 
@@ -2595,7 +2652,7 @@ function renderWorld(host) {
           <span class="hd-sub">l'aire de chaque disque est proportionnelle au tonnage</span></div>
         <div class="panel-bd flush">
           <div class="globe-wrap">
-            <canvas id="globe-cv" title="Faites glisser pour tourner la Terre"></canvas>
+            <canvas id="globe-cv" title="Faites glisser pour tourner · molette ou pincement pour zoomer"></canvas>
             <div class="globe-tip hidden" id="globe-tip"></div>
             <div class="globe-ctl">
               <button id="globe-spin" class="gb${globeView.spin ? ' on' : ''}">Rotation</button>
@@ -2603,26 +2660,55 @@ function renderWorld(host) {
               <button class="gb" data-goto="-90,30">Amériques</button>
               <button class="gb" data-goto="110,25">Asie</button>
             </div>
+            <div class="globe-zoom">
+              <button class="gb" id="gz-in" title="Zoomer">+</button>
+              <span id="gz-lvl">1,0×</span>
+              <button class="gb" id="gz-out" title="Dézoomer">−</button>
+              <button class="gb" id="gz-reset" title="Vue d'ensemble">⤢</button>
+            </div>
           </div>
         </div>
-        <div class="note">Face sombre : la nuit à l'instant présent. L'or se traite en continu par
-          relais entre fuseaux — le carnet passe de Sydney à Tokyo, puis Shanghai, Londres et
-          enfin New York, où se traitent les contrats du rapport COT.</div>
+        <div class="note">Faites glisser pour tourner, la molette ou deux doigts pour zoomer.
+          L'Europe concentre une vingtaine de détenteurs sur quelques degrés : au-delà de 2×
+          chacun porte son nom. Face sombre : la nuit à l'instant présent — l'or se traite en
+          continu par relais entre fuseaux, de Sydney à New York où se traitent les contrats du
+          rapport COT.</div>
       </div>
 
       <div class="panel">
-        <div class="panel-hd">Places du marché mondial
-          <span class="hd-sub">${new Date().toUTCString().slice(17, 22)} UTC</span></div>
-        <div class="panel-bd flush"><div class="hub-list">${hubs.map((x) => `
-          <div class="hub${x.open ? ' on' : ''}">
-            <span class="hub-dot"></span>
-            <div class="hub-b">
-              <div class="hub-n">${escapeHtml(x.name)}
-                <em>${String(Math.floor(x.openUtc)).padStart(2, '0')}h–${String(Math.floor(x.closeUtc)).padStart(2, '0')}h UTC</em></div>
-              <div class="hub-d">${escapeHtml(x.note)}</div>
-            </div>
-          </div>`).join('')}</div></div>
+        <div class="panel-hd">Détenteurs
+          <span class="hd-sub">cliquez pour centrer le globe</span></div>
+        <div class="panel-bd flush">
+          <div class="gl-search">
+            <input id="gl-q" type="search" placeholder="Filtrer un pays…" spellcheck="false"
+              autocomplete="off">
+          </div>
+          <div class="gl-list" id="gl-list">${holders.map((h) => `
+            <button class="gl-row" data-iso="${escapeHtml(h.iso)}"
+                    data-name="${escapeHtml(h.name.toLowerCase())}">
+              <span class="gl-rank">${h.rank}</span>
+              <span class="gl-name">${escapeHtml(h.name)}</span>
+              <span class="gl-t">${fmtInt(Math.round(h.tonnes))} t</span>
+              <span class="gl-b"><i style="width:${((h.tonnes / holders[0].tonnes) * 100).toFixed(1)}%;
+                background:${h.institution ? 'var(--accent-2)' : 'var(--gold)'}"></i></span>
+            </button>`).join('')}</div>
+        </div>
+        <div class="note" id="gl-count">${holders.length} détenteurs déclarants.</div>
       </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">Places du marché mondial
+        <span class="hd-sub">${new Date().toUTCString().slice(17, 22)} UTC · ${hubs.filter((x) => x.open).length} ouverte${hubs.filter((x) => x.open).length > 1 ? 's' : ''}</span></div>
+      <div class="panel-bd flush"><div class="hub-grid">${hubs.map((x) => `
+        <div class="hub${x.open ? ' on' : ''}">
+          <span class="hub-dot"></span>
+          <div class="hub-b">
+            <div class="hub-n">${escapeHtml(x.name)}
+              <em>${String(Math.floor(x.openUtc)).padStart(2, '0')}h–${String(Math.floor(x.closeUtc)).padStart(2, '0')}h UTC</em></div>
+            <div class="hub-d">${escapeHtml(x.note)}</div>
+          </div>
+        </div>`).join('')}</div></div>
     </div>
 
     <div class="panel">
@@ -2650,6 +2736,86 @@ function renderWorld(host) {
         structurellement pas de raison de s'arrêter.</div>
     </div>
 
+    ${meta.regions && meta.regions.length ? `<div class="grid-2">
+      <div class="panel">
+        <div class="panel-hd">Poids par région
+          <span class="hd-sub">institutions exclues — elles doubleraient les tonnes de leurs membres</span></div>
+        <div class="panel-bd"><div class="contrib">${(() => {
+    const mx = Math.max(...meta.regions.map((r) => r.tonnes), 1);
+    const tot = meta.regions.reduce((a, r) => a + r.tonnes, 0);
+    return meta.regions.map((r) => `<div class="contrib-row">
+            <div class="contrib-lb">${escapeHtml(r.region)}
+              <small>${r.pays} pays · ${fmtPct((r.tonnes / tot) * 100, 1)} du total</small></div>
+            <div class="contrib-side">
+              <div class="contrib-bar wide"><i style="left:0;width:${((r.tonnes / mx) * 100).toFixed(1)}%;
+                background:var(--gold)"></i></div>
+              <span class="contrib-val n">${fmtInt(Math.round(r.tonnes))} t</span>
+            </div>
+          </div>`).join('');
+  })()}</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-hd">Grammes par habitant
+          <span class="hd-sub">le classement que le tonnage brut masque</span></div>
+        <div class="panel-bd flush"><div class="tbl-wrap"><table class="tbl">
+          <thead><tr><th>#</th><th class="l">Pays</th><th class="n">g / habitant</th>
+            <th class="n">Rang au tonnage</th><th class="n">Écart de rang</th></tr></thead>
+          <tbody>${(() => {
+    const pc = holders.filter((h) => h.perCapita != null)
+      .sort((a, b) => b.perCapita - a.perCapita);
+    return pc.slice(0, 12).map((h, i) => {
+      const shift = h.rank - (i + 1);
+      return `<tr class="clickable" data-holder="${escapeHtml(h.iso)}">
+              <td class="n dim">${i + 1}</td>
+              <td class="l">${escapeHtml(h.name)}</td>
+              <td class="n">${fmtNum(h.perCapita, 1)}</td>
+              <td class="n dim">${h.rank}</td>
+              <td class="n ${shift > 0 ? 'up' : shift < 0 ? 'dn' : 'dim'}">${shift === 0 ? '=' : fmtSigned(shift)}</td>
+            </tr>`;
+    }).join('');
+  })()}</tbody>
+        </table></div></div>
+        <div class="note">Population : ${escapeHtml(meta.popSource || 'Nations unies')}. La colonne
+          <b>écart de rang</b> mesure la distance entre les deux classements : la Suisse est 8ᵉ en
+          tonnage et 1ʳᵉ par tête, l'inverse d'un pays très peuplé dont le stock impressionne en
+          valeur absolue mais pas rapporté à sa population.</div>
+      </div>
+    </div>` : ''}
+
+    ${meta.concentration ? `<div class="panel">
+      <div class="panel-hd">Concentration du stock officiel</div>
+      <div class="panel-bd">
+        <div class="grid-4">
+          ${statCard({
+    label: 'Trois premiers', value: fmtPct(meta.concentration.top3, 1),
+    sub: 'États-Unis, Allemagne, Italie', gauge: gaugeHtml(meta.concentration.top3, 'warm'),
+  })}
+          ${statCard({
+    label: 'Cinq premiers', value: fmtPct(meta.concentration.top5, 1),
+    gauge: gaugeHtml(meta.concentration.top5, 'warm'),
+  })}
+          ${statCard({
+    label: 'Dix premiers', value: fmtPct(meta.concentration.top10, 1),
+    sub: `sur ${meta.concentration.etats} États déclarants`,
+    gauge: gaugeHtml(meta.concentration.top10, 'hot'),
+  })}
+          ${statCard({
+    label: 'Indice Herfindahl', value: fmtInt(meta.concentration.hhi),
+    sub: meta.concentration.hhi > 2500 ? 'très concentré'
+      : meta.concentration.hhi > 1500 ? 'modérément concentré' : 'peu concentré',
+  })}
+        </div>
+        <p class="legend-note" style="margin-top:12px">Les deux mesures se contredisent, et c'est
+        l'information : l'indice de Herfindahl — ${fmtInt(meta.concentration.hhi)}, soit
+        « ${meta.concentration.hhi > 1500 ? 'concentré' : 'peu concentré'} » sur l'échelle
+        antitrust — est tiré vers le bas par la longue traîne d'une cinquantaine de petits
+        détenteurs, alors que les trois premiers pèsent ${fmtPct(meta.concentration.top3, 1)} du
+        stock déclaré à eux seuls. Un chiffre unique aurait tranché à tort dans un sens ou dans
+        l'autre.</p>
+      </div>
+    </div>` : ''}
+
     <div class="panel">
       <div class="panel-hd">Ce que ces chiffres disent, et ce qu'ils ne disent pas</div>
       <div class="panel-bd">
@@ -2673,14 +2839,48 @@ function renderWorld(host) {
   const cv = $('#globe-cv');
   const tip = $('#globe-tip');
   let drag = null;
+  let pinch = null;
 
-  const paint = () => { globeHits = Globe.draw(cv, holders, globeView); };
+  const paint = () => {
+    globeHits = Globe.draw(cv, holders, globeView);
+    const lvl = $('#gz-lvl');
+    if (lvl) lvl.textContent = `${fmtNum(globeView.zoom, 1)}×`;
+  };
 
   Globe.loadLand().then(paint);
   paint();
 
+  /* Centrage animé. Sauter d'un coup à l'autre bout du globe fait
+     perdre le fil : on interpole, et par le plus court chemin en
+     longitude — sans quoi un aller Tokyo → New York repart dans le
+     mauvais sens sur 290° au lieu de 70°. */
+  let anim = null;
+  const focus = (lon, lat, zoom) => {
+    globeView.spin = false;
+    $('#globe-spin').classList.remove('on');
+    let d = lon - globeView.lon;
+    while (d > 180) d -= 360;
+    while (d < -180) d += 360;
+    anim = {
+      t0: performance.now(), dur: 520,
+      from: { lon: globeView.lon, lat: globeView.lat, zoom: globeView.zoom },
+      to: { lon: globeView.lon + d, lat, zoom },
+    };
+  };
+
   const loop = () => {
-    if (globeView.spin && !drag) { globeView.lon = (globeView.lon + 0.12) % 360; paint(); }
+    if (anim) {
+      const k = Math.min(1, (performance.now() - anim.t0) / anim.dur);
+      const e = k < 0.5 ? 2 * k * k : 1 - ((-2 * k + 2) ** 2) / 2;   /* accélère puis freine */
+      globeView.lon = anim.from.lon + (anim.to.lon - anim.from.lon) * e;
+      globeView.lat = anim.from.lat + (anim.to.lat - anim.from.lat) * e;
+      globeView.zoom = anim.from.zoom + (anim.to.zoom - anim.from.zoom) * e;
+      if (k >= 1) anim = null;
+      paint();
+    } else if (globeView.spin && !drag) {
+      globeView.lon = (globeView.lon + 0.12) % 360;
+      paint();
+    }
     globeRaf = requestAnimationFrame(loop);
   };
   stopGlobe();
@@ -2692,31 +2892,59 @@ function renderWorld(host) {
     return { x: t.clientX - r.left, y: t.clientY - r.top };
   };
 
-  const down = (e) => { drag = { ...at(e), lon: globeView.lon, lat: globeView.lat }; };
+  const setZoom = (z) => {
+    globeView.zoom = Math.max(1, Math.min(6, z));
+    paint();
+  };
+
+  const down = (e) => {
+    if (e.touches && e.touches.length === 2) {
+      const [a, b] = e.touches;
+      pinch = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), z: globeView.zoom };
+      drag = null;
+      return;
+    }
+    /* la sensibilité de rotation baisse avec le zoom : sinon un
+       glissement de deux centimètres traverse trois continents */
+    drag = { ...at(e), lon: globeView.lon, lat: globeView.lat };
+  };
+
   const move = (e) => {
+    if (pinch && e.touches && e.touches.length === 2) {
+      const [a, b] = e.touches;
+      const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      setZoom(pinch.z * (d / pinch.d));
+      if (e.cancelable) e.preventDefault();
+      return;
+    }
     const p = at(e);
     if (drag) {
-      globeView.lon = drag.lon - (p.x - drag.x) * 0.42;
-      globeView.lat = Math.max(-85, Math.min(85, drag.lat + (p.y - drag.y) * 0.42));
+      const k = 0.42 / globeView.zoom;
+      globeView.lon = drag.lon - (p.x - drag.x) * k;
+      globeView.lat = Math.max(-85, Math.min(85, drag.lat + (p.y - drag.y) * k));
+      anim = null;
       paint();
       if (e.cancelable) e.preventDefault();
       return;
     }
-    const hit = globeHits.find((h) => Math.hypot(h.x - p.x, h.y - p.y) <= h.rad);
+    const hit = Globe.pick(globeHits, p.x, p.y);
+    const iso = hit ? hit.iso : null;
+    if (iso !== globeView.hovered) { globeView.hovered = iso; paint(); }
     if (hit) {
       tip.classList.remove('hidden');
       tip.style.left = `${hit.x}px`;
       tip.style.top = `${hit.y - hit.rad - 8}px`;
       tip.innerHTML = `<b>${escapeHtml(hit.name)}</b>
         <span>${fmtInt(Math.round(hit.tonnes))} t · rang ${hit.rank}</span>
-        ${hit.share == null ? '' : `<span>${fmtPct(hit.share, 1)} de ses réserves de change</span>`}`;
+        ${hit.share == null ? '' : `<span>${fmtPct(hit.share, 1)} de ses réserves de change</span>`}
+        <span class="dim">cliquez pour le détail</span>`;
       cv.style.cursor = 'pointer';
     } else {
       tip.classList.add('hidden');
-      cv.style.cursor = 'grab';
+      cv.style.cursor = drag ? 'grabbing' : 'grab';
     }
   };
-  const up = () => { drag = null; };
+  const up = () => { drag = null; pinch = null; };
 
   cv.addEventListener('mousedown', down);
   cv.addEventListener('mousemove', move);
@@ -2724,25 +2952,72 @@ function renderWorld(host) {
   cv.addEventListener('touchstart', down, { passive: true });
   cv.addEventListener('touchmove', move, { passive: false });
   cv.addEventListener('touchend', up);
-  cv.addEventListener('mouseleave', () => { tip.classList.add('hidden'); });
+  cv.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    setZoom(globeView.zoom * (e.deltaY < 0 ? 1.16 : 1 / 1.16));
+  }, { passive: false });
+  cv.addEventListener('mouseleave', () => {
+    tip.classList.add('hidden');
+    if (globeView.hovered) { globeView.hovered = null; paint(); }
+  });
   cv.addEventListener('click', (e) => {
     const p = at(e);
-    const hit = globeHits.find((h) => Math.hypot(h.x - p.x, h.y - p.y) <= h.rad);
-    if (hit) openHolderDrawer(hit.iso);
+    const hit = Globe.pick(globeHits, p.x, p.y);
+    if (hit) { selectHolder(hit.iso, false); openHolderDrawer(hit.iso); }
   });
 
   new ResizeObserver(paint).observe(cv);
 
+  /* ── liste latérale ── */
+  const selectHolder = (iso, recenter = true) => {
+    globeView.selected = iso;
+    $$('.gl-row').forEach((r) => r.classList.toggle('on', r.dataset.iso === iso));
+    const h = holders.find((x) => x.iso === iso);
+    if (h && recenter) {
+      /* on zoome davantage sur les grappes serrées : en Europe, 1× ne
+         sépare rien, alors qu'un pays isolé n'a pas besoin de 3× */
+      const crowd = holders.filter((o) => o !== h
+        && Math.hypot(o.lon - h.lon, o.lat - h.lat) < 12).length;
+      focus(h.lon, h.lat, crowd >= 4 ? 3.4 : crowd >= 1 ? 2.4 : 1.7);
+    }
+    paint();
+  };
+
+  $$('.gl-row').forEach((b) => {
+    b.onclick = () => { selectHolder(b.dataset.iso); openHolderDrawer(b.dataset.iso); };
+    b.onmouseenter = () => { globeView.hovered = b.dataset.iso; paint(); };
+    b.onmouseleave = () => { globeView.hovered = null; paint(); };
+  });
+
+  $('#gl-q').oninput = (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    let n = 0;
+    $$('.gl-row').forEach((r) => {
+      const ok = !q || r.dataset.name.includes(q);
+      r.classList.toggle('hidden', !ok);
+      if (ok) n++;
+    });
+    $('#gl-count').textContent = q
+      ? `${n} détenteur${n > 1 ? 's' : ''} sur ${holders.length}.`
+      : `${holders.length} détenteurs déclarants.`;
+  };
+
   $('#globe-spin').onclick = (e) => {
     globeView.spin = !globeView.spin;
+    if (globeView.spin) anim = null;
     e.currentTarget.classList.toggle('on', globeView.spin);
+  };
+  $('#gz-in').onclick = () => setZoom(globeView.zoom * 1.5);
+  $('#gz-out').onclick = () => setZoom(globeView.zoom / 1.5);
+  $('#gz-reset').onclick = () => {
+    globeView.selected = null;
+    $$('.gl-row').forEach((r) => r.classList.remove('on'));
+    focus(20, 22, 1);
   };
   $$('.gb[data-goto]').forEach((b) => {
     b.onclick = () => {
       const [lon, lat] = b.dataset.goto.split(',').map(Number);
-      globeView.lon = lon; globeView.lat = lat; globeView.spin = false;
-      $('#globe-spin').classList.remove('on');
-      paint();
+      focus(lon, lat, 1.6);
     };
   });
 }
@@ -2773,6 +3048,18 @@ function openHolderDrawer(iso) {
     h.share == null ? 'non calculable pour une institution'
       : h.share > 60 ? 'l\'or est le cœur de ses réserves'
         : h.share > 25 ? 'part significative' : 'part encore faible — marge d\'achat structurelle')}
+        ${kv('Par habitant', h.perCapita == null ? '—' : `${fmtNum(h.perCapita, 1)} g`,
+    h.perCapita == null ? 'sans population de référence'
+      : (() => {
+        const pc = holders.filter((x) => x.perCapita != null).sort((a, b) => b.perCapita - a.perCapita);
+        const r = pc.findIndex((x) => x.iso === h.iso) + 1;
+        return `${r}ᵉ par tête contre ${h.rank}ᵉ au tonnage`;
+      })())}
+        ${kv('Région', escapeHtml(h.region || '—'),
+    h.region && meta.regions ? (() => {
+      const reg = meta.regions.find((x) => x.region === h.region);
+      return reg ? `${fmtPct((h.tonnes / reg.tonnes) * 100, 1)} du stock régional` : '';
+    })() : '')}
       </div>
       ${h.share == null ? '' : gaugeHtml(h.share, h.share > 60 ? 'hot' : h.share > 25 ? 'warm' : 'cool',
     ['0 %', '50 %', '100 %'])}

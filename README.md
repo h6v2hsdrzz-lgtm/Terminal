@@ -80,6 +80,26 @@ Le **score de tension** (±100) agrège ces signaux en une lecture unique, et
 affiche systématiquement ses composantes : un score qu'on ne peut pas décomposer
 ne vaut rien.
 
+### Statistiques, avec de quoi les juger
+
+Un coefficient nu ne veut rien dire. Chaque corrélation affichée porte donc son
+**intervalle de confiance à 95 %** (transformation z de Fisher), son verdict de
+significativité, sa **variance expliquée**, et le coefficient de rang de
+**Spearman** — insensible aux semaines extrêmes, nombreuses sur des variations
+hebdomadaires de COT. La différence est concrète : sur l'or, les hedge funds
+sortent à r = 0,34 significatif, et les producteurs à r = −0,15 dont l'intervalle
+contient zéro. Affichés seuls, les deux chiffres auraient eu l'air comparables.
+
+Trois mesures complètent la lecture d'un extrême :
+
+- la **demi-vie** du positionnement, estimée par régression de retour à la
+  moyenne — savoir qu'un index est à 95 ne dit pas s'il se dénoue en trois
+  semaines ou en huit mois ;
+- l'**asymétrie** et l'**aplatissement** de la distribution, qui disent à quel
+  point le z-score, qui suppose une loi normale, est ici une approximation ;
+- l'**autocorrélation** des flux hebdomadaires : les semaines s'enchaînent-elles
+  (tendance) ou alternent-elles (bruit) ?
+
 ### Panneaux détaillés
 
 Cohortes et séries macro sont **cliquables** partout où elles apparaissent : un
@@ -157,7 +177,7 @@ interest de tout le marché à terme.
 | **Saisonnalité** | Variation mensuelle sur 40 ans, écart-type, signal/bruit, saisonnalité du positionnement |
 | **Comparateur** | Les 7 marchés sur une grille normalisée, classement de tension, poids en dollars |
 | **Macro** | 16 séries FRED avec sparklines, régime, corrélations or et argent |
-| **Monde** | Globe des réserves d'or officielles, classement des détenteurs, places de marché ouvertes |
+| **Monde** | Globe zoomable des réserves officielles, liste filtrable, concentration, grammes par habitant, agrégats régionaux, places de marché |
 | **Alertes** | Seuils sur les mesures COT, évalués localement |
 | **Actualité** | Fil francophone rangé en six catégories |
 
@@ -178,7 +198,7 @@ français l'ouvre sans manipulation.
 
 ## Agent d'analyse
 
-L'agent reçoit à chaque question un instantané JSON (~15 Ko) de **ce qui est
+L'agent reçoit à chaque question un instantané JSON (~17 Ko) de **ce qui est
 affiché à l'écran** : positionnement complet, score de tension et ses
 composantes, régime macro, corrélations, divergences, analogues, réserves
 officielles et actualité classée par catégorie. Il ne

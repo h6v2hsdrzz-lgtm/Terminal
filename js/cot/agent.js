@@ -199,7 +199,44 @@ const Agent = {
         net_specs_vs_prix_52s: joined.length ? (() => {
           const c = Metrics.correlation(joined, 52); return c == null ? null : +c.toFixed(2);
         })() : null,
+        /* Version complète sur trois ans : sans l'intervalle de confiance
+           l'agent citerait « r = 0,15 » comme un fait établi alors que
+           l'échantillon ne permet pas de le distinguer de zéro. */
+        net_specs_vs_prix_156s: joined.length ? (() => {
+          const c = Metrics.correlationFull(joined, 156);
+          if (!c) return null;
+          return {
+            r: +c.r.toFixed(2),
+            intervalle_95: [+c.lo.toFixed(2), +c.hi.toFixed(2)],
+            significatif: c.significatif,
+            spearman: c.spearman == null ? null : +c.spearman.toFixed(2),
+            variance_expliquee_pct: +(c.r2 * 100).toFixed(1),
+            n: c.n,
+          };
+        })() : null,
       },
+      /* Dynamique du positionnement spéculatif : combien de temps met un
+         extrême à se dénouer, et à quel point la distribution s'écarte de
+         la normale que suppose le z-score. */
+      dynamique: (() => {
+        const specKey = report === 'legacy' ? 'noncomm' : 'money';
+        const net = Metrics.series(rows, specKey, 'net');
+        const hl = Metrics.halfLife(net, 520);
+        const mo = Metrics.moments(net.map((p) => p.value));
+        const ac = Metrics.autocorr(net);
+        return {
+          demi_vie_semaines: hl && !hl.diverge ? +hl.weeks.toFixed(1) : null,
+          retour_a_la_moyenne: hl ? !hl.diverge : null,
+          moyenne_long_terme: hl ? Math.round(hl.mean) : null,
+          ecart_actuel_a_la_moyenne: hl && !hl.diverge ? Math.round(hl.ecart) : null,
+          asymetrie: mo ? +mo.skew.toFixed(2) : null,
+          aplatissement_exces: mo ? +mo.kurt.toFixed(2) : null,
+          autocorrelation_flux: ac == null ? null : +ac.toFixed(2),
+          note: 'La demi-vie est le temps pour effacer la moitié d\'un écart à la moyenne. '
+            + 'Asymétrie et aplatissement disent à quel point le z-score, qui suppose une loi '
+            + 'normale, est une approximation ici.',
+        };
+      })(),
       divergence_prix_positionnement: joined.length
         ? (Metrics.divergence(joined, 26) || {}).label : null,
       court_terme: (() => {
@@ -260,10 +297,14 @@ const Agent = {
           avertissement: 'Réserves officielles déclarées au FMI uniquement. Déclaration volontaire et '
             + 'différée : un tonnage stable ne prouve pas l\'absence d\'achat. Hors ETF, hors particuliers, '
             + 'hors stocks des banques commerciales.',
+          concentration: meta.concentration || null,
+          par_region: meta.regions || null,
           principaux_detenteurs: holders.slice(0, 15).map((h) => ({
             rang: h.rank, nom: h.name, tonnes: Math.round(h.tonnes),
             pct_du_total_declare: +((h.tonnes / total) * 100).toFixed(1),
             pct_de_ses_reserves_de_change: h.share,
+            grammes_par_habitant: h.perCapita,
+            region: h.region || undefined,
             institution: h.institution || undefined,
           })),
         };
