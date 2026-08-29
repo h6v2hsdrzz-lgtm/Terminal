@@ -16,11 +16,36 @@ journées « avec » et les journées « sans », et un journal exportable.
 | Données partagées entre appareils | oui, un serveur les tient | non, chaque navigateur a les siennes |
 | Pour qui | l'usage durable | essayer tout de suite, ou publier sur un hébergement statique |
 
-La version autonome tient dans `joie/autonome/index.html` : aucune dépendance,
-aucune construction, les graphiques sont du SVG écrit à la main. Ouvrez le
-fichier dans un navigateur, ou déposez-le sur n'importe quel hébergement
+La version autonome tient dans `joie/autonome/` : aucune dépendance, aucune
+construction, les graphiques sont du SVG écrit à la main. Ouvrez le fichier
+dans un navigateur, ou déposez le dossier sur n'importe quel hébergement
 statique. Les deux versions partagent le même modèle, les mêmes calculs et le
 même jeu de démonstration.
+
+### Installation sur l'écran d'accueil
+
+Servie en HTTPS, la version autonome s'installe comme une application : elle a
+son manifeste, ses icônes et un service worker qui la fait s'ouvrir sans
+réseau. Ce dépôt étant publié par GitHub Pages, elle vit à
+`…/joie/autonome/` une fois la branche fusionnée.
+
+- **iPhone / iPad** — ouvrir l'adresse dans Safari (les autres navigateurs
+  d'iOS ne savent pas installer), bouton Partager, « Sur l'écran d'accueil ».
+- **Android** — ouvrir dans Chrome, menu ⋮, « Installer l'application ».
+- **Bureau** — l'icône d'installation apparaît à droite de la barre d'adresse.
+
+Une fois installée, l'application s'ouvre en plein écran, sans barre de
+navigateur, et fonctionne hors réseau. Les données restent propres à chaque
+appareil : deux téléphones ne partagent pas le même journal — c'est le prix de
+l'absence de serveur.
+
+```
+joie/autonome/
+├─ index.html              l'application entière
+├─ manifest.webmanifest    nom, icônes, couleurs, mode plein écran
+├─ sw.js                   service worker : ouverture sans réseau
+└─ icone*.png|svg          icônes d'écran d'accueil, dont une masquable
+```
 
 ## Démarrage
 

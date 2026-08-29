@@ -239,10 +239,11 @@ un journal de suivi du niveau de joie quotidien (Next.js, Prisma, SQLite). Elle
 a son propre `README.md` et son propre cycle de développement — le poste web
 reste statique et sans build.
 
-`joie/autonome/index.html` en est une version d'un seul fichier, sans
-dépendance ni construction, qui garde ses données dans le navigateur. Celle-là
-suit la règle du dépôt : GitHub Pages la sert telle quelle, à
-`/joie/autonome/`.
+`joie/autonome/` en est une version d'un seul fichier, sans dépendance ni
+construction, qui garde ses données dans le navigateur. Celle-là suit la règle
+du dépôt : GitHub Pages la sert telle quelle, à `/joie/autonome/`. Elle
+s'installe sur un écran d'accueil et s'ouvre sans réseau — manifeste, icônes
+et service worker sont dans le dossier.
 
 ## Avertissements
 

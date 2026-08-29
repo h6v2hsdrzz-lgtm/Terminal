@@ -1,0 +1,18 @@
+{
+  "name": "Journal de joie",
+  "short_name": "Joie",
+  "description": "Suivi quotidien du niveau de joie de Momo, Sam et Samy, et effet des déclencheurs biberon et plante verte.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#f5f3ed",
+  "theme_color": "#f5f3ed",
+  "categories": ["lifestyle", "health"],
+  "icons": [
+    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icone-masquable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

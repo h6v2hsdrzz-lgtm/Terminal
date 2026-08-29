@@ -2,8 +2,22 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Journal de joie</title>
+<meta name="description" content="Suivi quotidien du niveau de joie de Momo, Sam et Samy, et effet des déclencheurs biberon et plante verte.">
+
+<!-- Installation sur l'écran d'accueil : le manifeste pour Android et les
+     navigateurs de bureau, les métas Apple pour iOS qui l'ignore encore. -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icone-apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Joie">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f3ed">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#10151d">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
@@ -410,6 +424,19 @@ tbody tr:last-child td { border-bottom: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* ── Zone sûre ────────────────────────────────────────────────────────
+   Posée sur l'écran d'accueil, la page occupe tout l'écran, encoche et
+   barre d'état comprises. Ces règles viennent après celles de mise en
+   page : sinon la cascade les annulerait.
+   ─────────────────────────────────────────────────────────────────── */
+
+.barre-int { padding-top: calc(10px + env(safe-area-inset-top)); }
+main {
+  padding-left: calc(16px + env(safe-area-inset-left));
+  padding-right: calc(16px + env(safe-area-inset-right));
+}
+footer { padding-bottom: calc(36px + env(safe-area-inset-bottom)); }
 </style>
 </head>
 <body>
@@ -1698,6 +1725,17 @@ $("theme-ic").textContent = themeActuel() === "dark" ? "☀" : "☾";
 synchroniserCible();
 rendreSelecteursGraphiques();
 rendre();
+
+/* Le service worker ne sert que la page installée : inutile — et refusé —
+   dans un cadre embarqué ou en file://, d'où les deux garde-fous. */
+if ("serviceWorker" in navigator && location.protocol.startsWith("http") && window.top === window.self) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {
+      // Hébergement sans service worker : l'application marche, sans le
+      // mode hors ligne. Rien à signaler à l'utilisateur.
+    });
+  });
+}
 document.fonts && document.fonts.ready.then(() => { rendreCourbe(); rendreBarres(); });
 </script>
 
