@@ -7,6 +7,21 @@ verte**.
 Une saisie par personne et par jour, un tableau de bord qui compare les
 journées « avec » et les journées « sans », et un journal exportable.
 
+## Deux versions
+
+| | `joie/` (cette application) | `joie/autonome/` |
+|---|---|---|
+| Stockage | SQLite, par API Routes | le navigateur (`localStorage`) |
+| Installation | `npm install` | aucune — un fichier HTML |
+| Données partagées entre appareils | oui, un serveur les tient | non, chaque navigateur a les siennes |
+| Pour qui | l'usage durable | essayer tout de suite, ou publier sur un hébergement statique |
+
+La version autonome tient dans `joie/autonome/index.html` : aucune dépendance,
+aucune construction, les graphiques sont du SVG écrit à la main. Ouvrez le
+fichier dans un navigateur, ou déposez-le sur n'importe quel hébergement
+statique. Les deux versions partagent le même modèle, les mêmes calculs et le
+même jeu de démonstration.
+
 ## Démarrage
 
 Node 20 ou plus récent.
@@ -59,6 +74,11 @@ suppression ligne à ligne ; export CSV ou JSON de tout ce que les filtres
 laissent passer.
 
 Le thème clair / sombre suit le système par défaut et retient le choix manuel.
+
+Dans la version autonome, l'export choisit son chemin selon l'endroit où la page
+tourne : la capacité de l'hôte quand elle est publiée, un téléchargement
+classique sur une page web ordinaire, et à défaut le contenu affiché pour être
+copié.
 
 ## Architecture
 
