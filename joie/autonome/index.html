@@ -1,0 +1,1743 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Journal de joie</title>
+<meta name="description" content="Suivi quotidien du niveau de joie de Momo, Sam et Samy, et effet des déclencheurs biberon et plante verte.">
+
+<!-- Installation sur l'écran d'accueil : le manifeste pour Android et les
+     navigateurs de bureau, les métas Apple pour iOS qui l'ignore encore. -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icone-apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Joie">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f5f3ed">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#10151d">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* ════════════════════════════════════════════════════════════════════
+   Journal de joie — version autonome, un seul fichier, aucune
+   dépendance. Les données vivent dans le navigateur (localStorage).
+
+   Palette : bleu ardoise et blanc cassé pour la structure ; le vert et
+   l'ambre ne portent que du sens. Les trois teintes de profil sont
+   validées sur la clarté, le chroma, la séparation en vision
+   daltonienne et le contraste — séparément pour chaque thème, le
+   sombre n'étant pas l'inverse du clair.
+   ════════════════════════════════════════════════════════════════════ */
+
+:root {
+  color-scheme: light;
+
+  --fond: #f5f3ed;
+  --surface: #fffefa;
+  --surface-2: #ecebe3;
+  --surface-3: #e3e1d7;
+  --bordure: #e0ddd2;
+  --bordure-2: #c9c5b7;
+
+  --texte: #1e2a37;
+  --attenue: #5c6875;
+  --faible: #949daa;
+
+  --ardoise: #37639f;
+  --vert: #2f8f6b;
+  --ambre: #c07f0f;
+  --rouge: #b4483f;
+  --vert-texte: #237055;
+  --ambre-texte: #8f5f0a;
+
+  --momo: #37639f;
+  --sam: #2f8f6b;
+  --samy: #c07f0f;
+
+  --action: #37639f;
+  --action-texte: #fffefa;
+
+  --grille: #e2e0d6;
+  --ombre: 0 1px 2px rgb(30 42 55 / .06), 0 10px 28px -14px rgb(30 42 55 / .22);
+
+  --display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --texte-fam: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --fond: #10151d;
+    --surface: #171e28;
+    --surface-2: #1d2632;
+    --surface-3: #26313e;
+    --bordure: #253040;
+    --bordure-2: #354354;
+
+    --texte: #dde3ea;
+    --attenue: #96a1af;
+    --faible: #5f6b7a;
+
+    --ardoise: #5288d4;
+    --vert: #2fa87e;
+    --ambre: #bb8b22;
+    --rouge: #e0736a;
+    --vert-texte: #4dbf93;
+    --ambre-texte: #d9a441;
+
+    --momo: #5288d4;
+    --sam: #2fa87e;
+    --samy: #bb8b22;
+
+    --action: #5288d4;
+    --action-texte: #0f1620;
+
+    --grille: #232e3b;
+    --ombre: 0 1px 2px rgb(0 0 0 / .4), 0 14px 34px -18px rgb(0 0 0 / .7);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --fond: #10151d;
+  --surface: #171e28;
+  --surface-2: #1d2632;
+  --surface-3: #26313e;
+  --bordure: #253040;
+  --bordure-2: #354354;
+
+  --texte: #dde3ea;
+  --attenue: #96a1af;
+  --faible: #5f6b7a;
+
+  --ardoise: #5288d4;
+  --vert: #2fa87e;
+  --ambre: #bb8b22;
+  --rouge: #e0736a;
+  --vert-texte: #4dbf93;
+  --ambre-texte: #d9a441;
+
+  --momo: #5288d4;
+  --sam: #2fa87e;
+  --samy: #bb8b22;
+
+  --action: #5288d4;
+  --action-texte: #0f1620;
+
+  --grille: #232e3b;
+  --ombre: 0 1px 2px rgb(0 0 0 / .4), 0 14px 34px -18px rgb(0 0 0 / .7);
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  background: var(--fond);
+  color: var(--texte);
+  font: 400 14px/1.5 var(--texte-fam);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 600; text-wrap: balance; }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: none; padding: 0; }
+
+:focus-visible { outline: 2px solid var(--ardoise); outline-offset: 2px; border-radius: 4px; }
+
+.num { font-variant-numeric: tabular-nums; }
+.cache { display: none !important; }
+
+/* ── Ossature ─────────────────────────────────────────────────────── */
+
+.barre {
+  position: sticky; top: 0; z-index: 30;
+  background: color-mix(in srgb, var(--fond) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--bordure);
+}
+.barre-int {
+  max-width: 1200px; margin: 0 auto; padding: 10px 16px;
+  display: flex; align-items: center; gap: 12px;
+}
+.sceau {
+  width: 34px; height: 34px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 10px; background: var(--surface-2);
+  font-size: 17px;
+}
+.titre-bloc { flex: 1; min-width: 0; }
+.titre-bloc h1 { font-size: 17px; letter-spacing: -.01em; }
+.titre-bloc p { margin: 1px 0 0; font-size: 12px; color: var(--attenue); }
+
+main { max-width: 1200px; margin: 0 auto; padding: 18px 16px 8px; display: grid; gap: 14px; }
+
+footer {
+  max-width: 1200px; margin: 0 auto; padding: 10px 16px 36px;
+  font-size: 12px; color: var(--faible);
+}
+
+.carte {
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  border-radius: 16px;
+  box-shadow: var(--ombre);
+}
+.carte > header {
+  display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
+  gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--bordure);
+}
+.carte > header h2 { font-size: 15px; letter-spacing: -.01em; }
+.carte > header p { margin: 2px 0 0; font-size: 12px; color: var(--attenue); }
+.carte > .corps { padding: 16px; }
+
+.etiq {
+  font-size: 11px; font-weight: 500; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--attenue);
+}
+
+/* ── Indicateurs ──────────────────────────────────────────────────── */
+
+.kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.tuile { background: var(--surface); border: 1px solid var(--bordure); border-radius: 16px; padding: 14px; box-shadow: var(--ombre); }
+.tuile .entete { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.pastille { width: 8px; height: 8px; border-radius: 999px; flex: none; }
+.chiffre { font-family: var(--display); font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+.grand { font-size: 40px; }
+.moyen { font-size: 30px; }
+.sur { font-size: 12px; color: var(--faible); }
+.jauge { height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; margin-top: 10px; }
+.jauge > i { display: block; height: 100%; border-radius: 999px; transition: width .5s ease; }
+.tuile .pied { margin: 8px 0 0; font-size: 12px; color: var(--attenue); }
+.tendance { font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 3px; }
+
+.kpi-large { grid-column: span 2; }
+
+/* ── Zone de travail ──────────────────────────────────────────────── */
+
+.travail { display: grid; gap: 14px; align-items: start; }
+.colonne-droite { display: grid; gap: 14px; min-width: 0; }
+
+/* ── Formulaire ───────────────────────────────────────────────────── */
+
+.champ { margin-bottom: 18px; }
+.champ:last-child { margin-bottom: 0; }
+.champ > label, .champ > .etiq { display: block; margin-bottom: 6px; }
+
+.saisie {
+  width: 100%; padding: 9px 11px;
+  background: var(--surface); color: var(--texte);
+  border: 1px solid var(--bordure); border-radius: 11px;
+}
+.saisie:focus { border-color: var(--ardoise); outline: none; }
+textarea.saisie { resize: vertical; min-height: 62px; }
+
+.segments { display: flex; gap: 4px; padding: 4px; background: var(--surface-2); border: 1px solid var(--bordure); border-radius: 12px; }
+.segments button {
+  flex: 1; padding: 8px 6px; border-radius: 9px; font-size: 13px; font-weight: 500;
+  color: var(--attenue); border: 1px solid transparent; text-align: center;
+}
+.segments button:hover { background: var(--surface-3); color: var(--texte); }
+.segments button[aria-checked="true"], .segments button[aria-pressed="true"] {
+  background: var(--surface); color: var(--texte); border-color: var(--bordure-2); box-shadow: var(--ombre);
+}
+.segments.compact button { padding: 5px 9px; font-size: 12px; flex: none; }
+
+.rangee-joie { display: flex; align-items: center; gap: 14px; }
+.visage { font-size: 24px; line-height: 1; }
+.valeur-joie { font-family: var(--display); font-weight: 700; font-size: 32px; line-height: 1; width: 44px; }
+.bornes { display: flex; justify-content: space-between; font-size: 11px; color: var(--faible); margin-top: 2px; }
+
+input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  flex: 1; height: 26px; background: transparent; cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track { height: 8px; border-radius: 999px; background: var(--piste, var(--surface-3)); }
+input[type="range"]::-moz-range-track { height: 8px; border-radius: 999px; background: var(--piste, var(--surface-3)); }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 22px; height: 22px; margin-top: -7px; border-radius: 999px;
+  background: var(--surface); border: 3px solid var(--accent, var(--ardoise)); box-shadow: var(--ombre);
+  transition: transform .12s ease;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 22px; height: 22px; border-radius: 999px;
+  background: var(--surface); border: 3px solid var(--accent, var(--ardoise)); box-shadow: var(--ombre);
+}
+input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.12); }
+
+.bascules { display: grid; gap: 8px; }
+.bascule {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 11px; border: 1px solid var(--bordure); border-radius: 12px; background: var(--surface);
+}
+.bascule:hover { background: var(--surface-2); }
+.bascule[aria-checked="true"] { background: var(--surface-2); }
+.bascule .ic { font-size: 17px; line-height: 1; filter: grayscale(1) opacity(.55); }
+.bascule[aria-checked="true"] .ic { filter: none; }
+.bascule .txt { flex: 1; min-width: 0; }
+.bascule .txt b { display: block; font-weight: 500; font-size: 13.5px; }
+.bascule .txt span { display: block; font-size: 12px; color: var(--attenue); }
+.interrupteur { position: relative; width: 42px; height: 23px; border-radius: 999px; background: var(--surface-3); flex: none; transition: background .15s ease; }
+.interrupteur i { position: absolute; top: 2px; left: 2px; width: 19px; height: 19px; border-radius: 999px; background: var(--surface); box-shadow: 0 1px 2px rgb(0 0 0 / .25); transition: left .15s ease; }
+.bascule[aria-checked="true"] .interrupteur i { left: 21px; }
+
+.bandeau {
+  display: flex; gap: 8px; align-items: flex-start;
+  padding: 9px 11px; margin-bottom: 16px;
+  background: var(--surface-2); border: 1px solid var(--bordure); border-radius: 12px;
+  font-size: 12px; color: var(--attenue);
+}
+
+.principal {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; margin-top: 20px; padding: 11px 16px;
+  background: var(--action); color: var(--action-texte);
+  border-radius: 12px; font-weight: 600; font-size: 14px;
+  transition: filter .15s ease;
+}
+.principal:hover { filter: brightness(1.06); }
+.principal.confirme { background: var(--vert); color: #fff; }
+
+.secondaire {
+  padding: 7px 11px; border: 1px solid var(--bordure); border-radius: 10px;
+  font-size: 12px; font-weight: 500; color: var(--attenue);
+}
+.secondaire:hover { background: var(--surface-2); color: var(--texte); }
+.secondaire[disabled] { opacity: .45; cursor: default; }
+
+/* ── Graphiques ───────────────────────────────────────────────────── */
+
+.legende { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-bottom: 10px; font-size: 12px; color: var(--attenue); }
+.legende span { display: inline-flex; align-items: center; gap: 6px; }
+.zone-graphe { position: relative; }
+.zone-graphe svg { display: block; width: 100%; height: auto; overflow: visible; }
+.bulle {
+  position: absolute; pointer-events: none; z-index: 5;
+  background: var(--surface); border: 1px solid var(--bordure); border-radius: 12px;
+  box-shadow: var(--ombre); padding: 8px 10px; font-size: 12px; min-width: 140px;
+  transform: translate(-50%, -105%);
+}
+.bulle h4 { margin: 0 0 5px; font-size: 12px; font-family: var(--texte-fam); font-weight: 600; }
+.bulle .l { display: flex; align-items: center; gap: 7px; }
+.bulle .l b { margin-left: auto; font-weight: 600; }
+.note-graphe { margin: 12px 0 0; font-size: 12px; color: var(--attenue); }
+
+/* ── Journal ──────────────────────────────────────────────────────── */
+
+.filtres { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding-bottom: 14px; border-bottom: 1px solid var(--bordure); margin-bottom: 14px; }
+.filtres label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--attenue); }
+.filtres select, .filtres input[type="date"] { padding: 6px 8px; font-size: 12px; background: var(--surface); border: 1px solid var(--bordure); border-radius: 9px; }
+.puce {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border: 1px solid var(--bordure); border-radius: 10px;
+  font-size: 12px; font-weight: 500; color: var(--attenue);
+}
+.puce:hover { background: var(--surface-2); }
+.puce[aria-pressed="true"] { background: var(--surface-2); color: var(--texte); }
+.recherche { display: flex; align-items: center; gap: 6px; flex: 1 1 170px; padding: 6px 9px; background: var(--surface); border: 1px solid var(--bordure); border-radius: 10px; }
+.recherche input { flex: 1; min-width: 0; border: none; background: none; outline: none; font-size: 12px; }
+.lien { font-size: 12px; font-weight: 500; color: var(--ardoise); }
+.lien:hover { text-decoration: underline; }
+
+.table-enveloppe { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+thead th { text-align: left; padding: 6px 12px 8px 0; border-bottom: 1px solid var(--bordure); }
+thead th button { font-size: 11px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--attenue); display: inline-flex; align-items: center; gap: 4px; }
+thead th button:hover { color: var(--texte); }
+tbody td { padding: 9px 12px 9px 0; border-bottom: 1px solid var(--bordure); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: none; }
+.barre-joie { display: inline-block; width: 62px; height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; vertical-align: middle; }
+.barre-joie > i { display: block; height: 100%; border-radius: 999px; }
+.marque {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 6px; border: 1px solid var(--bordure); border-radius: 7px;
+  background: var(--surface-2); font-size: 11px; font-weight: 500;
+}
+.notes-cel { max-width: 22rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--attenue); }
+.actions { text-align: right; white-space: nowrap; }
+.icone-btn { padding: 5px; border-radius: 7px; color: var(--attenue); line-height: 0; }
+.icone-btn:hover { background: var(--surface-2); color: var(--texte); }
+.icone-btn.danger:hover { color: var(--rouge); }
+
+.cartes-journal { display: none; flex-direction: column; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.cartes-journal li { border: 1px solid var(--bordure); border-radius: 12px; background: var(--surface-2); padding: 11px; }
+
+.vide { text-align: center; padding: 34px 12px; color: var(--attenue); }
+.vide p { margin: 0 0 14px; }
+
+.pagination { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 14px; font-size: 12px; color: var(--attenue); }
+
+/* ── Fenêtres et messages ─────────────────────────────────────────── */
+
+.voile { position: fixed; inset: 0; z-index: 60; background: rgb(0 0 0 / .45); display: flex; align-items: flex-end; justify-content: center; padding: 0; }
+.fenetre { width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto; background: var(--surface); border: 1px solid var(--bordure); border-radius: 18px 18px 0 0; box-shadow: var(--ombre); }
+.fenetre > header { position: sticky; top: 0; background: var(--surface); display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 1px solid var(--bordure); }
+.fenetre > header h2 { font-size: 15px; }
+.fenetre .corps { padding: 16px; }
+.duo { display: flex; gap: 8px; margin-top: 20px; }
+.duo > * { flex: 1; margin-top: 0; }
+.annuler { padding: 11px 16px; border: 1px solid var(--bordure); border-radius: 12px; font-weight: 500; color: var(--attenue); }
+.annuler:hover { background: var(--surface-2); color: var(--texte); }
+.aire-export { width: 100%; min-height: 190px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; }
+
+.messages { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 70; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; }
+.message {
+  pointer-events: auto; display: flex; align-items: flex-start; gap: 8px;
+  width: 100%; max-width: 380px; padding: 10px 12px;
+  background: var(--surface); border: 1px solid var(--bordure); border-radius: 12px; box-shadow: var(--ombre);
+  font-size: 13px;
+}
+.message.erreur { border-color: var(--rouge); }
+
+/* ── Formats ──────────────────────────────────────────────────────── */
+
+@media (min-width: 640px) {
+  .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .kpi-large { grid-column: span 3; }
+  .fenetre .bascules { grid-template-columns: 1fr 1fr; }
+  .voile { align-items: center; padding: 16px; }
+  .fenetre { border-radius: 18px; }
+  .messages { left: auto; right: 16px; bottom: auto; top: 70px; align-items: flex-end; }
+}
+
+@media (max-width: 767px) {
+  .table-enveloppe { display: none; }
+  .cartes-journal { display: flex; }
+}
+
+@media (min-width: 1080px) {
+  .kpis { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .kpi-large { grid-column: span 2; }
+  .kpi-influent { grid-column: span 1; }
+  .travail { grid-template-columns: minmax(0, 22rem) minmax(0, 1fr); }
+  .colonne-gauche { position: sticky; top: 74px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* ── Zone sûre ────────────────────────────────────────────────────────
+   Posée sur l'écran d'accueil, la page occupe tout l'écran, encoche et
+   barre d'état comprises. Ces règles viennent après celles de mise en
+   page : sinon la cascade les annulerait.
+   ─────────────────────────────────────────────────────────────────── */
+
+.barre-int { padding-top: calc(10px + env(safe-area-inset-top)); }
+main {
+  padding-left: calc(16px + env(safe-area-inset-left));
+  padding-right: calc(16px + env(safe-area-inset-right));
+}
+footer { padding-bottom: calc(36px + env(safe-area-inset-bottom)); }
+</style>
+</head>
+<body>
+
+<div class="barre">
+  <div class="barre-int">
+    <span class="sceau" aria-hidden="true">🌿</span>
+    <div class="titre-bloc">
+      <h1>Journal de joie</h1>
+      <p>Momo, Sam &amp; Samy — biberon et plante verte</p>
+    </div>
+    <button id="theme" class="secondaire" style="padding:7px 10px" aria-label="Changer de thème" title="Changer de thème">
+      <span id="theme-ic" aria-hidden="true">◐</span>
+    </button>
+  </div>
+</div>
+
+<main>
+  <section class="kpis" id="kpis" aria-label="Indicateurs"></section>
+
+  <div class="travail">
+    <div class="colonne-gauche">
+      <section class="carte">
+        <header>
+          <div>
+            <h2>Saisie du jour</h2>
+            <p>Une mesure par personne et par jour</p>
+          </div>
+        </header>
+        <div class="corps">
+          <form id="formulaire" novalidate>
+            <div id="bandeau" class="bandeau cache"></div>
+
+            <div class="champ">
+              <label class="etiq" for="f-date">Date</label>
+              <input class="saisie num" type="date" id="f-date">
+              <p id="f-date-fr" style="margin:5px 0 0;font-size:12px;color:var(--faible)"></p>
+            </div>
+
+            <div class="champ">
+              <span class="etiq">Profil</span>
+              <div class="segments" id="f-personne" role="radiogroup" aria-label="Personne"></div>
+            </div>
+
+            <div class="champ">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+                <label class="etiq" for="f-joie" style="margin:0">Niveau de joie</label>
+                <span id="f-humeur" style="font-size:12px;color:var(--attenue)"></span>
+              </div>
+              <div class="rangee-joie">
+                <span class="visage" id="f-visage" aria-hidden="true">🙂</span>
+                <span class="valeur-joie num" id="f-valeur">7</span>
+                <input type="range" id="f-joie" min="1" max="10" step="1" value="7">
+              </div>
+              <div class="bornes num"><span>1</span><span>10</span></div>
+            </div>
+
+            <div class="champ">
+              <span class="etiq">Déclencheurs du jour</span>
+              <div class="bascules">
+                <button type="button" class="bascule" id="f-biberon" role="switch" aria-checked="false">
+                  <span class="ic" aria-hidden="true">🍼</span>
+                  <span class="txt"><b>Biberon</b><span>Présent ce jour</span></span>
+                  <span class="interrupteur" aria-hidden="true"><i></i></span>
+                </button>
+                <button type="button" class="bascule" id="f-plante" role="switch" aria-checked="false">
+                  <span class="ic" aria-hidden="true">🌿</span>
+                  <span class="txt"><b>Plante verte</b><span>Présente ce jour</span></span>
+                  <span class="interrupteur" aria-hidden="true"><i></i></span>
+                </button>
+              </div>
+            </div>
+
+            <div class="champ">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+                <label class="etiq" for="f-notes" style="margin:0">Notes <span style="text-transform:none;color:var(--faible)">(optionnel)</span></label>
+                <span class="num" id="f-compte" style="font-size:11px;color:var(--faible)">0/500</span>
+              </div>
+              <textarea class="saisie" id="f-notes" maxlength="500" placeholder="Ce qui a marqué la journée…"></textarea>
+            </div>
+
+            <button type="submit" class="principal" id="f-valider">Enregistrer la journée</button>
+          </form>
+        </div>
+      </section>
+    </div>
+
+    <div class="colonne-droite">
+      <section class="carte">
+        <header>
+          <div>
+            <h2>Évolution du niveau de joie</h2>
+            <p>Une courbe par personne, échelle 0 à 10</p>
+          </div>
+          <div class="segments compact" id="fenetre-choix" role="radiogroup" aria-label="Fenêtre affichée"></div>
+        </header>
+        <div class="corps">
+          <div class="legende" id="legende-courbe"></div>
+          <div class="zone-graphe" id="zone-courbe">
+            <svg id="courbe" role="img" aria-label="Évolution du niveau de joie dans le temps"></svg>
+            <div class="bulle cache" id="bulle-courbe"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="carte">
+        <header>
+          <div>
+            <h2>Effet des déclencheurs</h2>
+            <p>Moyenne des journées avec, puis sans</p>
+          </div>
+          <div class="segments compact" id="declencheur-choix" role="radiogroup" aria-label="Déclencheur comparé"></div>
+        </header>
+        <div class="corps">
+          <div class="legende" id="legende-barres"></div>
+          <div class="zone-graphe" id="zone-barres">
+            <svg id="barres" role="img" aria-label="Comparaison des moyennes avec et sans le déclencheur"></svg>
+            <div class="bulle cache" id="bulle-barres"></div>
+          </div>
+          <p class="note-graphe" id="note-barres"></p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <section class="carte">
+    <header>
+      <div>
+        <h2>Journal</h2>
+        <p id="journal-compte"></p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="secondaire" id="export-csv">Exporter CSV</button>
+        <button class="secondaire" id="export-json">Exporter JSON</button>
+      </div>
+    </header>
+    <div class="corps">
+      <div class="filtres" id="filtres"></div>
+      <div id="journal"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Les moyennes se lisent à la mesure près : un écart calculé sur trois journées n'est pas une tendance.
+  Les données restent dans ce navigateur — rien n'est envoyé nulle part.
+</footer>
+
+<div class="messages" id="messages"></div>
+
+<script>
+"use strict";
+
+/* ══════════════════════════════════════════════════════════════════
+   Données
+   ══════════════════════════════════════════════════════════════════ */
+
+const PERSONNES = ["Momo", "Sam", "Samy"];
+const COULEUR = { Momo: "var(--momo)", Sam: "var(--sam)", Samy: "var(--samy)" };
+const FORME = { Momo: "cercle", Sam: "carre", Samy: "triangle" };
+const DECLENCHEURS = [
+  { cle: "biberon", libelle: "Biberon", colonne: "biberon", emoji: "🍼", couleur: "var(--ardoise)" },
+  { cle: "planteVerte", libelle: "Plante verte", colonne: "plante_verte", emoji: "🌿", couleur: "var(--vert)" },
+];
+const ECHANTILLON_FIABLE = 3;
+const CLE_DONNEES = "joie:entrees:v1";
+const CLE_THEME = "joie:theme";
+const PAS = 25;
+
+/** Lecture tolérante : un stockage illisible ne doit pas bloquer l'application. */
+function charger() {
+  try {
+    const brut = localStorage.getItem(CLE_DONNEES);
+    if (!brut) return [];
+    const lu = JSON.parse(brut);
+    return Array.isArray(lu) ? lu.filter(estEntreeValide) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function sauver() {
+  try {
+    localStorage.setItem(CLE_DONNEES, JSON.stringify(entrees));
+  } catch (e) {
+    signaler("Impossible d'enregistrer dans ce navigateur — la saisie sera perdue au rechargement.", "erreur");
+  }
+}
+
+function estEntreeValide(e) {
+  return e && typeof e.id === "string" && estDateIso(e.date) && PERSONNES.includes(e.personne)
+    && Number.isInteger(e.joie) && e.joie >= 1 && e.joie <= 10;
+}
+
+let entrees = charger();
+
+/* ══════════════════════════════════════════════════════════════════
+   Dates — ISO en mémoire, JJ/MM/AAAA à l'écran
+   ══════════════════════════════════════════════════════════════════ */
+
+function versIso(d) {
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function aujourdhui() { return versIso(new Date()); }
+function estDateIso(v) {
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const [a, m, j] = v.split("-").map(Number);
+  const d = new Date(a, m - 1, j);
+  return d.getFullYear() === a && d.getMonth() === m - 1 && d.getDate() === j;
+}
+function isoVersFr(iso) {
+  if (!estDateIso(iso)) return iso;
+  const [a, m, j] = iso.split("-");
+  return j + "/" + m + "/" + a;
+}
+function isoVersJourMois(iso) {
+  const [, m, j] = iso.split("-");
+  return j + "/" + m;
+}
+function isoVersTexte(iso) {
+  const [a, m, j] = iso.split("-").map(Number);
+  return new Date(a, m - 1, j).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+}
+function decalerIso(iso, jours) {
+  const [a, m, j] = iso.split("-").map(Number);
+  const d = new Date(a, m - 1, j);
+  d.setDate(d.getDate() + jours);
+  return versIso(d);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Analyse — fonctions pures
+   ══════════════════════════════════════════════════════════════════ */
+
+function moyenne(v) { return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; }
+function arrondir(v, d) { return v === null || !isFinite(v) ? null : Math.round(v * 10 ** d) / 10 ** d; }
+function fmt(v, d) {
+  d = d === undefined ? 1 : d;
+  const a = arrondir(v, d);
+  return a === null ? "—" : a.toFixed(d).replace(".", ",");
+}
+
+function statsParPersonne() {
+  return PERSONNES.map((personne) => {
+    const siennes = entrees.filter((e) => e.personne === personne).sort((a, b) => a.date.localeCompare(b.date));
+    const recentes = moyenne(siennes.slice(-7).map((e) => e.joie));
+    const avant = moyenne(siennes.slice(-14, -7).map((e) => e.joie));
+    return {
+      personne,
+      moyenne: moyenne(siennes.map((e) => e.joie)),
+      nombre: siennes.length,
+      tendance: recentes !== null && avant !== null ? recentes - avant : null,
+    };
+  });
+}
+
+function impacts(lot) {
+  return DECLENCHEURS.map((d) => {
+    const avec = lot.filter((e) => e[d.cle]).map((e) => e.joie);
+    const sans = lot.filter((e) => !e[d.cle]).map((e) => e.joie);
+    const ma = moyenne(avec), ms = moyenne(sans);
+    return {
+      cle: d.cle, libelle: d.libelle, emoji: d.emoji,
+      moyenneAvec: ma, moyenneSans: ms, nAvec: avec.length, nSans: sans.length,
+      delta: ma !== null && ms !== null ? ma - ms : null,
+      fiable: avec.length >= ECHANTILLON_FIABLE && sans.length >= ECHANTILLON_FIABLE,
+    };
+  });
+}
+
+/** Le plus grand écart positif, ou rien tant qu'aucun déclencheur n'en montre. */
+function plusInfluent() {
+  const candidats = impacts(entrees).filter((i) => i.delta !== null && i.delta > 0);
+  if (!candidats.length) return null;
+  return candidats.reduce((meilleur, c) => (c.delta > meilleur.delta ? c : meilleur));
+}
+
+function serieTemporelle() {
+  const parDate = new Map();
+  for (const e of entrees) {
+    let p = parDate.get(e.date);
+    if (!p) { p = { date: e.date, valeurs: {}, decl: {} }; parDate.set(e.date, p); }
+    p.valeurs[e.personne] = e.joie;
+    p.decl[e.personne] = { biberon: e.biberon, planteVerte: e.planteVerte };
+  }
+  return [...parDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function comparaison(cle) {
+  const bloc = (perimetre, lot) => {
+    const avec = lot.filter((e) => e[cle]).map((e) => e.joie);
+    const sans = lot.filter((e) => !e[cle]).map((e) => e.joie);
+    return { perimetre, avec: moyenne(avec), sans: moyenne(sans), nAvec: avec.length, nSans: sans.length };
+  };
+  return [bloc("Collectif", entrees)].concat(
+    PERSONNES.map((p) => bloc(p, entrees.filter((e) => e.personne === p)))
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   État de l'interface
+   ══════════════════════════════════════════════════════════════════ */
+
+const etat = {
+  fenetre: "30",
+  declencheur: "biberon",
+  colonne: "date",
+  sens: "desc",
+  profils: [],
+  du: "", au: "",
+  fBiberon: "tous", fPlante: "tous",
+  recherche: "",
+  limite: PAS,
+};
+
+const saisie = { date: aujourdhui(), personne: "Momo", joie: 7, biberon: false, planteVerte: false, notes: "" };
+
+const $ = (id) => document.getElementById(id);
+const echapper = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+/* ══════════════════════════════════════════════════════════════════
+   Messages
+   ══════════════════════════════════════════════════════════════════ */
+
+function signaler(texte, ton) {
+  const boite = document.createElement("div");
+  boite.className = "message" + (ton === "erreur" ? " erreur" : "");
+  boite.innerHTML = '<span aria-hidden="true">' + (ton === "erreur" ? "⚠" : "✓") + "</span><span>" + echapper(texte) + "</span>";
+  $("messages").append(boite);
+  setTimeout(() => boite.remove(), 4200);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Indicateurs
+   ══════════════════════════════════════════════════════════════════ */
+
+function tendanceHtml(v) {
+  if (v === null || Math.abs(v) < 0.05) return '<span class="tendance" style="color:var(--faible)">— stable</span>';
+  const haut = v > 0;
+  return '<span class="tendance" style="color:' + (haut ? "var(--vert-texte)" : "var(--rouge)") + '" title="Moyenne des 7 dernières mesures comparée aux 7 précédentes">'
+    + (haut ? "↗ +" : "↘ −") + fmt(Math.abs(v)) + " pts</span>";
+}
+
+function jaugeHtml(v, couleur) {
+  const part = v === null ? 0 : Math.max(0, Math.min(1, v / 10)) * 100;
+  return '<div class="jauge"><i style="width:' + part + "%;background:" + couleur + '"></i></div>';
+}
+
+function rendreKpis() {
+  const globale = moyenne(entrees.map((e) => e.joie));
+  const jours = new Set(entrees.map((e) => e.date)).size;
+  const influent = plusInfluent();
+
+  let html =
+    '<div class="tuile kpi-large">' +
+      '<div class="entete etiq"><span aria-hidden="true">◷</span> Moyenne générale</div>' +
+      '<div style="display:flex;align-items:baseline;gap:6px"><span class="chiffre grand num">' + fmt(globale) + '</span><span class="sur">/ 10</span></div>' +
+      jaugeHtml(globale, "var(--ardoise)") +
+      '<p class="pied num">' + entrees.length + " mesure" + (entrees.length > 1 ? "s" : "") + " · " + jours + " jour" + (jours > 1 ? "s" : "") + " couvert" + (jours > 1 ? "s" : "") + "</p>" +
+    "</div>";
+
+  for (const s of statsParPersonne()) {
+    html +=
+      '<div class="tuile">' +
+        '<div class="entete etiq"><span class="pastille" style="background:' + COULEUR[s.personne] + '"></span>' + s.personne + "</div>" +
+        '<div style="display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 8px">' +
+          '<span><span class="chiffre moyen num" style="color:' + COULEUR[s.personne] + '">' + fmt(s.moyenne) + '</span> <span class="sur">/ 10</span></span>' +
+          tendanceHtml(s.tendance) +
+        "</div>" +
+        jaugeHtml(s.moyenne, COULEUR[s.personne]) +
+        '<p class="pied num">' + s.nombre + " mesure" + (s.nombre > 1 ? "s" : "") + "</p>" +
+      "</div>";
+  }
+
+  html += '<div class="tuile kpi-influent">' +
+    '<div class="entete etiq"><span aria-hidden="true">★</span> Déclencheur le plus influent</div>';
+  if (influent) {
+    html +=
+      '<div style="display:flex;align-items:center;gap:7px"><span aria-hidden="true">' + influent.emoji + '</span><b style="font-family:var(--display);font-size:16px">' + influent.libelle + "</b></div>" +
+      '<p style="margin:7px 0 0"><span class="chiffre num" style="font-size:26px;color:var(--vert-texte)">+' + fmt(influent.delta) + '</span> <span class="sur">pts</span></p>' +
+      '<p class="pied num">avec ' + fmt(influent.moyenneAvec) + " (" + influent.nAvec + ") · sans " + fmt(influent.moyenneSans) + " (" + influent.nSans + ")</p>" +
+      (influent.fiable ? "" : '<p class="pied" style="color:var(--ambre-texte)">Moins de ' + ECHANTILLON_FIABLE + " mesures d'un côté : écart encore fragile.</p>");
+  } else {
+    html += '<p class="pied">Aucun écart positif mesurable — il faut des journées avec <em>et</em> sans chaque déclencheur.</p>';
+  }
+  html += "</div>";
+
+  $("kpis").innerHTML = html;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Formulaire
+   ══════════════════════════════════════════════════════════════════ */
+
+const VISAGES = ["😞", "😔", "😕", "😐", "🙂", "😊", "😄", "😁", "🤩", "🥳"];
+
+function couleurJoie(j) { return j <= 3 ? "var(--rouge)" : j <= 6 ? "var(--ambre)" : "var(--vert)"; }
+function humeur(j) {
+  return j <= 2 ? "Journée difficile" : j <= 4 ? "En demi-teinte" : j <= 6 ? "Correcte" : j <= 8 ? "Bonne journée" : "Excellente journée";
+}
+
+function entreeDe(date, personne) {
+  return entrees.find((e) => e.date === date && e.personne === personne) || null;
+}
+
+function rendreFormulaire() {
+  $("f-date").value = saisie.date;
+  $("f-date").max = aujourdhui();
+  $("f-date-fr").textContent = estDateIso(saisie.date) ? isoVersFr(saisie.date) : "—";
+
+  $("f-personne").innerHTML = PERSONNES.map((p) =>
+    '<button type="button" role="radio" data-personne="' + p + '" aria-checked="' + (p === saisie.personne) + '"' +
+    (p === saisie.personne ? ' style="border-color:' + COULEUR[p] + '"' : "") + ">" + p + "</button>"
+  ).join("");
+
+  const accent = couleurJoie(saisie.joie);
+  const part = ((saisie.joie - 1) / 9) * 100;
+  const curseur = $("f-joie");
+  curseur.value = saisie.joie;
+  curseur.style.setProperty("--accent", accent);
+  curseur.style.setProperty("--piste", "linear-gradient(90deg," + accent + " 0%," + accent + " " + part + "%,var(--surface-3) " + part + "%)");
+  curseur.setAttribute("aria-valuetext", saisie.joie + " sur 10 — " + humeur(saisie.joie));
+  $("f-valeur").textContent = saisie.joie;
+  $("f-valeur").style.color = accent;
+  $("f-visage").textContent = VISAGES[saisie.joie - 1];
+  $("f-humeur").textContent = humeur(saisie.joie);
+
+  $("f-biberon").setAttribute("aria-checked", String(saisie.biberon));
+  $("f-biberon").style.borderColor = saisie.biberon ? "var(--ardoise)" : "";
+  $("f-biberon").querySelector(".interrupteur").style.background = saisie.biberon ? "var(--ardoise)" : "";
+  $("f-plante").setAttribute("aria-checked", String(saisie.planteVerte));
+  $("f-plante").style.borderColor = saisie.planteVerte ? "var(--vert)" : "";
+  $("f-plante").querySelector(".interrupteur").style.background = saisie.planteVerte ? "var(--vert)" : "";
+
+  if ($("f-notes").value !== saisie.notes) $("f-notes").value = saisie.notes;
+  $("f-compte").textContent = saisie.notes.length + "/500";
+
+  const dejaLa = entreeDe(saisie.date, saisie.personne);
+  const bandeau = $("bandeau");
+  if (dejaLa) {
+    bandeau.classList.remove("cache");
+    bandeau.innerHTML = '<span aria-hidden="true">✎</span><span>' + saisie.personne + " a déjà une entrée le " + isoVersFr(saisie.date)
+      + " — les champs sont pré-remplis, la validation la mettra à jour.</span>";
+  } else {
+    bandeau.classList.add("cache");
+  }
+
+  const valider = $("f-valider");
+  if (!valider.classList.contains("confirme")) {
+    valider.textContent = dejaLa ? "Mettre à jour l'entrée" : "Enregistrer la journée";
+  }
+}
+
+/** Recharge les champs quand le couple (date, personne) change de cible. */
+let derniereCible = "";
+function synchroniserCible() {
+  const cible = saisie.date + "|" + saisie.personne;
+  if (cible === derniereCible) return;
+  derniereCible = cible;
+  const dejaLa = entreeDe(saisie.date, saisie.personne);
+  if (dejaLa) {
+    saisie.joie = dejaLa.joie;
+    saisie.biberon = dejaLa.biberon;
+    saisie.planteVerte = dejaLa.planteVerte;
+    saisie.notes = dejaLa.notes || "";
+  } else {
+    saisie.joie = 7;
+    saisie.biberon = false;
+    saisie.planteVerte = false;
+    saisie.notes = "";
+  }
+}
+
+function identifiant() {
+  return "e" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function enregistrer() {
+  if (!estDateIso(saisie.date)) { signaler("Choisissez une date valide.", "erreur"); return; }
+
+  const existante = entreeDe(saisie.date, saisie.personne);
+  const valeurs = {
+    date: saisie.date,
+    personne: saisie.personne,
+    joie: saisie.joie,
+    biberon: saisie.biberon,
+    planteVerte: saisie.planteVerte,
+    notes: saisie.notes.trim() || null,
+  };
+
+  if (existante) {
+    Object.assign(existante, valeurs);
+    signaler("Entrée du " + isoVersFr(saisie.date) + " mise à jour pour " + saisie.personne + ".");
+  } else {
+    entrees.push(Object.assign({ id: identifiant() }, valeurs));
+    signaler("Joie de " + saisie.personne + " enregistrée pour le " + isoVersFr(saisie.date) + ".");
+  }
+
+  sauver();
+
+  const valider = $("f-valider");
+  valider.classList.add("confirme");
+  valider.textContent = "Enregistré";
+  setTimeout(() => { valider.classList.remove("confirme"); rendreFormulaire(); }, 1500);
+
+  rendre();
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Graphiques — SVG écrit à la main, aucune bibliothèque
+   ══════════════════════════════════════════════════════════════════ */
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+function noeud(nom, attrs) {
+  const el = document.createElementNS(SVG_NS, nom);
+  for (const cle in attrs) el.setAttribute(cle, attrs[cle]);
+  return el;
+}
+
+function marqueur(x, y, personne, taille) {
+  const t = taille || 4;
+  const commun = { fill: COULEUR[personne], stroke: "var(--surface)", "stroke-width": 2 };
+  if (FORME[personne] === "carre") return noeud("rect", Object.assign({ x: x - t, y: y - t, width: t * 2, height: t * 2, rx: 1 }, commun));
+  if (FORME[personne] === "triangle") return noeud("polygon", Object.assign({ points: x + "," + (y - t - 1) + " " + (x + t + 1) + "," + (y + t) + " " + (x - t - 1) + "," + (y + t) }, commun));
+  return noeud("circle", Object.assign({ cx: x, cy: y, r: t }, commun));
+}
+
+function marqueurHtml(personne) {
+  const c = COULEUR[personne];
+  if (FORME[personne] === "carre") return '<svg width="11" height="11" aria-hidden="true"><rect x="1" y="1" width="9" height="9" rx="1" fill="' + c + '"/></svg>';
+  if (FORME[personne] === "triangle") return '<svg width="12" height="11" aria-hidden="true"><polygon points="6,1 11,10 1,10" fill="' + c + '"/></svg>';
+  return '<svg width="11" height="11" aria-hidden="true"><circle cx="5.5" cy="5.5" r="4.5" fill="' + c + '"/></svg>';
+}
+
+function pointsFenetre() {
+  const serie = serieTemporelle();
+  if (etat.fenetre === "tout") return serie;
+  const depuis = decalerIso(aujourdhui(), -Number(etat.fenetre));
+  const coupee = serie.filter((p) => p.date >= depuis);
+  return coupee.length ? coupee : serie;
+}
+
+function rendreCourbe() {
+  const svg = $("courbe");
+  svg.textContent = "";
+  $("bulle-courbe").classList.add("cache");
+
+  const points = pointsFenetre();
+  const largeur = Math.max(320, $("zone-courbe").clientWidth || 640);
+  const hauteur = largeur < 520 ? 250 : 310;
+  const m = { haut: 10, droite: 10, bas: 26, gauche: 28 };
+  svg.setAttribute("viewBox", "0 0 " + largeur + " " + hauteur);
+  svg.setAttribute("height", hauteur);
+
+  $("legende-courbe").innerHTML = PERSONNES.map((p) => "<span>" + marqueurHtml(p) + p + "</span>").join("");
+
+  if (!points.length) {
+    svg.append(noeud("rect", { width: largeur, height: hauteur, fill: "transparent" }));
+    const t = noeud("text", { x: largeur / 2, y: hauteur / 2, "text-anchor": "middle", fill: "var(--attenue)", "font-size": 13 });
+    t.textContent = "Aucune mesure pour l'instant.";
+    svg.append(t);
+    return;
+  }
+
+  const x = (i) => points.length === 1
+    ? m.gauche + (largeur - m.gauche - m.droite) / 2
+    : m.gauche + (i * (largeur - m.gauche - m.droite)) / (points.length - 1);
+  const y = (v) => m.haut + (1 - v / 10) * (hauteur - m.haut - m.bas);
+
+  for (const v of [0, 2, 4, 6, 8, 10]) {
+    svg.append(noeud("line", { x1: m.gauche, x2: largeur - m.droite, y1: y(v), y2: y(v), stroke: "var(--grille)", "stroke-width": 1 }));
+    const t = noeud("text", { x: m.gauche - 7, y: y(v) + 4, "text-anchor": "end", fill: "var(--faible)", "font-size": 11 });
+    t.textContent = v;
+    svg.append(t);
+  }
+
+  const pas = Math.max(1, Math.ceil(points.length / (largeur < 520 ? 4 : 8)));
+  points.forEach((p, i) => {
+    if (i % pas !== 0 && i !== points.length - 1) return;
+    const t = noeud("text", { x: x(i), y: hauteur - 7, "text-anchor": "middle", fill: "var(--faible)", "font-size": 11 });
+    t.textContent = isoVersJourMois(p.date);
+    svg.append(t);
+  });
+
+  for (const personne of PERSONNES) {
+    const segments = [];
+    let courant = [];
+    points.forEach((p, i) => {
+      const v = p.valeurs[personne];
+      if (v === undefined) return;
+      courant.push([x(i), y(v)]);
+    });
+    if (courant.length) segments.push(courant);
+
+    for (const seg of segments) {
+      if (seg.length > 1) {
+        svg.append(noeud("polyline", {
+          points: seg.map((c) => c[0] + "," + c[1]).join(" "),
+          fill: "none", stroke: COULEUR[personne], "stroke-width": 2,
+          "stroke-linejoin": "round", "stroke-linecap": "round",
+        }));
+      }
+      for (const c of seg) svg.append(marqueur(c[0], c[1], personne));
+    }
+  }
+
+  const survol = noeud("line", { y1: m.haut, y2: hauteur - m.bas, stroke: "var(--bordure-2)", "stroke-width": 1, opacity: 0 });
+  svg.append(survol);
+
+  const capteur = noeud("rect", { x: 0, y: 0, width: largeur, height: hauteur, fill: "transparent" });
+  svg.append(capteur);
+
+  const bulle = $("bulle-courbe");
+  function bouger(evenement) {
+    const boite = svg.getBoundingClientRect();
+    const px = ((evenement.clientX - boite.left) / boite.width) * largeur;
+    let proche = 0, ecart = Infinity;
+    points.forEach((p, i) => { const d = Math.abs(x(i) - px); if (d < ecart) { ecart = d; proche = i; } });
+
+    const p = points[proche];
+    survol.setAttribute("x1", x(proche));
+    survol.setAttribute("x2", x(proche));
+    survol.setAttribute("opacity", 1);
+
+    let contenu = "<h4>" + isoVersTexte(p.date) + "</h4>";
+    for (const personne of PERSONNES) {
+      const v = p.valeurs[personne];
+      if (v === undefined) continue;
+      const d = p.decl[personne] || {};
+      contenu += '<div class="l num"><span class="pastille" style="background:' + COULEUR[personne] + '"></span>'
+        + '<span style="color:var(--attenue)">' + personne + "</span><b>" + v + "</b>"
+        + '<span aria-hidden="true">' + (d.biberon ? "🍼" : "") + (d.planteVerte ? "🌿" : "") + "</span></div>";
+    }
+    bulle.innerHTML = contenu;
+    bulle.classList.remove("cache");
+    const gauche = (x(proche) / largeur) * boite.width;
+    bulle.style.left = Math.min(Math.max(gauche, 80), boite.width - 80) + "px";
+    bulle.style.top = Math.max(60, (evenement.clientY - boite.top) - 8) + "px";
+  }
+
+  capteur.addEventListener("mousemove", bouger);
+  capteur.addEventListener("mouseleave", () => { bulle.classList.add("cache"); survol.setAttribute("opacity", 0); });
+}
+
+function rendreBarres() {
+  const svg = $("barres");
+  svg.textContent = "";
+  $("bulle-barres").classList.add("cache");
+
+  const declencheur = DECLENCHEURS.find((d) => d.cle === etat.declencheur);
+  const donnees = comparaison(etat.declencheur);
+  const largeur = Math.max(320, $("zone-barres").clientWidth || 640);
+  const hauteur = largeur < 520 ? 230 : 280;
+  const m = { haut: 18, droite: 10, bas: 26, gauche: 28 };
+  svg.setAttribute("viewBox", "0 0 " + largeur + " " + hauteur);
+  svg.setAttribute("height", hauteur);
+
+  $("legende-barres").innerHTML =
+    '<span><i style="width:11px;height:11px;border-radius:2px;background:' + declencheur.couleur + '"></i>Avec ' + declencheur.libelle.toLowerCase() + "</span>" +
+    '<span><i style="width:11px;height:11px;border-radius:2px;background:var(--surface-3);border:1px solid var(--bordure-2)"></i>Sans</span>';
+
+  $("note-barres").textContent = "Un écart n'est pas une cause : il dit que les journées " + declencheur.libelle.toLowerCase()
+    + " ont été plus joyeuses, pas qu'elles l'ont été grâce à " + (declencheur.cle === "biberon" ? "lui" : "elle") + ".";
+
+  const vide = donnees.every((d) => d.avec === null && d.sans === null);
+  if (vide) {
+    const t = noeud("text", { x: largeur / 2, y: hauteur / 2, "text-anchor": "middle", fill: "var(--attenue)", "font-size": 13 });
+    t.textContent = "Rien à comparer tant qu'aucune journée n'est enregistrée.";
+    svg.append(t);
+    return;
+  }
+
+  const y = (v) => m.haut + (1 - v / 10) * (hauteur - m.haut - m.bas);
+  const base = y(0);
+
+  for (const v of [0, 2, 4, 6, 8, 10]) {
+    svg.append(noeud("line", { x1: m.gauche, x2: largeur - m.droite, y1: y(v), y2: y(v), stroke: "var(--grille)", "stroke-width": 1 }));
+    const t = noeud("text", { x: m.gauche - 7, y: y(v) + 4, "text-anchor": "end", fill: "var(--faible)", "font-size": 11 });
+    t.textContent = v;
+    svg.append(t);
+  }
+
+  const bande = (largeur - m.gauche - m.droite) / donnees.length;
+  const largeurBarre = Math.min(46, (bande - 22) / 2);
+  const bulle = $("bulle-barres");
+
+  donnees.forEach((d, i) => {
+    const centre = m.gauche + bande * i + bande / 2;
+
+    const dessiner = (valeur, decalage, remplissage, contour) => {
+      if (valeur === null) return;
+      const hb = base - y(valeur);
+      const xg = centre + decalage;
+      const r = Math.min(4, hb);
+      // Coins arrondis uniquement du côté de la donnée : le pied reste posé sur l'axe.
+      const chemin = "M" + xg + " " + base + " V" + (y(valeur) + r) + " Q" + xg + " " + y(valeur) + " " + (xg + r) + " " + y(valeur)
+        + " H" + (xg + largeurBarre - r) + " Q" + (xg + largeurBarre) + " " + y(valeur) + " " + (xg + largeurBarre) + " " + (y(valeur) + r)
+        + " V" + base + " Z";
+      const attrs = { d: chemin, fill: remplissage };
+      if (contour) { attrs.stroke = contour; attrs["stroke-width"] = 1; }
+      svg.append(noeud("path", attrs));
+
+      const t = noeud("text", { x: xg + largeurBarre / 2, y: y(valeur) - 6, "text-anchor": "middle", fill: "var(--attenue)", "font-size": 11 });
+      t.textContent = fmt(valeur);
+      svg.append(t);
+    };
+
+    dessiner(d.avec, -largeurBarre - 1, declencheur.couleur, null);
+    dessiner(d.sans, 1, "var(--surface-3)", "var(--bordure-2)");
+
+    const nom = noeud("text", { x: centre, y: hauteur - 7, "text-anchor": "middle", fill: "var(--attenue)", "font-size": 11 });
+    nom.textContent = d.perimetre;
+    svg.append(nom);
+
+    const capteur = noeud("rect", { x: m.gauche + bande * i, y: m.haut, width: bande, height: hauteur - m.haut - m.bas, fill: "transparent" });
+    capteur.addEventListener("mouseenter", () => {
+      const ecart = d.avec !== null && d.sans !== null ? d.avec - d.sans : null;
+      bulle.innerHTML = "<h4>" + d.perimetre + "</h4>"
+        + '<p class="num" style="margin:0;color:var(--attenue)">Avec : <b style="color:var(--texte)">' + fmt(d.avec, 2) + "</b> (" + d.nAvec + ")</p>"
+        + '<p class="num" style="margin:2px 0 0;color:var(--attenue)">Sans : <b style="color:var(--texte)">' + fmt(d.sans, 2) + "</b> (" + d.nSans + ")</p>"
+        + (ecart === null ? "" : '<p class="num" style="margin:5px 0 0;font-weight:600;color:' + (ecart >= 0 ? "var(--vert-texte)" : "var(--rouge)") + '">'
+          + (ecart >= 0 ? "+" : "−") + fmt(Math.abs(ecart), 2) + " pt</p>");
+      bulle.classList.remove("cache");
+      const boite = svg.getBoundingClientRect();
+      bulle.style.left = ((centre / largeur) * boite.width) + "px";
+      bulle.style.top = (boite.height * 0.42) + "px";
+    });
+    capteur.addEventListener("mouseleave", () => bulle.classList.add("cache"));
+    svg.append(capteur);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Journal
+   ══════════════════════════════════════════════════════════════════ */
+
+function lignesFiltrees() {
+  const terme = etat.recherche.trim().toLowerCase();
+  const gardees = entrees.filter((e) => {
+    if (etat.profils.length && !etat.profils.includes(e.personne)) return false;
+    if (etat.du && e.date < etat.du) return false;
+    if (etat.au && e.date > etat.au) return false;
+    if (etat.fBiberon !== "tous" && e.biberon !== (etat.fBiberon === "avec")) return false;
+    if (etat.fPlante !== "tous" && e.planteVerte !== (etat.fPlante === "avec")) return false;
+    if (terme && !(e.notes || "").toLowerCase().includes(terme)) return false;
+    return true;
+  });
+
+  const signe = etat.sens === "asc" ? 1 : -1;
+  return gardees.sort((a, b) => {
+    if (etat.colonne === "joie") return signe * (a.joie - b.joie || a.date.localeCompare(b.date));
+    if (etat.colonne === "personne") return signe * (a.personne.localeCompare(b.personne) || a.date.localeCompare(b.date));
+    return signe * (a.date.localeCompare(b.date) || a.personne.localeCompare(b.personne));
+  });
+}
+
+function filtreActif() {
+  return etat.profils.length || etat.du || etat.au || etat.fBiberon !== "tous" || etat.fPlante !== "tous" || etat.recherche;
+}
+
+function rendreFiltres() {
+  const choix = (nom, valeur) =>
+    '<label>' + nom + '<select data-filtre="' + (nom === "Biberon" ? "fBiberon" : "fPlante") + '">' +
+    ["tous", "avec", "sans"].map((v) => '<option value="' + v + '"' + (valeur === v ? " selected" : "") + ">" + (v === "tous" ? "Tous" : v === "avec" ? "Avec" : "Sans") + "</option>").join("") +
+    "</select></label>";
+
+  $("filtres").innerHTML =
+    PERSONNES.map((p) => {
+      const actif = etat.profils.includes(p);
+      return '<button class="puce" data-profil="' + p + '" aria-pressed="' + actif + '"' + (actif ? ' style="border-color:' + COULEUR[p] + '"' : "") +
+        '><span class="pastille" style="background:' + COULEUR[p] + '"></span>' + p + "</button>";
+    }).join("") +
+    '<label>Du <input type="date" class="num" data-borne="du" value="' + etat.du + '"></label>' +
+    '<label>au <input type="date" class="num" data-borne="au" value="' + etat.au + '"></label>' +
+    choix("Biberon", etat.fBiberon) + choix("Plante", etat.fPlante) +
+    '<span class="recherche"><span aria-hidden="true" style="color:var(--faible)">⌕</span>' +
+    '<input type="search" id="f-recherche" placeholder="Rechercher dans les notes" value="' + echapper(etat.recherche) + '"></span>' +
+    '<button class="lien' + (filtreActif() ? "" : " cache") + '" id="reinit">Réinitialiser</button>';
+}
+
+/** Bascule le bouton de remise à zéro sans toucher au champ de recherche. */
+function majReinit() {
+  const bouton = $("reinit");
+  if (bouton) bouton.classList.toggle("cache", !filtreActif());
+}
+
+function marquesHtml(e) {
+  let html = "";
+  if (e.biberon) html += '<span class="marque" style="color:var(--ardoise);border-color:var(--ardoise)">🍼 Biberon</span> ';
+  if (e.planteVerte) html += '<span class="marque" style="color:var(--vert-texte);border-color:var(--vert-texte)">🌿 Plante</span>';
+  return html || '<span style="color:var(--faible)">—</span>';
+}
+
+function rendreJournal() {
+  const lignes = lignesFiltrees();
+  const visibles = lignes.slice(0, etat.limite);
+  const restantes = lignes.length - visibles.length;
+
+  $("journal-compte").textContent = lignes.length + " entrée" + (lignes.length > 1 ? "s" : "") + (filtreActif() ? " après filtrage" : "");
+  $("export-csv").disabled = lignes.length === 0;
+  $("export-json").disabled = lignes.length === 0;
+
+  const zone = $("journal");
+
+  if (!entrees.length) {
+    zone.innerHTML =
+      '<div class="vide"><p>Le journal est vide. Saisissez une première journée à gauche —' +
+      " ou remplissez-le d'un jeu de démonstration pour voir ce que le tableau de bord raconte.</p>" +
+      '<button class="secondaire" id="demo">Charger six semaines de démonstration</button></div>';
+    return;
+  }
+
+  if (!lignes.length) {
+    zone.innerHTML = '<p class="vide">Aucune entrée ne correspond à ces filtres.</p>';
+    return;
+  }
+
+  const fleche = etat.sens === "asc" ? "↑" : "↓";
+  const entete = (cle, libelle) =>
+    '<th scope="col" aria-sort="' + (etat.colonne === cle ? (etat.sens === "asc" ? "ascending" : "descending") : "none") + '">' +
+    '<button data-tri="' + cle + '">' + libelle + (etat.colonne === cle ? " " + fleche : "") + "</button></th>";
+
+  let html =
+    '<div class="table-enveloppe"><table><thead><tr>' +
+      entete("date", "Date") + entete("personne", "Personne") + entete("joie", "Joie") +
+      '<th scope="col"><span class="etiq">Déclencheurs</span></th>' +
+      '<th scope="col"><span class="etiq">Notes</span></th>' +
+      '<th scope="col" class="actions"><span class="etiq">Actions</span></th>' +
+    "</tr></thead><tbody>";
+
+  for (const e of visibles) {
+    html +=
+      "<tr>" +
+        '<td class="num" style="white-space:nowrap">' + isoVersFr(e.date) + "</td>" +
+        '<td><span style="display:inline-flex;align-items:center;gap:6px"><span class="pastille" style="background:' + COULEUR[e.personne] + '"></span>' + e.personne + "</span></td>" +
+        '<td><span style="display:inline-flex;align-items:center;gap:8px"><b class="num" style="width:16px">' + e.joie + "</b>" +
+          '<span class="barre-joie"><i style="width:' + e.joie * 10 + "%;background:" + COULEUR[e.personne] + '"></i></span></span></td>' +
+        "<td>" + marquesHtml(e) + "</td>" +
+        '<td class="notes-cel" title="' + echapper(e.notes || "") + '">' + (e.notes ? echapper(e.notes) : "—") + "</td>" +
+        '<td class="actions">' +
+          '<button class="icone-btn" data-modifier="' + e.id + '" aria-label="Modifier l\'entrée du ' + isoVersFr(e.date) + " pour " + e.personne + '">✎</button>' +
+          '<button class="icone-btn danger" data-supprimer="' + e.id + '" aria-label="Supprimer l\'entrée du ' + isoVersFr(e.date) + " pour " + e.personne + '">🗑</button>' +
+        "</td>" +
+      "</tr>";
+  }
+  html += "</tbody></table></div>";
+
+  html += '<ul class="cartes-journal">';
+  for (const e of visibles) {
+    html +=
+      "<li><div style='display:flex;justify-content:space-between;gap:8px;align-items:flex-start'>" +
+        "<div><p style='margin:0;font-weight:500;display:flex;align-items:center;gap:6px'>" +
+          '<span class="pastille" style="background:' + COULEUR[e.personne] + '"></span>' + e.personne +
+          '<span class="num" style="color:var(--attenue);font-weight:400">· ' + isoVersFr(e.date) + "</span></p>" +
+          "<p style='margin:6px 0 0'>" + marquesHtml(e) + "</p></div>" +
+        '<span class="chiffre num" style="font-size:26px;color:' + COULEUR[e.personne] + '">' + e.joie + "</span>" +
+      "</div>" +
+      (e.notes ? "<p style='margin:8px 0 0;font-size:12px;color:var(--attenue)'>" + echapper(e.notes) + "</p>" : "") +
+      "<div style='display:flex;justify-content:flex-end;gap:4px;margin-top:8px'>" +
+        '<button class="icone-btn" data-modifier="' + e.id + '" aria-label="Modifier">✎</button>' +
+        '<button class="icone-btn danger" data-supprimer="' + e.id + '" aria-label="Supprimer">🗑</button>' +
+      "</div></li>";
+  }
+  html += "</ul>";
+
+  if (restantes > 0) {
+    html += '<div class="pagination"><span class="num">' + visibles.length + " sur " + lignes.length + "</span>" +
+      '<button class="secondaire" id="plus">Afficher ' + Math.min(PAS, restantes) + " de plus</button></div>";
+  }
+
+  zone.innerHTML = html;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Fenêtre de modification
+   ══════════════════════════════════════════════════════════════════ */
+
+function ouvrirModification(id) {
+  const entree = entrees.find((e) => e.id === id);
+  if (!entree) return;
+  const brouillon = Object.assign({}, entree, { notes: entree.notes || "" });
+
+  const voile = document.createElement("div");
+  voile.className = "voile";
+  voile.innerHTML =
+    '<div class="fenetre" role="dialog" aria-modal="true" aria-label="Modifier une entrée">' +
+      '<header><h2>Modifier l\'entrée</h2><button class="icone-btn" data-fermer aria-label="Fermer">✕</button></header>' +
+      '<div class="corps">' +
+        '<div class="champ"><label class="etiq" for="m-date">Date</label>' +
+          '<input class="saisie num" type="date" id="m-date" value="' + brouillon.date + '" max="' + aujourdhui() + '">' +
+          '<p id="m-date-fr" style="margin:5px 0 0;font-size:12px;color:var(--faible)">' + isoVersFr(brouillon.date) + "</p></div>" +
+        '<div class="champ"><span class="etiq">Profil</span><div class="segments" id="m-personne" role="radiogroup" aria-label="Personne"></div></div>' +
+        '<div class="champ">' +
+          '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">' +
+            '<label class="etiq" for="m-joie" style="margin:0">Niveau de joie</label><span id="m-humeur" style="font-size:12px;color:var(--attenue)"></span></div>' +
+          '<div class="rangee-joie"><span class="visage" id="m-visage" aria-hidden="true"></span>' +
+            '<span class="valeur-joie num" id="m-valeur"></span>' +
+            '<input type="range" id="m-joie" min="1" max="10" step="1" value="' + brouillon.joie + '"></div>' +
+          '<div class="bornes num"><span>1</span><span>10</span></div></div>' +
+        '<div class="champ"><span class="etiq">Déclencheurs du jour</span><div class="bascules">' +
+          '<button type="button" class="bascule" id="m-biberon" role="switch"><span class="ic" aria-hidden="true">🍼</span>' +
+            '<span class="txt"><b>Biberon</b><span>Présent ce jour</span></span><span class="interrupteur" aria-hidden="true"><i></i></span></button>' +
+          '<button type="button" class="bascule" id="m-plante" role="switch"><span class="ic" aria-hidden="true">🌿</span>' +
+            '<span class="txt"><b>Plante verte</b><span>Présente ce jour</span></span><span class="interrupteur" aria-hidden="true"><i></i></span></button>' +
+        "</div></div>" +
+        '<div class="champ"><label class="etiq" for="m-notes">Notes <span style="text-transform:none;color:var(--faible)">(optionnel)</span></label>' +
+          '<textarea class="saisie" id="m-notes" maxlength="500">' + echapper(brouillon.notes) + "</textarea></div>" +
+        '<div class="duo"><button class="annuler" data-fermer>Annuler</button>' +
+          '<button class="principal" id="m-enregistrer" style="margin-top:0">Enregistrer</button></div>' +
+      "</div>" +
+    "</div>";
+
+  document.body.append(voile);
+
+  function peindre() {
+    voile.querySelector("#m-personne").innerHTML = PERSONNES.map((p) =>
+      '<button type="button" role="radio" data-personne="' + p + '" aria-checked="' + (p === brouillon.personne) + '"' +
+      (p === brouillon.personne ? ' style="border-color:' + COULEUR[p] + '"' : "") + ">" + p + "</button>"
+    ).join("");
+
+    const accent = couleurJoie(brouillon.joie);
+    const part = ((brouillon.joie - 1) / 9) * 100;
+    const curseur = voile.querySelector("#m-joie");
+    curseur.value = brouillon.joie;
+    curseur.style.setProperty("--accent", accent);
+    curseur.style.setProperty("--piste", "linear-gradient(90deg," + accent + " 0%," + accent + " " + part + "%,var(--surface-3) " + part + "%)");
+    voile.querySelector("#m-valeur").textContent = brouillon.joie;
+    voile.querySelector("#m-valeur").style.color = accent;
+    voile.querySelector("#m-visage").textContent = VISAGES[brouillon.joie - 1];
+    voile.querySelector("#m-humeur").textContent = humeur(brouillon.joie);
+    voile.querySelector("#m-date-fr").textContent = estDateIso(brouillon.date) ? isoVersFr(brouillon.date) : "—";
+
+    for (const [cle, id, couleur] of [["biberon", "#m-biberon", "var(--ardoise)"], ["planteVerte", "#m-plante", "var(--vert)"]]) {
+      const bouton = voile.querySelector(id);
+      bouton.setAttribute("aria-checked", String(brouillon[cle]));
+      bouton.style.borderColor = brouillon[cle] ? couleur : "";
+      bouton.querySelector(".interrupteur").style.background = brouillon[cle] ? couleur : "";
+    }
+  }
+  peindre();
+
+  function fermer() {
+    voile.remove();
+    document.removeEventListener("keydown", surTouche);
+  }
+  function surTouche(e) { if (e.key === "Escape") fermer(); }
+  document.addEventListener("keydown", surTouche);
+
+  voile.addEventListener("mousedown", (e) => { if (e.target === voile) fermer(); });
+
+  voile.addEventListener("click", (e) => {
+    if (e.target.closest("[data-fermer]")) { fermer(); return; }
+    const profil = e.target.closest("[data-personne]");
+    if (profil) { brouillon.personne = profil.dataset.personne; peindre(); return; }
+    if (e.target.closest("#m-biberon")) { brouillon.biberon = !brouillon.biberon; peindre(); return; }
+    if (e.target.closest("#m-plante")) { brouillon.planteVerte = !brouillon.planteVerte; peindre(); return; }
+
+    if (e.target.closest("#m-enregistrer")) {
+      if (!estDateIso(brouillon.date)) { signaler("Choisissez une date valide.", "erreur"); return; }
+      const occupee = entrees.find((x) => x.id !== entree.id && x.date === brouillon.date && x.personne === brouillon.personne);
+      if (occupee) { signaler(brouillon.personne + " a déjà une entrée le " + isoVersFr(brouillon.date) + ".", "erreur"); return; }
+
+      entree.date = brouillon.date;
+      entree.personne = brouillon.personne;
+      entree.joie = brouillon.joie;
+      entree.biberon = brouillon.biberon;
+      entree.planteVerte = brouillon.planteVerte;
+      entree.notes = brouillon.notes.trim() || null;
+      sauver();
+      derniereCible = "";
+      synchroniserCible();
+      fermer();
+      signaler("Entrée modifiée.");
+      rendre();
+    }
+  });
+
+  voile.querySelector("#m-joie").addEventListener("input", (e) => { brouillon.joie = Number(e.target.value); peindre(); });
+  voile.querySelector("#m-date").addEventListener("change", (e) => { brouillon.date = e.target.value; peindre(); });
+  voile.querySelector("#m-notes").addEventListener("input", (e) => { brouillon.notes = e.target.value; });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Exports
+   ══════════════════════════════════════════════════════════════════ */
+
+let sauvegardeFichier = null;
+if (window.claude && typeof window.claude.use === "function") {
+  window.claude.use("downloads").then((d) => { sauvegardeFichier = d; }).catch(() => {});
+}
+
+function versCsv(lignes) {
+  const echappe = (v) => (/[";\n\r]/.test(v) ? '"' + v.replaceAll('"', '""') + '"' : v);
+  const lignesCsv = ["id;date;personne;joie;biberon;plante_verte;notes"];
+  for (const e of lignes) {
+    lignesCsv.push([
+      e.id, isoVersFr(e.date), e.personne, String(e.joie),
+      e.biberon ? "Vrai" : "Faux", e.planteVerte ? "Vrai" : "Faux", e.notes || "",
+    ].map(echappe).join(";"));
+  }
+  return "﻿" + lignesCsv.join("\r\n");
+}
+
+function versJson(lignes) {
+  return JSON.stringify(lignes.map((e) => ({
+    id: e.id, date: isoVersFr(e.date), personne: e.personne, joie: e.joie,
+    biberon: e.biberon, plante_verte: e.planteVerte, notes: e.notes || null,
+  })), null, 2);
+}
+
+async function exporter(format) {
+  const lignes = lignesFiltrees();
+  if (!lignes.length) return;
+
+  const contenu = format === "csv" ? versCsv(lignes) : versJson(lignes);
+  const nom = "joie-" + aujourdhui() + "." + format;
+
+  // Trois environnements, trois chemins : la page publiée remet le fichier
+  // par la capacité de l'hôte, une page web ordinaire par un lien blob, et
+  // s'il ne reste rien, le contenu s'affiche pour être copié.
+  if (sauvegardeFichier) {
+    try {
+      await sauvegardeFichier.save({ filename: nom, data: contenu });
+      signaler(lignes.length + " entrées exportées en " + format.toUpperCase() + ".");
+      return;
+    } catch (erreur) {
+      if (erreur && erreur.code === "declined") return;
+    }
+  } else if (telechargerBlob(nom, contenu, format)) {
+    signaler(lignes.length + " entrées exportées en " + format.toUpperCase() + ".");
+    return;
+  }
+
+  ouvrirRepliExport(nom, contenu, lignes.length);
+}
+
+/** Téléchargement classique — inerte dans un cadre bridé, d'où le repli. */
+function telechargerBlob(nom, contenu, format) {
+  try {
+    const type = format === "csv" ? "text/csv" : "application/json";
+    const url = URL.createObjectURL(new Blob([contenu], { type: type + ";charset=utf-8" }));
+    const lien = document.createElement("a");
+    lien.href = url;
+    lien.download = nom;
+    document.body.append(lien);
+    lien.click();
+    lien.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/** Repli quand la page ne peut pas remettre de fichier : le texte, à copier. */
+function ouvrirRepliExport(nom, contenu, nombre) {
+  const voile = document.createElement("div");
+  voile.className = "voile";
+  voile.innerHTML =
+    '<div class="fenetre" role="dialog" aria-modal="true" aria-label="Export">' +
+      "<header><h2>" + echapper(nom) + '</h2><button class="icone-btn" data-fermer aria-label="Fermer">✕</button></header>' +
+      '<div class="corps"><p style="margin:0 0 10px;font-size:12px;color:var(--attenue)">' +
+        nombre + " entrées. Le téléchargement direct n'est pas disponible ici — copiez le contenu.</p>" +
+        '<textarea class="saisie aire-export" id="export-texte" readonly></textarea>' +
+        '<div class="duo"><button class="annuler" data-fermer>Fermer</button>' +
+        '<button class="principal" id="copier" style="margin-top:0">Copier</button></div></div>' +
+    "</div>";
+
+  document.body.append(voile);
+  voile.querySelector("#export-texte").value = contenu;
+
+  const fermer = () => voile.remove();
+  voile.addEventListener("mousedown", (e) => { if (e.target === voile) fermer(); });
+  voile.addEventListener("click", async (e) => {
+    if (e.target.closest("[data-fermer]")) { fermer(); return; }
+    if (e.target.closest("#copier")) {
+      const aire = voile.querySelector("#export-texte");
+      try {
+        await navigator.clipboard.writeText(contenu);
+      } catch (err) {
+        aire.select();
+        document.execCommand("copy");
+      }
+      signaler("Contenu copié.");
+      fermer();
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Jeu de démonstration — même générateur que la version serveur
+   ══════════════════════════════════════════════════════════════════ */
+
+function chargerDemo() {
+  let graine = 20260829;
+  const tirage = () => { graine = (graine * 1664525 + 1013904223) >>> 0; return graine / 0x100000000; };
+
+  const profils = {
+    Momo: { base: 5.6, biberon: 2.1, plante: 0.4, presence: 0.95 },
+    Sam: { base: 6.9, biberon: 0.9, plante: 0.8, presence: 0.9 },
+    Samy: { base: 6.2, biberon: 1.4, plante: 0.2, presence: 0.85 },
+  };
+  const notes = [
+    "Longue sieste, réveil de bonne humeur.", "Journée de pluie, sortie annulée.",
+    "Visite des grands-parents.", "Nuit courte.", "Premier soleil de la semaine.",
+    null, null, null,
+  ];
+
+  const produites = [];
+  for (let recul = 41; recul >= 0; recul--) {
+    const date = decalerIso(aujourdhui(), -recul);
+    const biberon = tirage() < 0.45;
+    const planteVerte = tirage() < 0.55;
+
+    for (const personne of PERSONNES) {
+      const profil = profils[personne];
+      if (tirage() > profil.presence) continue;
+      const bruit = (tirage() - 0.5) * 2.4;
+      const joie = Math.max(1, Math.min(10, Math.round(
+        profil.base + (biberon ? profil.biberon : 0) + (planteVerte ? profil.plante : 0) + bruit
+      )));
+      produites.push({
+        id: identifiant() + produites.length,
+        date, personne, joie, biberon, planteVerte,
+        notes: notes[Math.floor(tirage() * notes.length)],
+      });
+    }
+  }
+
+  entrees = produites;
+  sauver();
+  derniereCible = "";
+  synchroniserCible();
+  signaler(produites.length + " entrées de démonstration chargées.");
+  rendre();
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Thème
+   ══════════════════════════════════════════════════════════════════ */
+
+function themeActuel() {
+  const choisi = document.documentElement.getAttribute("data-theme");
+  if (choisi) return choisi;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function appliquerTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  $("theme-ic").textContent = theme === "dark" ? "☀" : "☾";
+  try { localStorage.setItem(CLE_THEME, theme); } catch (e) {}
+  // Les graphiques lisent les couleurs du thème : ils se redessinent.
+  rendreCourbe();
+  rendreBarres();
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Rendu et branchements
+   ══════════════════════════════════════════════════════════════════ */
+
+function rendre() {
+  rendreKpis();
+  rendreFormulaire();
+  rendreCourbe();
+  rendreBarres();
+  rendreFiltres();
+  rendreJournal();
+}
+
+function segments(hote, options, actif, surChoix) {
+  hote.innerHTML = options.map((o) =>
+    '<button type="button" role="radio" data-valeur="' + o.valeur + '" aria-checked="' + (o.valeur === actif) + '">' + o.libelle + "</button>"
+  ).join("");
+  hote.onclick = (e) => {
+    const bouton = e.target.closest("[data-valeur]");
+    if (bouton) surChoix(bouton.dataset.valeur);
+  };
+}
+
+function rendreSelecteursGraphiques() {
+  segments($("fenetre-choix"), [
+    { valeur: "30", libelle: "30 j" }, { valeur: "90", libelle: "90 j" }, { valeur: "tout", libelle: "Tout" },
+  ], etat.fenetre, (v) => { etat.fenetre = v; rendreSelecteursGraphiques(); rendreCourbe(); });
+
+  segments($("declencheur-choix"),
+    DECLENCHEURS.map((d) => ({ valeur: d.cle, libelle: d.libelle })),
+    etat.declencheur, (v) => { etat.declencheur = v; rendreSelecteursGraphiques(); rendreBarres(); });
+}
+
+// ── Formulaire
+$("formulaire").addEventListener("submit", (e) => { e.preventDefault(); enregistrer(); });
+$("f-date").addEventListener("change", (e) => { saisie.date = e.target.value; synchroniserCible(); rendreFormulaire(); });
+$("f-personne").addEventListener("click", (e) => {
+  const bouton = e.target.closest("[data-personne]");
+  if (!bouton) return;
+  saisie.personne = bouton.dataset.personne;
+  synchroniserCible();
+  rendreFormulaire();
+});
+$("f-joie").addEventListener("input", (e) => { saisie.joie = Number(e.target.value); rendreFormulaire(); });
+$("f-biberon").addEventListener("click", () => { saisie.biberon = !saisie.biberon; rendreFormulaire(); });
+$("f-plante").addEventListener("click", () => { saisie.planteVerte = !saisie.planteVerte; rendreFormulaire(); });
+$("f-notes").addEventListener("input", (e) => { saisie.notes = e.target.value; $("f-compte").textContent = saisie.notes.length + "/500"; });
+
+// ── Journal (délégation : le contenu est reconstruit à chaque rendu)
+$("journal").addEventListener("click", (e) => {
+  const tri = e.target.closest("[data-tri]");
+  if (tri) {
+    const cible = tri.dataset.tri;
+    if (cible === etat.colonne) etat.sens = etat.sens === "asc" ? "desc" : "asc";
+    else { etat.colonne = cible; etat.sens = cible === "date" ? "desc" : "asc"; }
+    rendreJournal();
+    return;
+  }
+
+  const modifier = e.target.closest("[data-modifier]");
+  if (modifier) { ouvrirModification(modifier.dataset.modifier); return; }
+
+  const supprimer = e.target.closest("[data-supprimer]");
+  if (supprimer) {
+    const entree = entrees.find((x) => x.id === supprimer.dataset.supprimer);
+    if (!entree) return;
+    if (!confirm("Supprimer l'entrée du " + isoVersFr(entree.date) + " pour " + entree.personne + " ?")) return;
+    entrees = entrees.filter((x) => x.id !== entree.id);
+    sauver();
+    derniereCible = "";
+    synchroniserCible();
+    signaler("Entrée du " + isoVersFr(entree.date) + " supprimée.");
+    rendre();
+    return;
+  }
+
+  if (e.target.closest("#plus")) { etat.limite += PAS; rendreJournal(); return; }
+  if (e.target.closest("#demo")) { chargerDemo(); }
+});
+
+// ── Filtres
+$("filtres").addEventListener("click", (e) => {
+  const profil = e.target.closest("[data-profil]");
+  if (profil) {
+    const p = profil.dataset.profil;
+    etat.profils = etat.profils.includes(p) ? etat.profils.filter((x) => x !== p) : etat.profils.concat(p);
+    rendreFiltres();
+    rendreJournal();
+    return;
+  }
+  if (e.target.closest("#reinit")) {
+    Object.assign(etat, { profils: [], du: "", au: "", fBiberon: "tous", fPlante: "tous", recherche: "" });
+    rendreFiltres();
+    rendreJournal();
+  }
+});
+$("filtres").addEventListener("change", (e) => {
+  const borne = e.target.dataset.borne;
+  if (borne) { etat[borne] = e.target.value; rendreFiltres(); rendreJournal(); return; }
+  const filtre = e.target.dataset.filtre;
+  if (filtre) { etat[filtre] = e.target.value; rendreJournal(); }
+});
+$("filtres").addEventListener("input", (e) => {
+  if (e.target.id !== "f-recherche") return;
+  etat.recherche = e.target.value;
+  majReinit();
+  rendreJournal();
+});
+
+// ── Exports et thème
+$("export-csv").addEventListener("click", () => exporter("csv"));
+$("export-json").addEventListener("click", () => exporter("json"));
+$("theme").addEventListener("click", () => appliquerTheme(themeActuel() === "dark" ? "light" : "dark"));
+
+// ── Redimensionnement : les graphiques sont dessinés à la taille réelle
+let minuterie = null;
+window.addEventListener("resize", () => {
+  clearTimeout(minuterie);
+  minuterie = setTimeout(() => { rendreCourbe(); rendreBarres(); }, 150);
+});
+
+// ── Démarrage
+try {
+  const memorise = localStorage.getItem(CLE_THEME);
+  if (memorise) document.documentElement.setAttribute("data-theme", memorise);
+} catch (e) {}
+$("theme-ic").textContent = themeActuel() === "dark" ? "☀" : "☾";
+
+synchroniserCible();
+rendreSelecteursGraphiques();
+rendre();
+
+/* Le service worker ne sert que la page installée : inutile — et refusé —
+   dans un cadre embarqué ou en file://, d'où les deux garde-fous. */
+if ("serviceWorker" in navigator && location.protocol.startsWith("http") && window.top === window.self) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {
+      // Hébergement sans service worker : l'application marche, sans le
+      // mode hors ligne. Rien à signaler à l'utilisateur.
+    });
+  });
+}
+document.fonts && document.fonts.ready.then(() => { rendreCourbe(); rendreBarres(); });
+</script>
+
+</body>
+</html>

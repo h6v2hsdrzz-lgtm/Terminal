@@ -1,0 +1,203 @@
+@import "tailwindcss";
+
+/* Thème piloté par une classe sur <html> plutôt que par la seule préférence
+   système : l'utilisateur doit pouvoir choisir, et son choix doit tenir. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Palette ──────────────────────────────────────────────────────────────
+   Bleu ardoise et blanc cassé pour la structure ; le vert et l'ambre ne
+   servent qu'à porter du sens (plante verte, biberon, variations), jamais à
+   décorer. Les trois couleurs de profil sont prises dans cette même gamme.
+   ─────────────────────────────────────────────────────────────────────── */
+:root {
+  color-scheme: light;
+
+  --fond: #f5f3ed;
+  --surface: #fffefa;
+  --surface-2: #ecebe3;
+  --surface-3: #e3e1d7;
+  --bordure: #e0ddd2;
+  --bordure-2: #c9c5b7;
+
+  --texte: #1e2a37;
+  --attenue: #5c6875;
+  --faible: #949daa;
+
+  /* Trois teintes de série validées par scripts/validate_palette.js :
+     bande de clarté, plancher de chroma, séparation daltonienne et
+     contraste sur la surface claire. Ne pas retoucher à l'œil. */
+  --ardoise: #37639f;
+  --ardoise-doux: #8aa0c0;
+  --vert: #2f8f6b;
+  --ambre: #c07f0f;
+  --rouge: #b4483f;
+
+  --momo: #37639f;
+  --sam: #2f8f6b;
+  --samy: #c07f0f;
+
+  /* Variantes assombries : les mêmes teintes en petit texte, au-dessus du
+     rapport de contraste 4,5:1 que les aplats de série n'atteignent pas. */
+  --vert-texte: #237055;
+  --ambre-texte: #8f5f0a;
+  --action: #37639f;
+  --action-texte: #ffffff;
+
+  --grille: #e2e0d6;
+  --ombre: 0 1px 2px rgb(30 42 55 / 0.06), 0 8px 24px -12px rgb(30 42 55 / 0.18);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --fond: #10151d;
+  --surface: #171e28;
+  --surface-2: #1d2632;
+  --surface-3: #26313e;
+  --bordure: #253040;
+  --bordure-2: #354354;
+
+  --texte: #dde3ea;
+  --attenue: #96a1af;
+  --faible: #5f6b7a;
+
+  /* Le thème sombre n'est pas l'inverse du clair : les trois teintes sont
+     rechoisies et revalidées contre la surface sombre. */
+  --ardoise: #5288d4;
+  --ardoise-doux: #4c637f;
+  --vert: #2fa87e;
+  --ambre: #bb8b22;
+  --rouge: #e0736a;
+
+  --momo: #5288d4;
+  --sam: #2fa87e;
+  --samy: #bb8b22;
+
+  --vert-texte: #4dbf93;
+  --ambre-texte: #d9a441;
+  --action: #5288d4;
+  --action-texte: #0f1620;
+
+  --grille: #232e3b;
+  --ombre: 0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px -16px rgb(0 0 0 / 0.6);
+}
+
+@theme inline {
+  --color-fond: var(--fond);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-bordure: var(--bordure);
+  --color-bordure-2: var(--bordure-2);
+  --color-texte: var(--texte);
+  --color-attenue: var(--attenue);
+  --color-faible: var(--faible);
+  --color-ardoise: var(--ardoise);
+  --color-ardoise-doux: var(--ardoise-doux);
+  --color-vert: var(--vert);
+  --color-ambre: var(--ambre);
+  --color-rouge: var(--rouge);
+  --color-vert-texte: var(--vert-texte);
+  --color-ambre-texte: var(--ambre-texte);
+  --color-action: var(--action);
+  --color-action-texte: var(--action-texte);
+  --color-momo: var(--momo);
+  --color-sam: var(--sam);
+  --color-samy: var(--samy);
+
+  --font-sans: "Inter", "Segoe UI", "Helvetica Neue", system-ui, -apple-system, sans-serif;
+  --font-mono: "SF Mono", "Cascadia Mono", "Consolas", "DejaVu Sans Mono", monospace;
+}
+
+html {
+  background: var(--fond);
+}
+
+body {
+  background: var(--fond);
+  color: var(--texte);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Chiffres alignés partout : un tableau de moyennes se lit en colonne. */
+.tabulaire {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ardoise);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--ardoise) 28%, transparent);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bordure-2);
+  border: 3px solid var(--fond);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--faible);
+}
+
+/* Le curseur de joie : même piste, même pastille, sur les trois moteurs. */
+.curseur-joie {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+}
+.curseur-joie::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--piste, var(--surface-3));
+}
+.curseur-joie::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--piste, var(--surface-3));
+}
+.curseur-joie::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 22px;
+  width: 22px;
+  margin-top: -7px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 3px solid var(--accent-curseur, var(--ardoise));
+  box-shadow: var(--ombre);
+  transition: transform 0.12s ease;
+}
+.curseur-joie::-moz-range-thumb {
+  height: 22px;
+  width: 22px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 3px solid var(--accent-curseur, var(--ardoise));
+  box-shadow: var(--ombre);
+}
+.curseur-joie:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
