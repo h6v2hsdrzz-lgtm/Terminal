@@ -1,0 +1,39 @@
+{
+  "name": "joie",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/ensure-env.mjs && next dev",
+    "build": "node scripts/ensure-env.mjs && prisma generate && next build",
+    "start": "next start",
+    "lint": "eslint",
+    "db:setup": "node scripts/ensure-env.mjs && prisma migrate deploy && prisma generate",
+    "db:migrate": "node scripts/ensure-env.mjs && prisma migrate dev",
+    "db:seed": "node scripts/ensure-env.mjs && tsx prisma/seed.ts",
+    "db:studio": "node scripts/ensure-env.mjs && prisma studio",
+    "postinstall": "node scripts/ensure-env.mjs && prisma generate",
+    "test": "node --import tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "@prisma/adapter-better-sqlite3": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "lucide-react": "^1.37.0",
+    "next": "16.3.3",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "recharts": "^3.10.1",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.3",
+    "prisma": "^7.10.0",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.12",
+    "typescript": "^5"
+  }
+}

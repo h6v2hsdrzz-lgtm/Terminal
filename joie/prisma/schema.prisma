@@ -1,0 +1,39 @@
+// Modèle de données du suivi de joie.
+//
+// Une entrée = le niveau de joie d'une personne pour un jour donné, avec
+// l'état des deux déclencheurs suivis. La contrainte d'unicité (jour,
+// personne) est volontaire : le tableau de bord compare des moyennes
+// quotidiennes, deux mesures le même jour pour la même personne fausseraient
+// les deltas. Le formulaire détecte le doublon et bascule en modification.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Entree {
+  id String @id @default(cuid())
+
+  // Date du jour mesuré, au format ISO `AAAA-MM-JJ` : c'est le seul format
+  // qui se trie et se filtre correctement en base. L'affichage et les
+  // exports la rendent en JJ/MM/AAAA (voir src/lib/date.ts).
+  date String
+
+  personne    String  // "Momo" | "Sam" | "Samy"
+  joie        Int // 1 → 10
+  biberon     Boolean @default(false)
+  planteVerte Boolean @default(false) @map("plante_verte")
+  notes       String?
+
+  creeLe     DateTime @default(now()) @map("cree_le")
+  modifieLe  DateTime @updatedAt @map("modifie_le")
+
+  @@unique([date, personne])
+  @@index([date])
+  @@index([personne])
+  @@map("entrees")
+}
