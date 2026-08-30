@@ -245,6 +245,13 @@ du dépôt : GitHub Pages la sert telle quelle, à `/joie/autonome/`. Elle
 s'installe sur un écran d'accueil et s'ouvre sans réseau — manifeste, icônes
 et service worker sont dans le dossier.
 
+Le dossier `budget/` contient **Prévoyant**, un budget prévisionnel : on y
+saisit revenus, dépenses et virements récurrents, et l'application en tire le
+solde jour par jour jusqu'à cinq ans, les mois qui coincent, les enveloppes par
+catégorie, les objectifs d'épargne et des scénarios comparés. Même règle que
+`joie/autonome/` : un seul fichier, aucune dépendance, données gardées dans le
+navigateur, servi tel quel à `/budget/`. Son `README.md` détaille le modèle.
+
 ## Avertissements
 
 - Projet indépendant, non affilié à la CFTC, à la LBMA, au World Gold Council

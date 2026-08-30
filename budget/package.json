@@ -1,0 +1,10 @@
+{
+  "name": "prevoyant",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Budget prévisionnel — un seul fichier, aucune dépendance.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "servir": "python3 -m http.server 8000"
+  }
+}

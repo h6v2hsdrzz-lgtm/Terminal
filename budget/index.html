@@ -1,0 +1,3142 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prévoyant — budget prévisionnel</title>
+<meta name="description" content="Estimation de tous les revenus et dépenses à venir : flux récurrents, solde projeté au jour près, enveloppes, objectifs d'épargne et scénarios comparés. Tout reste dans le navigateur.">
+
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icone-apple-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Prévoyant">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f3f5f7">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f141a">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&display=swap">
+
+<style>
+/* ════════════════════════════════════════════════════════════════════
+   Prévoyant — un seul fichier, aucune dépendance, aucun réseau.
+
+   Tout ce qui est affiché est calculé à partir d'une seule liste : les
+   flux. Un flux dit « combien, à partir de quand, à quel rythme, et
+   jusqu'à quand » ; le reste — solde jour par jour, mois par mois,
+   enveloppes, objectifs, scénarios — en découle par projection.
+
+   Les huit teintes de catégorie sont espacées en teinte et tenues dans
+   une bande de clarté étroite, séparément pour chaque thème, pour
+   rester lisibles côte à côte dans un anneau ou une pile de barres.
+   ════════════════════════════════════════════════════════════════════ */
+
+:root {
+  color-scheme: light;
+
+  --fond: #f3f5f7;
+  --surface: #ffffff;
+  --surface-2: #eaedf1;
+  --surface-3: #dfe3e9;
+  --bordure: #e0e4ea;
+  --bordure-2: #c3cad4;
+
+  --texte: #15202b;
+  --attenue: #56626f;
+  --faible: #8b95a1;
+
+  --serie-1: #3b6ea8;
+  --serie-2: #2f8f6b;
+  --serie-3: #b0740f;
+  --serie-4: #8b57b0;
+  --serie-5: #bd4f45;
+  --serie-6: #1c8795;
+  --serie-7: #75792a;
+  --serie-8: #b0537c;
+
+  --revenu: #2f8f6b;
+  --revenu-texte: #227053;
+  --depense: #bd4f45;
+  --depense-texte: #a03c33;
+  --epargne: #3b6ea8;
+  --alerte: #b0740f;
+  --alerte-texte: #8a5a09;
+
+  --action: #1f4f7a;
+  --action-fort: #163b5c;
+  --action-texte: #ffffff;
+
+  --grille: #e6e9ee;
+  --ombre: 0 1px 2px rgb(21 32 43 / .06), 0 12px 30px -16px rgb(21 32 43 / .28);
+  --ombre-forte: 0 2px 6px rgb(21 32 43 / .1), 0 26px 60px -24px rgb(21 32 43 / .4);
+
+  --display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --texte-fam: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --r: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="clair"]) {
+    color-scheme: dark;
+    --fond: #0f141a;
+    --surface: #161d26;
+    --surface-2: #1c2531;
+    --surface-3: #26313e;
+    --bordure: #232e3b;
+    --bordure-2: #35414f;
+    --texte: #dce3ea;
+    --attenue: #94a0ad;
+    --faible: #5e6a78;
+    --serie-1: #5b93d6;
+    --serie-2: #35a880;
+    --serie-3: #c8912c;
+    --serie-4: #a97cd4;
+    --serie-5: #d96f63;
+    --serie-6: #2ba7b6;
+    --serie-7: #9aa243;
+    --serie-8: #d0789e;
+    --revenu: #35a880;
+    --revenu-texte: #4dc19a;
+    --depense: #d96f63;
+    --depense-texte: #e58a7e;
+    --epargne: #5b93d6;
+    --alerte: #c8912c;
+    --alerte-texte: #dcaa45;
+    --action: #5b93d6;
+    --action-fort: #7aabe4;
+    --action-texte: #0f141a;
+    --grille: #212b37;
+    --ombre: 0 1px 2px rgb(0 0 0 / .4), 0 14px 34px -18px rgb(0 0 0 / .75);
+    --ombre-forte: 0 2px 8px rgb(0 0 0 / .5), 0 30px 70px -28px rgb(0 0 0 / .9);
+  }
+}
+
+:root[data-theme="sombre"] {
+  color-scheme: dark;
+  --fond: #0f141a;
+  --surface: #161d26;
+  --surface-2: #1c2531;
+  --surface-3: #26313e;
+  --bordure: #232e3b;
+  --bordure-2: #35414f;
+  --texte: #dce3ea;
+  --attenue: #94a0ad;
+  --faible: #5e6a78;
+  --serie-1: #5b93d6;
+  --serie-2: #35a880;
+  --serie-3: #c8912c;
+  --serie-4: #a97cd4;
+  --serie-5: #d96f63;
+  --serie-6: #2ba7b6;
+  --serie-7: #9aa243;
+  --serie-8: #d0789e;
+  --revenu: #35a880;
+  --revenu-texte: #4dc19a;
+  --depense: #d96f63;
+  --depense-texte: #e58a7e;
+  --epargne: #5b93d6;
+  --alerte: #c8912c;
+  --alerte-texte: #dcaa45;
+  --action: #5b93d6;
+  --action-fort: #7aabe4;
+  --action-texte: #0f141a;
+  --grille: #212b37;
+  --ombre: 0 1px 2px rgb(0 0 0 / .4), 0 14px 34px -18px rgb(0 0 0 / .75);
+  --ombre-forte: 0 2px 8px rgb(0 0 0 / .5), 0 30px 70px -28px rgb(0 0 0 / .9);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fond);
+  color: var(--texte);
+  font-family: var(--texte-fam);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+
+h1, h2, h3, .chiffre { font-family: var(--display); }
+h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -.015em; }
+
+.chiffre, table td.num, table th.num, .mono {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: var(--action); }
+
+:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.masque { display: none !important; }
+.dim { color: var(--attenue); }
+.faible { color: var(--faible); }
+.pos { color: var(--revenu-texte); }
+.neg { color: var(--depense-texte); }
+
+/* ─────────────────────── En-tête ─────────────────────── */
+
+header#tete {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: color-mix(in srgb, var(--fond) 88%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--bordure);
+  padding: 10px max(14px, env(safe-area-inset-left)) 0 max(14px, env(safe-area-inset-right));
+}
+
+.tete-haut {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 1180px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+}
+
+.marque {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -.02em;
+  margin-right: auto;
+}
+.marque svg { display: block; }
+.marque em { font-style: normal; color: var(--attenue); font-weight: 500; }
+
+.tete-outils { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.pilule {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 13px;
+  color: var(--attenue);
+  white-space: nowrap;
+}
+.pilule b { color: var(--texte); font-weight: 600; }
+
+button.outil {
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  border-radius: 999px;
+  padding: 6px 13px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--attenue);
+  transition: background .12s, color .12s, border-color .12s;
+}
+button.outil:hover { background: var(--surface-2); color: var(--texte); }
+
+nav#onglets {
+  display: flex;
+  gap: 2px;
+  max-width: 1180px;
+  margin: 8px auto 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+nav#onglets::-webkit-scrollbar { display: none; }
+
+nav#onglets button {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 9px 13px 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--attenue);
+  white-space: nowrap;
+  border-radius: 6px 6px 0 0;
+  transition: color .12s, border-color .12s;
+}
+nav#onglets button:hover { color: var(--texte); }
+nav#onglets button.on { color: var(--texte); border-bottom-color: var(--action); font-weight: 600; }
+
+/* ─────────────────────── Structure ─────────────────────── */
+
+main {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 20px max(14px, env(safe-area-inset-left)) 90px max(14px, env(safe-area-inset-right));
+}
+
+.carte {
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  border-radius: var(--r);
+  padding: 16px 18px;
+  box-shadow: var(--ombre);
+}
+
+.carte-tete {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+.carte-tete h2 { font-size: 15px; letter-spacing: 0; }
+.carte-tete h3 { font-size: 14px; letter-spacing: 0; }
+.carte-tete .droite { margin-left: auto; font-size: 13px; color: var(--attenue); }
+.sous { font-size: 13px; color: var(--attenue); margin: 0 0 12px; }
+
+.grille { display: grid; gap: 14px; }
+.g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.g-2-1 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+@media (max-width: 900px) {
+  .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .g3, .g-2-1 { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  .g2, .g4 { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ─────────────────────── Indicateurs ─────────────────────── */
+
+.kpi { display: flex; flex-direction: column; gap: 2px; }
+.kpi .etiq {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--faible);
+  font-weight: 600;
+}
+.kpi .val {
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+.kpi .note { font-size: 12.5px; color: var(--attenue); }
+
+.jauge {
+  height: 6px;
+  background: var(--surface-3);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+.jauge > i { display: block; height: 100%; border-radius: 999px; }
+
+/* ─────────────────────── Bandeau d'alerte ─────────────────────── */
+
+.bandeau {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  border-radius: var(--r);
+  padding: 13px 16px;
+  border: 1px solid;
+  font-size: 14px;
+}
+.bandeau .ic { font-size: 17px; line-height: 1.2; }
+.bandeau b { font-weight: 600; }
+.bandeau.rouge { background: color-mix(in srgb, var(--depense) 12%, var(--surface)); border-color: color-mix(in srgb, var(--depense) 40%, var(--bordure)); }
+.bandeau.ambre { background: color-mix(in srgb, var(--alerte) 13%, var(--surface)); border-color: color-mix(in srgb, var(--alerte) 40%, var(--bordure)); }
+.bandeau.vert  { background: color-mix(in srgb, var(--revenu) 11%, var(--surface)); border-color: color-mix(in srgb, var(--revenu) 36%, var(--bordure)); }
+
+/* ─────────────────────── Tableaux ─────────────────────── */
+
+.tableau-boite { overflow-x: auto; margin: 0 -18px; padding: 0 18px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+table th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--faible);
+  font-weight: 600;
+  padding: 0 10px 7px;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--bordure);
+}
+table td { padding: 9px 10px; border-bottom: 1px solid var(--grille); vertical-align: middle; }
+table tr:last-child td { border-bottom: 0; }
+table .num { text-align: right; font-variant-numeric: tabular-nums; }
+table tbody tr.cliquable { cursor: pointer; }
+table tbody tr.cliquable:hover { background: var(--surface-2); }
+table tr.repli td { background: var(--surface-2); padding: 0; }
+table tr.total td { font-weight: 600; border-top: 1px solid var(--bordure-2); }
+
+.puce {
+  display: inline-block;
+  width: 9px; height: 9px;
+  border-radius: 3px;
+  margin-right: 7px;
+  vertical-align: -1px;
+  flex: none;
+}
+
+.etiquette {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--bordure);
+  color: var(--attenue);
+  white-space: nowrap;
+}
+.etiquette.rev { background: color-mix(in srgb, var(--revenu) 14%, transparent); border-color: color-mix(in srgb, var(--revenu) 34%, transparent); color: var(--revenu-texte); }
+.etiquette.dep { background: color-mix(in srgb, var(--depense) 14%, transparent); border-color: color-mix(in srgb, var(--depense) 34%, transparent); color: var(--depense-texte); }
+.etiquette.off { opacity: .65; text-decoration: line-through; }
+
+/* ─────────────────────── Boutons ─────────────────────── */
+
+.btn {
+  border: 1px solid var(--bordure-2);
+  background: var(--surface);
+  border-radius: 9px;
+  padding: 8px 15px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background .12s, border-color .12s, transform .06s;
+}
+.btn:hover { background: var(--surface-2); }
+.btn:active { transform: translateY(1px); }
+.btn.primaire {
+  background: var(--action);
+  border-color: var(--action);
+  color: var(--action-texte);
+  font-weight: 600;
+}
+.btn.primaire:hover { background: var(--action-fort); border-color: var(--action-fort); }
+.btn.danger { color: var(--depense-texte); border-color: color-mix(in srgb, var(--depense) 45%, var(--bordure)); }
+.btn.danger:hover { background: color-mix(in srgb, var(--depense) 12%, var(--surface)); }
+.btn.petit { padding: 4px 10px; font-size: 13px; border-radius: 7px; }
+.btn.fantome { border-color: transparent; background: none; color: var(--attenue); }
+.btn.fantome:hover { background: var(--surface-2); color: var(--texte); }
+
+.segments {
+  display: inline-flex;
+  background: var(--surface-2);
+  border: 1px solid var(--bordure);
+  border-radius: 9px;
+  padding: 2px;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.segments button {
+  border: 0;
+  background: none;
+  border-radius: 7px;
+  padding: 5px 11px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--attenue);
+}
+.segments button.on { background: var(--surface); color: var(--texte); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
+
+/* ─────────────────────── Formulaires ─────────────────────── */
+
+label.champ { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--attenue); }
+label.champ > span.ttl { font-weight: 600; color: var(--texte); font-size: 13px; }
+label.champ .aide { font-size: 12px; color: var(--faible); }
+
+input[type="text"], input[type="number"], input[type="date"], select, textarea {
+  background: var(--surface);
+  border: 1px solid var(--bordure-2);
+  border-radius: 9px;
+  padding: 8px 10px;
+  font-size: 14px;
+  width: 100%;
+  min-width: 0;
+}
+textarea { resize: vertical; min-height: 60px; }
+input:disabled, select:disabled { background: var(--surface-2); color: var(--faible); }
+
+.ligne-champs { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ligne-champs.trois { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 620px) { .ligne-champs, .ligne-champs.trois { grid-template-columns: minmax(0, 1fr); } }
+
+.case { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.case input { width: auto; }
+
+/* ─────────────────────── Dialogue ─────────────────────── */
+
+#voile {
+  position: fixed;
+  inset: 0;
+  background: rgb(10 15 21 / .5);
+  backdrop-filter: blur(3px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+#voile.masque { display: none !important; }
+
+#dialogue {
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  border-radius: 16px;
+  box-shadow: var(--ombre-forte);
+  width: min(620px, 100%);
+  max-height: min(88vh, 900px);
+  display: flex;
+  flex-direction: column;
+}
+#dialogue-tete {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--bordure);
+}
+#dialogue-tete h2 { font-size: 16px; margin-right: auto; }
+#dialogue-corps { padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+#dialogue-pied {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 13px 18px;
+  border-top: 1px solid var(--bordure);
+  flex-wrap: wrap;
+}
+#dialogue-pied .gauche { margin-right: auto; }
+
+/* ─────────────────────── Messages ─────────────────────── */
+
+#messages {
+  position: fixed;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  pointer-events: none;
+}
+.message {
+  background: var(--texte);
+  color: var(--fond);
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 500;
+  box-shadow: var(--ombre-forte);
+  animation: monte .18s ease-out;
+}
+@keyframes monte { from { opacity: 0; transform: translateY(8px); } }
+
+/* ─────────────────────── Graphiques ─────────────────────── */
+
+.graphe { width: 100%; display: block; overflow: visible; touch-action: pan-y; }
+.graphe text { font-family: var(--texte-fam); font-variant-numeric: tabular-nums; }
+.axe { font-size: 11px; fill: var(--faible); }
+.ligne-grille { stroke: var(--grille); stroke-width: 1; }
+.ligne-zero { stroke: var(--bordure-2); stroke-width: 1; stroke-dasharray: 3 3; }
+.ligne-seuil { stroke: var(--alerte); stroke-width: 1; stroke-dasharray: 5 4; opacity: .8; }
+.curseur { stroke: var(--bordure-2); stroke-width: 1; }
+
+.legende { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; color: var(--attenue); margin-top: 8px; }
+.legende span { display: inline-flex; align-items: center; }
+
+.infobulle {
+  position: absolute;
+  pointer-events: none;
+  background: var(--surface);
+  border: 1px solid var(--bordure-2);
+  border-radius: 9px;
+  box-shadow: var(--ombre-forte);
+  padding: 8px 11px;
+  font-size: 12.5px;
+  min-width: 140px;
+  z-index: 10;
+  transition: opacity .1s;
+}
+.infobulle .t { font-weight: 600; margin-bottom: 3px; font-size: 12px; }
+.infobulle .l { display: flex; justify-content: space-between; gap: 14px; font-variant-numeric: tabular-nums; }
+.boite-graphe { position: relative; }
+
+/* ─────────────────────── Divers ─────────────────────── */
+
+.vide {
+  text-align: center;
+  padding: 34px 18px;
+  color: var(--attenue);
+  font-size: 14px;
+}
+.vide p { margin: 0 0 12px; }
+
+ul.agenda { list-style: none; margin: 0; padding: 0; }
+ul.agenda li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--grille);
+  font-size: 14px;
+}
+ul.agenda li:last-child { border-bottom: 0; }
+ul.agenda .quand { width: 62px; flex: none; font-size: 12.5px; color: var(--attenue); font-variant-numeric: tabular-nums; }
+ul.agenda .quoi { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+ul.agenda .combien { font-variant-numeric: tabular-nums; font-weight: 500; white-space: nowrap; }
+
+.sep { height: 1px; background: var(--bordure); margin: 4px 0; }
+
+.pile { display: flex; flex-direction: column; gap: 14px; }
+.rangee { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.rangee.fin { justify-content: flex-end; }
+
+@media print {
+  header#tete, nav#onglets, .btn, #messages { display: none !important; }
+  .carte { break-inside: avoid; box-shadow: none; }
+}
+</style>
+</head>
+<body>
+
+<header id="tete">
+  <div class="tete-haut">
+    <div class="marque">
+      <svg width="24" height="24" viewBox="0 0 512 512" aria-hidden="true">
+        <rect width="512" height="512" rx="112" fill="var(--action)"/>
+        <path d="M104 344 L200 248 L288 320 L408 168" fill="none" stroke="var(--action-texte)"
+              stroke-width="38" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="408" cy="168" r="30" fill="var(--action-texte)"/>
+      </svg>
+      <span>Prévoyant<em> · budget prévisionnel</em></span>
+    </div>
+
+    <div class="tete-outils">
+      <span class="pilule" id="pilule-solde" title="Solde de départ, tous comptes confondus">
+        Aujourd'hui <b id="pilule-solde-val">—</b>
+      </span>
+      <span class="pilule" id="pilule-fin" title="Solde projeté au bout de l'horizon">
+        <span id="pilule-fin-etiq">À l'horizon</span> <b id="pilule-fin-val">—</b>
+      </span>
+      <label class="pilule" style="padding: 2px 6px 2px 12px;">
+        Horizon
+        <select id="sel-horizon" style="border: 0; background: none; width: auto; padding: 3px 4px; font-size: 13px; font-weight: 600;">
+          <option value="3">3 mois</option>
+          <option value="6">6 mois</option>
+          <option value="12">12 mois</option>
+          <option value="24">24 mois</option>
+          <option value="36">36 mois</option>
+          <option value="60">5 ans</option>
+        </select>
+      </label>
+      <button class="outil" id="btn-theme" title="Changer de thème" aria-label="Changer de thème">◐</button>
+    </div>
+  </div>
+
+  <nav id="onglets" aria-label="Sections">
+    <button data-vue="tableau" class="on">Tableau de bord</button>
+    <button data-vue="flux">Revenus &amp; dépenses</button>
+    <button data-vue="projection">Projection</button>
+    <button data-vue="categories">Catégories</button>
+    <button data-vue="objectifs">Objectifs</button>
+    <button data-vue="scenarios">Scénarios</button>
+    <button data-vue="comptes">Comptes</button>
+    <button data-vue="reglages">Réglages</button>
+  </nav>
+</header>
+
+<main>
+  <section id="vue-tableau" class="vue pile"></section>
+  <section id="vue-flux" class="vue pile masque"></section>
+  <section id="vue-projection" class="vue pile masque"></section>
+  <section id="vue-categories" class="vue pile masque"></section>
+  <section id="vue-objectifs" class="vue pile masque"></section>
+  <section id="vue-scenarios" class="vue pile masque"></section>
+  <section id="vue-comptes" class="vue pile masque"></section>
+  <section id="vue-reglages" class="vue pile masque"></section>
+</main>
+
+<div id="voile" class="masque">
+  <div id="dialogue" role="dialog" aria-modal="true" aria-labelledby="dialogue-titre">
+    <div id="dialogue-tete">
+      <h2 id="dialogue-titre"></h2>
+      <button class="btn fantome petit" id="dialogue-x" aria-label="Fermer">✕</button>
+    </div>
+    <div id="dialogue-corps"></div>
+    <div id="dialogue-pied"></div>
+  </div>
+</div>
+
+<div id="messages" aria-live="polite"></div>
+
+<script id="code">
+"use strict";
+
+/* ══════════════════════════════════════════════════════════════════════
+   1. Constantes et valeurs par défaut
+   ══════════════════════════════════════════════════════════════════════ */
+
+const CLE_ETAT = "prevoyant:etat:v1";
+const CLE_THEME = "prevoyant:theme";
+const VERSION_ETAT = 1;
+
+const TEINTES_MAX = 8;
+const HORIZONS = [3, 6, 12, 24, 36, 60];
+const OCCURRENCES_MAX = 4000;   // garde-fou : un flux ne peut pas boucler sans fin
+
+const DEVISES = {
+  EUR: { symbole: "€", nom: "Euro" },
+  CHF: { symbole: "CHF", nom: "Franc suisse" },
+  USD: { symbole: "$", nom: "Dollar américain" },
+  CAD: { symbole: "$ CA", nom: "Dollar canadien" },
+  GBP: { symbole: "£", nom: "Livre sterling" },
+  MAD: { symbole: "DH", nom: "Dirham marocain" },
+};
+
+/* Un rythme se décrit soit en jours, soit en mois — jamais les deux. Les
+   rythmes mensuels sont comptés en mois pour que le 31 reste le 31 quand le
+   mois le permet, au lieu de dériver de quelques jours à chaque échéance. */
+const FREQUENCES = [
+  { id: "ponctuel",    nom: "Une seule fois",       court: "1×",     parAn: 0 },
+  { id: "hebdo",       nom: "Chaque semaine",       court: "hebdo",  parAn: 365.2425 / 7,  jours: 7 },
+  { id: "quinzaine",   nom: "Toutes les 2 semaines", court: "2 sem.", parAn: 365.2425 / 14, jours: 14 },
+  { id: "mensuel",     nom: "Chaque mois",          court: "mensuel", parAn: 12, mois: 1 },
+  { id: "bimestriel",  nom: "Tous les 2 mois",      court: "2 mois", parAn: 6,  mois: 2 },
+  { id: "trimestriel", nom: "Chaque trimestre",     court: "trim.",  parAn: 4,  mois: 3 },
+  { id: "semestriel",  nom: "Chaque semestre",      court: "sem.",   parAn: 2,  mois: 6 },
+  { id: "annuel",      nom: "Chaque année",         court: "annuel", parAn: 1,  mois: 12 },
+];
+const FREQ = Object.fromEntries(FREQUENCES.map((f) => [f.id, f]));
+
+const PARAMETRES_DEFAUT = {
+  titre: "Mon budget",
+  devise: "EUR",
+  horizon: 24,
+  seuilAlerte: 0,
+  arrondi: true,          // masquer les centimes
+  debutProjection: null,  // null = aujourd'hui
+};
+
+const CATEGORIES_DEFAUT = [
+  { id: "cat-salaire",   nom: "Salaire",            type: "revenu",  teinte: 2 },
+  { id: "cat-primes",    nom: "Primes & extras",    type: "revenu",  teinte: 6 },
+  { id: "cat-aides",     nom: "Aides & allocations", type: "revenu", teinte: 4 },
+  { id: "cat-logement",  nom: "Logement",           type: "depense", teinte: 1, plafond: null },
+  { id: "cat-courses",   nom: "Courses",            type: "depense", teinte: 2, plafond: null },
+  { id: "cat-energie",   nom: "Énergie & eau",      type: "depense", teinte: 3, plafond: null },
+  { id: "cat-transport", nom: "Transport",          type: "depense", teinte: 4, plafond: null },
+  { id: "cat-sante",     nom: "Santé",              type: "depense", teinte: 6, plafond: null },
+  { id: "cat-abos",      nom: "Abonnements",        type: "depense", teinte: 8, plafond: null },
+  { id: "cat-loisirs",   nom: "Loisirs & sorties",  type: "depense", teinte: 5, plafond: null },
+  { id: "cat-impots",    nom: "Impôts & taxes",     type: "depense", teinte: 7, plafond: null },
+  { id: "cat-credits",   nom: "Crédits",            type: "depense", teinte: 5, plafond: null },
+  { id: "cat-epargne",   nom: "Épargne",            type: "depense", teinte: 1, plafond: null },
+  { id: "cat-divers",    nom: "Divers",             type: "depense", teinte: 7, plafond: null },
+];
+
+/* ══════════════════════════════════════════════════════════════════════
+   2. Dates — tout en ISO « AAAA-MM-JJ », tout en UTC.
+
+   Le fuseau ne sert à rien ici : une échéance est un jour du calendrier,
+   pas un instant. Passer par UTC évite qu'un décalage horaire fasse
+   glisser une échéance de la veille au lendemain.
+   ══════════════════════════════════════════════════════════════════════ */
+
+function deuxChiffres(n) { return String(n).padStart(2, "0"); }
+
+function estIso(v) {
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const [a, m, j] = v.split("-").map(Number);
+  return m >= 1 && m <= 12 && j >= 1 && j <= joursDansMois(a, m);
+}
+
+function joursDansMois(annee, mois) { return new Date(Date.UTC(annee, mois, 0)).getUTCDate(); }
+
+function versUTC(iso) {
+  const [a, m, j] = iso.split("-").map(Number);
+  return Date.UTC(a, m - 1, j);
+}
+
+function versIso(ms) {
+  const d = new Date(ms);
+  return d.getUTCFullYear() + "-" + deuxChiffres(d.getUTCMonth() + 1) + "-" + deuxChiffres(d.getUTCDate());
+}
+
+function aujourdhui() {
+  const d = new Date();
+  return d.getFullYear() + "-" + deuxChiffres(d.getMonth() + 1) + "-" + deuxChiffres(d.getDate());
+}
+
+function ajouterJours(iso, n) { return versIso(versUTC(iso) + n * 86400000); }
+
+/** Ajoute des mois en gardant le jour d'ancrage, rabattu sur le dernier jour
+ *  du mois quand il n'existe pas (un 31 janvier + 1 mois donne le 28 ou 29). */
+function ajouterMois(iso, n, ancre) {
+  const [a, m, j] = iso.split("-").map(Number);
+  const total = a * 12 + (m - 1) + n;
+  const na = Math.floor(total / 12);
+  const nm = total - na * 12 + 1;
+  const jour = Math.min(ancre || j, joursDansMois(na, nm));
+  return na + "-" + deuxChiffres(nm) + "-" + deuxChiffres(jour);
+}
+
+function joursEntre(a, b) { return Math.round((versUTC(b) - versUTC(a)) / 86400000); }
+
+/** Nombre de mois entiers écoulés de `a` à `b` (négatif si `b` précède `a`). */
+function moisEntre(a, b) {
+  const [aa, am, aj] = a.split("-").map(Number);
+  const [ba, bm, bj] = b.split("-").map(Number);
+  let n = (ba - aa) * 12 + (bm - am);
+  if (bj < aj) n -= 1;
+  return n;
+}
+
+function cleMois(iso) { return iso.slice(0, 7); }
+function debutDeMois(cle) { return cle + "-01"; }
+function finDeMois(cle) {
+  const [a, m] = cle.split("-").map(Number);
+  return cle + "-" + deuxChiffres(joursDansMois(a, m));
+}
+function moisSuivant(cle) {
+  const [a, m] = cle.split("-").map(Number);
+  return m === 12 ? (a + 1) + "-01" : a + "-" + deuxChiffres(m + 1);
+}
+
+const MOIS_NOMS = ["janvier", "février", "mars", "avril", "mai", "juin",
+  "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+const MOIS_COURTS = ["janv.", "févr.", "mars", "avr.", "mai", "juin",
+  "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+
+function libelleMois(cle, court) {
+  const [a, m] = cle.split("-").map(Number);
+  return (court ? MOIS_COURTS[m - 1] : MOIS_NOMS[m - 1]) + " " + a;
+}
+function libelleDate(iso, court) {
+  const [a, m, j] = iso.split("-").map(Number);
+  return j + " " + (court ? MOIS_COURTS[m - 1] : MOIS_NOMS[m - 1]) + (court ? "" : " " + a);
+}
+function libelleJourMois(iso) {
+  const [, m, j] = iso.split("-").map(Number);
+  return j + " " + MOIS_COURTS[m - 1];
+}
+
+/** « dans 3 jours », « demain », « aujourd'hui » — pour l'agenda. */
+function delaiTexte(iso, depuis) {
+  const n = joursEntre(depuis, iso);
+  if (n === 0) return "aujourd'hui";
+  if (n === 1) return "demain";
+  if (n < 0) return "passé";
+  if (n < 7) return "dans " + n + " j";
+  return libelleJourMois(iso);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   3. Nombres et argent
+   ══════════════════════════════════════════════════════════════════════ */
+
+let _formats = {};
+
+function devise() { return (ETAT.parametres && ETAT.parametres.devise) || "EUR"; }
+
+function formatteur(decimales) {
+  const cle = devise() + ":" + decimales;
+  if (!_formats[cle]) {
+    _formats[cle] = new Intl.NumberFormat("fr-FR", {
+      style: "currency", currency: devise(),
+      minimumFractionDigits: decimales, maximumFractionDigits: decimales,
+    });
+  }
+  return _formats[cle];
+}
+
+function argent(v, options) {
+  const o = options || {};
+  if (v === null || v === undefined || !isFinite(v)) return "—";
+  const dec = o.decimales !== undefined ? o.decimales
+    : (ETAT.parametres && ETAT.parametres.arrondi ? 0 : 2);
+  let s = formatteur(dec).format(o.signe ? Math.abs(v) : v);
+  if (o.signe) s = (v < 0 ? "−" : "+") + " " + s;
+  return s;
+}
+
+/** Version courte pour les axes : 1 240 → « 1,2 k ». */
+function argentCourt(v) {
+  const s = DEVISES[devise()] ? DEVISES[devise()].symbole : "";
+  const a = Math.abs(v);
+  const signe = v < 0 ? "−" : "";
+  if (a >= 1000000) return signe + (a / 1000000).toFixed(a >= 10000000 ? 0 : 1).replace(".", ",") + " M" + s;
+  if (a >= 1000) return signe + (a / 1000).toFixed(a >= 10000 ? 0 : 1).replace(".", ",") + " k" + s;
+  return signe + Math.round(a) + " " + s;
+}
+
+function pourcent(v, decimales) {
+  if (v === null || !isFinite(v)) return "—";
+  const arrondi = Math.round(v * Math.pow(10, decimales || 0)) / Math.pow(10, decimales || 0);
+  // le même signe moins que dans les montants, pour ne pas mélanger deux traits
+  return arrondi.toLocaleString("fr-FR").replace("-", "− ") + " %";
+}
+
+function nombre(v, decimales) {
+  if (v === null || !isFinite(v)) return "—";
+  return v.toLocaleString("fr-FR", { minimumFractionDigits: decimales || 0, maximumFractionDigits: decimales || 0 });
+}
+
+function arrondi2(v) { return Math.round(v * 100) / 100; }
+
+function identifiant(prefixe) {
+  return prefixe + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
+}
+
+function esc(s) {
+  return String(s === null || s === undefined ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function teinte(n) { return "var(--serie-" + (((Number(n) || 1) - 1) % TEINTES_MAX + 1) + ")"; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   4. État — chargement, validation, sauvegarde
+
+   `normaliser` est la seule porte d'entrée : état relu du navigateur,
+   fichier importé, jeu de démonstration. Tout ce qui entre y passe, donc
+   un fichier abîmé donne une application vide, jamais une application
+   cassée.
+   ══════════════════════════════════════════════════════════════════════ */
+
+function nombreSur(v, defaut, min, max) {
+  const n = typeof v === "string" ? Number(v.replace(",", ".")) : Number(v);
+  if (!isFinite(n)) return defaut;
+  if (min !== undefined && n < min) return min;
+  if (max !== undefined && n > max) return max;
+  return n;
+}
+
+function texteSur(v, defaut, max) {
+  if (typeof v !== "string") return defaut;
+  const t = v.trim();
+  return t ? t.slice(0, max || 80) : defaut;
+}
+
+function normaliserCategorie(brut, i) {
+  if (!brut || typeof brut !== "object") return null;
+  const type = brut.type === "revenu" ? "revenu" : "depense";
+  return {
+    id: texteSur(brut.id, identifiant("cat"), 60),
+    nom: texteSur(brut.nom, "Catégorie " + (i + 1), 40),
+    type,
+    teinte: nombreSur(brut.teinte, (i % TEINTES_MAX) + 1, 1, TEINTES_MAX),
+    plafond: brut.plafond === null || brut.plafond === undefined ? null : nombreSur(brut.plafond, null, 0),
+  };
+}
+
+function normaliserCompte(brut, i) {
+  if (!brut || typeof brut !== "object") return null;
+  return {
+    id: texteSur(brut.id, identifiant("cpt"), 60),
+    nom: texteSur(brut.nom, "Compte " + (i + 1), 40),
+    type: brut.type === "epargne" ? "epargne" : "courant",
+    solde: arrondi2(nombreSur(brut.solde, 0)),
+    teinte: nombreSur(brut.teinte, (i % TEINTES_MAX) + 1, 1, TEINTES_MAX),
+  };
+}
+
+function normaliserFlux(brut, i, comptes, categories) {
+  if (!brut || typeof brut !== "object") return null;
+  let type = brut.type === "revenu" ? "revenu" : brut.type === "virement" ? "virement" : "depense";
+  // un virement suppose deux comptes distincts ; à défaut, c'est une dépense
+  if (type === "virement" && comptes.length < 2) type = "depense";
+  const frequence = FREQ[brut.frequence] ? brut.frequence : "mensuel";
+  const debut = estIso(brut.debut) ? brut.debut : aujourdhui();
+  let fin = estIso(brut.fin) ? brut.fin : null;
+  if (fin && fin < debut) fin = debut;
+  const cats = categories.filter((c) => c.type === type);
+  const cat = cats.find((c) => c.id === brut.categorieId);
+  const cpt = comptes.find((c) => c.id === brut.compteId) || comptes[0];
+  let compteDest = null;
+  if (type === "virement") {
+    const d = comptes.find((c) => c.id === brut.compteDest && c.id !== cpt.id);
+    compteDest = d ? d.id : comptes.find((c) => c.id !== cpt.id).id;
+  }
+  return {
+    id: texteSur(brut.id, identifiant("flx"), 60),
+    libelle: texteSur(brut.libelle, "Sans nom", 60),
+    type,
+    // le sens est porté par `type` : un montant est toujours écrit positif
+    montant: Math.abs(arrondi2(nombreSur(brut.montant, 0, -1e12, 1e12))),
+    categorieId: type === "virement" ? null : (cat ? cat.id : (cats[0] ? cats[0].id : null)),
+    compteId: cpt.id,
+    compteDest,
+    frequence,
+    debut,
+    fin,
+    indexation: nombreSur(brut.indexation, 0, -50, 50),
+    actif: brut.actif !== false,
+    note: texteSur(brut.note, "", 300),
+  };
+}
+
+function normaliserObjectif(brut, comptes) {
+  if (!brut || typeof brut !== "object") return null;
+  const cpt = comptes.find((c) => c.id === brut.compteId);
+  return {
+    id: texteSur(brut.id, identifiant("obj"), 60),
+    nom: texteSur(brut.nom, "Objectif", 50),
+    cible: Math.abs(arrondi2(nombreSur(brut.cible, 1000, -1e12, 1e12))),
+    dateCible: estIso(brut.dateCible) ? brut.dateCible : ajouterMois(aujourdhui(), 12),
+    compteId: cpt ? cpt.id : null,
+    teinte: nombreSur(brut.teinte, 1, 1, TEINTES_MAX),
+  };
+}
+
+function normaliserScenario(brut, i, comptes, categories) {
+  if (!brut || typeof brut !== "object") return null;
+  const extras = Array.isArray(brut.extras)
+    ? brut.extras.map((f, k) => normaliserFlux(f, k, comptes, categories)).filter(Boolean).slice(0, 40)
+    : [];
+  return {
+    id: texteSur(brut.id, identifiant("scn"), 60),
+    nom: texteSur(brut.nom, "Scénario " + (i + 1), 50),
+    teinte: nombreSur(brut.teinte, ((i + 2) % TEINTES_MAX) + 1, 1, TEINTES_MAX),
+    actif: brut.actif !== false,
+    ajustRevenus: nombreSur(brut.ajustRevenus, 0, -100, 500),
+    ajustDepenses: nombreSur(brut.ajustDepenses, 0, -100, 500),
+    soldeDelta: arrondi2(nombreSur(brut.soldeDelta, 0)),
+    exclus: Array.isArray(brut.exclus) ? brut.exclus.filter((x) => typeof x === "string").slice(0, 200) : [],
+    extras,
+  };
+}
+
+function normaliser(brut) {
+  const src = brut && typeof brut === "object" ? brut : {};
+  const p = src.parametres && typeof src.parametres === "object" ? src.parametres : {};
+
+  const parametres = {
+    titre: texteSur(p.titre, PARAMETRES_DEFAUT.titre, 60),
+    devise: DEVISES[p.devise] ? p.devise : PARAMETRES_DEFAUT.devise,
+    horizon: HORIZONS.includes(Number(p.horizon)) ? Number(p.horizon) : PARAMETRES_DEFAUT.horizon,
+    seuilAlerte: arrondi2(nombreSur(p.seuilAlerte, 0, 0, 1e12)),
+    arrondi: p.arrondi !== false,
+    debutProjection: estIso(p.debutProjection) ? p.debutProjection : null,
+  };
+
+  let categories = (Array.isArray(src.categories) ? src.categories : CATEGORIES_DEFAUT)
+    .map(normaliserCategorie).filter(Boolean).slice(0, 60);
+  if (!categories.length) categories = CATEGORIES_DEFAUT.map(normaliserCategorie);
+  if (!categories.some((c) => c.type === "revenu")) categories.push(normaliserCategorie(CATEGORIES_DEFAUT[0], 0));
+  if (!categories.some((c) => c.type === "depense")) categories.push(normaliserCategorie(CATEGORIES_DEFAUT[3], 3));
+
+  let comptes = (Array.isArray(src.comptes) ? src.comptes : [])
+    .map(normaliserCompte).filter(Boolean).slice(0, 20);
+  if (!comptes.length) comptes = [{ id: "cpt-courant", nom: "Compte courant", type: "courant", solde: 0, teinte: 1 }];
+
+  const flux = (Array.isArray(src.flux) ? src.flux : [])
+    .map((f, i) => normaliserFlux(f, i, comptes, categories)).filter(Boolean).slice(0, 500);
+
+  const objectifs = (Array.isArray(src.objectifs) ? src.objectifs : [])
+    .map((o) => normaliserObjectif(o, comptes)).filter(Boolean).slice(0, 40);
+
+  const scenarios = (Array.isArray(src.scenarios) ? src.scenarios : [])
+    .map((s, i) => normaliserScenario(s, i, comptes, categories)).filter(Boolean).slice(0, 12);
+
+  return { version: VERSION_ETAT, parametres, comptes, categories, flux, objectifs, scenarios };
+}
+
+let ETAT = normaliser(null);
+
+function categorie(id) { return ETAT.categories.find((c) => c.id === id) || null; }
+function compte(id) { return ETAT.comptes.find((c) => c.id === id) || null; }
+function nomCategorie(id) { const c = categorie(id); return c ? c.nom : "Sans catégorie"; }
+function nomCompte(id) { const c = compte(id); return c ? c.nom : "—"; }
+function soldeDepart() { return ETAT.comptes.reduce((s, c) => s + c.solde, 0); }
+function departProjection() { return ETAT.parametres.debutProjection || aujourdhui(); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   5. Le moteur : d'une liste de flux à un solde jour par jour
+   ══════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Montant d'un flux à une date donnée, revalorisation comprise.
+ *
+ * Le montant saisi est celui d'aujourd'hui. L'indexation ne s'applique donc
+ * qu'à partir de la date de référence de la projection, et par pas d'un an
+ * — une augmentation tombe à date anniversaire, elle ne se lisse pas.
+ */
+function montantA(flux, date, reference) {
+  const idx = Number(flux.indexation) || 0;
+  if (!idx) return flux.montant;
+  const base = reference && reference > flux.debut ? reference : flux.debut;
+  const annees = Math.floor(Math.max(0, moisEntre(base, date)) / 12);
+  if (!annees) return flux.montant;
+  return flux.montant * Math.pow(1 + idx / 100, annees);
+}
+
+/**
+ * Toutes les échéances d'un flux dans la fenêtre [du, au].
+ * Les rythmes sont recalculés depuis la date de début à chaque rang, jamais
+ * de proche en proche : un 31 rabattu sur un 28 en février ne contamine pas
+ * les mois suivants.
+ */
+function occurrences(flux, du, au, reference) {
+  const res = [];
+  if (!flux || !flux.actif || !estIso(flux.debut) || !estIso(du) || !estIso(au)) return res;
+
+  const borneFin = flux.fin && flux.fin < au ? flux.fin : au;
+  if (flux.debut > borneFin || du > borneFin) return res;
+
+  const freq = FREQ[flux.frequence] || FREQ.mensuel;
+
+  if (freq.id === "ponctuel") {
+    if (flux.debut >= du && flux.debut <= borneFin) {
+      res.push({ date: flux.debut, montant: arrondi2(montantA(flux, flux.debut, reference)) });
+    }
+    return res;
+  }
+
+  const ancre = Number(flux.debut.slice(8, 10));
+  let k = 0;
+
+  // saut direct au premier rang susceptible de tomber dans la fenêtre
+  if (du > flux.debut) {
+    k = freq.jours
+      ? Math.max(0, Math.floor(joursEntre(flux.debut, du) / freq.jours))
+      : Math.max(0, Math.floor(moisEntre(flux.debut, du) / freq.mois));
+  }
+
+  const dateDuRang = (rang) => freq.jours
+    ? ajouterJours(flux.debut, rang * freq.jours)
+    : ajouterMois(flux.debut, rang * freq.mois, ancre);
+
+  let date = dateDuRang(k);
+  let garde = 0;
+  while (date < du && garde++ < OCCURRENCES_MAX) date = dateDuRang(++k);
+
+  garde = 0;
+  while (date <= borneFin && garde++ < OCCURRENCES_MAX) {
+    res.push({ date, montant: arrondi2(montantA(flux, date, reference)) });
+    date = dateDuRang(++k);
+  }
+  return res;
+}
+
+/** Rythme mensuel moyen d'un flux, sans tenir compte des dates. */
+function mensualiteMoyenne(flux) {
+  const freq = FREQ[flux.frequence] || FREQ.mensuel;
+  return freq.parAn ? (flux.montant * freq.parAn) / 12 : 0;
+}
+
+/**
+ * Projection complète.
+ *
+ * options : { du, au, flux, comptes, soldeInitial, compteId }
+ * Renvoie les opérations datées, la courbe de solde, le détail mois par mois,
+ * la répartition par catégorie et les dates de rupture.
+ */
+function projeter(options) {
+  const o = options || {};
+  const du = estIso(o.du) ? o.du : departProjection();
+  // l'horizon se compte en mois pleins : douze mois, c'est jusqu'à la fin du
+  // douzième — pas jusqu'au même quantième, qui laisserait un mois tronqué
+  const au = estIso(o.au) ? o.au : finDeMois(cleMois(ajouterMois(du, ETAT.parametres.horizon - 1)));
+  const listeFlux = (o.flux || ETAT.flux).filter((f) => !o.compteId
+    || f.compteId === o.compteId
+    || (f.type === "virement" && f.compteDest === o.compteId));
+  const comptes = o.comptes || ETAT.comptes;
+  const soldeInitial = o.soldeInitial !== undefined
+    ? o.soldeInitial
+    : (o.compteId ? (compte(o.compteId) ? compte(o.compteId).solde : 0)
+                  : comptes.reduce((s, c) => s + c.solde, 0));
+
+  /* Un virement n'est ni un revenu ni une dépense : c'est de l'argent qui
+     change de poche. Il ne compte dans les totaux que si sa contrepartie est
+     hors du périmètre observé — sur l'ensemble des comptes, jamais ; sur un
+     compte seul, toujours. Vu de tous les comptes, les deux jambes se
+     compensent et une seule ligne est affichée, à montant nul. */
+  const dansPerimetre = (id) => !o.compteId || id === o.compteId;
+
+  const operations = [];
+  for (const f of listeFlux) {
+    for (const oc of occurrences(f, du, au, du)) {
+      const commun = { date: oc.date, brut: oc.montant, type: f.type, libelle: f.libelle, fluxId: f.id };
+      if (f.type === "virement") {
+        const source = dansPerimetre(f.compteId);
+        const destination = dansPerimetre(f.compteDest);
+        if (source && destination) {
+          operations.push(Object.assign({}, commun, {
+            montant: 0, comptable: false, sens: "interne",
+            categorieId: null, compteId: f.compteId, compteDest: f.compteDest,
+          }));
+        } else if (source) {
+          operations.push(Object.assign({}, commun, {
+            montant: -oc.montant, comptable: true, sens: "sortie",
+            categorieId: null, compteId: f.compteId, compteDest: f.compteDest,
+          }));
+        } else if (destination) {
+          operations.push(Object.assign({}, commun, {
+            montant: oc.montant, comptable: true, sens: "entree",
+            categorieId: null, compteId: f.compteDest, compteDest: f.compteId,
+          }));
+        }
+      } else {
+        operations.push(Object.assign({}, commun, {
+          montant: f.type === "revenu" ? oc.montant : -oc.montant,
+          comptable: true,
+          categorieId: f.categorieId,
+          compteId: f.compteId,
+        }));
+      }
+    }
+  }
+  operations.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+
+  // courbe de solde : un point au départ, un par jour où quelque chose bouge
+  const points = [{ date: du, solde: soldeInitial }];
+  let solde = soldeInitial;
+  let soldeMin = soldeInitial, dateSoldeMin = du;
+  let dateDecouvert = null, dateSousSeuil = null;
+  const seuil = ETAT.parametres.seuilAlerte;
+
+  for (let i = 0; i < operations.length; i++) {
+    solde = arrondi2(solde + operations[i].montant);
+    operations[i].solde = solde;
+    const dernier = operations[i].date;
+    if (i === operations.length - 1 || operations[i + 1].date !== dernier) {
+      points.push({ date: dernier, solde });
+    }
+    if (solde < soldeMin) { soldeMin = solde; dateSoldeMin = dernier; }
+    if (solde < 0 && !dateDecouvert) dateDecouvert = dernier;
+    if (seuil > 0 && solde < seuil && !dateSousSeuil) dateSousSeuil = dernier;
+  }
+  if (points[points.length - 1].date !== au) points.push({ date: au, solde });
+
+  // mois par mois — tous les mois de la fenêtre, y compris les mois vides
+  const mois = [];
+  const parCle = new Map();
+  for (let cle = cleMois(du); cle <= cleMois(au); cle = moisSuivant(cle)) {
+    const m = {
+      cle, revenus: 0, depenses: 0, net: 0,
+      soldeFin: soldeInitial, soldeMin: null, operations: [],
+    };
+    mois.push(m);
+    parCle.set(cle, m);
+  }
+
+  let courant = soldeInitial;
+  for (const op of operations) {
+    const m = parCle.get(cleMois(op.date));
+    if (!m) continue;
+    m.operations.push(op);
+    if (!op.comptable) continue;
+    if (op.montant >= 0) m.revenus += op.montant; else m.depenses += -op.montant;
+  }
+  for (const m of mois) {
+    m.revenus = arrondi2(m.revenus);
+    m.depenses = arrondi2(m.depenses);
+    m.net = arrondi2(m.revenus - m.depenses);
+    courant = arrondi2(courant + m.net);
+    m.soldeFin = courant;
+    m.soldeMin = m.operations.length
+      ? Math.min.apply(null, m.operations.map((op) => op.solde))
+      : courant;
+  }
+
+  // répartition par catégorie
+  const parCategorie = new Map();
+  for (const op of operations) {
+    if (!op.comptable || !op.categorieId) continue;
+    const cle = op.categorieId;
+    if (!parCategorie.has(cle)) {
+      parCategorie.set(cle, { categorieId: op.categorieId, type: op.type, total: 0, nombre: 0 });
+    }
+    const e = parCategorie.get(cle);
+    e.total = arrondi2(e.total + op.brut);
+    e.nombre++;
+  }
+
+  const totalRevenus = arrondi2(mois.reduce((s, m) => s + m.revenus, 0));
+  const totalDepenses = arrondi2(mois.reduce((s, m) => s + m.depenses, 0));
+  const nbMois = Math.max(1, mois.length);
+
+  return {
+    du, au, soldeInitial, soldeFinal: solde,
+    operations, points, mois, parCategorie,
+    nbMois,
+    totaux: {
+      revenus: totalRevenus,
+      depenses: totalDepenses,
+      net: arrondi2(totalRevenus - totalDepenses),
+      revenusMensuels: arrondi2(totalRevenus / nbMois),
+      depensesMensuelles: arrondi2(totalDepenses / nbMois),
+      netMensuel: arrondi2((totalRevenus - totalDepenses) / nbMois),
+      tauxEpargne: totalRevenus > 0 ? ((totalRevenus - totalDepenses) / totalRevenus) * 100 : null,
+    },
+    alerte: { dateDecouvert, dateSousSeuil, soldeMin, dateSoldeMin, seuil },
+  };
+}
+
+/** Solde projeté à une date donnée, lu sur la courbe en escalier. */
+function soldeALaDate(projection, date) {
+  if (!projection.points.length) return projection.soldeInitial;
+  if (date <= projection.points[0].date) return projection.soldeInitial;
+  let solde = projection.soldeInitial;
+  for (const p of projection.points) {
+    if (p.date > date) break;
+    solde = p.solde;
+  }
+  return solde;
+}
+
+/* ── Scénarios ────────────────────────────────────────────────────────── */
+
+/** Liste de flux d'un scénario : exclusions, ajustements, ajouts. */
+function fluxDuScenario(scenario) {
+  if (!scenario) return ETAT.flux.slice();
+  const exclus = new Set(scenario.exclus || []);
+  const ajuste = (f) => {
+    if (f.type === "virement") return f;
+    const pct = f.type === "revenu" ? scenario.ajustRevenus : scenario.ajustDepenses;
+    if (!pct) return f;
+    return Object.assign({}, f, { montant: arrondi2(f.montant * (1 + pct / 100)) });
+  };
+  return ETAT.flux.filter((f) => !exclus.has(f.id)).map(ajuste).concat(scenario.extras || []);
+}
+
+function projeterScenario(scenario, du, au) {
+  return projeter({
+    du, au,
+    flux: fluxDuScenario(scenario),
+    soldeInitial: soldeDepart() + (scenario ? scenario.soldeDelta : 0),
+  });
+}
+
+/* ── Objectifs ────────────────────────────────────────────────────────── */
+
+/**
+ * Un objectif est jugé sur la trajectoire, pas sur le seul solde final :
+ * on lit le solde projeté à la date cible et on en déduit ce qu'il
+ * manquerait, chaque mois, pour y arriver.
+ */
+function evaluerObjectif(objectif, projection) {
+  const depart = projection.du;
+  const cpt = objectif.compteId ? compte(objectif.compteId) : null;
+  const proj = objectif.compteId
+    ? projeter({ du: projection.du, au: projection.au, compteId: objectif.compteId })
+    : projection;
+
+  const actuel = cpt ? cpt.solde : projection.soldeInitial;
+  const dansFenetre = objectif.dateCible <= proj.au;
+  const projete = dansFenetre ? soldeALaDate(proj, objectif.dateCible) : null;
+  const moisRestants = Math.max(0, moisEntre(depart, objectif.dateCible));
+  const manque = projete === null ? null : arrondi2(objectif.cible - projete);
+  const rythmeProjete = proj.totaux.netMensuel;
+
+  let verdict = "hors-horizon";
+  if (objectif.dateCible < depart) verdict = "echu";
+  else if (projete !== null) verdict = manque <= 0 ? "atteint" : (manque <= objectif.cible * 0.1 ? "juste" : "insuffisant");
+
+  return {
+    objectif, actuel, projete, manque, moisRestants, rythmeProjete, verdict,
+    progression: objectif.cible > 0 ? Math.max(0, Math.min(1, (projete === null ? actuel : projete) / objectif.cible)) : 0,
+    progressionActuelle: objectif.cible > 0 ? Math.max(0, Math.min(1, actuel / objectif.cible)) : 0,
+    effortMensuel: manque !== null && manque > 0 && moisRestants > 0 ? arrondi2(manque / moisRestants) : 0,
+  };
+}
+
+/* ── Enveloppes par catégorie ─────────────────────────────────────────── */
+
+function enveloppes(projection) {
+  return ETAT.categories
+    .filter((c) => c.type === "depense")
+    .map((c) => {
+      const e = projection.parCategorie.get(c.id);
+      const total = e ? e.total : 0;
+      const mensuel = arrondi2(total / projection.nbMois);
+      const plafond = c.plafond;
+      return {
+        categorie: c, total, mensuel, plafond,
+        ecart: plafond ? arrondi2(mensuel - plafond) : null,
+        ratio: plafond ? mensuel / plafond : null,
+      };
+    })
+    .sort((a, b) => b.mensuel - a.mensuel);
+}
+
+/* ── Prêt : mensualité d'un emprunt amortissable ──────────────────────── */
+
+/** Mensualité constante d'un prêt — formule d'annuité classique. */
+function mensualitePret(capital, tauxAnnuel, mois) {
+  if (!(capital > 0) || !(mois > 0)) return 0;
+  const t = (Number(tauxAnnuel) || 0) / 100 / 12;
+  if (t <= 0) return arrondi2(capital / mois);
+  return arrondi2((capital * t) / (1 - Math.pow(1 + t, -mois)));
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   6. Persistance
+   ══════════════════════════════════════════════════════════════════════ */
+
+function chargerEtat() {
+  let brut = null;
+  try {
+    const t = localStorage.getItem(CLE_ETAT);
+    if (t) brut = JSON.parse(t);
+  } catch (e) { brut = null; }
+  ETAT = normaliser(brut);
+  return brut !== null;
+}
+
+function enregistrerEtat() {
+  _formats = {};
+  try {
+    localStorage.setItem(CLE_ETAT, JSON.stringify(ETAT));
+  } catch (e) {
+    message("Sauvegarde impossible — l'espace du navigateur est plein.");
+  }
+}
+
+function modifier(action) {
+  action();
+  enregistrerEtat();
+  rendre();
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   7. Jeu de démonstration
+
+   Un foyer plausible : un salaire indexé, un treizième mois, un loyer, des
+   charges, un crédit auto qui se termine, des impôts trimestriels et des
+   vacances annuelles. Assez pour que toutes les vues aient quelque chose à
+   montrer dès la première ouverture.
+   ══════════════════════════════════════════════════════════════════════ */
+
+function jeuDemo() {
+  const debut = debutDeMois(cleMois(aujourdhui()));
+  const an = (n) => ajouterMois(debut, n);
+
+  const comptes = [
+    { id: "cpt-courant", nom: "Compte courant", type: "courant", solde: 2840, teinte: 1 },
+    { id: "cpt-livret", nom: "Livret d'épargne", type: "epargne", solde: 6200, teinte: 2 },
+  ];
+
+  const f = (libelle, type, montant, categorieId, frequence, jour, extra) => Object.assign({
+    id: identifiant("flx"), libelle, type, montant, categorieId,
+    compteId: "cpt-courant", frequence,
+    debut: debut.slice(0, 8) + deuxChiffres(Math.min(jour, 28)),
+    fin: null, indexation: 0, actif: true, note: "",
+  }, extra || {});
+
+  const flux = [
+    f("Salaire net", "revenu", 2450, "cat-salaire", "mensuel", 27, { indexation: 1.5 }),
+    f("Treizième mois", "revenu", 2450, "cat-primes", "annuel", 20, { debut: an(0).slice(0, 5) + "12-20", indexation: 1.5 }),
+    f("Allocations", "revenu", 140, "cat-aides", "mensuel", 5),
+
+    f("Loyer", "depense", 780, "cat-logement", "mensuel", 3, { indexation: 2 }),
+    f("Charges de copropriété", "depense", 220, "cat-logement", "trimestriel", 10),
+    f("Assurance habitation", "depense", 186, "cat-logement", "annuel", 15),
+    f("Courses", "depense", 145, "cat-courses", "hebdo", 6, { indexation: 2.5 }),
+    f("Électricité & gaz", "depense", 118, "cat-energie", "mensuel", 8, { indexation: 4 }),
+    f("Eau", "depense", 74, "cat-energie", "trimestriel", 12),
+    f("Carburant", "depense", 90, "cat-transport", "quinzaine", 4),
+    f("Assurance auto", "depense", 62, "cat-transport", "mensuel", 6),
+    f("Mutuelle", "depense", 68, "cat-sante", "mensuel", 5),
+    f("Téléphone & internet", "depense", 46, "cat-abos", "mensuel", 9),
+    f("Abonnements vidéo & musique", "depense", 24, "cat-abos", "mensuel", 12),
+    f("Salle de sport", "depense", 32, "cat-loisirs", "mensuel", 2),
+    f("Sorties & restaurants", "depense", 120, "cat-loisirs", "mensuel", 20),
+    f("Impôt sur le revenu", "depense", 410, "cat-impots", "trimestriel", 15),
+    f("Taxe foncière", "depense", 0, "cat-impots", "annuel", 15, { montant: 0, actif: false }),
+    f("Crédit auto", "depense", 249, "cat-credits", "mensuel", 5, { fin: an(17) }),
+    f("Virement épargne", "virement", 250, null, "mensuel", 2, { compteDest: "cpt-livret" }),
+    f("Vacances d'été", "depense", 1400, "cat-loisirs", "annuel", 1, { debut: an(0).slice(0, 5) + "07-01" }),
+    f("Cadeaux de fin d'année", "depense", 400, "cat-divers", "annuel", 10, { debut: an(0).slice(0, 5) + "12-10" }),
+  ];
+
+  const objectifs = [
+    { id: identifiant("obj"), nom: "Épargne de précaution", cible: 12000, dateCible: an(18), compteId: "cpt-livret", teinte: 2 },
+    { id: identifiant("obj"), nom: "Apport appartement", cible: 25000, dateCible: an(36), compteId: null, teinte: 4 },
+  ];
+
+  const scenarios = [
+    {
+      id: identifiant("scn"), nom: "Déménagement (loyer +150 €)", teinte: 5, actif: true,
+      ajustRevenus: 0, ajustDepenses: 0, soldeDelta: -1500, exclus: [], extras: [],
+    },
+    {
+      id: identifiant("scn"), nom: "Serrage de ceinture (−15 % de dépenses)", teinte: 2, actif: true,
+      ajustRevenus: 0, ajustDepenses: -15, soldeDelta: 0, exclus: [], extras: [],
+    },
+  ];
+
+  const brut = {
+    version: VERSION_ETAT,
+    parametres: Object.assign({}, PARAMETRES_DEFAUT, { titre: "Budget du foyer", seuilAlerte: 800 }),
+    comptes, categories: CATEGORIES_DEFAUT, flux, objectifs, scenarios,
+  };
+
+  // le loyer du scénario « déménagement » : même flux, montant relevé
+  const etat = normaliser(brut);
+  const loyer = etat.flux.find((x) => x.libelle === "Loyer");
+  if (loyer) {
+    etat.scenarios[0].exclus = [loyer.id];
+    etat.scenarios[0].extras = [normaliserFlux(
+      Object.assign({}, loyer, { id: identifiant("flx"), libelle: "Loyer (nouveau logement)", montant: 930 }),
+      0, etat.comptes, etat.categories
+    )];
+  }
+  return etat;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   8. Graphiques — du SVG écrit à la main, aucune bibliothèque
+
+   Les dimensions sont mesurées sur le conteneur plutôt que laissées à un
+   viewBox élastique : les libellés gardent la même taille sur un téléphone
+   et sur un écran large. Le redimensionnement de la fenêtre relance le
+   rendu de la vue courante.
+   ══════════════════════════════════════════════════════════════════════ */
+
+function largeurDe(cible, defaut) {
+  const l = cible && cible.clientWidth ? cible.clientWidth : 0;
+  return Math.max(300, l || defaut || 720);
+}
+
+/** Graduations « rondes » couvrant [min, max]. */
+function graduations(min, max, cible) {
+  if (!isFinite(min) || !isFinite(max)) return [0];
+  if (min === max) { min -= 1; max += 1; }
+  const brut = (max - min) / Math.max(2, cible || 5);
+  const magnitude = Math.pow(10, Math.floor(Math.log10(Math.abs(brut) || 1)));
+  const normalise = brut / magnitude;
+  const pas = (normalise <= 1 ? 1 : normalise <= 2 ? 2 : normalise <= 2.5 ? 2.5 : normalise <= 5 ? 5 : 10) * magnitude;
+  const debut = Math.floor(min / pas) * pas;
+  const res = [];
+  for (let v = debut; v <= max + pas * 0.001; v += pas) res.push(arrondi2(v));
+  return res;
+}
+
+function infobulleDe(boite) {
+  let bulle = boite.querySelector(".infobulle");
+  if (!bulle) {
+    bulle = document.createElement("div");
+    bulle.className = "infobulle";
+    bulle.style.opacity = "0";
+    boite.appendChild(bulle);
+  }
+  return bulle;
+}
+
+function placerBulle(bulle, boite, x, y) {
+  const l = bulle.offsetWidth || 160;
+  const largeur = boite.clientWidth;
+  let gx = x + 14;
+  if (gx + l > largeur) gx = Math.max(4, x - l - 14);
+  bulle.style.left = gx + "px";
+  bulle.style.top = Math.max(4, y - 10) + "px";
+  bulle.style.opacity = "1";
+}
+
+/**
+ * Courbes de solde dans le temps.
+ * series : [{ nom, couleur, points: [{date, solde}], remplir }]
+ */
+function grapheCourbes(cible, series, options) {
+  const o = options || {};
+  const L = largeurDe(cible);
+  const H = o.hauteur || 280;
+  const mg = { h: 14, d: 12, b: 26, g: 58 };
+  const l = L - mg.g - mg.d;
+  const h = H - mg.h - mg.b;
+
+  const utiles = series.filter((s) => s.points && s.points.length);
+  if (!utiles.length) { cible.innerHTML = '<div class="vide">Rien à projeter pour l\'instant.</div>'; return; }
+
+  const t0 = versUTC(utiles[0].points[0].date);
+  const t1 = versUTC(utiles[0].points[utiles[0].points.length - 1].date);
+  const etendue = Math.max(1, t1 - t0);
+
+  let min = Infinity, max = -Infinity;
+  for (const s of utiles) for (const p of s.points) { if (p.solde < min) min = p.solde; if (p.solde > max) max = p.solde; }
+  if (o.seuil > 0) { min = Math.min(min, o.seuil); max = Math.max(max, o.seuil); }
+  min = Math.min(min, 0);
+  const marge = (max - min) * 0.08 || 100;
+  min -= marge; max += marge;
+
+  const gx = (iso) => mg.g + ((versUTC(iso) - t0) / etendue) * l;
+  const gy = (v) => mg.h + h - ((v - min) / (max - min || 1)) * h;
+
+  const ticks = graduations(min, max, 5);
+  let svg = '<svg class="graphe" width="' + L + '" height="' + H + '" viewBox="0 0 ' + L + ' ' + H + '" role="img" aria-label="' + esc(o.titreAccessible || "Solde projeté") + '">';
+
+  for (const t of ticks) {
+    const y = gy(t);
+    if (y < mg.h - 1 || y > mg.h + h + 1) continue;
+    svg += '<line class="ligne-grille" x1="' + mg.g + '" y1="' + y.toFixed(1) + '" x2="' + (mg.g + l) + '" y2="' + y.toFixed(1) + '"/>';
+    svg += '<text class="axe" x="' + (mg.g - 8) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end">' + esc(argentCourt(t)) + "</text>";
+  }
+
+  if (min < 0 && max > 0) {
+    svg += '<line class="ligne-zero" x1="' + mg.g + '" y1="' + gy(0).toFixed(1) + '" x2="' + (mg.g + l) + '" y2="' + gy(0).toFixed(1) + '"/>';
+  }
+  if (o.seuil > 0) {
+    svg += '<line class="ligne-seuil" x1="' + mg.g + '" y1="' + gy(o.seuil).toFixed(1) + '" x2="' + (mg.g + l) + '" y2="' + gy(o.seuil).toFixed(1) + '"/>';
+  }
+
+  // repères de temps : un par trimestre au plus, six au total au maximum
+  const nbMois = Math.max(1, moisEntre(utiles[0].points[0].date, utiles[0].points[utiles[0].points.length - 1].date));
+  const pasMois = Math.max(1, Math.ceil(nbMois / Math.max(2, Math.floor(l / 90))));
+  for (let k = 0; k <= nbMois; k += pasMois) {
+    const iso = ajouterMois(utiles[0].points[0].date, k);
+    if (versUTC(iso) > t1) break;
+    svg += '<text class="axe" x="' + gx(iso).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle">' + esc(libelleMois(cleMois(iso), true)) + "</text>";
+  }
+
+  // courbes en escalier : entre deux échéances, le solde ne bouge pas
+  for (const s of utiles) {
+    let d = "";
+    let px = null, py = null;
+    for (const p of s.points) {
+      const x = gx(p.date), y = gy(p.solde);
+      if (px === null) { d = "M" + x.toFixed(1) + "," + y.toFixed(1); }
+      else { d += "L" + x.toFixed(1) + "," + py.toFixed(1) + "L" + x.toFixed(1) + "," + y.toFixed(1); }
+      px = x; py = y;
+    }
+    if (s.remplir) {
+      const base = Math.min(mg.h + h, Math.max(mg.h, gy(Math.max(0, min))));
+      svg += '<path d="' + d + "L" + px.toFixed(1) + "," + base.toFixed(1) + "L" + gx(s.points[0].date).toFixed(1) + "," + base.toFixed(1) + 'Z" fill="' + s.couleur + '" opacity=".10"/>';
+    }
+    svg += '<path d="' + d + '" fill="none" stroke="' + s.couleur + '" stroke-width="' + (s.epaisseur || 2) + '" stroke-linejoin="round" stroke-linecap="round"' + (s.pointille ? ' stroke-dasharray="5 4"' : "") + "/>";
+  }
+
+  // marqueur de découvert
+  if (o.marqueur && o.marqueur.date >= utiles[0].points[0].date) {
+    const x = gx(o.marqueur.date);
+    svg += '<line x1="' + x.toFixed(1) + '" y1="' + mg.h + '" x2="' + x.toFixed(1) + '" y2="' + (mg.h + h) + '" stroke="var(--depense)" stroke-width="1.5" stroke-dasharray="4 3"/>';
+    svg += '<circle cx="' + x.toFixed(1) + '" cy="' + gy(o.marqueur.valeur).toFixed(1) + '" r="4" fill="var(--depense)"/>';
+  }
+
+  svg += '<g class="survol"><line class="curseur" x1="0" y1="' + mg.h + '" x2="0" y2="' + (mg.h + h) + '" style="opacity:0"/></g>';
+  svg += '<rect x="' + mg.g + '" y="' + mg.h + '" width="' + l + '" height="' + h + '" fill="transparent" class="capteur"/>';
+  svg += "</svg>";
+
+  cible.innerHTML = svg;
+  cible.classList.add("boite-graphe");
+
+  // survol : date sous le curseur, valeur de chaque série à cette date
+  const bulle = infobulleDe(cible);
+  const capteur = cible.querySelector(".capteur");
+  const curseur = cible.querySelector(".survol line");
+
+  const bouger = (ev) => {
+    const rect = cible.querySelector("svg").getBoundingClientRect();
+    const px = (ev.touches ? ev.touches[0].clientX : ev.clientX) - rect.left;
+    const ratio = Math.max(0, Math.min(1, (px - mg.g) / l));
+    const iso = versIso(t0 + ratio * etendue);
+    curseur.setAttribute("x1", gx(iso).toFixed(1));
+    curseur.setAttribute("x2", gx(iso).toFixed(1));
+    curseur.style.opacity = "1";
+    let html = '<div class="t">' + esc(libelleDate(iso)) + "</div>";
+    for (const s of utiles) {
+      const v = lireSurPoints(s.points, iso);
+      html += '<div class="l"><span><i class="puce" style="background:' + s.couleur + '"></i>' + esc(s.nom) + "</span><b>" + esc(argent(v)) + "</b></div>";
+    }
+    bulle.innerHTML = html;
+    placerBulle(bulle, cible, gx(iso), mg.h + 6);
+  };
+  capteur.addEventListener("mousemove", bouger);
+  capteur.addEventListener("touchmove", (e) => { bouger(e); }, { passive: true });
+  capteur.addEventListener("mouseleave", () => { bulle.style.opacity = "0"; curseur.style.opacity = "0"; });
+}
+
+function lireSurPoints(points, date) {
+  let v = points.length ? points[0].solde : 0;
+  for (const p of points) { if (p.date > date) break; v = p.solde; }
+  return v;
+}
+
+/** Barres revenus / dépenses mois par mois. */
+function grapheBarres(cible, mois, options) {
+  const o = options || {};
+  const L = largeurDe(cible);
+  const H = o.hauteur || 250;
+  const mg = { h: 14, d: 10, b: 26, g: 58 };
+  const l = L - mg.g - mg.d;
+  const h = H - mg.h - mg.b;
+
+  if (!mois.length) { cible.innerHTML = '<div class="vide">Aucun mois à afficher.</div>'; return; }
+
+  const max = Math.max(1, ...mois.map((m) => Math.max(m.revenus, m.depenses)));
+  const ticks = graduations(0, max, 4);
+  const haut = ticks[ticks.length - 1] || max;
+  const pas = l / mois.length;
+  const largeurBarre = Math.max(2, Math.min(16, pas / 2 - 2));
+
+  const gy = (v) => mg.h + h - (v / haut) * h;
+
+  let svg = '<svg class="graphe" width="' + L + '" height="' + H + '" viewBox="0 0 ' + L + ' ' + H + '" role="img" aria-label="Revenus et dépenses mois par mois">';
+  for (const t of ticks) {
+    const y = gy(t);
+    svg += '<line class="ligne-grille" x1="' + mg.g + '" y1="' + y.toFixed(1) + '" x2="' + (mg.g + l) + '" y2="' + y.toFixed(1) + '"/>';
+    svg += '<text class="axe" x="' + (mg.g - 8) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end">' + esc(argentCourt(t)) + "</text>";
+  }
+
+  const pasEtiquette = Math.max(1, Math.ceil(mois.length / Math.max(2, Math.floor(l / 78))));
+  mois.forEach((m, i) => {
+    const centre = mg.g + i * pas + pas / 2;
+    const xr = centre - largeurBarre - 1;
+    const xd = centre + 1;
+    svg += '<rect x="' + xr.toFixed(1) + '" y="' + gy(m.revenus).toFixed(1) + '" width="' + largeurBarre.toFixed(1) +
+      '" height="' + Math.max(0, mg.h + h - gy(m.revenus)).toFixed(1) + '" rx="2" fill="var(--revenu)"/>';
+    svg += '<rect x="' + xd.toFixed(1) + '" y="' + gy(m.depenses).toFixed(1) + '" width="' + largeurBarre.toFixed(1) +
+      '" height="' + Math.max(0, mg.h + h - gy(m.depenses)).toFixed(1) + '" rx="2" fill="var(--depense)"/>';
+    if (i % pasEtiquette === 0) {
+      svg += '<text class="axe" x="' + centre.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle">' + esc(libelleMois(m.cle, true)) + "</text>";
+    }
+    svg += '<rect class="colonne" data-i="' + i + '" x="' + (mg.g + i * pas).toFixed(1) + '" y="' + mg.h + '" width="' + pas.toFixed(1) + '" height="' + h + '" fill="transparent"/>';
+  });
+  svg += "</svg>";
+  cible.innerHTML = svg;
+  cible.classList.add("boite-graphe");
+
+  const bulle = infobulleDe(cible);
+  cible.querySelectorAll(".colonne").forEach((r) => {
+    r.addEventListener("mouseenter", () => {
+      const m = mois[Number(r.dataset.i)];
+      bulle.innerHTML = '<div class="t">' + esc(libelleMois(m.cle)) + "</div>" +
+        '<div class="l"><span><i class="puce" style="background:var(--revenu)"></i>Revenus</span><b>' + esc(argent(m.revenus)) + "</b></div>" +
+        '<div class="l"><span><i class="puce" style="background:var(--depense)"></i>Dépenses</span><b>' + esc(argent(m.depenses)) + "</b></div>" +
+        '<div class="l"><span>Net</span><b class="' + (m.net >= 0 ? "pos" : "neg") + '">' + esc(argent(m.net, { signe: true })) + "</b></div>" +
+        '<div class="l"><span>Solde fin de mois</span><b>' + esc(argent(m.soldeFin)) + "</b></div>";
+      placerBulle(bulle, cible, Number(r.getAttribute("x")) + Number(r.getAttribute("width")) / 2, mg.h + 6);
+    });
+    r.addEventListener("mouseleave", () => { bulle.style.opacity = "0"; });
+  });
+}
+
+/** Anneau de répartition. parts : [{nom, valeur, couleur}] */
+function grapheAnneau(cible, parts, options) {
+  const o = options || {};
+  const taille = o.taille || 190;
+  const total = parts.reduce((s, p) => s + p.valeur, 0);
+  if (!total) { cible.innerHTML = '<div class="vide">Aucune dépense sur la période.</div>'; return; }
+
+  const r = taille / 2 - 6;
+  const rInt = r * 0.62;
+  const cx = taille / 2, cy = taille / 2;
+  let angle = -Math.PI / 2;
+
+  let svg = '<svg class="graphe" width="' + taille + '" height="' + taille + '" viewBox="0 0 ' + taille + ' ' + taille + '" role="img" aria-label="Répartition des dépenses">';
+  for (const p of parts) {
+    const part = p.valeur / total;
+    const fin = angle + part * Math.PI * 2;
+    const grand = part > 0.5 ? 1 : 0;
+    const x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
+    const x2 = cx + r * Math.cos(fin), y2 = cy + r * Math.sin(fin);
+    const x3 = cx + rInt * Math.cos(fin), y3 = cy + rInt * Math.sin(fin);
+    const x4 = cx + rInt * Math.cos(angle), y4 = cy + rInt * Math.sin(angle);
+    // un secteur complet ne se trace pas en arc : on pose un anneau plein
+    if (part > 0.999) {
+      svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + ((r + rInt) / 2) + '" fill="none" stroke="' + p.couleur + '" stroke-width="' + (r - rInt) + '"><title>' + esc(p.nom) + "</title></circle>";
+    } else {
+      svg += '<path d="M' + x1.toFixed(2) + "," + y1.toFixed(2) + "A" + r + "," + r + " 0 " + grand + ",1 " + x2.toFixed(2) + "," + y2.toFixed(2) +
+        "L" + x3.toFixed(2) + "," + y3.toFixed(2) + "A" + rInt + "," + rInt + " 0 " + grand + ",0 " + x4.toFixed(2) + "," + y4.toFixed(2) +
+        'Z" fill="' + p.couleur + '" stroke="var(--surface)" stroke-width="1.5"><title>' + esc(p.nom + " · " + argent(p.valeur)) + "</title></path>";
+    }
+    angle = fin;
+  }
+  svg += '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" style="font-family:var(--display);font-weight:700;font-size:16px;fill:var(--texte)">' + esc(argentCourt(total)) + "</text>";
+  svg += '<text x="' + cx + '" y="' + (cy + 14) + '" text-anchor="middle" class="axe">' + esc(o.legende || "au total") + "</text>";
+  svg += "</svg>";
+  cible.innerHTML = svg;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   9. Vues
+   ══════════════════════════════════════════════════════════════════════ */
+
+const VUES = ["tableau", "flux", "projection", "categories", "objectifs", "scenarios", "comptes", "reglages"];
+let vueActive = "tableau";
+let PROJECTION = null;
+
+const ui = {
+  recherche: "",
+  filtreType: "tous",
+  tri: "montant",
+  compteProjection: "",
+  moisOuverts: new Set(),
+};
+
+function boite(id) { return document.getElementById(id); }
+
+function message(texte) {
+  const zone = boite("messages");
+  const el = document.createElement("div");
+  el.className = "message";
+  el.textContent = texte;
+  zone.appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+function carte(contenu, options) {
+  const o = options || {};
+  const tete = o.titre
+    ? '<div class="carte-tete"><h2>' + esc(o.titre) + "</h2>" + (o.droite ? '<div class="droite">' + o.droite + "</div>" : "") + "</div>" +
+      (o.sous ? '<p class="sous">' + esc(o.sous) + "</p>" : "")
+    : "";
+  return '<div class="carte' + (o.classe ? " " + o.classe : "") + '"' + (o.id ? ' id="' + o.id + '"' : "") + ">" + tete + contenu + "</div>";
+}
+
+/** Le montant d'une opération, signé — sauf un virement interne, qui ne fait
+ *  ni entrer ni sortir d'argent du périmètre observé. */
+function montantOperation(op) {
+  if (op.type === "virement" && op.sens === "interne") {
+    return '<span class="dim">↔ ' + esc(argent(op.brut)) + "</span>";
+  }
+  return '<span class="' + (op.montant >= 0 ? "pos" : "neg") + '">' + esc(argent(op.montant, { signe: true })) + "</span>";
+}
+
+/** « Courant → Livret » pour un virement, la catégorie sinon. */
+function contexteOperation(op) {
+  if (op.type !== "virement") return nomCategorie(op.categorieId);
+  if (op.sens === "entree") return nomCompte(op.compteDest) + " → " + nomCompte(op.compteId);
+  return nomCompte(op.compteId) + " → " + nomCompte(op.compteDest);
+}
+
+function kpi(etiquette, valeur, note, couleur) {
+  return '<div class="kpi"><span class="etiq">' + esc(etiquette) + "</span>" +
+    '<span class="val"' + (couleur ? ' style="color:' + couleur + '"' : "") + ">" + esc(valeur) + "</span>" +
+    (note ? '<span class="note">' + note + "</span>" : "") + "</div>";
+}
+
+/* ── Tableau de bord ──────────────────────────────────────────────────── */
+
+function rendreTableau(cible, p) {
+  if (!ETAT.flux.length) { cible.innerHTML = etatVide(); return; }
+
+  const t = p.totaux;
+  const evolution = arrondi2(p.soldeFinal - p.soldeInitial);
+  const horizonTexte = ETAT.parametres.horizon + " mois";
+
+  const kpis = carte(
+    '<div class="grille g4">' +
+    kpi("Solde aujourd'hui", argent(p.soldeInitial),
+      esc(ETAT.comptes.length + (ETAT.comptes.length > 1 ? " comptes" : " compte"))) +
+    kpi("Dans " + horizonTexte, argent(p.soldeFinal),
+      '<span class="' + (evolution >= 0 ? "pos" : "neg") + '">' + esc(argent(evolution, { signe: true })) + "</span> sur la période",
+      evolution >= 0 ? "var(--revenu-texte)" : "var(--depense-texte)") +
+    kpi("Reste chaque mois", argent(t.netMensuel, { signe: true }),
+      esc(argent(t.revenusMensuels) + " − " + argent(t.depensesMensuelles)),
+      t.netMensuel >= 0 ? "var(--revenu-texte)" : "var(--depense-texte)") +
+    kpi("Taux d'épargne", t.tauxEpargne === null ? "—" : pourcent(t.tauxEpargne, 1),
+      "part des revenus non dépensée") +
+    "</div>", { classe: "kpis" });
+
+  const a = p.alerte;
+  let bandeau;
+  if (a.dateDecouvert) {
+    bandeau = '<div class="bandeau rouge"><span class="ic">⚠</span><div><b>Découvert le ' + esc(libelleDate(a.dateDecouvert)) +
+      "</b> — au rythme actuel, le solde passe sous zéro dans " + esc(nombre(Math.max(0, joursEntre(p.du, a.dateDecouvert)))) +
+      " jours, et descend jusqu'à <b>" + esc(argent(a.soldeMin)) + "</b> le " + esc(libelleDate(a.dateSoldeMin)) +
+      ". Il manque environ <b>" + esc(argent(Math.abs(a.soldeMin))) + "</b> pour tenir la période.</div></div>";
+  } else if (a.dateSousSeuil) {
+    bandeau = '<div class="bandeau ambre"><span class="ic">◉</span><div><b>Sous votre seuil de sécurité le ' + esc(libelleDate(a.dateSousSeuil)) +
+      "</b> — le solde reste positif, mais descend à " + esc(argent(a.soldeMin)) + " le " + esc(libelleDate(a.dateSoldeMin)) +
+      " alors que vous vous êtes fixé un plancher de " + esc(argent(a.seuil)) + ".</div></div>";
+  } else {
+    bandeau = '<div class="bandeau vert"><span class="ic">✓</span><div><b>Aucune rupture sur ' + esc(horizonTexte) + "</b> — le point bas est de " +
+      esc(argent(a.soldeMin)) + " le " + esc(libelleDate(a.dateSoldeMin)) +
+      (a.seuil > 0 ? ", au-dessus de votre seuil de " + esc(argent(a.seuil)) : "") + ".</div></div>";
+  }
+
+  const courbe = carte('<div id="g-solde"></div>' +
+    '<div class="legende"><span><i class="puce" style="background:var(--epargne)"></i>Solde projeté</span>' +
+    (ETAT.parametres.seuilAlerte > 0 ? '<span><svg width="18" height="8"><line x1="0" y1="4" x2="18" y2="4" class="ligne-seuil"/></svg>&nbsp;Seuil de sécurité</span>' : "") +
+    "</div>",
+    { titre: "Solde jour par jour", sous: "Chaque marche est une échéance. Le tracé suppose que tous les flux ci-dessous se réalisent comme prévu.",
+      droite: esc(libelleDate(p.du, true) + " → " + libelleDate(p.au, true)) });
+
+  const barres = carte('<div id="g-mois"></div>' +
+    '<div class="legende"><span><i class="puce" style="background:var(--revenu)"></i>Revenus</span>' +
+    '<span><i class="puce" style="background:var(--depense)"></i>Dépenses</span></div>',
+    { titre: "Mois par mois" });
+
+  // agenda : les 45 prochains jours
+  const limite = ajouterJours(p.du, 45);
+  const prochaines = p.operations.filter((op) => op.date <= limite).slice(0, 12);
+  const agenda = carte(
+    prochaines.length
+      ? '<ul class="agenda">' + prochaines.map((op) =>
+          '<li><span class="quand">' + esc(delaiTexte(op.date, p.du)) + "</span>" +
+          '<span class="quoi"><i class="puce" style="background:' + teinte(categorie(op.categorieId) ? categorie(op.categorieId).teinte : 1) + '"></i>' + esc(op.libelle) +
+          (op.type === "virement" ? ' <span class="faible">· ' + esc(contexteOperation(op)) + "</span>" : "") + "</span>" +
+          '<span class="combien">' + montantOperation(op) + "</span></li>").join("")
+        + "</ul>"
+      : '<div class="vide">Rien de prévu dans les 45 prochains jours.</div>',
+    { titre: "À venir", sous: "Les 45 prochains jours." });
+
+  // répartition des dépenses
+  const parts = [...p.parCategorie.values()]
+    .filter((e) => e.type === "depense")
+    .sort((x, y) => y.total - x.total)
+    .map((e) => {
+      const c = categorie(e.categorieId);
+      return { nom: c ? c.nom : "Sans catégorie", valeur: e.total, couleur: teinte(c ? c.teinte : 1) };
+    });
+  const totalDep = parts.reduce((s, x) => s + x.valeur, 0);
+  const repartition = carte(
+    '<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;justify-content:center">' +
+    '<div id="g-anneau"></div>' +
+    '<div style="flex:1;min-width:190px">' +
+    parts.slice(0, 7).map((x) =>
+      '<div class="l" style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;font-size:13.5px">' +
+      '<span><i class="puce" style="background:' + x.couleur + '"></i>' + esc(x.nom) + "</span>" +
+      '<span class="mono dim">' + esc(pourcent((x.valeur / totalDep) * 100, 0)) + " · " + esc(argent(x.valeur / p.nbMois)) + "/mois</span></div>").join("") +
+    (parts.length > 7 ? '<div class="faible" style="font-size:12.5px;padding-top:4px">+ ' + (parts.length - 7) + " autres catégories</div>" : "") +
+    "</div></div>",
+    { titre: "Où part l'argent", sous: "Sur toute la période projetée, dépenses seulement." });
+
+  cible.innerHTML = kpis + bandeau + courbe +
+    '<div class="grille g-2-1">' + barres + agenda + "</div>" + repartition;
+
+  grapheCourbes(boite("g-solde"), [{
+    nom: "Solde", couleur: "var(--epargne)", points: p.points, remplir: true,
+  }], {
+    seuil: ETAT.parametres.seuilAlerte,
+    marqueur: a.dateDecouvert ? { date: a.dateDecouvert, valeur: soldeALaDate(p, a.dateDecouvert) } : null,
+    hauteur: 300,
+  });
+  grapheBarres(boite("g-mois"), p.mois, { hauteur: 230 });
+  grapheAnneau(boite("g-anneau"), parts, { legende: "de dépenses" });
+}
+
+function etatVide() {
+  return carte(
+    '<div class="vide"><p style="font-size:16px;color:var(--texte);font-family:var(--display);font-weight:700">Rien à projeter — pour l\'instant.</p>' +
+    "<p>Un budget prévisionnel se construit à partir de vos flux : ce qui rentre, ce qui sort, à quel rythme, " +
+    "et à partir de quand. Ajoutez-les un par un, ou partez d'un foyer d'exemple et remplacez les montants.</p>" +
+    '<div class="rangee" style="justify-content:center">' +
+    '<button class="btn primaire" data-act="flux-nouveau">Ajouter un premier flux</button>' +
+    '<button class="btn" data-act="demo">Charger un exemple</button>' +
+    "</div></div>");
+}
+
+/* ── Revenus & dépenses ───────────────────────────────────────────────── */
+
+function prochaineEcheance(f, du, au) {
+  const oc = occurrences(f, du, au, du);
+  return oc.length ? oc[0] : null;
+}
+
+function rendreFlux(cible, p) {
+  const revenus = ETAT.flux.filter((f) => f.type === "revenu" && f.actif);
+  const depenses = ETAT.flux.filter((f) => f.type === "depense" && f.actif);
+  const virements = ETAT.flux.filter((f) => f.type === "virement" && f.actif);
+  const rythmeR = revenus.reduce((s, f) => s + mensualiteMoyenne(f), 0);
+  const rythmeD = depenses.reduce((s, f) => s + mensualiteMoyenne(f), 0);
+  const rythmeV = virements.reduce((s, f) => s + mensualiteMoyenne(f), 0);
+
+  const entete = carte(
+    '<div class="grille g3">' +
+    kpi("Revenus, rythme mensuel", argent(rythmeR), esc(revenus.length + " flux actifs"), "var(--revenu-texte)") +
+    kpi("Dépenses, rythme mensuel", argent(rythmeD), esc(depenses.length + " flux actifs"), "var(--depense-texte)") +
+    kpi("Écart", argent(rythmeR - rythmeD, { signe: true }),
+      rythmeR > 0 ? esc(pourcent(((rythmeR - rythmeD) / rythmeR) * 100, 1) + " des revenus") : "",
+      rythmeR - rythmeD >= 0 ? "var(--revenu-texte)" : "var(--depense-texte)") +
+    "</div>" +
+    '<p class="sous" style="margin:10px 0 0">Rythme moyen, ponctuels exclus : un trimestriel de 300 € compte pour 100 €/mois. ' +
+    "La projection, elle, place chaque échéance à sa date." +
+    (virements.length ? " S'y ajoutent " + esc(nombre(rythmeV)) + " € par mois de virements entre vos comptes, qui ne sont ni des revenus ni des dépenses." : "") +
+    "</p>");
+
+  const barreOutils = '<div class="rangee" style="margin-bottom:12px">' +
+    '<input type="text" id="rech" placeholder="Rechercher un flux…" value="' + esc(ui.recherche) + '" style="max-width:240px">' +
+    '<div class="segments" data-groupe="filtreType">' +
+    ["tous", "revenu", "depense"].concat(ETAT.flux.some((f) => f.type === "virement") ? ["virement"] : []).map((v) =>
+      '<button data-act="filtre-type" data-v="' + v + '" class="' + (ui.filtreType === v ? "on" : "") + '">' +
+      (v === "tous" ? "Tout" : v === "revenu" ? "Revenus" : v === "depense" ? "Dépenses" : "Virements") + "</button>").join("") +
+    "</div>" +
+    '<div class="segments" data-groupe="tri">' +
+    [["montant", "Montant"], ["libelle", "Nom"], ["date", "Prochaine"]].map(([v, n]) =>
+      '<button data-act="tri" data-v="' + v + '" class="' + (ui.tri === v ? "on" : "") + '">' + n + "</button>").join("") +
+    "</div>" +
+    '<button class="btn primaire" data-act="flux-nouveau" style="margin-left:auto">+ Nouveau flux</button></div>';
+
+  let liste = ETAT.flux.slice();
+  if (ui.filtreType !== "tous") liste = liste.filter((f) => f.type === ui.filtreType);
+  if (ui.recherche.trim()) {
+    const q = ui.recherche.trim().toLowerCase();
+    liste = liste.filter((f) => (f.libelle + " " + nomCategorie(f.categorieId) + " " + f.note).toLowerCase().includes(q));
+  }
+  const suivante = new Map(liste.map((f) => [f.id, prochaineEcheance(f, p.du, p.au)]));
+  const totalHorizon = new Map();
+  for (const f of liste) {
+    totalHorizon.set(f.id, occurrences(f, p.du, p.au, p.du).reduce((s, o) => s + o.montant, 0));
+  }
+  liste.sort((a, b) => {
+    if (ui.tri === "libelle") return a.libelle.localeCompare(b.libelle, "fr");
+    if (ui.tri === "date") {
+      const da = suivante.get(a.id), db = suivante.get(b.id);
+      if (!da) return 1; if (!db) return -1;
+      return da.date < db.date ? -1 : da.date > db.date ? 1 : 0;
+    }
+    return mensualiteMoyenne(b) - mensualiteMoyenne(a);
+  });
+
+  const lignes = liste.map((f) => {
+    const c = categorie(f.categorieId);
+    const s = suivante.get(f.id);
+    const freq = FREQ[f.frequence] || FREQ.mensuel;
+    return '<tr class="cliquable" data-act="flux-editer" data-id="' + esc(f.id) + '">' +
+      "<td><div style=\"font-weight:500\">" + esc(f.libelle) +
+        (f.actif ? "" : ' <span class="etiquette off">en pause</span>') +
+        (f.indexation ? ' <span class="etiquette" title="Revalorisation annuelle">+' + esc(nombre(f.indexation, 1)) + " %/an</span>" : "") +
+        "</div>" +
+        '<div class="faible" style="font-size:12.5px"><i class="puce" style="background:' + teinte(c ? c.teinte : 1) + '"></i>' +
+        (f.type === "virement"
+          ? esc(nomCompte(f.compteId) + " → " + nomCompte(f.compteDest))
+          : esc(nomCategorie(f.categorieId) + " · " + nomCompte(f.compteId))) +
+        (f.fin ? " · jusqu'au " + esc(libelleDate(f.fin)) : "") + "</div></td>" +
+      '<td><span class="etiquette">' + esc(freq.court) + "</span>" +
+        (f.type === "virement" ? ' <span class="etiquette">virement</span>' : "") + "</td>" +
+      '<td class="num ' + (f.type === "revenu" ? "pos" : f.type === "depense" ? "neg" : "dim") + '" style="font-weight:600">' +
+        esc(f.type === "virement" ? "↔ " + argent(f.montant) : argent(f.type === "revenu" ? f.montant : -f.montant, { signe: true })) + "</td>" +
+      '<td class="num dim">' + esc(argent(mensualiteMoyenne(f))) + "</td>" +
+      '<td class="dim">' + (s ? esc(libelleDate(s.date, true)) : '<span class="faible">—</span>') + "</td>" +
+      '<td class="num dim">' + esc(argent(totalHorizon.get(f.id) || 0)) + "</td>" +
+      '<td class="num" style="white-space:nowrap">' +
+        '<button class="btn fantome petit" data-act="flux-basculer" data-id="' + esc(f.id) + '" title="' + (f.actif ? "Mettre en pause" : "Réactiver") + '">' + (f.actif ? "⏸" : "▶") + "</button>" +
+        '<button class="btn fantome petit" data-act="flux-dupliquer" data-id="' + esc(f.id) + '" title="Dupliquer">⧉</button>' +
+        '<button class="btn fantome petit" data-act="flux-supprimer" data-id="' + esc(f.id) + '" title="Supprimer">✕</button></td></tr>';
+  }).join("");
+
+  const table = liste.length
+    ? '<div class="tableau-boite"><table><thead><tr>' +
+      "<th>Flux</th><th>Rythme</th><th class=\"num\">Montant</th><th class=\"num\">Par mois</th><th>Prochaine</th>" +
+      '<th class="num">Sur ' + ETAT.parametres.horizon + " mois</th><th></th></tr></thead><tbody>" + lignes + "</tbody></table></div>"
+    : '<div class="vide">Aucun flux ne correspond à cette recherche.</div>';
+
+  cible.innerHTML = (ETAT.flux.length ? entete : "") + carte(barreOutils + table);
+
+  const rech = boite("rech");
+  if (rech) {
+    rech.addEventListener("input", () => {
+      ui.recherche = rech.value;
+      const pos = rech.selectionStart;
+      rendre();
+      const neuf = boite("rech");
+      if (neuf) { neuf.focus(); neuf.setSelectionRange(pos, pos); }
+    });
+  }
+}
+
+/* ── Projection ───────────────────────────────────────────────────────── */
+
+function rendreProjection(cible, p) {
+  // un compte supprimé entre-temps ramène la vue à tous les comptes
+  const filtre = compte(ui.compteProjection) ? ui.compteProjection : "";
+  const proj = filtre ? projeter({ du: p.du, au: p.au, compteId: filtre }) : p;
+
+  const choixCompte = '<label class="champ" style="max-width:240px"><span class="ttl">Périmètre</span>' +
+    '<select data-act="compte-projection"><option value="">Tous les comptes</option>' +
+    ETAT.comptes.map((c) => '<option value="' + esc(c.id) + '"' + (filtre === c.id ? " selected" : "") + ">" + esc(c.nom) + "</option>").join("") +
+    "</select></label>";
+
+  const lignes = proj.mois.map((m) => {
+    const ouvert = ui.moisOuverts.has(m.cle);
+    let html = '<tr class="cliquable" data-act="mois-detail" data-cle="' + m.cle + '">' +
+      "<td>" + (m.operations.length ? '<span class="faible">' + (ouvert ? "▾" : "▸") + "</span> " : "&nbsp;&nbsp;&nbsp;") + esc(libelleMois(m.cle)) + "</td>" +
+      '<td class="num pos">' + (m.revenus ? esc(argent(m.revenus)) : '<span class="faible">—</span>') + "</td>" +
+      '<td class="num neg">' + (m.depenses ? esc(argent(m.depenses)) : '<span class="faible">—</span>') + "</td>" +
+      '<td class="num ' + (m.net >= 0 ? "pos" : "neg") + '" style="font-weight:600">' + esc(argent(m.net, { signe: true })) + "</td>" +
+      '<td class="num" style="font-weight:600' + (m.soldeFin < 0 ? ";color:var(--depense-texte)" : "") + '">' + esc(argent(m.soldeFin)) + "</td>" +
+      '<td class="num dim">' + esc(argent(m.soldeMin)) + "</td></tr>";
+    if (ouvert && m.operations.length) {
+      html += '<tr class="repli"><td colspan="6"><div style="padding:6px 10px 10px"><table>' +
+        m.operations.map((op) =>
+          "<tr><td style=\"width:88px\" class=\"dim\">" + esc(libelleDate(op.date, true)) + "</td>" +
+          "<td><i class=\"puce\" style=\"background:" + teinte(categorie(op.categorieId) ? categorie(op.categorieId).teinte : 1) + "\"></i>" + esc(op.libelle) + "</td>" +
+          '<td class="dim">' + esc(contexteOperation(op)) + "</td>" +
+          '<td class="num">' + montantOperation(op) + "</td>" +
+          '<td class="num dim">' + esc(argent(op.solde)) + "</td></tr>").join("") +
+        "</table></div></td></tr>";
+    }
+    return html;
+  }).join("");
+
+  const total = '<tr class="total"><td>Total sur ' + proj.nbMois + " mois</td>" +
+    '<td class="num pos">' + esc(argent(proj.totaux.revenus)) + "</td>" +
+    '<td class="num neg">' + esc(argent(proj.totaux.depenses)) + "</td>" +
+    '<td class="num ' + (proj.totaux.net >= 0 ? "pos" : "neg") + '">' + esc(argent(proj.totaux.net, { signe: true })) + "</td>" +
+    '<td class="num">' + esc(argent(proj.soldeFinal)) + "</td><td></td></tr>";
+
+  cible.innerHTML =
+    carte('<div class="rangee" style="align-items:flex-end">' + choixCompte +
+      '<div style="margin-left:auto" class="rangee">' +
+      '<button class="btn" data-act="export-csv">Exporter en CSV</button>' +
+      '<button class="btn" data-act="tout-replier">' + (ui.moisOuverts.size ? "Tout replier" : "Tout déplier") + "</button></div></div>" +
+      '<div id="g-proj" style="margin-top:14px"></div>',
+      { titre: "Trajectoire du solde", sous: filtre ? "Compte « " + nomCompte(filtre) + " » seul." : "Tous comptes confondus." }) +
+    carte('<div class="tableau-boite"><table><thead><tr><th>Mois</th><th class="num">Revenus</th><th class="num">Dépenses</th>' +
+      '<th class="num">Net</th><th class="num">Solde fin de mois</th><th class="num">Point bas</th></tr></thead>' +
+      "<tbody>" + lignes + total + "</tbody></table></div>",
+      { titre: "Mois par mois", sous: "Cliquez une ligne pour voir le détail des opérations du mois." });
+
+  grapheCourbes(boite("g-proj"), [{ nom: "Solde", couleur: "var(--epargne)", points: proj.points, remplir: true }],
+    { seuil: filtre ? 0 : ETAT.parametres.seuilAlerte, hauteur: 260 });
+}
+
+/* ── Catégories ───────────────────────────────────────────────────────── */
+
+function rendreCategories(cible, p) {
+  const env = enveloppes(p);
+  const totalDep = env.reduce((s, e) => s + e.mensuel, 0);
+  const parts = env.filter((e) => e.mensuel > 0).map((e) => ({
+    nom: e.categorie.nom, valeur: e.mensuel, couleur: teinte(e.categorie.teinte),
+  }));
+
+  const lignesDep = env.map((e) => {
+    const c = e.categorie;
+    const depassement = e.ratio !== null && e.ratio > 1;
+    return '<tr><td><i class="puce" style="background:' + teinte(c.teinte) + '"></i>' + esc(c.nom) + "</td>" +
+      '<td class="num">' + esc(argent(e.mensuel)) + '<div class="faible" style="font-size:11.5px">par mois</div></td>' +
+      '<td class="num dim">' + esc(argent(e.total)) + "</td>" +
+      '<td class="num dim">' + (totalDep ? esc(pourcent((e.mensuel / totalDep) * 100, 1)) : "—") + "</td>" +
+      '<td style="min-width:150px">' +
+        (e.plafond
+          ? '<div class="jauge"><i style="width:' + Math.min(100, (e.ratio || 0) * 100).toFixed(1) + "%;background:" +
+            (depassement ? "var(--depense)" : "var(--revenu)") + '"></i></div>' +
+            '<div style="font-size:12px;margin-top:3px" class="' + (depassement ? "neg" : "dim") + '">' +
+            esc(argent(e.plafond)) + " · " + esc(argent(e.ecart, { signe: true })) + "</div>"
+          : '<span class="faible" style="font-size:12.5px">aucun plafond</span>') + "</td>" +
+      '<td class="num" style="white-space:nowrap">' +
+        '<button class="btn fantome petit" data-act="cat-editer" data-id="' + esc(c.id) + '">Modifier</button>' +
+        '<button class="btn fantome petit" data-act="cat-supprimer" data-id="' + esc(c.id) + '" title="Supprimer">✕</button></td></tr>';
+  }).join("");
+
+  const revenusCats = ETAT.categories.filter((c) => c.type === "revenu").map((c) => {
+    const e = p.parCategorie.get(c.id);
+    const total = e ? e.total : 0;
+    return '<tr><td><i class="puce" style="background:' + teinte(c.teinte) + '"></i>' + esc(c.nom) + "</td>" +
+      '<td class="num">' + esc(argent(total / p.nbMois)) + "</td>" +
+      '<td class="num dim">' + esc(argent(total)) + "</td>" +
+      '<td class="num"><button class="btn fantome petit" data-act="cat-editer" data-id="' + esc(c.id) + '">Modifier</button>' +
+      '<button class="btn fantome petit" data-act="cat-supprimer" data-id="' + esc(c.id) + '">✕</button></td></tr>';
+  }).join("");
+
+  const depassees = env.filter((e) => e.ratio !== null && e.ratio > 1);
+  const alerte = depassees.length
+    ? '<div class="bandeau ambre" style="margin-bottom:14px"><span class="ic">◉</span><div><b>' + depassees.length +
+      (depassees.length > 1 ? " enveloppes dépassées" : " enveloppe dépassée") + "</b> — " +
+      esc(depassees.map((e) => e.categorie.nom + " (" + argent(e.ecart, { signe: true }) + ")").join(", ")) +
+      " par rapport au plafond mensuel que vous avez fixé.</div></div>"
+    : "";
+
+  cible.innerHTML = alerte +
+    carte('<div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;justify-content:center">' +
+      '<div id="g-cat"></div><div style="flex:1;min-width:200px">' +
+      parts.slice(0, 8).map((x) => '<div style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;font-size:13.5px">' +
+        '<span><i class="puce" style="background:' + x.couleur + '"></i>' + esc(x.nom) + "</span>" +
+        '<span class="mono dim">' + esc(argent(x.valeur)) + "/mois</span></div>").join("") +
+      "</div></div>",
+      { titre: "Répartition mensuelle moyenne", sous: "Moyenne sur l'horizon : les charges annuelles y sont lissées." }) +
+    carte('<div class="tableau-boite"><table><thead><tr><th>Catégorie de dépense</th><th class="num">Par mois</th>' +
+      '<th class="num">Sur ' + ETAT.parametres.horizon + ' mois</th><th class="num">Part</th><th>Enveloppe</th><th></th></tr></thead>' +
+      "<tbody>" + lignesDep + "</tbody></table></div>" +
+      '<div class="rangee" style="margin-top:12px"><button class="btn" data-act="cat-nouvelle" data-type="depense">+ Catégorie de dépense</button></div>',
+      { titre: "Enveloppes", sous: "Un plafond mensuel par catégorie ; la barre compare la moyenne projetée à ce plafond." }) +
+    carte('<div class="tableau-boite"><table><thead><tr><th>Catégorie de revenu</th><th class="num">Par mois</th>' +
+      '<th class="num">Sur ' + ETAT.parametres.horizon + " mois</th><th></th></tr></thead><tbody>" + revenusCats + "</tbody></table></div>" +
+      '<div class="rangee" style="margin-top:12px"><button class="btn" data-act="cat-nouvelle" data-type="revenu">+ Catégorie de revenu</button></div>',
+      { titre: "Revenus par catégorie" });
+
+  grapheAnneau(boite("g-cat"), parts, { legende: "par mois" });
+}
+
+/* ── Objectifs ────────────────────────────────────────────────────────── */
+
+function rendreObjectifs(cible, p) {
+  if (!ETAT.objectifs.length) {
+    cible.innerHTML = carte('<div class="vide"><p>Aucun objectif. Un objectif, c\'est un montant et une date : ' +
+      "l'application dit alors si votre trajectoire y mène, et ce qu'il faudrait mettre de côté chaque mois sinon.</p>" +
+      '<button class="btn primaire" data-act="obj-nouveau">Ajouter un objectif</button></div>', { titre: "Objectifs d'épargne" });
+    return;
+  }
+
+  const cartes = ETAT.objectifs.map((o) => {
+    const e = evaluerObjectif(o, p);
+    const couleur = teinte(o.teinte);
+    const verdicts = {
+      atteint: ['<span class="etiquette rev">Atteint</span>', "Au rythme projeté, l'objectif est dépassé de " + argent(-e.manque) + " à la date visée."],
+      juste: ['<span class="etiquette">De justesse</span>', "Il manquerait " + argent(e.manque) + ", soit " + argent(e.effortMensuel) + " de plus par mois."],
+      insuffisant: ['<span class="etiquette dep">Hors d\'atteinte</span>', "Il manquerait " + argent(e.manque) + " — soit " + argent(e.effortMensuel) + " de plus chaque mois pendant " + nombre(e.moisRestants) + " mois."],
+      "hors-horizon": ['<span class="etiquette">Au-delà de l\'horizon</span>', "La date visée dépasse la fenêtre de projection ; allongez l'horizon pour l'évaluer."],
+      echu: ['<span class="etiquette">Échue</span>', "La date visée est passée."],
+    };
+    const [badge, phrase] = verdicts[e.verdict] || verdicts.insuffisant;
+
+    return carte(
+      '<div class="carte-tete"><h3>' + esc(o.nom) + "</h3><div class=\"droite\">" + badge + "</div></div>" +
+      '<div class="rangee" style="gap:6px;margin:2px 0 10px"><span class="chiffre" style="font-size:24px;font-weight:700;color:' + couleur + '">' +
+      esc(argent(e.projete === null ? e.actuel : e.projete)) + '</span><span class="dim">sur ' + esc(argent(o.cible)) +
+      ' visés pour le ' + esc(libelleDate(o.dateCible)) + "</span></div>" +
+      '<div class="jauge" style="height:9px"><i style="width:' + (e.progression * 100).toFixed(1) + "%;background:" + couleur + '"></i></div>' +
+      '<div class="rangee" style="justify-content:space-between;margin-top:6px;font-size:12.5px">' +
+      '<span class="dim">Aujourd\'hui ' + esc(argent(e.actuel)) + " · " + esc(pourcent(e.progressionActuelle * 100, 0)) + "</span>" +
+      '<span class="dim">' + esc(nombre(e.moisRestants)) + " mois restants</span></div>" +
+      '<p class="sous" style="margin:10px 0 0">' + esc(phrase) + "</p>" +
+      '<div class="rangee fin" style="margin-top:8px">' +
+      '<button class="btn fantome petit" data-act="obj-editer" data-id="' + esc(o.id) + '">Modifier</button>' +
+      '<button class="btn fantome petit" data-act="obj-supprimer" data-id="' + esc(o.id) + '">Supprimer</button></div>');
+  }).join("");
+
+  cible.innerHTML = '<div class="grille g2">' + cartes + "</div>" +
+    '<div class="rangee"><button class="btn primaire" data-act="obj-nouveau">+ Nouvel objectif</button></div>';
+}
+
+/* ── Scénarios ────────────────────────────────────────────────────────── */
+
+function rendreScenarios(cible, p) {
+  const actifs = ETAT.scenarios.filter((s) => s.actif);
+  const series = [{ nom: "Référence", couleur: "var(--epargne)", points: p.points, remplir: true, epaisseur: 2.4 }];
+  const projections = new Map();
+  for (const s of actifs) {
+    const pr = projeterScenario(s, p.du, p.au);
+    projections.set(s.id, pr);
+    series.push({ nom: s.nom, couleur: teinte(s.teinte), points: pr.points, pointille: true });
+  }
+
+  const lignes = ETAT.scenarios.map((s) => {
+    const pr = projections.get(s.id) || projeterScenario(s, p.du, p.au);
+    const ecart = arrondi2(pr.soldeFinal - p.soldeFinal);
+    const modifs = [];
+    if (s.ajustRevenus) modifs.push("revenus " + (s.ajustRevenus > 0 ? "+" : "−") + nombre(Math.abs(s.ajustRevenus), 1) + " %");
+    if (s.ajustDepenses) modifs.push("dépenses " + (s.ajustDepenses > 0 ? "+" : "−") + nombre(Math.abs(s.ajustDepenses), 1) + " %");
+    if (s.exclus.length) modifs.push(s.exclus.length + (s.exclus.length > 1 ? " flux retirés" : " flux retiré"));
+    if (s.extras.length) modifs.push(s.extras.length + (s.extras.length > 1 ? " flux ajoutés" : " flux ajouté"));
+    if (s.soldeDelta) modifs.push("solde de départ " + argent(s.soldeDelta, { signe: true }));
+
+    return "<tr><td><label class=\"case\"><input type=\"checkbox\" data-act=\"scn-basculer\" data-id=\"" + esc(s.id) + "\"" + (s.actif ? " checked" : "") + ">" +
+      '<span><i class="puce" style="background:' + teinte(s.teinte) + '"></i>' + esc(s.nom) + "</span></label>" +
+      '<div class="faible" style="font-size:12.5px;padding-left:26px">' + esc(modifs.join(" · ") || "aucune modification") + "</div></td>" +
+      '<td class="num">' + esc(argent(pr.soldeFinal)) + "</td>" +
+      '<td class="num ' + (ecart >= 0 ? "pos" : "neg") + '" style="font-weight:600">' + esc(argent(ecart, { signe: true })) + "</td>" +
+      '<td class="num ' + (pr.totaux.netMensuel >= 0 ? "pos" : "neg") + '">' + esc(argent(pr.totaux.netMensuel, { signe: true })) + "</td>" +
+      "<td class=\"dim\">" + (pr.alerte.dateDecouvert ? '<span class="neg">découvert le ' + esc(libelleDate(pr.alerte.dateDecouvert, true)) + "</span>" : "jamais à découvert") + "</td>" +
+      '<td class="num" style="white-space:nowrap">' +
+      '<button class="btn fantome petit" data-act="scn-editer" data-id="' + esc(s.id) + '">Modifier</button>' +
+      '<button class="btn fantome petit" data-act="scn-supprimer" data-id="' + esc(s.id) + '">✕</button></td></tr>';
+  }).join("");
+
+  cible.innerHTML =
+    carte('<div id="g-scn"></div><div class="legende">' +
+      series.map((s) => '<span><i class="puce" style="background:' + s.couleur + '"></i>' + esc(s.nom) + "</span>").join("") + "</div>",
+      { titre: "Trajectoires comparées",
+        sous: "La référence en trait plein, les scénarios en pointillés. Un scénario ne modifie jamais vos flux : il les rejoue autrement." }) +
+    carte(ETAT.scenarios.length
+      ? '<div class="tableau-boite"><table><thead><tr><th>Scénario</th><th class="num">Solde à l\'horizon</th>' +
+        '<th class="num">Écart</th><th class="num">Reste par mois</th><th>Découvert</th><th></th></tr></thead><tbody>' +
+        '<tr class="total"><td>Référence — vos flux tels quels</td><td class="num">' + esc(argent(p.soldeFinal)) + "</td>" +
+        '<td class="num dim">—</td><td class="num">' + esc(argent(p.totaux.netMensuel, { signe: true })) + "</td>" +
+        "<td class=\"dim\">" + (p.alerte.dateDecouvert ? '<span class="neg">le ' + esc(libelleDate(p.alerte.dateDecouvert, true)) + "</span>" : "jamais") + "</td><td></td></tr>" +
+        lignes + "</tbody></table></div>"
+      : '<div class="vide">Aucun scénario. Un scénario répond à « et si… » : et si je déménageais, et si je perdais 20 % de revenus, et si je coupais les abonnements ?</div>') +
+    '<div class="rangee"><button class="btn primaire" data-act="scn-nouveau">+ Nouveau scénario</button></div>';
+
+  grapheCourbes(boite("g-scn"), series, { seuil: ETAT.parametres.seuilAlerte, hauteur: 300 });
+}
+
+/* ── Comptes ──────────────────────────────────────────────────────────── */
+
+function rendreComptes(cible, p) {
+  const lignes = ETAT.comptes.map((c) => {
+    const pr = projeter({ du: p.du, au: p.au, compteId: c.id });
+    const nb = ETAT.flux.filter((f) => f.compteId === c.id).length;
+    return '<tr><td><i class="puce" style="background:' + teinte(c.teinte) + '"></i><b>' + esc(c.nom) + "</b>" +
+      '<div class="faible" style="font-size:12.5px;padding-left:16px">' + (c.type === "epargne" ? "Épargne" : "Compte courant") +
+      " · " + nb + (nb > 1 ? " flux rattachés" : " flux rattaché") + "</div></td>" +
+      '<td class="num">' + esc(argent(c.solde)) + "</td>" +
+      '<td class="num" style="font-weight:600' + (pr.soldeFinal < 0 ? ";color:var(--depense-texte)" : "") + '">' + esc(argent(pr.soldeFinal)) + "</td>" +
+      '<td class="num ' + (pr.totaux.net >= 0 ? "pos" : "neg") + '">' + esc(argent(pr.totaux.net, { signe: true })) + "</td>" +
+      '<td class="num" style="white-space:nowrap">' +
+      '<button class="btn fantome petit" data-act="cpt-editer" data-id="' + esc(c.id) + '">Modifier</button>' +
+      '<button class="btn fantome petit" data-act="cpt-supprimer" data-id="' + esc(c.id) + '">✕</button></td></tr>';
+  }).join("");
+
+  cible.innerHTML = carte(
+    '<div class="grille g3" style="margin-bottom:14px">' +
+    kpi("Total aujourd'hui", argent(soldeDepart())) +
+    kpi("Total à l'horizon", argent(p.soldeFinal), esc(argent(p.soldeFinal - p.soldeInitial, { signe: true }) + " sur " + ETAT.parametres.horizon + " mois")) +
+    kpi("Comptes", nombre(ETAT.comptes.length)) +
+    "</div>" +
+    '<div class="tableau-boite"><table><thead><tr><th>Compte</th><th class="num">Solde actuel</th>' +
+    '<th class="num">Solde à l\'horizon</th><th class="num">Variation</th><th></th></tr></thead><tbody>' + lignes + "</tbody></table></div>" +
+    '<div class="rangee" style="margin-top:12px"><button class="btn primaire" data-act="cpt-nouveau">+ Nouveau compte</button></div>',
+    { titre: "Comptes",
+      sous: "Chaque flux est rattaché à un compte ; le solde de départ est celui que vous constatez aujourd'hui sur votre relevé." });
+}
+
+/* ── Réglages ─────────────────────────────────────────────────────────── */
+
+function rendreReglages(cible, p) {
+  const par = ETAT.parametres;
+  const theme = localStorage.getItem(CLE_THEME) || "auto";
+
+  const parametres = carte(
+    '<div class="ligne-champs">' +
+    '<label class="champ"><span class="ttl">Titre du budget</span>' +
+    '<input type="text" data-act="param" data-cle="titre" value="' + esc(par.titre) + '" maxlength="60"></label>' +
+    '<label class="champ"><span class="ttl">Monnaie</span><select data-act="param" data-cle="devise">' +
+    Object.entries(DEVISES).map(([code, d]) => '<option value="' + code + '"' + (par.devise === code ? " selected" : "") + ">" +
+      esc(d.nom + " (" + d.symbole + ")") + "</option>").join("") + "</select></label>" +
+    '<label class="champ"><span class="ttl">Horizon de projection</span><select data-act="param" data-cle="horizon">' +
+    HORIZONS.map((h) => '<option value="' + h + '"' + (par.horizon === h ? " selected" : "") + ">" +
+      (h >= 12 && h % 12 === 0 ? (h / 12) + (h === 12 ? " an" : " ans") + " (" + h + " mois)" : h + " mois") + "</option>").join("") +
+    "</select></label>" +
+    '<label class="champ"><span class="ttl">Seuil de sécurité</span>' +
+    '<input type="number" data-act="param" data-cle="seuilAlerte" value="' + esc(par.seuilAlerte) + '" min="0" step="50">' +
+    '<span class="aide">Le plancher sous lequel vous ne voulez pas descendre. 0 pour n\'être averti qu\'en cas de découvert.</span></label>' +
+    '<label class="champ"><span class="ttl">Départ de la projection</span>' +
+    '<input type="date" data-act="param" data-cle="debutProjection" value="' + esc(par.debutProjection || "") + '">' +
+    '<span class="aide">Vide = aujourd\'hui (' + esc(libelleDate(aujourdhui())) + ").</span></label>" +
+    '<label class="champ"><span class="ttl">Affichage des montants</span>' +
+    '<select data-act="param" data-cle="arrondi"><option value="1"' + (par.arrondi ? " selected" : "") + ">Sans centimes</option>" +
+    '<option value="0"' + (par.arrondi ? "" : " selected") + ">Avec centimes</option></select></label>" +
+    "</div>" +
+    '<div class="sep" style="margin:16px 0"></div>' +
+    '<label class="champ"><span class="ttl">Thème</span></label>' +
+    '<div class="segments" style="margin-top:6px">' +
+    [["auto", "Automatique"], ["clair", "Clair"], ["sombre", "Sombre"]].map(([v, n]) =>
+      '<button data-act="theme" data-v="' + v + '" class="' + (theme === v ? "on" : "") + '">' + n + "</button>").join("") +
+    "</div>",
+    { titre: "Réglages" });
+
+  const donnees = carte(
+    '<div class="rangee">' +
+    '<button class="btn" data-act="export-json">Exporter mes données (JSON)</button>' +
+    '<button class="btn" data-act="import-json">Importer un fichier</button>' +
+    '<button class="btn" data-act="export-csv">Exporter la projection (CSV)</button>' +
+    '<button class="btn" data-act="demo">Recharger l\'exemple</button>' +
+    '<button class="btn danger" data-act="raz">Repartir de zéro</button>' +
+    "</div>" +
+    '<p class="sous" style="margin:12px 0 0">' +
+    "Vos données ne quittent jamais cet appareil : elles sont écrites dans le stockage local du navigateur, " +
+    "pas sur un serveur. Vider les données du site les efface — l'export JSON est votre sauvegarde. " +
+    "Le fichier réimporté remplace intégralement le contenu actuel.</p>" +
+    '<div class="sep" style="margin:14px 0"></div>' +
+    '<div class="grille g4">' +
+    kpi("Flux", nombre(ETAT.flux.length)) +
+    kpi("Comptes", nombre(ETAT.comptes.length)) +
+    kpi("Catégories", nombre(ETAT.categories.length)) +
+    kpi("Opérations projetées", nombre(p.operations.length)) +
+    "</div>",
+    { titre: "Vos données" });
+
+  const apropos = carte(
+    "<p class=\"sous\">Le solde projeté n'est pas une prévision de ce qui arrivera : c'est la conséquence arithmétique " +
+    "des flux que vous avez saisis. Il vaut ce que vaut la saisie — un abonnement oublié, et la courbe ment de son montant. " +
+    "Trois choses aident à s'en approcher :</p>" +
+    '<ul class="sous" style="margin:0;padding-left:20px">' +
+    "<li>reprendre trois mois de relevés plutôt que de lister de mémoire ;</li>" +
+    "<li>saisir les charges annuelles (assurances, impôts, vacances) à leur date réelle plutôt que lissées — c'est ce qui creuse les mois difficiles ;</li>" +
+    "<li>renseigner une revalorisation annuelle sur les postes qui montent : loyer, énergie, courses.</li></ul>" +
+    '<p class="sous" style="margin:12px 0 0">Prévoyant est un fichier unique, sans dépendance ni réseau. ' +
+    "Installé depuis le navigateur, il fonctionne hors ligne.</p>",
+    { titre: "Ce que la projection dit, et ce qu'elle ne dit pas" });
+
+  cible.innerHTML = parametres + donnees + apropos;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   10. Dialogues
+   ══════════════════════════════════════════════════════════════════════ */
+
+function ouvrirDialogue(titre, corpsHTML, boutons, apres) {
+  boite("dialogue-titre").textContent = titre;
+  // le corps est remplacé par un clone vide : les écouteurs posés par le
+  // dialogue précédent partent avec l'ancien nœud, et ne s'empilent pas
+  const ancien = boite("dialogue-corps");
+  const neuf = ancien.cloneNode(false);
+  ancien.replaceWith(neuf);
+  neuf.innerHTML = corpsHTML;
+  const pied = boite("dialogue-pied");
+  pied.innerHTML = "";
+  for (const b of boutons || []) {
+    const el = document.createElement("button");
+    el.className = "btn " + (b.classe || "") + (b.gauche ? " gauche" : "");
+    el.textContent = b.texte;
+    el.addEventListener("click", () => b.action && b.action());
+    pied.appendChild(el);
+  }
+  boite("voile").classList.remove("masque");
+  if (apres) apres();
+  const premier = boite("dialogue-corps").querySelector("input, select, textarea");
+  if (premier) premier.focus();
+}
+
+function fermerDialogue() {
+  boite("voile").classList.add("masque");
+  boite("dialogue-corps").innerHTML = "";
+}
+
+function confirmer(titre, texte, libelleAction, action) {
+  ouvrirDialogue(titre, '<p class="sous" style="margin:0">' + esc(texte) + "</p>", [
+    { texte: "Annuler", action: fermerDialogue },
+    { texte: libelleAction, classe: "danger", action: () => { fermerDialogue(); action(); } },
+  ]);
+}
+
+function optionsCategories(type, choisie) {
+  return ETAT.categories.filter((c) => c.type === type)
+    .map((c) => '<option value="' + esc(c.id) + '"' + (c.id === choisie ? " selected" : "") + ">" + esc(c.nom) + "</option>").join("");
+}
+
+function optionsComptes(choisi) {
+  return ETAT.comptes.map((c) => '<option value="' + esc(c.id) + '"' + (c.id === choisi ? " selected" : "") + ">" + esc(c.nom) + "</option>").join("");
+}
+
+/* ── Formulaire d'un flux ─────────────────────────────────────────────── */
+
+function formulaireFlux(flux) {
+  const f = flux || {
+    id: null, libelle: "", type: "depense", montant: "", categorieId: null, compteId: ETAT.comptes[0].id,
+    compteDest: null, frequence: "mensuel", debut: aujourdhui(), fin: null, indexation: 0, actif: true, note: "",
+  };
+  const plusieursComptes = ETAT.comptes.length > 1;
+
+  const corps =
+    '<div class="segments" id="f-type">' +
+    '<button data-v="depense" class="' + (f.type === "depense" ? "on" : "") + '">Dépense</button>' +
+    '<button data-v="revenu" class="' + (f.type === "revenu" ? "on" : "") + '">Revenu</button>' +
+    (plusieursComptes ? '<button data-v="virement" class="' + (f.type === "virement" ? "on" : "") + '">Virement entre comptes</button>' : "") +
+    "</div>" +
+    '<div class="ligne-champs">' +
+    '<label class="champ"><span class="ttl">Libellé</span><input type="text" id="f-libelle" maxlength="60" value="' + esc(f.libelle) + '" placeholder="Loyer, salaire, assurance…"></label>' +
+    '<label class="champ"><span class="ttl">Montant</span><input type="number" id="f-montant" min="0" step="0.01" value="' + esc(f.montant) + '" placeholder="0"></label>' +
+    '<label class="champ" id="f-bloc-categorie"' + (f.type === "virement" ? ' style="display:none"' : "") + '><span class="ttl">Catégorie</span><select id="f-categorie">' +
+      optionsCategories(f.type === "virement" ? "depense" : f.type, f.categorieId) + "</select></label>" +
+    '<label class="champ"><span class="ttl" id="f-titre-compte">' + (f.type === "virement" ? "Depuis le compte" : "Compte") + '</span><select id="f-compte">' + optionsComptes(f.compteId) + "</select></label>" +
+    '<label class="champ" id="f-bloc-dest"' + (f.type === "virement" ? "" : ' style="display:none"') + '><span class="ttl">Vers le compte</span><select id="f-compte-dest">' +
+      optionsComptes(f.compteDest) + "</select>" +
+      '<span class="aide">Ce qui sort d\'un compte entre sur l\'autre : votre patrimoine total ne bouge pas.</span></label>' +
+    '<label class="champ"><span class="ttl">Rythme</span><select id="f-frequence">' +
+    FREQUENCES.map((x) => '<option value="' + x.id + '"' + (f.frequence === x.id ? " selected" : "") + ">" + esc(x.nom) + "</option>").join("") +
+    "</select></label>" +
+    '<label class="champ"><span class="ttl">Première échéance</span><input type="date" id="f-debut" value="' + esc(f.debut) + '"></label>' +
+    "</div>" +
+    '<div class="ligne-champs">' +
+    '<label class="champ"><span class="ttl">Dernière échéance <span class="faible">(facultatif)</span></span>' +
+    '<input type="date" id="f-fin" value="' + esc(f.fin || "") + '">' +
+    '<span class="aide">Un crédit qui se termine, un contrat qui expire.</span></label>' +
+    '<label class="champ"><span class="ttl">Revalorisation annuelle</span>' +
+    '<input type="number" id="f-indexation" step="0.1" min="-50" max="50" value="' + esc(f.indexation) + '">' +
+    '<span class="aide">En % par an, appliqué à chaque date anniversaire. Loyer +2, énergie +4…</span></label>' +
+    "</div>" +
+    '<label class="champ"><span class="ttl">Note <span class="faible">(facultatif)</span></span>' +
+    '<textarea id="f-note" maxlength="300" rows="2">' + esc(f.note) + "</textarea></label>" +
+    '<label class="case"><input type="checkbox" id="f-actif"' + (f.actif ? " checked" : "") + "> Flux actif (décochez pour le mettre en pause sans le supprimer)</label>" +
+    '<div class="sep"></div>' +
+    '<details><summary style="cursor:pointer;font-size:13.5px;color:var(--attenue)">Calculer une mensualité de prêt</summary>' +
+    '<div class="ligne-champs trois" style="margin-top:10px">' +
+    '<label class="champ"><span class="ttl">Capital emprunté</span><input type="number" id="p-capital" min="0" step="100" placeholder="15000"></label>' +
+    '<label class="champ"><span class="ttl">Taux annuel (%)</span><input type="number" id="p-taux" min="0" step="0.01" placeholder="3,5"></label>' +
+    '<label class="champ"><span class="ttl">Durée (mois)</span><input type="number" id="p-duree" min="1" step="1" placeholder="48"></label>' +
+    "</div>" +
+    '<div class="rangee" style="margin-top:10px"><button class="btn petit" id="p-calc" type="button">Reporter dans le formulaire</button>' +
+    '<span class="faible" id="p-resultat" style="font-size:13px"></span></div>' +
+    '<p class="sous" style="margin:8px 0 0">Le montant et la dernière échéance sont remplis à partir de la formule d\'annuité constante.</p></details>';
+
+  const lire = () => {
+    const type = boite("dialogue-corps").querySelector("#f-type .on").dataset.v;
+    return {
+      id: f.id || identifiant("flx"),
+      libelle: boite("f-libelle").value.trim(),
+      type,
+      montant: Number(boite("f-montant").value.replace(",", ".")),
+      categorieId: boite("f-categorie").value,
+      compteId: boite("f-compte").value,
+      compteDest: boite("f-compte-dest").value,
+      frequence: boite("f-frequence").value,
+      debut: boite("f-debut").value,
+      fin: boite("f-fin").value || null,
+      indexation: Number(boite("f-indexation").value.replace(",", ".")) || 0,
+      actif: boite("f-actif").checked,
+      note: boite("f-note").value.trim(),
+    };
+  };
+
+  const brancher = () => {
+    // un virement ne peut pas arriver sur son compte de départ : la
+    // destination se déplace d'elle-même quand la source vient l'occuper
+    const ajusterDestination = () => {
+      const dest = boite("f-compte-dest");
+      if (dest.value !== boite("f-compte").value) return;
+      const autre = Array.from(dest.options).find((o) => o.value !== boite("f-compte").value);
+      if (autre) dest.value = autre.value;
+    };
+    boite("f-compte").addEventListener("change", ajusterDestination);
+    if (f.type === "virement") ajusterDestination();
+
+    // le choix du type refiltre les catégories proposées
+    boite("dialogue-corps").querySelectorAll("#f-type button").forEach((b) => {
+      b.addEventListener("click", () => {
+        boite("dialogue-corps").querySelectorAll("#f-type button").forEach((x) => x.classList.remove("on"));
+        b.classList.add("on");
+        const virement = b.dataset.v === "virement";
+        boite("f-bloc-categorie").style.display = virement ? "none" : "";
+        boite("f-bloc-dest").style.display = virement ? "" : "none";
+        boite("f-titre-compte").textContent = virement ? "Depuis le compte" : "Compte";
+        if (virement) ajusterDestination();
+        else boite("f-categorie").innerHTML = optionsCategories(b.dataset.v, null);
+      });
+    });
+    boite("p-calc").addEventListener("click", () => {
+      const capital = Number(boite("p-capital").value.replace(",", "."));
+      const taux = Number(boite("p-taux").value.replace(",", ".")) || 0;
+      const duree = Math.round(Number(boite("p-duree").value));
+      if (!(capital > 0) || !(duree > 0)) { boite("p-resultat").textContent = "Capital et durée sont nécessaires."; return; }
+      const m = mensualitePret(capital, taux, duree);
+      boite("f-montant").value = m;
+      boite("f-frequence").value = "mensuel";
+      const debut = boite("f-debut").value || aujourdhui();
+      boite("f-fin").value = ajouterMois(debut, duree - 1);
+      boite("p-resultat").textContent = nombre(duree) + " mensualités de " + argent(m) + " — coût total " +
+        argent(arrondi2(m * duree)) + ", dont " + argent(arrondi2(m * duree - capital)) + " d'intérêts.";
+    });
+  };
+
+  return { corps, lire, brancher, existant: !!flux };
+}
+
+function ouvrirFlux(id) {
+  const flux = id ? ETAT.flux.find((f) => f.id === id) : null;
+  const form = formulaireFlux(flux);
+  const boutons = [];
+  if (flux) {
+    boutons.push({ texte: "Supprimer", classe: "danger gauche", action: () => { fermerDialogue(); supprimerFlux(flux.id); } });
+    boutons.push({ texte: "Dupliquer", action: () => { fermerDialogue(); dupliquerFlux(flux.id); } });
+  }
+  boutons.push({ texte: "Annuler", action: fermerDialogue });
+  boutons.push({
+    texte: flux ? "Enregistrer" : "Ajouter", classe: "primaire",
+    action: () => {
+      const brut = form.lire();
+      if (!brut.libelle) { message("Donnez un libellé à ce flux."); return; }
+      if (!(brut.montant >= 0)) { message("Le montant doit être un nombre positif."); return; }
+      if (!estIso(brut.debut)) { message("La date de première échéance est invalide."); return; }
+      if (brut.type === "virement" && brut.compteId === brut.compteDest) {
+        message("Un virement va d'un compte vers un autre."); return;
+      }
+      modifier(() => {
+        const propre = normaliserFlux(brut, 0, ETAT.comptes, ETAT.categories);
+        const i = ETAT.flux.findIndex((f) => f.id === brut.id);
+        if (i >= 0) ETAT.flux[i] = propre; else ETAT.flux.push(propre);
+      });
+      fermerDialogue();
+      message(flux ? "Flux mis à jour." : "Flux ajouté.");
+    },
+  });
+  ouvrirDialogue(flux ? "Modifier un flux" : "Nouveau flux", form.corps, boutons, form.brancher);
+}
+
+function supprimerFlux(id) {
+  const f = ETAT.flux.find((x) => x.id === id);
+  if (!f) return;
+  confirmer("Supprimer ce flux ?", "« " + f.libelle + " » disparaîtra de la projection. Cette action ne peut pas être annulée.",
+    "Supprimer", () => {
+      modifier(() => {
+        ETAT.flux = ETAT.flux.filter((x) => x.id !== id);
+        for (const s of ETAT.scenarios) s.exclus = s.exclus.filter((x) => x !== id);
+      });
+      message("Flux supprimé.");
+    });
+}
+
+function dupliquerFlux(id) {
+  const f = ETAT.flux.find((x) => x.id === id);
+  if (!f) return;
+  modifier(() => {
+    const copie = Object.assign({}, f, { id: identifiant("flx"), libelle: f.libelle + " (copie)" });
+    ETAT.flux.splice(ETAT.flux.indexOf(f) + 1, 0, copie);
+  });
+  message("Flux dupliqué.");
+}
+
+/* ── Compte, catégorie, objectif ──────────────────────────────────────── */
+
+function ouvrirCompte(id) {
+  const c = id ? compte(id) : null;
+  const corps = '<div class="ligne-champs">' +
+    '<label class="champ"><span class="ttl">Nom</span><input type="text" id="c-nom" maxlength="40" value="' + esc(c ? c.nom : "") + '" placeholder="Compte courant"></label>' +
+    '<label class="champ"><span class="ttl">Solde d\'aujourd\'hui</span><input type="number" id="c-solde" step="0.01" value="' + esc(c ? c.solde : 0) + '"></label>' +
+    '<label class="champ"><span class="ttl">Type</span><select id="c-type">' +
+    '<option value="courant"' + (c && c.type === "courant" ? " selected" : "") + ">Compte courant</option>" +
+    '<option value="epargne"' + (c && c.type === "epargne" ? " selected" : "") + ">Épargne</option></select></label>" +
+    '<label class="champ"><span class="ttl">Couleur</span><select id="c-teinte">' +
+    Array.from({ length: TEINTES_MAX }, (_, i) => '<option value="' + (i + 1) + '"' + (c && c.teinte === i + 1 ? " selected" : "") + ">Teinte " + (i + 1) + "</option>").join("") +
+    "</select></label></div>";
+
+  ouvrirDialogue(c ? "Modifier le compte" : "Nouveau compte", corps, [
+    { texte: "Annuler", action: fermerDialogue },
+    {
+      texte: c ? "Enregistrer" : "Ajouter", classe: "primaire", action: () => {
+        const nom = boite("c-nom").value.trim();
+        if (!nom) { message("Donnez un nom à ce compte."); return; }
+        modifier(() => {
+          const propre = normaliserCompte({
+            id: c ? c.id : identifiant("cpt"), nom,
+            solde: Number(boite("c-solde").value.replace(",", ".")),
+            type: boite("c-type").value, teinte: Number(boite("c-teinte").value),
+          }, ETAT.comptes.length);
+          const i = ETAT.comptes.findIndex((x) => x.id === propre.id);
+          if (i >= 0) ETAT.comptes[i] = propre; else ETAT.comptes.push(propre);
+        });
+        fermerDialogue();
+      },
+    },
+  ]);
+}
+
+function supprimerCompte(id) {
+  if (ETAT.comptes.length <= 1) { message("Il faut au moins un compte."); return; }
+  const c = compte(id);
+  const rattaches = ETAT.flux.filter((f) => f.compteId === id);
+  confirmer("Supprimer « " + c.nom + " » ?",
+    rattaches.length
+      ? rattaches.length + (rattaches.length > 1 ? " flux seront rattachés" : " flux sera rattaché") + " au compte « " +
+        ETAT.comptes.find((x) => x.id !== id).nom + " »."
+      : "Ce compte n'a aucun flux rattaché.",
+    "Supprimer", () => {
+      modifier(() => {
+        const remplacant = ETAT.comptes.find((x) => x.id !== id);
+        for (const f of ETAT.flux) if (f.compteId === id) f.compteId = remplacant.id;
+        for (const o of ETAT.objectifs) if (o.compteId === id) o.compteId = null;
+        ETAT.comptes = ETAT.comptes.filter((x) => x.id !== id);
+      });
+      message("Compte supprimé.");
+    });
+}
+
+function ouvrirCategorie(id, type) {
+  const c = id ? categorie(id) : null;
+  const t = c ? c.type : (type || "depense");
+  const corps = '<div class="ligne-champs">' +
+    '<label class="champ"><span class="ttl">Nom</span><input type="text" id="k-nom" maxlength="40" value="' + esc(c ? c.nom : "") + '"></label>' +
+    '<label class="champ"><span class="ttl">Couleur</span><select id="k-teinte">' +
+    Array.from({ length: TEINTES_MAX }, (_, i) => '<option value="' + (i + 1) + '"' + (c && c.teinte === i + 1 ? " selected" : "") + ">Teinte " + (i + 1) + "</option>").join("") +
+    "</select></label></div>" +
+    (t === "depense"
+      ? '<label class="champ"><span class="ttl">Plafond mensuel <span class="faible">(facultatif)</span></span>' +
+        '<input type="number" id="k-plafond" min="0" step="10" value="' + esc(c && c.plafond !== null ? c.plafond : "") + '">' +
+        '<span class="aide">L\'enveloppe que vous ne voulez pas dépasser en moyenne sur un mois. Vide = pas de plafond.</span></label>'
+      : "");
+
+  ouvrirDialogue(c ? "Modifier la catégorie" : "Nouvelle catégorie", corps, [
+    { texte: "Annuler", action: fermerDialogue },
+    {
+      texte: c ? "Enregistrer" : "Ajouter", classe: "primaire", action: () => {
+        const nom = boite("k-nom").value.trim();
+        if (!nom) { message("Donnez un nom à cette catégorie."); return; }
+        const champPlafond = boite("k-plafond");
+        modifier(() => {
+          const propre = normaliserCategorie({
+            id: c ? c.id : identifiant("cat"), nom, type: t,
+            teinte: Number(boite("k-teinte").value),
+            plafond: champPlafond && champPlafond.value !== "" ? Number(champPlafond.value.replace(",", ".")) : null,
+          }, ETAT.categories.length);
+          const i = ETAT.categories.findIndex((x) => x.id === propre.id);
+          if (i >= 0) ETAT.categories[i] = propre; else ETAT.categories.push(propre);
+        });
+        fermerDialogue();
+      },
+    },
+  ]);
+}
+
+function supprimerCategorie(id) {
+  const c = categorie(id);
+  if (!c) return;
+  const memeType = ETAT.categories.filter((x) => x.type === c.type && x.id !== id);
+  if (!memeType.length) { message("Gardez au moins une catégorie de ce type."); return; }
+  const utilises = ETAT.flux.filter((f) => f.categorieId === id);
+  confirmer("Supprimer « " + c.nom + " » ?",
+    utilises.length
+      ? utilises.length + (utilises.length > 1 ? " flux passeront" : " flux passera") + " dans « " + memeType[0].nom + " »."
+      : "Aucun flux n'utilise cette catégorie.",
+    "Supprimer", () => {
+      modifier(() => {
+        for (const f of ETAT.flux) if (f.categorieId === id) f.categorieId = memeType[0].id;
+        ETAT.categories = ETAT.categories.filter((x) => x.id !== id);
+      });
+      message("Catégorie supprimée.");
+    });
+}
+
+function ouvrirObjectif(id) {
+  const o = id ? ETAT.objectifs.find((x) => x.id === id) : null;
+  const corps = '<div class="ligne-champs">' +
+    '<label class="champ"><span class="ttl">Intitulé</span><input type="text" id="o-nom" maxlength="50" value="' + esc(o ? o.nom : "") + '" placeholder="Épargne de précaution"></label>' +
+    '<label class="champ"><span class="ttl">Montant visé</span><input type="number" id="o-cible" min="0" step="100" value="' + esc(o ? o.cible : "") + '"></label>' +
+    '<label class="champ"><span class="ttl">Pour quand</span><input type="date" id="o-date" value="' + esc(o ? o.dateCible : ajouterMois(aujourdhui(), 12)) + '"></label>' +
+    '<label class="champ"><span class="ttl">Sur quel compte</span><select id="o-compte">' +
+    '<option value="">Tous les comptes</option>' + optionsComptes(o ? o.compteId : null) + "</select>" +
+    '<span class="aide">Un objectif suivi sur le livret ne compte que ce qui y arrive.</span></label>' +
+    '<label class="champ"><span class="ttl">Couleur</span><select id="o-teinte">' +
+    Array.from({ length: TEINTES_MAX }, (_, i) => '<option value="' + (i + 1) + '"' + (o && o.teinte === i + 1 ? " selected" : "") + ">Teinte " + (i + 1) + "</option>").join("") +
+    "</select></label></div>";
+
+  ouvrirDialogue(o ? "Modifier l'objectif" : "Nouvel objectif", corps, [
+    { texte: "Annuler", action: fermerDialogue },
+    {
+      texte: o ? "Enregistrer" : "Ajouter", classe: "primaire", action: () => {
+        const nom = boite("o-nom").value.trim();
+        if (!nom) { message("Donnez un intitulé à cet objectif."); return; }
+        modifier(() => {
+          const propre = normaliserObjectif({
+            id: o ? o.id : identifiant("obj"), nom,
+            cible: Number(boite("o-cible").value.replace(",", ".")),
+            dateCible: boite("o-date").value,
+            compteId: boite("o-compte").value || null,
+            teinte: Number(boite("o-teinte").value),
+          }, ETAT.comptes);
+          const i = ETAT.objectifs.findIndex((x) => x.id === propre.id);
+          if (i >= 0) ETAT.objectifs[i] = propre; else ETAT.objectifs.push(propre);
+        });
+        fermerDialogue();
+      },
+    },
+  ]);
+}
+
+/* ── Scénario ─────────────────────────────────────────────────────────── */
+
+function ligneExtra(f, i) {
+  return '<div class="ligne-champs trois extra" data-i="' + i + '" style="align-items:end;border:1px solid var(--bordure);border-radius:10px;padding:10px;margin-bottom:8px">' +
+    '<label class="champ"><span class="ttl">Libellé</span><input type="text" class="x-libelle" maxlength="60" value="' + esc(f.libelle) + '"></label>' +
+    '<label class="champ"><span class="ttl">Montant</span><input type="number" class="x-montant" min="0" step="0.01" value="' + esc(f.montant) + '"></label>' +
+    '<label class="champ"><span class="ttl">Sens</span><select class="x-type">' +
+    '<option value="depense"' + (f.type === "depense" ? " selected" : "") + ">Dépense</option>" +
+    '<option value="revenu"' + (f.type === "revenu" ? " selected" : "") + ">Revenu</option></select></label>" +
+    '<label class="champ"><span class="ttl">Rythme</span><select class="x-frequence">' +
+    FREQUENCES.map((x) => '<option value="' + x.id + '"' + (f.frequence === x.id ? " selected" : "") + ">" + esc(x.nom) + "</option>").join("") +
+    "</select></label>" +
+    '<label class="champ"><span class="ttl">À partir du</span><input type="date" class="x-debut" value="' + esc(f.debut) + '"></label>' +
+    '<div class="rangee fin"><button type="button" class="btn petit danger" data-act="scn-extra-retirer" data-i="' + i + '">Retirer</button></div>' +
+    "</div>";
+}
+
+function ouvrirScenario(id) {
+  const s = id ? ETAT.scenarios.find((x) => x.id === id) : null;
+  let extras = s ? s.extras.map((f) => Object.assign({}, f)) : [];
+
+  const dessiner = () => {
+    const corps =
+      '<div class="ligne-champs">' +
+      '<label class="champ"><span class="ttl">Nom du scénario</span><input type="text" id="s-nom" maxlength="50" value="' + esc(s ? s.nom : "") + '" placeholder="Et si je déménageais ?"></label>' +
+      '<label class="champ"><span class="ttl">Couleur</span><select id="s-teinte">' +
+      Array.from({ length: TEINTES_MAX }, (_, i) => '<option value="' + (i + 1) + '"' + (s && s.teinte === i + 1 ? " selected" : "") + ">Teinte " + (i + 1) + "</option>").join("") +
+      "</select></label></div>" +
+      '<div class="ligne-champs trois">' +
+      '<label class="champ"><span class="ttl">Tous les revenus</span><input type="number" id="s-rev" step="1" value="' + esc(s ? s.ajustRevenus : 0) + '">' +
+      '<span class="aide">en % (−20 = un cinquième de moins)</span></label>' +
+      '<label class="champ"><span class="ttl">Toutes les dépenses</span><input type="number" id="s-dep" step="1" value="' + esc(s ? s.ajustDepenses : 0) + '">' +
+      '<span class="aide">en %</span></label>' +
+      '<label class="champ"><span class="ttl">Solde de départ</span><input type="number" id="s-solde" step="10" value="' + esc(s ? s.soldeDelta : 0) + '">' +
+      '<span class="aide">un apport, un imprévu</span></label></div>' +
+      '<div class="sep"></div>' +
+      '<div><div class="ttl" style="font-weight:600;margin-bottom:6px">Flux retirés dans ce scénario</div>' +
+      '<div style="max-height:190px;overflow:auto;border:1px solid var(--bordure);border-radius:10px;padding:8px">' +
+      (ETAT.flux.length ? ETAT.flux.map((f) =>
+        '<label class="case" style="padding:2px 0"><input type="checkbox" class="s-exclu" value="' + esc(f.id) + '"' +
+        (s && s.exclus.includes(f.id) ? " checked" : "") + '><span>' + esc(f.libelle) +
+        ' <span class="faible">· ' + esc(argent(f.type === "revenu" ? f.montant : -f.montant, { signe: true })) + " " + esc((FREQ[f.frequence] || FREQ.mensuel).court) + "</span></span></label>").join("")
+        : '<span class="faible">Aucun flux à retirer.</span>') +
+      "</div></div>" +
+      '<div><div class="ttl" style="font-weight:600;margin:4px 0 6px">Flux ajoutés dans ce scénario</div>' +
+      '<div id="s-extras">' + extras.map(ligneExtra).join("") + "</div>" +
+      '<button type="button" class="btn petit" data-act="scn-extra-ajouter">+ Ajouter un flux au scénario</button></div>';
+
+    const lireExtras = () => Array.from(document.querySelectorAll("#s-extras .extra")).map((n) => ({
+      id: identifiant("flx"),
+      libelle: n.querySelector(".x-libelle").value.trim() || "Flux du scénario",
+      montant: Number(n.querySelector(".x-montant").value.replace(",", ".")) || 0,
+      type: n.querySelector(".x-type").value,
+      frequence: n.querySelector(".x-frequence").value,
+      debut: n.querySelector(".x-debut").value || aujourdhui(),
+      compteId: ETAT.comptes[0].id,
+      categorieId: null, fin: null, indexation: 0, actif: true, note: "",
+    }));
+
+    const memoriser = () => { extras = lireExtras(); };
+
+    ouvrirDialogue(s ? "Modifier le scénario" : "Nouveau scénario", corps, [
+      { texte: "Annuler", action: fermerDialogue },
+      {
+        texte: s ? "Enregistrer" : "Créer", classe: "primaire", action: () => {
+          const nom = boite("s-nom").value.trim();
+          if (!nom) { message("Donnez un nom à ce scénario."); return; }
+          const brut = {
+            id: s ? s.id : identifiant("scn"), nom, actif: s ? s.actif : true,
+            teinte: Number(boite("s-teinte").value),
+            ajustRevenus: Number(boite("s-rev").value.replace(",", ".")) || 0,
+            ajustDepenses: Number(boite("s-dep").value.replace(",", ".")) || 0,
+            soldeDelta: Number(boite("s-solde").value.replace(",", ".")) || 0,
+            exclus: Array.from(document.querySelectorAll(".s-exclu:checked")).map((x) => x.value),
+            extras: lireExtras(),
+          };
+          modifier(() => {
+            const propre = normaliserScenario(brut, ETAT.scenarios.length, ETAT.comptes, ETAT.categories);
+            const i = ETAT.scenarios.findIndex((x) => x.id === propre.id);
+            if (i >= 0) ETAT.scenarios[i] = propre; else ETAT.scenarios.push(propre);
+          });
+          fermerDialogue();
+        },
+      },
+    ], () => {
+      // ajout / retrait d'un flux de scénario : on relit ce qui est saisi avant de redessiner
+      boite("dialogue-corps").addEventListener("click", (ev) => {
+        const b = ev.target.closest("[data-act]");
+        if (!b) return;
+        if (b.dataset.act === "scn-extra-ajouter") {
+          memoriser();
+          extras.push({ libelle: "", montant: 0, type: "depense", frequence: "mensuel", debut: aujourdhui() });
+          dessiner();
+        } else if (b.dataset.act === "scn-extra-retirer") {
+          memoriser();
+          extras.splice(Number(b.dataset.i), 1);
+          dessiner();
+        }
+      });
+    });
+  };
+  dessiner();
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   11. Import / export
+   ══════════════════════════════════════════════════════════════════════ */
+
+function telecharger(nom, contenu, type) {
+  const blob = new Blob([contenu], { type: type + ";charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nom;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function nomFichier(extension) {
+  const t = ETAT.parametres.titre.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "budget";
+  return t + "-" + aujourdhui() + "." + extension;
+}
+
+function exporterJson() {
+  telecharger(nomFichier("json"), JSON.stringify(ETAT, null, 2), "application/json");
+  message("Fichier exporté.");
+}
+
+function exporterCsv(projection) {
+  const sep = ";";
+  const echappe = (v) => {
+    const s = String(v === null || v === undefined ? "" : v);
+    return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const lignes = [["Date", "Libellé", "Type", "Catégorie", "Compte", "Montant", "Solde projeté"].join(sep)];
+  for (const op of projection.operations) {
+    lignes.push([
+      op.date, op.libelle, op.montant >= 0 ? "Revenu" : "Dépense",
+      nomCategorie(op.categorieId), nomCompte(op.compteId),
+      String(op.montant).replace(".", ","), String(op.solde).replace(".", ","),
+    ].map(echappe).join(sep));
+  }
+  // le BOM évite qu'un tableur ouvre les accents de travers
+  telecharger(nomFichier("csv"), "﻿" + lignes.join("\r\n"), "text/csv");
+  message(projection.operations.length + " opérations exportées.");
+}
+
+function importerJson() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "application/json,.json";
+  input.addEventListener("change", () => {
+    const fichier = input.files && input.files[0];
+    if (!fichier) return;
+    const lecteur = new FileReader();
+    lecteur.onload = () => {
+      let brut;
+      try { brut = JSON.parse(String(lecteur.result)); }
+      catch (e) { message("Ce fichier n'est pas un JSON valide."); return; }
+      const propre = normaliser(brut);
+      confirmer("Remplacer vos données ?",
+        "Le fichier contient " + propre.flux.length + " flux, " + propre.comptes.length + " comptes et " +
+        propre.objectifs.length + " objectifs. Vos données actuelles seront écrasées.",
+        "Importer", () => {
+          ETAT = propre;
+          enregistrerEtat();
+          rendre();
+          message("Données importées.");
+        });
+    };
+    lecteur.readAsText(fichier);
+  });
+  input.click();
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   12. Rendu général et événements
+   ══════════════════════════════════════════════════════════════════════ */
+
+function rendre() {
+  PROJECTION = projeter({});
+
+  boite("pilule-solde-val").textContent = argent(PROJECTION.soldeInitial);
+  const fin = boite("pilule-fin-val");
+  fin.textContent = argent(PROJECTION.soldeFinal);
+  fin.style.color = PROJECTION.soldeFinal < 0 ? "var(--depense-texte)"
+    : (PROJECTION.alerte.dateSousSeuil ? "var(--alerte-texte)" : "");
+  boite("pilule-fin-etiq").textContent = ETAT.parametres.horizon % 12 === 0
+    ? "Dans " + (ETAT.parametres.horizon / 12) + (ETAT.parametres.horizon === 12 ? " an" : " ans")
+    : "Dans " + ETAT.parametres.horizon + " mois";
+  boite("sel-horizon").value = String(ETAT.parametres.horizon);
+  document.title = ETAT.parametres.titre + " — Prévoyant";
+
+  for (const v of VUES) {
+    const section = boite("vue-" + v);
+    section.classList.toggle("masque", v !== vueActive);
+  }
+  document.querySelectorAll("#onglets button").forEach((b) => {
+    b.classList.toggle("on", b.dataset.vue === vueActive);
+  });
+
+  const cible = boite("vue-" + vueActive);
+  const rendus = {
+    tableau: rendreTableau, flux: rendreFlux, projection: rendreProjection,
+    categories: rendreCategories, objectifs: rendreObjectifs, scenarios: rendreScenarios,
+    comptes: rendreComptes, reglages: rendreReglages,
+  };
+  rendus[vueActive](cible, PROJECTION);
+}
+
+function allerA(vue) {
+  if (!VUES.includes(vue)) return;
+  vueActive = vue;
+  if (location.hash.slice(1) !== vue) location.hash = vue;
+  rendre();
+  window.scrollTo({ top: 0, behavior: "instant" });
+}
+
+function appliquerTheme(valeur) {
+  if (valeur === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", valeur);
+  localStorage.setItem(CLE_THEME, valeur);
+}
+
+function chargerDemo() {
+  confirmer("Charger l'exemple ?", "Le budget d'exemple remplacera ce que contient actuellement l'application.",
+    "Charger", () => {
+      ETAT = jeuDemo();
+      enregistrerEtat();
+      rendre();
+      message("Exemple chargé — remplacez les montants par les vôtres.");
+    });
+}
+
+function toutEffacer() {
+  confirmer("Tout effacer ?", "Flux, comptes, objectifs et scénarios seront supprimés définitivement. " +
+    "Pensez à exporter vos données avant si vous voulez pouvoir y revenir.",
+    "Tout effacer", () => {
+      ETAT = normaliser(null);
+      enregistrerEtat();
+      allerA("flux");
+      message("Application remise à zéro.");
+    });
+}
+
+const ACTIONS = {
+  "flux-nouveau": () => ouvrirFlux(null),
+  "flux-editer": (b) => ouvrirFlux(b.dataset.id),
+  "flux-supprimer": (b) => supprimerFlux(b.dataset.id),
+  "flux-dupliquer": (b) => dupliquerFlux(b.dataset.id),
+  "flux-basculer": (b) => modifier(() => {
+    const f = ETAT.flux.find((x) => x.id === b.dataset.id);
+    if (f) f.actif = !f.actif;
+  }),
+  "filtre-type": (b) => { ui.filtreType = b.dataset.v; rendre(); },
+  "tri": (b) => { ui.tri = b.dataset.v; rendre(); },
+  "mois-detail": (b) => {
+    const cle = b.dataset.cle;
+    if (ui.moisOuverts.has(cle)) ui.moisOuverts.delete(cle); else ui.moisOuverts.add(cle);
+    rendre();
+  },
+  "tout-replier": () => {
+    if (ui.moisOuverts.size) ui.moisOuverts.clear();
+    else for (const m of PROJECTION.mois) if (m.operations.length) ui.moisOuverts.add(m.cle);
+    rendre();
+  },
+  "cat-nouvelle": (b) => ouvrirCategorie(null, b.dataset.type),
+  "cat-editer": (b) => ouvrirCategorie(b.dataset.id),
+  "cat-supprimer": (b) => supprimerCategorie(b.dataset.id),
+  "cpt-nouveau": () => ouvrirCompte(null),
+  "cpt-editer": (b) => ouvrirCompte(b.dataset.id),
+  "cpt-supprimer": (b) => supprimerCompte(b.dataset.id),
+  "obj-nouveau": () => ouvrirObjectif(null),
+  "obj-editer": (b) => ouvrirObjectif(b.dataset.id),
+  "obj-supprimer": (b) => {
+    const o = ETAT.objectifs.find((x) => x.id === b.dataset.id);
+    if (!o) return;
+    confirmer("Supprimer « " + o.nom + " » ?", "L'objectif disparaîtra du suivi.", "Supprimer", () => {
+      modifier(() => { ETAT.objectifs = ETAT.objectifs.filter((x) => x.id !== o.id); });
+    });
+  },
+  "scn-nouveau": () => ouvrirScenario(null),
+  "scn-editer": (b) => ouvrirScenario(b.dataset.id),
+  "scn-supprimer": (b) => {
+    const s = ETAT.scenarios.find((x) => x.id === b.dataset.id);
+    if (!s) return;
+    confirmer("Supprimer « " + s.nom + " » ?", "Vos flux ne sont pas touchés : seul le scénario disparaît.", "Supprimer", () => {
+      modifier(() => { ETAT.scenarios = ETAT.scenarios.filter((x) => x.id !== s.id); });
+    });
+  },
+  "scn-basculer": (b) => modifier(() => {
+    const s = ETAT.scenarios.find((x) => x.id === b.dataset.id);
+    if (s) s.actif = !s.actif;
+  }),
+  "theme": (b) => { appliquerTheme(b.dataset.v); rendre(); },
+  "demo": chargerDemo,
+  "raz": toutEffacer,
+  "export-json": exporterJson,
+  "export-csv": () => exporterCsv(ui.compteProjection
+    ? projeter({ du: PROJECTION.du, au: PROJECTION.au, compteId: ui.compteProjection })
+    : PROJECTION),
+  "import-json": importerJson,
+};
+
+function brancherEvenements() {
+  document.addEventListener("click", (ev) => {
+    const b = ev.target.closest("[data-act]");
+    if (!b || b.closest("#dialogue-corps")) return;
+    const action = ACTIONS[b.dataset.act];
+    if (!action) return;
+    ev.preventDefault();
+    action(b);
+  });
+
+  document.addEventListener("change", (ev) => {
+    const cible = ev.target;
+    if (cible.dataset.act === "compte-projection") {
+      ui.compteProjection = cible.value;
+      rendre();
+    } else if (cible.dataset.act === "param") {
+      const cle = cible.dataset.cle;
+      modifier(() => {
+        if (cle === "horizon") ETAT.parametres.horizon = Number(cible.value);
+        else if (cle === "arrondi") ETAT.parametres.arrondi = cible.value === "1";
+        else if (cle === "seuilAlerte") ETAT.parametres.seuilAlerte = arrondi2(nombreSur(cible.value, 0, 0));
+        else if (cle === "debutProjection") ETAT.parametres.debutProjection = estIso(cible.value) ? cible.value : null;
+        else if (cle === "devise") ETAT.parametres.devise = DEVISES[cible.value] ? cible.value : "EUR";
+        else if (cle === "titre") ETAT.parametres.titre = texteSur(cible.value, "Mon budget", 60);
+        _formats = {};
+      });
+    }
+  });
+
+  boite("sel-horizon").addEventListener("change", (ev) => {
+    modifier(() => { ETAT.parametres.horizon = Number(ev.target.value); });
+  });
+
+  document.querySelectorAll("#onglets button").forEach((b) => {
+    b.addEventListener("click", () => allerA(b.dataset.vue));
+  });
+
+  boite("btn-theme").addEventListener("click", () => {
+    const ordre = ["auto", "clair", "sombre"];
+    const actuel = localStorage.getItem(CLE_THEME) || "auto";
+    const suivant = ordre[(ordre.indexOf(actuel) + 1) % ordre.length];
+    appliquerTheme(suivant);
+    message("Thème : " + (suivant === "auto" ? "automatique" : suivant));
+    if (vueActive === "reglages") rendre();
+  });
+
+  boite("dialogue-x").addEventListener("click", fermerDialogue);
+  boite("voile").addEventListener("mousedown", (ev) => {
+    if (ev.target === boite("voile")) fermerDialogue();
+  });
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && !boite("voile").classList.contains("masque")) fermerDialogue();
+  });
+
+  window.addEventListener("hashchange", () => {
+    const v = location.hash.slice(1);
+    if (VUES.includes(v) && v !== vueActive) { vueActive = v; rendre(); }
+  });
+
+  // les graphiques sont dessinés à la largeur mesurée : un redimensionnement
+  // les rejoue, une fois la fenêtre stabilisée
+  let minuterie = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(minuterie);
+    minuterie = setTimeout(rendre, 180);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   13. Démarrage
+   ══════════════════════════════════════════════════════════════════════ */
+
+function demarrer() {
+  appliquerTheme(localStorage.getItem(CLE_THEME) || "auto");
+
+  const dejaVu = chargerEtat();
+  if (!dejaVu) {
+    // première ouverture : mieux vaut une application vivante qu'une page vide
+    ETAT = jeuDemo();
+    enregistrerEtat();
+    setTimeout(() => message("Budget d'exemple chargé — remplacez les montants par les vôtres."), 400);
+  }
+
+  const depart = location.hash.slice(1);
+  if (VUES.includes(depart)) vueActive = depart;
+
+  brancherEvenements();
+  rendre();
+
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+}
+
+if (typeof document !== "undefined" && document.getElementById) {
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", demarrer);
+  else demarrer();
+}
+
+/* Le moteur est exposé pour les tests, qui évaluent ce script hors navigateur. */
+if (typeof globalThis !== "undefined") {
+  globalThis.Prevoyant = {
+    normaliser, occurrences, projeter, soldeALaDate, mensualiteMoyenne, mensualitePret,
+    evaluerObjectif, enveloppes, fluxDuScenario, projeterScenario, jeuDemo, montantA,
+    ajouterMois, ajouterJours, moisEntre, joursEntre, joursDansMois, estIso, cleMois,
+    finDeMois, moisSuivant, graduations, arrondi2,
+    etat: () => ETAT,
+    poserEtat: (e) => { ETAT = normaliser(e); return ETAT; },
+    FREQUENCES, VERSION_ETAT,
+  };
+}
+</script>
+</body>
+</html>
