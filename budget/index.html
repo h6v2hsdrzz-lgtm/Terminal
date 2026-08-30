@@ -78,7 +78,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="clair"]) {
+  :root:not([data-theme="light"]) {
     color-scheme: dark;
     --fond: #0f141a;
     --surface: #161d26;
@@ -113,7 +113,7 @@
   }
 }
 
-:root[data-theme="sombre"] {
+:root[data-theme="dark"] {
   color-scheme: dark;
   --fond: #0f141a;
   --surface: #161d26;
@@ -1389,22 +1389,29 @@ function mensualitePret(capital, tauxAnnuel, mois) {
    6. Persistance
    ══════════════════════════════════════════════════════════════════════ */
 
+/* Certains contextes refusent le stockage local — navigation privée, cookies
+   bloqués, page en bac à sable — et lèvent à la simple lecture. L'application
+   doit alors continuer de fonctionner, sans mémoire d'une session à l'autre. */
+function lireLocal(cle) {
+  try { return localStorage.getItem(cle); } catch (e) { return null; }
+}
+
+function ecrireLocal(cle, valeur) {
+  try { localStorage.setItem(cle, valeur); return true; } catch (e) { return false; }
+}
+
 function chargerEtat() {
   let brut = null;
-  try {
-    const t = localStorage.getItem(CLE_ETAT);
-    if (t) brut = JSON.parse(t);
-  } catch (e) { brut = null; }
+  const t = lireLocal(CLE_ETAT);
+  if (t) { try { brut = JSON.parse(t); } catch (e) { brut = null; } }
   ETAT = normaliser(brut);
   return brut !== null;
 }
 
 function enregistrerEtat() {
   _formats = {};
-  try {
-    localStorage.setItem(CLE_ETAT, JSON.stringify(ETAT));
-  } catch (e) {
-    message("Sauvegarde impossible — l'espace du navigateur est plein.");
+  if (!ecrireLocal(CLE_ETAT, JSON.stringify(ETAT))) {
+    message("Sauvegarde impossible : ce navigateur refuse le stockage local.");
   }
 }
 
@@ -2292,7 +2299,7 @@ function rendreComptes(cible, p) {
 
 function rendreReglages(cible, p) {
   const par = ETAT.parametres;
-  const theme = localStorage.getItem(CLE_THEME) || "auto";
+  const theme = lireLocal(CLE_THEME) || "auto";
 
   const parametres = carte(
     '<div class="ligne-champs">' +
@@ -2318,7 +2325,7 @@ function rendreReglages(cible, p) {
     '<div class="sep" style="margin:16px 0"></div>' +
     '<label class="champ"><span class="ttl">Thème</span></label>' +
     '<div class="segments" style="margin-top:6px">' +
-    [["auto", "Automatique"], ["clair", "Clair"], ["sombre", "Sombre"]].map(([v, n]) =>
+    [["auto", "Automatique"], ["light", "Clair"], ["dark", "Sombre"]].map(([v, n]) =>
       '<button data-act="theme" data-v="' + v + '" class="' + (theme === v ? "on" : "") + '">' + n + "</button>").join("") +
     "</div>",
     { titre: "Réglages" });
@@ -2940,11 +2947,25 @@ function allerA(vue) {
   window.scrollTo({ top: 0, behavior: "instant" });
 }
 
-function appliquerTheme(valeur) {
-  if (valeur === "auto") document.documentElement.removeAttribute("data-theme");
-  else document.documentElement.setAttribute("data-theme", valeur);
-  localStorage.setItem(CLE_THEME, valeur);
+/**
+ * Le thème est porté par `data-theme` sur la racine, aux valeurs que pose
+ * n'importe quel hôte : `light` ou `dark`.
+ *
+ * Au démarrage (`initial`), « automatique » ne retire rien : si la page est
+ * servie dans un cadre qui a déjà posé l'attribut, c'est le choix du lecteur,
+ * et l'effacer le trahirait. Seul un choix explicite dans les réglages
+ * écrase ce que l'hôte a posé.
+ */
+function appliquerTheme(valeur, initial) {
+  if (valeur === "auto") {
+    if (!initial) document.documentElement.removeAttribute("data-theme");
+  } else {
+    document.documentElement.setAttribute("data-theme", valeur);
+  }
+  if (!initial) ecrireLocal(CLE_THEME, valeur);
 }
+
+const NOMS_THEME = { auto: "automatique", light: "clair", dark: "sombre" };
 
 function chargerDemo() {
   confirmer("Charger l'exemple ?", "Le budget d'exemple remplacera ce que contient actuellement l'application.",
@@ -3064,11 +3085,11 @@ function brancherEvenements() {
   });
 
   boite("btn-theme").addEventListener("click", () => {
-    const ordre = ["auto", "clair", "sombre"];
-    const actuel = localStorage.getItem(CLE_THEME) || "auto";
+    const ordre = ["auto", "light", "dark"];
+    const actuel = lireLocal(CLE_THEME) || "auto";
     const suivant = ordre[(ordre.indexOf(actuel) + 1) % ordre.length];
     appliquerTheme(suivant);
-    message("Thème : " + (suivant === "auto" ? "automatique" : suivant));
+    message("Thème : " + NOMS_THEME[suivant]);
     if (vueActive === "reglages") rendre();
   });
 
@@ -3099,7 +3120,7 @@ function brancherEvenements() {
    ══════════════════════════════════════════════════════════════════════ */
 
 function demarrer() {
-  appliquerTheme(localStorage.getItem(CLE_THEME) || "auto");
+  appliquerTheme(lireLocal(CLE_THEME) || "auto", true);
 
   const dejaVu = chargerEtat();
   if (!dejaVu) {
