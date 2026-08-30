@@ -100,6 +100,11 @@ bancaire.
 
 1. **Créer la base.** Sur [neon.tech](https://neon.tech) (ou Supabase), créer un
    projet et copier la chaîne de connexion — elle commence par `postgresql://`.
+   Prendre celle **avec pool de connexions** : son hôte contient `-pooler`.
+   L'adresse directe tient quelques connexions puis refuse les suivantes, ce
+   qui se voit exactement quand plusieurs personnes consultent le journal en
+   même temps. Garder le `?sslmode=require` qu'elle porte : il chiffre la
+   liaison et le certificat est vérifié.
 2. **Déployer.** [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fh6v2hsdrzz-lgtm%2FTerminal&project-name=journal-de-joie&repository-name=journal-de-joie&root-directory=joie&env=DATABASE_URL&envDescription=URL%20de%20connexion%20PostgreSQL%20%28Neon%2C%20Supabase%20ou%20Vercel%20Postgres%29&envLink=https%3A%2F%2Fgithub.com%2Fh6v2hsdrzz-lgtm%2FTerminal%2Fblob%2Fmain%2Fjoie%2FREADME.md)
    Le formulaire demande `DATABASE_URL` : y coller la chaîne de l'étape 1.
 
