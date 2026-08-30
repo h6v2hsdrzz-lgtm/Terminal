@@ -11,7 +11,7 @@
  *    pas entre deux versions.
  */
 
-const VERSION = "joie-v1";
+const VERSION = "joie-v2";
 const COQUILLE = ["./", "./index.html", "./manifest.webmanifest", "./icone-192.png", "./icone-512.png", "./icone-apple-180.png"];
 
 self.addEventListener("install", (evenement) => {

@@ -22,6 +22,49 @@ dans un navigateur, ou déposez le dossier sur n'importe quel hébergement
 statique. Les deux versions partagent le même modèle, les mêmes calculs et le
 même jeu de démonstration.
 
+### Ce que la version autonome sait faire
+
+- **Lieu** sur chaque entrée, et une carte « lieu le plus joyeux » qui en découle.
+- **Tout est configurable** : profils (cinq au plus), facteurs suivis, lieux,
+  titre du journal, échelle de joie (1 à 5 ou 1 à 10), seuil de fiabilité,
+  cartes affichées, décor.
+- **Sept cartes** activables une à une : moyenne générale, une par profil,
+  facteur le plus influent, lieu le plus joyeux, série de jours en cours,
+  calendrier des dix dernières semaines, répartition des scores.
+- **Quatre décors** — sobre, aurore, jardin, nuit — faits de taches de couleur
+  floutées, animées ou non. Aucune image n'est chargée.
+
+Le plafond de cinq profils n'est pas arbitraire : les teintes de série sont
+validées ensemble sur la clarté, le chroma, la séparation en vision daltonienne
+et le contraste, dans les deux thèmes. Une sixième ne passe plus les contrôles.
+
+### Journal partagé et synchronisation
+
+Publiée comme artefact Claude, l'application partage son journal : chaque
+saisie et chaque réglage est publié, et **toutes les vues ouvertes basculent
+sur la nouvelle version**. La pastille en haut de page dit toujours où l'on
+en est — `Partagé`, `Envoi…`, `Lecture seule` ou `Local`.
+
+Deux voies de publication, de la plus douce à la plus rustique :
+
+1. **par fichier** — seul `data/journal.json` est réécrit, et la vue qui publie
+   continue de tourner sans interruption ;
+2. **par page** — le document entier est régénéré depuis son modèle et
+   republié ; toutes les vues rechargent, la saisie en cours étant mise de côté
+   dans `sessionStorage` pour survivre au passage.
+
+Le document régénéré n'est jamais une sérialisation du DOM affiché : il est
+reconstruit à partir du `<template>` intact, du texte du script et de l'état,
+ce qui le rend stable d'une republication à l'autre.
+
+Deux limites, dites franchement :
+
+- **Sur GitHub Pages, il n'y a pas de synchronisation.** Un hébergement
+  statique n'a pas de serveur ; chaque appareil garde son propre journal.
+- **Un lecteur sans droit d'écriture voit tout, ne modifie rien.** La page le
+  détecte à la première tentative et bascule en lecture seule plutôt que de
+  laisser croire à un enregistrement.
+
 ### Installation sur l'écran d'accueil
 
 Servie en HTTPS, la version autonome s'installe comme une application : elle a
