@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { enregistrerEntree, listerEntrees } from "@/lib/depot";
+import { enregistrerEntree, listerEntrees, versionJournal } from "@/lib/depot";
 import { validerSaisie } from "@/lib/validation";
 
 // Prisma et SQLite ont besoin du runtime Node, et le journal change à chaque
@@ -9,8 +9,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const entrees = await listerEntrees();
-  return NextResponse.json({ entrees });
+  const [entrees, version] = await Promise.all([listerEntrees(), versionJournal()]);
+  return NextResponse.json(
+    { entrees, version },
+    { headers: { "Cache-Control": "no-store, max-age=0" } },
+  );
 }
 
 export async function POST(requete: Request) {

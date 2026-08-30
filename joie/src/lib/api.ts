@@ -29,11 +29,23 @@ async function lireErreur(reponse: Response): Promise<never> {
   throw new ErreurApi(message, erreurs);
 }
 
-export async function chargerEntrees(): Promise<Entree[]> {
+export async function chargerEntrees(): Promise<{ entrees: Entree[]; version: string }> {
   const reponse = await fetch("/api/entrees", { cache: "no-store" });
   if (!reponse.ok) await lireErreur(reponse);
-  const { entrees } = await reponse.json();
-  return entrees as Entree[];
+  const corps = await reponse.json();
+  return { entrees: corps.entrees as Entree[], version: String(corps.version ?? "") };
+}
+
+/**
+ * Empreinte du journal — quelques octets. C'est elle que la page interroge
+ * toutes les trois secondes ; le journal entier n'est rechargé que lorsque
+ * l'empreinte a bougé.
+ */
+export async function chargerVersion(): Promise<string> {
+  const reponse = await fetch("/api/version", { cache: "no-store" });
+  if (!reponse.ok) await lireErreur(reponse);
+  const { version } = await reponse.json();
+  return String(version ?? "");
 }
 
 export async function creerEntree(saisie: SaisieEntree): Promise<Entree> {

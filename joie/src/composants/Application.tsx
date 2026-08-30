@@ -14,7 +14,7 @@ import { Kpis } from "./Kpis";
 import { Notifications } from "./Notifications";
 
 function Contenu() {
-  const { entrees } = useJournal();
+  const { entrees, horsLigne } = useJournal();
 
   return (
     <>
@@ -29,6 +29,20 @@ function Contenu() {
               Momo, Sam &amp; Samy — biberon et plante verte
             </p>
           </div>
+          <span
+            title={
+              horsLigne
+                ? "Le serveur ne répond pas — les saisies faites ailleurs n'arrivent plus"
+                : "Les saisies faites sur les autres appareils arrivent en quelques secondes"
+            }
+            className="hidden items-center gap-1.5 rounded-full border border-bordure bg-surface px-2.5 py-1 text-[11px] font-medium text-attenue sm:inline-flex"
+          >
+            <span
+              aria-hidden
+              className={`h-1.5 w-1.5 rounded-full ${horsLigne ? "bg-rouge" : "bg-vert"}`}
+            />
+            {horsLigne ? "Hors ligne" : "Synchronisé"}
+          </span>
           <BasculeTheme />
         </div>
       </header>
@@ -60,9 +74,15 @@ function Contenu() {
   );
 }
 
-export function Application({ entreesInitiales }: { entreesInitiales: Entree[] }) {
+export function Application({
+  entreesInitiales,
+  versionInitiale,
+}: {
+  entreesInitiales: Entree[];
+  versionInitiale: string;
+}) {
   return (
-    <FournisseurJournal entreesInitiales={entreesInitiales}>
+    <FournisseurJournal entreesInitiales={entreesInitiales} versionInitiale={versionInitiale}>
       <Contenu />
     </FournisseurJournal>
   );

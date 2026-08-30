@@ -11,10 +11,12 @@ journées « avec » et les journées « sans », et un journal exportable.
 
 | | `joie/` (cette application) | `joie/autonome/` |
 |---|---|---|
-| Stockage | SQLite, par API Routes | le navigateur (`localStorage`) |
-| Installation | `npm install` | aucune — un fichier HTML |
-| Données partagées entre appareils | oui, un serveur les tient | non, chaque navigateur a les siennes |
-| Pour qui | l'usage durable | essayer tout de suite, ou publier sur un hébergement statique |
+| Stockage | PostgreSQL, par API Routes | le navigateur (`localStorage`) |
+| Installation | un déploiement en un clic | aucune — un dossier statique |
+| Journal commun à tout le monde | **oui** | non, chaque navigateur a le sien |
+| Mise à jour entre navigateurs | ~1 seconde | aucune |
+| Fonctionne sans réseau | non | oui, une fois installée |
+| Pour qui | un journal partagé à plusieurs | essayer tout de suite, ou hébergement statique |
 
 La version autonome tient dans `joie/autonome/` : aucune dépendance, aucune
 construction, les graphiques sont du SVG écrit à la main. Ouvrez le fichier
@@ -90,26 +92,62 @@ joie/autonome/
 └─ icone*.png|svg          icônes d'écran d'accueil, dont une masquable
 ```
 
-## Démarrage
+## Mettre le journal en ligne, partagé
 
-Node 20 ou plus récent.
+C'est la seule façon d'avoir un journal **commun** : une base de données que
+tous les navigateurs interrogent. Deux services gratuits suffisent, sans carte
+bancaire.
+
+1. **Créer la base.** Sur [neon.tech](https://neon.tech) (ou Supabase), créer un
+   projet et copier la chaîne de connexion — elle commence par `postgresql://`.
+2. **Déployer.** [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fh6v2hsdrzz-lgtm%2FTerminal&project-name=journal-de-joie&repository-name=journal-de-joie&root-directory=joie&env=DATABASE_URL&envDescription=URL%20de%20connexion%20PostgreSQL%20%28Neon%2C%20Supabase%20ou%20Vercel%20Postgres%29&envLink=https%3A%2F%2Fgithub.com%2Fh6v2hsdrzz-lgtm%2FTerminal%2Fblob%2Fmain%2Fjoie%2FREADME.md)
+   Le formulaire demande `DATABASE_URL` : y coller la chaîne de l'étape 1.
+
+Le déploiement joue les migrations tout seul (`prisma migrate deploy` fait
+partie du build) et rend une adresse publique, que tout le monde peut ouvrir
+sans compte.
+
+Pour partir d'un journal garni plutôt que d'une page vide, une fois l'adresse
+obtenue : `DATABASE_URL="…" npm run db:seed`.
+
+## Synchronisation entre appareils
+
+Chaque page ouverte demande au serveur, toutes les trois secondes, une
+**empreinte** du journal — le nombre d'entrées et la date de la dernière
+modification, quelques octets. Tant qu'elle ne bouge pas, rien n'est rechargé ;
+dès qu'elle change, la page récupère le journal et se redessine, avec un
+message discret. Mesuré entre deux navigateurs : une saisie arrive à l'autre en
+une seconde environ.
+
+Une pastille dans l'en-tête dit l'état : `Synchronisé`, ou `Hors ligne` si le
+serveur ne répond plus — auquel cas l'affichage est conservé plutôt que vidé.
+
+Pourquoi une interrogation régulière plutôt qu'une connexion permanente
+(WebSocket, SSE) ? Parce que l'hébergement recommandé exécute l'application par
+fonctions sans état : une connexion ouverte y coûte cher, et deux visiteurs
+peuvent tomber sur deux instances différentes qui ne se parlent pas. Une
+empreinte toutes les trois secondes marche partout, ne coûte presque rien, et
+pour un journal de famille, trois secondes ne se voient pas.
+
+## Démarrage local
+
+Node 20 ou plus récent, et une base PostgreSQL. La plus rapide, avec Docker :
 
 ```bash
 cd joie
+npm run db:local   # démarre une base jetable sur le port 5433
 npm install        # installe et génère le client Prisma
-npm run db:setup   # crée la base SQLite (joie/prisma/dev.db)
+npm run db:setup   # joue les migrations
 npm run db:seed    # facultatif : six semaines de données de démonstration
 npm run dev        # http://localhost:3000
 ```
 
-`npm install` crée au passage un fichier `.env` à partir de `.env.example`.
-Une seule variable y figure, le chemin de la base :
+`npm run db:local:stop` arrête la base. Sans Docker, n'importe quel PostgreSQL
+fait l'affaire : renseigner son URL dans `.env`.
 
-```
-DATABASE_URL="file:./prisma/dev.db"
-```
-
-Pour repartir de zéro : supprimer `prisma/dev.db` et relancer `npm run db:setup`.
+`npm install` crée au passage un `.env` à partir de `.env.example` — sauf si
+`DATABASE_URL` existe déjà dans l'environnement, auquel cas la configuration de
+l'hébergeur est laissée intacte.
 
 ### Autres commandes
 
@@ -120,6 +158,7 @@ Pour repartir de zéro : supprimer `prisma/dev.db` et relancer `npm run db:setup
 | `npm run lint` | ESLint |
 | `npm run db:migrate` | crée une migration après modification du schéma |
 | `npm run db:studio` | Prisma Studio, pour inspecter la base |
+| `npm run db:local` / `db:local:stop` | base PostgreSQL jetable dans Docker |
 
 ## Ce que fait l'application
 
@@ -153,16 +192,18 @@ copié.
 ```
 joie/
 ├─ prisma/
-│  ├─ schema.prisma        modèle Entree, contrainte d'unicité (date, personne)
+│  ├─ schema.prisma        modèle Entree (PostgreSQL), unicité (date, personne)
 │  ├─ migrations/          migrations SQL versionnées
 │  └─ seed.ts              jeu de démonstration déterministe
 ├─ src/
 │  ├─ app/
 │  │  ├─ api/entrees/      GET, POST · PATCH, DELETE sur /:id
+│  │  ├─ api/version/      empreinte du journal, pour la synchronisation
 │  │  ├─ layout.tsx        métadonnées, thème appliqué avant la peinture
 │  │  ├─ page.tsx          composant serveur : charge le journal, rend l'app
 │  │  └─ globals.css       palette, thème sombre, curseur de joie
-│  ├─ composants/          formulaire, indicateurs, graphiques, journal
+│  ├─ composants/          formulaire, indicateurs, graphiques, journal,
+│  │                       et la boucle de synchronisation
 │  └─ lib/
 │     ├─ analyse.ts        moyennes, deltas, séries — fonctions pures
 │     ├─ date.ts           ISO en base, JJ/MM/AAAA à l'écran
@@ -174,7 +215,7 @@ joie/
 ```
 
 **Next.js 16** (App Router), **React 19**, **Tailwind CSS 4**, **Recharts**,
-**Lucide**, **Prisma 7** sur **SQLite**.
+**Lucide**, **Prisma 7** sur **PostgreSQL**.
 
 ### Deux formats de date, volontairement
 
@@ -207,6 +248,7 @@ fausseraient les écarts.
 | `POST` | `/api/entrees` | `201` — crée ou remplace l'entrée du couple `(date, personne)` |
 | `PATCH` | `/api/entrees/:id` | `200`, `404` si inconnue, `409` si le couple est déjà pris |
 | `DELETE` | `/api/entrees/:id` | `204` |
+| `GET` | `/api/version` | `{ version }` — empreinte du journal, interrogée toutes les 3 s |
 
 Une charge utile invalide renvoie `422` avec le détail par champ ; le serveur
 revalide tout, il ne fait pas confiance au formulaire.
