@@ -2835,16 +2835,43 @@ function ouvrirScenario(id) {
    11. Import / export
    ══════════════════════════════════════════════════════════════════════ */
 
-function telecharger(nom, contenu, type) {
-  const blob = new Blob([contenu], { type: type + ";charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = nom;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+/* Certains hôtes n'autorisent pas une page à déclencher un téléchargement
+   elle-même et le prennent en charge, en demandant confirmation au lecteur.
+   On leur pose la question une fois, à la première exportation. */
+let _hoteFichiers = null;
+
+function hoteDeTelechargement() {
+  if (!_hoteFichiers) {
+    _hoteFichiers = (typeof window !== "undefined" && window.claude && typeof window.claude.use === "function")
+      ? Promise.resolve(window.claude.use("downloads")).catch(() => null)
+      : Promise.resolve(null);
+  }
+  return _hoteFichiers;
+}
+
+function telecharger(nom, contenu, type, reussite) {
+  hoteDeTelechargement().then((hote) => {
+    if (hote) {
+      return hote.save({ filename: nom, data: contenu }).then(
+        () => message(reussite),
+        (erreur) => {
+          // un refus du lecteur n'est pas une erreur : il a dit non
+          if (erreur && erreur.code === "declined") return;
+          message("Enregistrement impossible depuis cette page.");
+        }
+      );
+    }
+    const blob = new Blob([contenu], { type: type + ";charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = nom;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    message(reussite);
+  });
 }
 
 function nomFichier(extension) {
@@ -2853,8 +2880,8 @@ function nomFichier(extension) {
 }
 
 function exporterJson() {
-  telecharger(nomFichier("json"), JSON.stringify(ETAT, null, 2), "application/json");
-  message("Fichier exporté.");
+  telecharger(nomFichier("json"), JSON.stringify(ETAT, null, 2), "application/json",
+    ETAT.flux.length + (ETAT.flux.length > 1 ? " flux exportés." : " flux exporté."));
 }
 
 function exporterCsv(projection) {
@@ -2872,8 +2899,8 @@ function exporterCsv(projection) {
     ].map(echappe).join(sep));
   }
   // le BOM évite qu'un tableur ouvre les accents de travers
-  telecharger(nomFichier("csv"), "﻿" + lignes.join("\r\n"), "text/csv");
-  message(projection.operations.length + " opérations exportées.");
+  telecharger(nomFichier("csv"), "﻿" + lignes.join("\r\n"), "text/csv",
+    projection.operations.length + " opérations exportées.");
 }
 
 function importerJson() {
