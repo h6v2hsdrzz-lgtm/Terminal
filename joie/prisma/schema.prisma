@@ -1,5 +1,9 @@
 // Modèle de données du suivi de joie.
 //
+// PostgreSQL : c'est la base qui s'héberge gratuitement chez Neon, Supabase
+// ou Vercel, et la seule qui survive à un hébergement sans disque — un
+// fichier SQLite disparaîtrait au premier redéploiement.
+//
 // Une entrée = le niveau de joie d'une personne pour un jour donné, avec
 // l'état des deux déclencheurs suivis. La contrainte d'unicité (jour,
 // personne) est volontaire : le tableau de bord compare des moyennes
@@ -12,7 +16,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model Entree {

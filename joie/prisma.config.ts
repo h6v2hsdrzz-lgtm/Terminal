@@ -6,8 +6,9 @@ import { join } from "node:path";
 
 import { defineConfig, env } from "prisma/config";
 
+// La variable fournie par l'hébergeur prime sur le fichier local.
 const fichierEnv = join(import.meta.dirname, ".env");
-if (existsSync(fichierEnv)) process.loadEnvFile(fichierEnv);
+if (!process.env.DATABASE_URL && existsSync(fichierEnv)) process.loadEnvFile(fichierEnv);
 
 export default defineConfig({
   schema: join("prisma", "schema.prisma"),

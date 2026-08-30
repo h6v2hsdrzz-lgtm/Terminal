@@ -1,14 +1,16 @@
 -- CreateTable
 CREATE TABLE "entrees" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "date" TEXT NOT NULL,
     "personne" TEXT NOT NULL,
     "joie" INTEGER NOT NULL,
     "biberon" BOOLEAN NOT NULL DEFAULT false,
     "plante_verte" BOOLEAN NOT NULL DEFAULT false,
     "notes" TEXT,
-    "cree_le" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "modifie_le" DATETIME NOT NULL
+    "cree_le" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "modifie_le" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "entrees_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex

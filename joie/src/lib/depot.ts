@@ -36,6 +36,20 @@ function versEntree(ligne: LigneEntree): Entree {
   };
 }
 
+/**
+ * Empreinte de l'état du journal : nombre d'entrées et date de la dernière
+ * modification. C'est ce que les navigateurs interrogent en boucle — deux
+ * agrégats, pas la table entière.
+ */
+export async function versionJournal(): Promise<string> {
+  const resume = await prisma.entree.aggregate({
+    _count: { _all: true },
+    _max: { modifieLe: true },
+  });
+  const dernier = resume._max.modifieLe ? resume._max.modifieLe.getTime() : 0;
+  return `${resume._count._all}-${dernier}`;
+}
+
 /** Journal complet, du plus récent au plus ancien. */
 export async function listerEntrees(): Promise<Entree[]> {
   const lignes = await prisma.entree.findMany({

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/ensure-env.mjs && next dev",
-    "build": "node scripts/ensure-env.mjs && prisma generate && next build",
+    "build": "node scripts/ensure-env.mjs && prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "eslint",
     "db:setup": "node scripts/ensure-env.mjs && prisma migrate deploy && prisma generate",
@@ -12,13 +12,17 @@
     "db:seed": "node scripts/ensure-env.mjs && tsx prisma/seed.ts",
     "db:studio": "node scripts/ensure-env.mjs && prisma studio",
     "postinstall": "node scripts/ensure-env.mjs && prisma generate",
-    "test": "node --import tsx --test tests/*.test.ts"
+    "test": "node --import tsx --test tests/*.test.ts",
+    "db:local": "docker run --rm -d --name joie-postgres -e POSTGRES_USER=joie -e POSTGRES_PASSWORD=joie -e POSTGRES_DB=joie -p 5433:5432 postgres:16-alpine",
+    "db:local:stop": "docker stop joie-postgres"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.10.0",
+    "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "lucide-react": "^1.37.0",
     "next": "16.3.3",
+    "pg": "^8.23.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "recharts": "^3.10.1",
@@ -27,6 +31,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
