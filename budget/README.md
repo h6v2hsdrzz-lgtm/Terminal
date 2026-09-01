@@ -41,6 +41,7 @@ partir de quand, à quel rythme, et jusqu'à quand :
 | Champ | Ce qu'il règle |
 |---|---|
 | Sens | revenu, dépense, ou **virement** entre deux de vos comptes |
+| Exceptions | une échéance précise corrigée, ou sautée |
 | Montant | toujours positif : c'est le sens qui porte le signe |
 | Rythme | ponctuel, hebdomadaire, quinzaine, mensuel, bimestriel, trimestriel, semestriel, annuel |
 | Première échéance | la date à laquelle le rythme démarre |
@@ -60,6 +61,28 @@ tombe le 28 en février, puis revient au 31 en mars : le rabattement ne
 contamine pas les échéances suivantes. C'est la raison pour laquelle chaque
 échéance est recalculée depuis la date de début, jamais de proche en proche.
 
+### Ajuster une échéance sans toucher au flux
+
+La facture d'énergie de ce mois-ci est plus lourde ; la prime tombe une fois
+plus haut ; le prélèvement de mars n'aura pas lieu. Chaque échéance se corrige
+individuellement — un montant pour ce jour-là, ou un saut — depuis le calendrier,
+l'agenda du tableau de bord ou le détail d'un mois. Le flux, lui, ne bouge pas :
+toutes les autres échéances gardent leur montant.
+
+C'est ce qui sépare une prévision d'un tableur figé. Sans cela, il faudrait
+choisir entre fausser toute la série et créer un flux ponctuel de rattrapage.
+
+### Le reste à vivre, et le partage contraint / choisi
+
+Chaque catégorie de dépense est marquée **contrainte** (elle tombe quoi qu'il
+arrive : loyer, courses, crédits) ou **choisie** (loisirs, abonnements, épargne).
+Le reste à vivre est ce qui reste des revenus une fois les contraintes payées,
+par mois et par jour.
+
+Le partage vient de vos catégories, pas d'un classement automatique : ce qui est
+un loisir chez l'un est un besoin chez l'autre. Une catégorie non classée est
+comptée comme contrainte — c'est l'hypothèse prudente.
+
 ### Les virements ne sont ni des revenus ni des dépenses
 
 Un virement vers le livret n'appauvrit personne : l'argent change de poche.
@@ -71,19 +94,23 @@ s'affiche, à montant nul, pour que le virement reste visible à l'agenda.
 Sans cette distinction, mettre 250 € de côté chaque mois ferait mécaniquement
 chuter le taux d'épargne — ce qui est exactement l'inverse de ce qui se passe.
 
-## Les huit vues
+## Les neuf vues
 
 - **Tableau de bord** — solde d'aujourd'hui, solde à l'horizon, reste mensuel,
-  taux d'épargne ; la courbe de solde jour par jour ; la date de découvert si
+  **reste à vivre** ; la courbe de solde jour par jour ; la date de découvert si
   elle existe, avec le montant qui manque pour tenir la période ; les
-  quarante-cinq prochains jours ; où part l'argent.
+  quarante-cinq prochains jours ; où part l'argent ; le partage entre dépenses
+  contraintes et choisies.
 - **Revenus & dépenses** — la liste des flux, cherchable et triable, avec pour
   chacun son équivalent mensuel, sa prochaine échéance et son total sur
   l'horizon. Une calculette d'annuité remplit le montant et la dernière
   échéance d'un crédit à partir du capital, du taux et de la durée.
 - **Projection** — le détail mois par mois : revenus, dépenses, net, solde de
-  fin de mois et point bas du mois. Chaque ligne se déplie sur ses opérations.
-  Exportable en CSV.
+  fin de mois et point bas du mois. Chaque ligne se déplie sur ses opérations,
+  et un sous-total tombe à chaque fin d'année. Exportable en CSV.
+- **Calendrier** — le mois au jour le jour : mouvements, solde au soir, jours
+  qui passent sous zéro. C'est de là qu'on **ajuste une échéance** (voir plus
+  bas), et qu'on voit quelles journées font le point bas du mois.
 - **Catégories** — la répartition, et une **enveloppe** mensuelle facultative
   par catégorie : la barre compare la moyenne projetée au plafond fixé.
 - **Objectifs** — un montant et une date. L'application lit le solde projeté à
@@ -93,7 +120,8 @@ chuter le taux d'épargne — ce qui est exactement l'inverse de ce qui se passe
 - **Scénarios** — « et si ? ». Un scénario retire des flux, en ajoute, applique
   un pourcentage à tous les revenus ou à toutes les dépenses, décale le solde de
   départ — et sa trajectoire se superpose à la référence. Il ne modifie jamais
-  vos flux : il les rejoue autrement.
+  vos flux : il les rejoue autrement. **Adopter** un scénario en fait le budget
+  de référence en une action, annulable comme les autres.
 - **Comptes** — soldes d'aujourd'hui et à l'horizon, compte par compte.
 - **Réglages** — monnaie, horizon, seuil de sécurité, date de départ, thème,
   import/export.
@@ -109,6 +137,13 @@ c'est précisément ce qui creuse les mois difficiles ; renseigner une
 revalorisation sur les postes qui montent.
 
 Rien ici n'est un conseil financier.
+
+## Raccourcis
+
+`1` … `9` changent de vue, `N` ouvre un nouveau flux, `/` cherche, `C` ramène au
+mois en cours, `T` change de thème, `?` affiche l'aide. **Toute modification est
+annulable** — par le bouton du message qui la confirme, ou par `Ctrl`/`⌘` + `Z`,
+sur trente pas en arrière.
 
 ## Tests
 

@@ -26,125 +26,148 @@
    Tout ce qui est affiché est calculé à partir d'une seule liste : les
    flux. Un flux dit « combien, à partir de quand, à quel rythme, et
    jusqu'à quand » ; le reste — solde jour par jour, mois par mois,
-   enveloppes, objectifs, scénarios — en découle par projection.
+   calendrier, enveloppes, objectifs, scénarios — en découle par
+   projection.
 
-   Les huit teintes de catégorie sont espacées en teinte et tenues dans
-   une bande de clarté étroite, séparément pour chaque thème, pour
-   rester lisibles côte à côte dans un anneau ou une pile de barres.
+   L'identité tient en trois teintes : une encre bleu-vert très sombre,
+   un pétrole qui porte toutes les actions et la courbe de solde, et le
+   couple vert / rouille des mouvements. Les huit teintes de catégorie
+   sont espacées en teinte et tenues dans une bande de clarté étroite,
+   séparément pour chaque thème, pour rester lisibles côte à côte dans
+   un anneau ou une pile de barres.
    ════════════════════════════════════════════════════════════════════ */
 
 :root {
   color-scheme: light;
 
-  --fond: #f3f5f7;
+  --fond: #edf1f3;
+  --fond-2: #e4eaee;
   --surface: #ffffff;
-  --surface-2: #eaedf1;
-  --surface-3: #dfe3e9;
-  --bordure: #e0e4ea;
-  --bordure-2: #c3cad4;
+  --surface-2: #e9eef1;
+  --surface-3: #dde5e9;
+  --bordure: #dde4e9;
+  --bordure-2: #bfcbd3;
 
-  --texte: #15202b;
-  --attenue: #56626f;
-  --faible: #8b95a1;
+  --texte: #0e191f;
+  --attenue: #4e5f6a;
+  --faible: #84939e;
 
-  --serie-1: #3b6ea8;
+  --serie-1: #0f6572;
   --serie-2: #2f8f6b;
   --serie-3: #b0740f;
-  --serie-4: #8b57b0;
-  --serie-5: #bd4f45;
-  --serie-6: #1c8795;
+  --serie-4: #7d5cb8;
+  --serie-5: #bd5238;
+  --serie-6: #2c6fae;
   --serie-7: #75792a;
-  --serie-8: #b0537c;
+  --serie-8: #ab4d7c;
 
   --revenu: #2f8f6b;
-  --revenu-texte: #227053;
-  --depense: #bd4f45;
-  --depense-texte: #a03c33;
-  --epargne: #3b6ea8;
+  --revenu-texte: #1f6b50;
+  --revenu-fond: #e6f2ed;
+  --depense: #bd5238;
+  --depense-texte: #a1412a;
+  --depense-fond: #faeae6;
   --alerte: #b0740f;
   --alerte-texte: #8a5a09;
+  --alerte-fond: #fbf1de;
 
-  --action: #1f4f7a;
-  --action-fort: #163b5c;
-  --action-texte: #ffffff;
+  --accent: #0f6572;
+  --accent-fort: #0a4c57;
+  --accent-doux: #e2eef0;
+  --accent-texte: #ffffff;
 
-  --grille: #e6e9ee;
-  --ombre: 0 1px 2px rgb(21 32 43 / .06), 0 12px 30px -16px rgb(21 32 43 / .28);
-  --ombre-forte: 0 2px 6px rgb(21 32 43 / .1), 0 26px 60px -24px rgb(21 32 43 / .4);
+  --grille: #e6ebee;
+  --ombre-1: 0 1px 2px rgb(14 25 31 / .05);
+  --ombre-2: 0 1px 2px rgb(14 25 31 / .05), 0 10px 24px -14px rgb(14 25 31 / .25);
+  --ombre-3: 0 2px 6px rgb(14 25 31 / .09), 0 28px 60px -26px rgb(14 25 31 / .45);
 
   --display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
-  --texte-fam: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --corps: "Public Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  --r-s: 8px;
   --r: 12px;
+  --r-l: 16px;
+  --rail: 236px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --fond: #0f141a;
-    --surface: #161d26;
-    --surface-2: #1c2531;
-    --surface-3: #26313e;
-    --bordure: #232e3b;
-    --bordure-2: #35414f;
-    --texte: #dce3ea;
-    --attenue: #94a0ad;
-    --faible: #5e6a78;
-    --serie-1: #5b93d6;
+    --fond: #0b1216;
+    --fond-2: #0e161b;
+    --surface: #141d23;
+    --surface-2: #1b262d;
+    --surface-3: #24313a;
+    --bordure: #212d35;
+    --bordure-2: #35444f;
+    --texte: #dbe4e9;
+    --attenue: #91a1ac;
+    --faible: #5d6c78;
+    --serie-1: #3aa5b5;
     --serie-2: #35a880;
     --serie-3: #c8912c;
-    --serie-4: #a97cd4;
-    --serie-5: #d96f63;
-    --serie-6: #2ba7b6;
+    --serie-4: #9c85e0;
+    --serie-5: #d9705a;
+    --serie-6: #5b93d6;
     --serie-7: #9aa243;
-    --serie-8: #d0789e;
+    --serie-8: #cf7aa6;
     --revenu: #35a880;
     --revenu-texte: #4dc19a;
-    --depense: #d96f63;
-    --depense-texte: #e58a7e;
-    --epargne: #5b93d6;
+    --revenu-fond: #12312a;
+    --depense: #d9705a;
+    --depense-texte: #e88f79;
+    --depense-fond: #35201b;
     --alerte: #c8912c;
     --alerte-texte: #dcaa45;
-    --action: #5b93d6;
-    --action-fort: #7aabe4;
-    --action-texte: #0f141a;
-    --grille: #212b37;
-    --ombre: 0 1px 2px rgb(0 0 0 / .4), 0 14px 34px -18px rgb(0 0 0 / .75);
-    --ombre-forte: 0 2px 8px rgb(0 0 0 / .5), 0 30px 70px -28px rgb(0 0 0 / .9);
+    --alerte-fond: #322612;
+    --accent: #3aa5b5;
+    --accent-fort: #59c0cf;
+    --accent-doux: #13323a;
+    --accent-texte: #06171c;
+    --grille: #1e2932;
+    --ombre-1: 0 1px 2px rgb(0 0 0 / .5);
+    --ombre-2: 0 1px 2px rgb(0 0 0 / .45), 0 12px 28px -16px rgb(0 0 0 / .8);
+    --ombre-3: 0 2px 8px rgb(0 0 0 / .55), 0 32px 70px -30px rgb(0 0 0 / .95);
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --fond: #0f141a;
-  --surface: #161d26;
-  --surface-2: #1c2531;
-  --surface-3: #26313e;
-  --bordure: #232e3b;
-  --bordure-2: #35414f;
-  --texte: #dce3ea;
-  --attenue: #94a0ad;
-  --faible: #5e6a78;
-  --serie-1: #5b93d6;
+  --fond: #0b1216;
+  --fond-2: #0e161b;
+  --surface: #141d23;
+  --surface-2: #1b262d;
+  --surface-3: #24313a;
+  --bordure: #212d35;
+  --bordure-2: #35444f;
+  --texte: #dbe4e9;
+  --attenue: #91a1ac;
+  --faible: #5d6c78;
+  --serie-1: #3aa5b5;
   --serie-2: #35a880;
   --serie-3: #c8912c;
-  --serie-4: #a97cd4;
-  --serie-5: #d96f63;
-  --serie-6: #2ba7b6;
+  --serie-4: #9c85e0;
+  --serie-5: #d9705a;
+  --serie-6: #5b93d6;
   --serie-7: #9aa243;
-  --serie-8: #d0789e;
+  --serie-8: #cf7aa6;
   --revenu: #35a880;
   --revenu-texte: #4dc19a;
-  --depense: #d96f63;
-  --depense-texte: #e58a7e;
-  --epargne: #5b93d6;
+  --revenu-fond: #12312a;
+  --depense: #d9705a;
+  --depense-texte: #e88f79;
+  --depense-fond: #35201b;
   --alerte: #c8912c;
   --alerte-texte: #dcaa45;
-  --action: #5b93d6;
-  --action-fort: #7aabe4;
-  --action-texte: #0f141a;
-  --grille: #212b37;
-  --ombre: 0 1px 2px rgb(0 0 0 / .4), 0 14px 34px -18px rgb(0 0 0 / .75);
-  --ombre-forte: 0 2px 8px rgb(0 0 0 / .5), 0 30px 70px -28px rgb(0 0 0 / .9);
+  --alerte-fond: #322612;
+  --accent: #3aa5b5;
+  --accent-fort: #59c0cf;
+  --accent-doux: #13323a;
+  --accent-texte: #06171c;
+  --grille: #1e2932;
+  --ombre-1: 0 1px 2px rgb(0 0 0 / .5);
+  --ombre-2: 0 1px 2px rgb(0 0 0 / .45), 0 12px 28px -16px rgb(0 0 0 / .8);
+  --ombre-3: 0 2px 8px rgb(0 0 0 / .55), 0 32px 70px -30px rgb(0 0 0 / .95);
 }
 
 * { box-sizing: border-box; }
@@ -153,528 +176,670 @@ body {
   margin: 0;
   background: var(--fond);
   color: var(--texte);
-  font-family: var(--texte-fam);
+  font-family: var(--corps);
   font-size: 15px;
   line-height: 1.5;
   -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, .chiffre { font-family: var(--display); }
-h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -.015em; }
+h1, h2, h3, h4 { margin: 0; font-family: var(--display); font-weight: 700; letter-spacing: -.018em; }
 
-.chiffre, table td.num, table th.num, .mono {
+.chiffre, td.num, th.num, .mono, .jauge-val {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
 }
 
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
-a { color: var(--action); }
+a { color: var(--accent); }
 
-:focus-visible {
-  outline: 2px solid var(--action);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 5px; }
 
 .masque { display: none !important; }
 .dim { color: var(--attenue); }
 .faible { color: var(--faible); }
 .pos { color: var(--revenu-texte); }
 .neg { color: var(--depense-texte); }
-
-/* ─────────────────────── En-tête ─────────────────────── */
-
-header#tete {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  background: color-mix(in srgb, var(--fond) 88%, transparent);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--bordure);
-  padding: 10px max(14px, env(safe-area-inset-left)) 0 max(14px, env(safe-area-inset-right));
+.eyebrow {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--faible);
 }
 
-.tete-haut {
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* ═══════════════════ Charpente ═══════════════════ */
+
+#appli { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); min-height: 100vh; }
+#zone { min-width: 0; display: flex; flex-direction: column; }
+
+/* ─── Rail de navigation ─── */
+
+#rail {
+  background: var(--fond-2);
+  border-right: 1px solid var(--bordure);
+  padding: 16px 12px 12px;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  max-width: 1180px;
-  margin: 0 auto;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 14px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
 }
 
 .marque {
   display: flex;
   align-items: center;
-  gap: 9px;
-  font-family: var(--display);
-  font-weight: 700;
-  font-size: 17px;
-  letter-spacing: -.02em;
-  margin-right: auto;
+  gap: 10px;
+  padding: 2px 6px 0;
 }
-.marque svg { display: block; }
-.marque em { font-style: normal; color: var(--attenue); font-weight: 500; }
+.marque .logo {
+  width: 30px; height: 30px;
+  border-radius: 9px;
+  background: var(--accent);
+  display: grid;
+  place-items: center;
+  flex: none;
+  box-shadow: var(--ombre-1);
+}
+.marque .logo svg { display: block; }
+.marque .nom { font-family: var(--display); font-weight: 700; font-size: 16.5px; letter-spacing: -.02em; line-height: 1.1; }
+.marque .sous-nom { display: block; font-size: 10.5px; color: var(--faible); letter-spacing: .04em; text-transform: uppercase; font-weight: 600; }
 
+#onglets { display: flex; flex-direction: column; gap: 1px; overflow-y: auto; scrollbar-width: thin; }
+#onglets button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: var(--r-s);
+  padding: 8px 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--attenue);
+  white-space: nowrap;
+  transition: background .13s, color .13s;
+}
+#onglets button .ic { width: 18px; height: 18px; flex: none; opacity: .8; }
+#onglets button:hover { background: var(--surface-2); color: var(--texte); }
+#onglets button.on {
+  background: var(--surface);
+  color: var(--texte);
+  font-weight: 600;
+  box-shadow: var(--ombre-1);
+}
+#onglets button.on .ic { color: var(--accent); opacity: 1; }
+
+.rail-pied {
+  margin-top: auto;
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  border-radius: var(--r);
+  padding: 11px 13px;
+  box-shadow: var(--ombre-1);
+}
+.rail-pied .l { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 2px 0; }
+.rail-pied .l span { font-size: 12px; color: var(--attenue); }
+.rail-pied .l b { font-family: var(--display); font-size: 15px; font-variant-numeric: tabular-nums; }
+.rail-pied .sep-fin { height: 1px; background: var(--bordure); margin: 6px 0; }
+
+/* ─── Barre supérieure ─── */
+
+header#tete {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: color-mix(in srgb, var(--fond) 86%, transparent);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--bordure);
+  padding: 12px max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.tete-titre { margin-right: auto; min-width: 0; }
+.tete-titre h1 { font-size: 19px; line-height: 1.2; }
 .tete-outils { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
 .pilule {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   background: var(--surface);
   border: 1px solid var(--bordure);
   border-radius: 999px;
-  padding: 5px 12px;
+  padding: 5px 13px;
   font-size: 13px;
   color: var(--attenue);
   white-space: nowrap;
+  box-shadow: var(--ombre-1);
 }
-.pilule b { color: var(--texte); font-weight: 600; }
+.pilule b { color: var(--texte); font-weight: 600; font-variant-numeric: tabular-nums; }
+.pilule.select { padding: 2px 6px 2px 13px; }
+.pilule select { border: 0; background: none; width: auto; padding: 3px 2px; font-size: 13px; font-weight: 600; box-shadow: none; }
 
 button.outil {
   background: var(--surface);
   border: 1px solid var(--bordure);
   border-radius: 999px;
-  padding: 6px 13px;
-  font-size: 13px;
-  font-weight: 500;
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
   color: var(--attenue);
-  transition: background .12s, color .12s, border-color .12s;
+  box-shadow: var(--ombre-1);
+  transition: background .13s, color .13s;
 }
 button.outil:hover { background: var(--surface-2); color: var(--texte); }
-
-nav#onglets {
-  display: flex;
-  gap: 2px;
-  max-width: 1180px;
-  margin: 8px auto 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-nav#onglets::-webkit-scrollbar { display: none; }
-
-nav#onglets button {
-  background: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  padding: 9px 13px 10px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--attenue);
-  white-space: nowrap;
-  border-radius: 6px 6px 0 0;
-  transition: color .12s, border-color .12s;
-}
-nav#onglets button:hover { color: var(--texte); }
-nav#onglets button.on { color: var(--texte); border-bottom-color: var(--action); font-weight: 600; }
-
-/* ─────────────────────── Structure ─────────────────────── */
+button.outil svg { width: 17px; height: 17px; }
 
 main {
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 20px max(14px, env(safe-area-inset-left)) 90px max(14px, env(safe-area-inset-right));
+  padding: 20px max(16px, env(safe-area-inset-right)) 96px max(16px, env(safe-area-inset-left));
+  max-width: 1280px;
+  width: 100%;
 }
+
+/* ─── Téléphone : le rail passe en tête ─── */
+
+@media (max-width: 999px) {
+  #appli { grid-template-columns: minmax(0, 1fr); }
+  #rail {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    height: auto;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--bordure);
+    background: color-mix(in srgb, var(--fond-2) 92%, transparent);
+    backdrop-filter: blur(14px);
+  }
+  #onglets {
+    flex-direction: row;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 2px;
+    padding-bottom: 2px;
+  }
+  #onglets::-webkit-scrollbar { display: none; }
+  #onglets button { width: auto; padding: 7px 11px; }
+  #onglets button .ic { display: none; }
+  .rail-pied { display: none; }
+  header#tete { position: static; backdrop-filter: none; background: none; padding-bottom: 4px; }
+  main { padding-top: 12px; }
+}
+
+/* ═══════════════════ Cartes ═══════════════════ */
+
+.pile { display: flex; flex-direction: column; gap: 16px; }
+.grille { display: grid; gap: 16px; }
+.g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.g-2-1 { grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr); }
+@media (max-width: 1100px) { .g-2-1 { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 900px) { .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .g3 { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 620px) { .g2, .g4 { grid-template-columns: minmax(0, 1fr); } }
 
 .carte {
   background: var(--surface);
   border: 1px solid var(--bordure);
-  border-radius: var(--r);
-  padding: 16px 18px;
-  box-shadow: var(--ombre);
+  border-radius: var(--r-l);
+  padding: 17px 19px;
+  box-shadow: var(--ombre-2);
 }
+.carte.plat { box-shadow: var(--ombre-1); }
 
-.carte-tete {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 4px;
-  flex-wrap: wrap;
-}
-.carte-tete h2 { font-size: 15px; letter-spacing: 0; }
-.carte-tete h3 { font-size: 14px; letter-spacing: 0; }
-.carte-tete .droite { margin-left: auto; font-size: 13px; color: var(--attenue); }
-.sous { font-size: 13px; color: var(--attenue); margin: 0 0 12px; }
+.carte-tete { display: flex; align-items: baseline; gap: 12px; margin-bottom: 3px; flex-wrap: wrap; }
+.carte-tete h2 { font-size: 15.5px; letter-spacing: -.01em; }
+.carte-tete h3 { font-size: 14.5px; letter-spacing: -.01em; }
+.carte-tete .droite { margin-left: auto; font-size: 12.5px; color: var(--attenue); font-variant-numeric: tabular-nums; }
+.sous { font-size: 13px; color: var(--attenue); margin: 0 0 14px; max-width: 74ch; }
+.sous:last-child { margin-bottom: 0; }
 
-.grille { display: grid; gap: 14px; }
-.g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.g-2-1 { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
-@media (max-width: 900px) {
-  .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .g3, .g-2-1 { grid-template-columns: minmax(0, 1fr); }
-}
-@media (max-width: 560px) {
-  .g2, .g4 { grid-template-columns: minmax(0, 1fr); }
-}
+/* ═══════════════════ Indicateurs ═══════════════════ */
 
-/* ─────────────────────── Indicateurs ─────────────────────── */
+.kpis { display: grid; gap: 1px; background: var(--bordure); border: 1px solid var(--bordure); border-radius: var(--r-l); overflow: hidden; box-shadow: var(--ombre-2); grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 900px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .kpis { grid-template-columns: minmax(0, 1fr); } }
 
-.kpi { display: flex; flex-direction: column; gap: 2px; }
-.kpi .etiq {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: .07em;
-  color: var(--faible);
-  font-weight: 600;
-}
-.kpi .val {
-  font-family: var(--display);
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -.02em;
-  font-variant-numeric: tabular-nums;
-}
+.kpi { background: var(--surface); padding: 15px 17px 13px; display: flex; flex-direction: column; gap: 3px; position: relative; min-width: 0; }
+.kpi .etiq { font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em; color: var(--faible); font-weight: 700; }
+.kpi .val { font-family: var(--display); font-size: 27px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1.15; }
 .kpi .note { font-size: 12.5px; color: var(--attenue); }
+.kpi .etincelle { position: absolute; right: 0; bottom: 0; left: 0; width: 100%; height: 34px; opacity: .55; pointer-events: none; }
 
-.jauge {
-  height: 6px;
-  background: var(--surface-3);
-  border-radius: 999px;
-  overflow: hidden;
-  margin-top: 6px;
-}
-.jauge > i { display: block; height: 100%; border-radius: 999px; }
+.jauge { height: 7px; background: var(--surface-3); border-radius: 999px; overflow: hidden; }
+.jauge > i { display: block; height: 100%; border-radius: 999px; transition: width .3s ease; }
+.jauge.fine { height: 5px; }
 
-/* ─────────────────────── Bandeau d'alerte ─────────────────────── */
+/* ═══════════════════ Bandeaux ═══════════════════ */
 
 .bandeau {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  border-radius: var(--r);
-  padding: 13px 16px;
-  border: 1px solid;
-  font-size: 14px;
+  display: flex; gap: 13px; align-items: flex-start;
+  border-radius: var(--r-l); padding: 14px 17px;
+  border: 1px solid; font-size: 14px;
+  box-shadow: var(--ombre-1);
 }
-.bandeau .ic { font-size: 17px; line-height: 1.2; }
+.bandeau .ic { flex: none; width: 20px; height: 20px; margin-top: 1px; }
 .bandeau b { font-weight: 600; }
-.bandeau.rouge { background: color-mix(in srgb, var(--depense) 12%, var(--surface)); border-color: color-mix(in srgb, var(--depense) 40%, var(--bordure)); }
-.bandeau.ambre { background: color-mix(in srgb, var(--alerte) 13%, var(--surface)); border-color: color-mix(in srgb, var(--alerte) 40%, var(--bordure)); }
-.bandeau.vert  { background: color-mix(in srgb, var(--revenu) 11%, var(--surface)); border-color: color-mix(in srgb, var(--revenu) 36%, var(--bordure)); }
+.bandeau.rouge { background: var(--depense-fond); border-color: color-mix(in srgb, var(--depense) 34%, var(--bordure)); color: var(--texte); }
+.bandeau.rouge .ic { color: var(--depense); }
+.bandeau.ambre { background: var(--alerte-fond); border-color: color-mix(in srgb, var(--alerte) 34%, var(--bordure)); }
+.bandeau.ambre .ic { color: var(--alerte); }
+.bandeau.vert { background: var(--revenu-fond); border-color: color-mix(in srgb, var(--revenu) 30%, var(--bordure)); }
+.bandeau.vert .ic { color: var(--revenu); }
 
-/* ─────────────────────── Tableaux ─────────────────────── */
+/* ═══════════════════ Tableaux ═══════════════════ */
 
-.tableau-boite { overflow-x: auto; margin: 0 -18px; padding: 0 18px; }
+.tableau-boite { overflow-x: auto; margin: 0 -19px; padding: 0 19px; }
 
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 table th {
   text-align: left;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  color: var(--faible);
-  font-weight: 600;
-  padding: 0 10px 7px;
-  white-space: nowrap;
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--faible); font-weight: 700;
+  padding: 0 10px 8px; white-space: nowrap;
   border-bottom: 1px solid var(--bordure);
 }
-table td { padding: 9px 10px; border-bottom: 1px solid var(--grille); vertical-align: middle; }
-table tr:last-child td { border-bottom: 0; }
+table td { padding: 10px; border-bottom: 1px solid var(--grille); vertical-align: middle; }
+table tbody tr:last-child td { border-bottom: 0; }
 table .num { text-align: right; font-variant-numeric: tabular-nums; }
-table tbody tr.cliquable { cursor: pointer; }
+table tbody tr.cliquable { cursor: pointer; transition: background .1s; }
 table tbody tr.cliquable:hover { background: var(--surface-2); }
-table tr.repli td { background: var(--surface-2); padding: 0; }
-table tr.total td { font-weight: 600; border-top: 1px solid var(--bordure-2); }
+table tr.repli > td { background: var(--surface-2); padding: 0; border-bottom: 1px solid var(--bordure); }
+table tr.repli table td { border-bottom-color: color-mix(in srgb, var(--bordure) 60%, transparent); }
+table tr.total td { font-weight: 600; border-top: 1px solid var(--bordure-2); background: var(--surface-2); }
+table tr.annee td { background: var(--accent-doux); font-weight: 600; font-size: 13px; }
+.actions { white-space: nowrap; text-align: right; opacity: .55; transition: opacity .12s; }
+tr:hover .actions, .actions:focus-within { opacity: 1; }
 
-.puce {
-  display: inline-block;
-  width: 9px; height: 9px;
-  border-radius: 3px;
-  margin-right: 7px;
-  vertical-align: -1px;
-  flex: none;
-}
+.puce { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 8px; vertical-align: 0; flex: none; }
 
 .etiquette {
-  display: inline-block;
-  font-size: 11.5px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--surface-2);
-  border: 1px solid var(--bordure);
-  color: var(--attenue);
-  white-space: nowrap;
+  display: inline-block; font-size: 11.5px; font-weight: 500;
+  padding: 2px 8px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--bordure);
+  color: var(--attenue); white-space: nowrap;
 }
-.etiquette.rev { background: color-mix(in srgb, var(--revenu) 14%, transparent); border-color: color-mix(in srgb, var(--revenu) 34%, transparent); color: var(--revenu-texte); }
-.etiquette.dep { background: color-mix(in srgb, var(--depense) 14%, transparent); border-color: color-mix(in srgb, var(--depense) 34%, transparent); color: var(--depense-texte); }
-.etiquette.off { opacity: .65; text-decoration: line-through; }
+.etiquette.rev { background: var(--revenu-fond); border-color: color-mix(in srgb, var(--revenu) 30%, transparent); color: var(--revenu-texte); }
+.etiquette.dep { background: var(--depense-fond); border-color: color-mix(in srgb, var(--depense) 30%, transparent); color: var(--depense-texte); }
+.etiquette.acc { background: var(--accent-doux); border-color: color-mix(in srgb, var(--accent) 26%, transparent); color: var(--accent-fort); }
+.etiquette.off { opacity: .6; text-decoration: line-through; }
 
-/* ─────────────────────── Boutons ─────────────────────── */
+/* ═══════════════════ Boutons ═══════════════════ */
 
 .btn {
-  border: 1px solid var(--bordure-2);
-  background: var(--surface);
-  border-radius: 9px;
-  padding: 8px 15px;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background .12s, border-color .12s, transform .06s;
+  border: 1px solid var(--bordure-2); background: var(--surface);
+  border-radius: var(--r-s); padding: 8px 15px;
+  font-size: 14px; font-weight: 500;
+  box-shadow: var(--ombre-1);
+  transition: background .12s, border-color .12s, transform .06s, box-shadow .12s;
 }
 .btn:hover { background: var(--surface-2); }
 .btn:active { transform: translateY(1px); }
-.btn.primaire {
-  background: var(--action);
-  border-color: var(--action);
-  color: var(--action-texte);
-  font-weight: 600;
-}
-.btn.primaire:hover { background: var(--action-fort); border-color: var(--action-fort); }
-.btn.danger { color: var(--depense-texte); border-color: color-mix(in srgb, var(--depense) 45%, var(--bordure)); }
-.btn.danger:hover { background: color-mix(in srgb, var(--depense) 12%, var(--surface)); }
-.btn.petit { padding: 4px 10px; font-size: 13px; border-radius: 7px; }
-.btn.fantome { border-color: transparent; background: none; color: var(--attenue); }
+.btn.primaire { background: var(--accent); border-color: var(--accent); color: var(--accent-texte); font-weight: 600; }
+.btn.primaire:hover { background: var(--accent-fort); border-color: var(--accent-fort); }
+.btn.danger { color: var(--depense-texte); border-color: color-mix(in srgb, var(--depense) 40%, var(--bordure)); }
+.btn.danger:hover { background: var(--depense-fond); }
+.btn.petit { padding: 4px 10px; font-size: 12.5px; border-radius: 7px; }
+.btn.fantome { border-color: transparent; background: none; color: var(--attenue); box-shadow: none; }
 .btn.fantome:hover { background: var(--surface-2); color: var(--texte); }
+.btn.icone { padding: 4px 7px; line-height: 1; }
+.btn.icone svg { width: 15px; height: 15px; display: block; }
 
-.segments {
-  display: inline-flex;
-  background: var(--surface-2);
-  border: 1px solid var(--bordure);
-  border-radius: 9px;
-  padding: 2px;
-  gap: 2px;
-  flex-wrap: wrap;
-}
-.segments button {
-  border: 0;
-  background: none;
-  border-radius: 7px;
-  padding: 5px 11px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--attenue);
-}
-.segments button.on { background: var(--surface); color: var(--texte); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / .08); }
+.segments { display: inline-flex; background: var(--surface-2); border: 1px solid var(--bordure); border-radius: var(--r-s); padding: 2px; gap: 2px; flex-wrap: wrap; }
+.segments button { border: 0; background: none; border-radius: 6px; padding: 5px 11px; font-size: 13px; font-weight: 500; color: var(--attenue); transition: background .12s, color .12s; }
+.segments button:hover { color: var(--texte); }
+.segments button.on { background: var(--surface); color: var(--texte); font-weight: 600; box-shadow: var(--ombre-1); }
 
-/* ─────────────────────── Formulaires ─────────────────────── */
+/* ═══════════════════ Formulaires ═══════════════════ */
 
-label.champ { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--attenue); }
-label.champ > span.ttl { font-weight: 600; color: var(--texte); font-size: 13px; }
-label.champ .aide { font-size: 12px; color: var(--faible); }
+label.champ { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--attenue); min-width: 0; }
+label.champ > .ttl { font-weight: 600; color: var(--texte); font-size: 13px; }
+label.champ .aide { font-size: 12px; color: var(--faible); line-height: 1.4; }
 
-input[type="text"], input[type="number"], input[type="date"], select, textarea {
+input[type="text"], input[type="number"], input[type="date"], input[type="month"], select, textarea {
   background: var(--surface);
   border: 1px solid var(--bordure-2);
-  border-radius: 9px;
+  border-radius: var(--r-s);
   padding: 8px 10px;
-  font-size: 14px;
-  width: 100%;
-  min-width: 0;
+  font-size: 14px; width: 100%; min-width: 0;
+  transition: border-color .12s, box-shadow .12s;
+}
+input:hover, select:hover, textarea:hover { border-color: var(--faible); }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 textarea { resize: vertical; min-height: 60px; }
 input:disabled, select:disabled { background: var(--surface-2); color: var(--faible); }
 
-.ligne-champs { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ligne-champs { display: grid; gap: 13px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .ligne-champs.trois { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 620px) { .ligne-champs, .ligne-champs.trois { grid-template-columns: minmax(0, 1fr); } }
 
-.case { display: flex; align-items: center; gap: 8px; font-size: 14px; }
-.case input { width: auto; }
+.case { display: flex; align-items: center; gap: 9px; font-size: 14px; cursor: pointer; }
+.case input { width: auto; accent-color: var(--accent); }
 
-/* ─────────────────────── Dialogue ─────────────────────── */
+details.repliable > summary {
+  cursor: pointer; font-size: 13.5px; color: var(--attenue);
+  padding: 6px 0; list-style: none; display: flex; align-items: center; gap: 6px;
+}
+details.repliable > summary::-webkit-details-marker { display: none; }
+details.repliable > summary::before { content: "›"; display: inline-block; transition: transform .15s; font-size: 16px; }
+details.repliable[open] > summary::before { transform: rotate(90deg); }
+
+/* ═══════════════════ Dialogue ═══════════════════ */
 
 #voile {
-  position: fixed;
-  inset: 0;
-  background: rgb(10 15 21 / .5);
-  backdrop-filter: blur(3px);
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
+  position: fixed; inset: 0; z-index: 50;
+  background: rgb(6 12 16 / .55);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+  animation: fondu .14s ease-out;
 }
 #voile.masque { display: none !important; }
+@keyframes fondu { from { opacity: 0; } }
 
 #dialogue {
   background: var(--surface);
   border: 1px solid var(--bordure);
-  border-radius: 16px;
-  box-shadow: var(--ombre-forte);
-  width: min(620px, 100%);
-  max-height: min(88vh, 900px);
-  display: flex;
-  flex-direction: column;
+  border-radius: 18px;
+  box-shadow: var(--ombre-3);
+  width: min(640px, 100%);
+  max-height: min(88vh, 920px);
+  display: flex; flex-direction: column;
+  animation: monte-dialogue .18s cubic-bezier(.2, .8, .3, 1);
 }
-#dialogue-tete {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 15px 18px;
-  border-bottom: 1px solid var(--bordure);
-}
-#dialogue-tete h2 { font-size: 16px; margin-right: auto; }
-#dialogue-corps { padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
-#dialogue-pied {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  padding: 13px 18px;
-  border-top: 1px solid var(--bordure);
-  flex-wrap: wrap;
-}
+@keyframes monte-dialogue { from { opacity: 0; transform: translateY(12px) scale(.985); } }
+
+#dialogue-tete { display: flex; align-items: center; gap: 10px; padding: 16px 19px; border-bottom: 1px solid var(--bordure); }
+#dialogue-tete h2 { font-size: 16.5px; margin-right: auto; }
+#dialogue-corps { padding: 19px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+#dialogue-pied { display: flex; gap: 8px; justify-content: flex-end; padding: 14px 19px; border-top: 1px solid var(--bordure); flex-wrap: wrap; background: var(--surface-2); border-radius: 0 0 17px 17px; }
 #dialogue-pied .gauche { margin-right: auto; }
 
-/* ─────────────────────── Messages ─────────────────────── */
+/* ═══════════════════ Messages ═══════════════════ */
 
 #messages {
-  position: fixed;
-  left: 50%;
-  bottom: max(18px, env(safe-area-inset-bottom));
-  transform: translateX(-50%);
-  z-index: 80;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
-  pointer-events: none;
+  position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom));
+  transform: translateX(-50%); z-index: 80;
+  display: flex; flex-direction: column; gap: 8px; align-items: center;
+  pointer-events: none; width: max-content; max-width: calc(100vw - 32px);
 }
 .message {
-  background: var(--texte);
-  color: var(--fond);
-  padding: 9px 16px;
-  border-radius: 999px;
-  font-size: 13.5px;
-  font-weight: 500;
-  box-shadow: var(--ombre-forte);
-  animation: monte .18s ease-out;
+  display: flex; align-items: center; gap: 12px;
+  background: var(--texte); color: var(--fond);
+  padding: 9px 10px 9px 17px; border-radius: 999px;
+  font-size: 13.5px; font-weight: 500;
+  box-shadow: var(--ombre-3);
+  animation: monte .2s cubic-bezier(.2, .8, .3, 1);
+  pointer-events: auto;
 }
-@keyframes monte { from { opacity: 0; transform: translateY(8px); } }
+.message button {
+  border: 0; border-radius: 999px; padding: 4px 12px;
+  background: color-mix(in srgb, var(--fond) 22%, transparent);
+  color: var(--fond); font-size: 12.5px; font-weight: 600;
+}
+.message button:hover { background: color-mix(in srgb, var(--fond) 34%, transparent); }
+@keyframes monte { from { opacity: 0; transform: translateY(10px); } }
 
-/* ─────────────────────── Graphiques ─────────────────────── */
+/* ═══════════════════ Graphiques ═══════════════════ */
 
+.boite-graphe { position: relative; }
 .graphe { width: 100%; display: block; overflow: visible; touch-action: pan-y; }
-.graphe text { font-family: var(--texte-fam); font-variant-numeric: tabular-nums; }
+.graphe text { font-family: var(--corps); font-variant-numeric: tabular-nums; }
 .axe { font-size: 11px; fill: var(--faible); }
 .ligne-grille { stroke: var(--grille); stroke-width: 1; }
 .ligne-zero { stroke: var(--bordure-2); stroke-width: 1; stroke-dasharray: 3 3; }
-.ligne-seuil { stroke: var(--alerte); stroke-width: 1; stroke-dasharray: 5 4; opacity: .8; }
+.ligne-seuil { stroke: var(--alerte); stroke-width: 1.25; stroke-dasharray: 5 4; opacity: .85; }
 .curseur { stroke: var(--bordure-2); stroke-width: 1; }
+/* les barres et les libellés sont posés au-dessus des zones de survol :
+   sans cela, ils intercepteraient le pointeur et la colonne ne s'allumerait
+   jamais quand on vise précisément une barre */
+.graphe .barre, .graphe text { pointer-events: none; }
+.graphe .colonne { transition: fill .12s; }
 
-.legende { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; color: var(--attenue); margin-top: 8px; }
+.legende { display: flex; flex-wrap: wrap; gap: 5px 18px; font-size: 12.5px; color: var(--attenue); margin-top: 10px; }
 .legende span { display: inline-flex; align-items: center; }
 
 .infobulle {
-  position: absolute;
-  pointer-events: none;
-  background: var(--surface);
-  border: 1px solid var(--bordure-2);
-  border-radius: 9px;
-  box-shadow: var(--ombre-forte);
-  padding: 8px 11px;
-  font-size: 12.5px;
-  min-width: 140px;
-  z-index: 10;
+  position: absolute; pointer-events: none;
+  background: var(--surface); border: 1px solid var(--bordure-2);
+  border-radius: var(--r); box-shadow: var(--ombre-3);
+  padding: 9px 12px; font-size: 12.5px; min-width: 150px; z-index: 10;
   transition: opacity .1s;
 }
-.infobulle .t { font-weight: 600; margin-bottom: 3px; font-size: 12px; }
-.infobulle .l { display: flex; justify-content: space-between; gap: 14px; font-variant-numeric: tabular-nums; }
-.boite-graphe { position: relative; }
+.infobulle .t { font-weight: 600; margin-bottom: 4px; font-size: 12px; }
+.infobulle .l { display: flex; justify-content: space-between; gap: 16px; font-variant-numeric: tabular-nums; padding: 1px 0; }
 
-/* ─────────────────────── Divers ─────────────────────── */
+/* ═══════════════════ Calendrier ═══════════════════ */
 
-.vide {
-  text-align: center;
-  padding: 34px 18px;
-  color: var(--attenue);
-  font-size: 14px;
+.cal-grille { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.cal-jour-nom { font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--faible); font-weight: 700; text-align: center; padding-bottom: 2px; }
+.cal-case {
+  border: 1px solid var(--bordure); border-radius: 10px;
+  background: var(--surface); min-height: 74px;
+  padding: 6px 7px; display: flex; flex-direction: column; gap: 3px;
+  text-align: left; font: inherit; color: inherit;
+  transition: border-color .12s, transform .08s, box-shadow .12s;
 }
-.vide p { margin: 0 0 12px; }
+.cal-case:hover { border-color: var(--bordure-2); box-shadow: var(--ombre-2); }
+.cal-case.vide { background: none; border-color: transparent; pointer-events: none; }
+.cal-case.hors { opacity: .45; }
+.cal-case .jour { font-size: 12px; font-weight: 600; color: var(--attenue); font-variant-numeric: tabular-nums; }
+.cal-case.aujourdhui { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.cal-case.aujourdhui .jour { color: var(--accent); }
+.cal-case .mv { font-size: 11.5px; font-variant-numeric: tabular-nums; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-case .solde { margin-top: auto; font-size: 10.5px; color: var(--faible); font-variant-numeric: tabular-nums; }
+.cal-case.rouge { background: var(--depense-fond); border-color: color-mix(in srgb, var(--depense) 30%, var(--bordure)); }
+@media (max-width: 620px) {
+  .cal-case { min-height: 58px; padding: 4px 5px; }
+  .cal-case .mv, .cal-case .solde { display: none; }
+  .cal-case .points { display: flex; gap: 2px; flex-wrap: wrap; }
+}
+.cal-case .points { display: flex; gap: 2px; flex-wrap: wrap; margin-top: 2px; }
+.cal-case .points i { width: 5px; height: 5px; border-radius: 999px; display: block; }
+
+/* ═══════════════════ Divers ═══════════════════ */
+
+.vide { text-align: center; padding: 38px 20px; color: var(--attenue); font-size: 14px; }
+.vide p { margin: 0 auto 14px; max-width: 56ch; }
+.vide .titre-vide { font-size: 17px; color: var(--texte); font-family: var(--display); font-weight: 700; margin-bottom: 8px; }
 
 ul.agenda { list-style: none; margin: 0; padding: 0; }
-ul.agenda li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--grille);
-  font-size: 14px;
-}
+ul.agenda li { display: flex; align-items: center; gap: 11px; padding: 8px 0; border-bottom: 1px solid var(--grille); font-size: 14px; }
 ul.agenda li:last-child { border-bottom: 0; }
-ul.agenda .quand { width: 62px; flex: none; font-size: 12.5px; color: var(--attenue); font-variant-numeric: tabular-nums; }
+ul.agenda .quand { width: 64px; flex: none; font-size: 12.5px; color: var(--attenue); font-variant-numeric: tabular-nums; }
 ul.agenda .quoi { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 ul.agenda .combien { font-variant-numeric: tabular-nums; font-weight: 500; white-space: nowrap; }
 
 .sep { height: 1px; background: var(--bordure); margin: 4px 0; }
-
-.pile { display: flex; flex-direction: column; gap: 14px; }
 .rangee { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .rangee.fin { justify-content: flex-end; }
+.pousse { margin-left: auto; }
+
+kbd {
+  font-family: var(--corps); font-size: 11.5px; font-weight: 600;
+  background: var(--surface-2); border: 1px solid var(--bordure-2);
+  border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; color: var(--attenue);
+}
 
 @media print {
-  header#tete, nav#onglets, .btn, #messages { display: none !important; }
+  #rail, header#tete, .btn, #messages { display: none !important; }
+  #appli { grid-template-columns: minmax(0, 1fr); }
   .carte { break-inside: avoid; box-shadow: none; }
 }
 </style>
 </head>
 <body>
 
-<header id="tete">
-  <div class="tete-haut">
+<!-- Jeu d'icônes : neuf traits pour neuf vues, plus les quelques signes
+     réutilisés dans les bandeaux et les boutons. Un seul jeu, référencé
+     par <use>, plutôt qu'un dessin recopié à chaque appel. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <g id="ic-tableau" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="7" height="8" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/>
+      <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="11" width="7" height="10" rx="1.5"/>
+    </g>
+    <g id="ic-flux" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 20V7M7 4 4 7.5M7 4l3 3.5"/><path d="M17 4v13M17 20l-3-3.5M17 20l3-3.5"/>
+    </g>
+    <g id="ic-projection" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 20h18"/><path d="M4 15l5-5 4 3.5L20 5"/><circle cx="20" cy="5" r="1.6" fill="currentColor" stroke="none"/>
+    </g>
+    <g id="ic-calendrier" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/>
+    </g>
+    <g id="ic-categories" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v8.5l6 6"/>
+    </g>
+    <g id="ic-objectifs" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>
+    </g>
+    <g id="ic-scenarios" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 20V8a3 3 0 0 1 3-3h9"/><path d="M15 2l3 3-3 3"/><path d="M6 14h6a3 3 0 0 0 3-3v-1"/>
+    </g>
+    <g id="ic-comptes" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2.5" y="6" width="19" height="13" rx="2.5"/><path d="M2.5 10.5h19"/><path d="M17 15.5h1.5"/>
+    </g>
+    <g id="ic-reglages" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2.2"/><circle cx="8" cy="17" r="2.2"/>
+    </g>
+    <g id="ic-theme" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor" stroke="none"/>
+    </g>
+    <g id="ic-aide" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.2 2.9c-.6.2-.8.7-.8 1.3v.4"/><path d="M12 17h.01"/>
+    </g>
+    <g id="ic-alerte" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3.8 2.6 20h18.8z"/><path d="M12 9.5v4.2M12 17h.01"/>
+    </g>
+    <g id="ic-ok" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="8.5"/><path d="m8.3 12.2 2.6 2.6 4.8-5.4"/>
+    </g>
+    <g id="ic-oeil" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="8.5"/><path d="M12 7.6v5M12 16.2h.01"/>
+    </g>
+    <g id="ic-crayon" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z"/>
+    </g>
+    <g id="ic-copie" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 5.5A2 2 0 0 0 14 4H6a2 2 0 0 0-2 2v8a2 2 0 0 0 1.5 1.9"/>
+    </g>
+    <g id="ic-croix" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+      <path d="M6 6l12 12M18 6 6 18"/>
+    </g>
+    <g id="ic-pause" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+      <path d="M9 5v14M15 5v14"/>
+    </g>
+    <g id="ic-lecture" fill="currentColor" stroke="none">
+      <path d="M8 5.5v13l11-6.5z"/>
+    </g>
+  </defs>
+</svg>
+
+<div id="appli">
+
+  <aside id="rail">
     <div class="marque">
-      <svg width="24" height="24" viewBox="0 0 512 512" aria-hidden="true">
-        <rect width="512" height="512" rx="112" fill="var(--action)"/>
-        <path d="M104 344 L200 248 L288 320 L408 168" fill="none" stroke="var(--action-texte)"
-              stroke-width="38" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="408" cy="168" r="30" fill="var(--action-texte)"/>
-      </svg>
-      <span>Prévoyant<em> · budget prévisionnel</em></span>
+      <span class="logo">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--accent-texte)"
+             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3.5 17 9 11l4 3 7.5-8.5"/><circle cx="20.5" cy="5.5" r="1.8" fill="var(--accent-texte)" stroke="none"/>
+        </svg>
+      </span>
+      <span>
+        <span class="nom">Prévoyant</span>
+        <span class="sous-nom">Budget prévisionnel</span>
+      </span>
     </div>
 
-    <div class="tete-outils">
-      <span class="pilule" id="pilule-solde" title="Solde de départ, tous comptes confondus">
-        Aujourd'hui <b id="pilule-solde-val">—</b>
-      </span>
-      <span class="pilule" id="pilule-fin" title="Solde projeté au bout de l'horizon">
-        <span id="pilule-fin-etiq">À l'horizon</span> <b id="pilule-fin-val">—</b>
-      </span>
-      <label class="pilule" style="padding: 2px 6px 2px 12px;">
-        Horizon
-        <select id="sel-horizon" style="border: 0; background: none; width: auto; padding: 3px 4px; font-size: 13px; font-weight: 600;">
-          <option value="3">3 mois</option>
-          <option value="6">6 mois</option>
-          <option value="12">12 mois</option>
-          <option value="24">24 mois</option>
-          <option value="36">36 mois</option>
-          <option value="60">5 ans</option>
-        </select>
-      </label>
-      <button class="outil" id="btn-theme" title="Changer de thème" aria-label="Changer de thème">◐</button>
+    <nav id="onglets" aria-label="Sections">
+      <button data-vue="tableau" class="on"><svg class="ic" viewBox="0 0 24 24"><use href="#ic-tableau"/></svg>Tableau de bord</button>
+      <button data-vue="flux"><svg class="ic" viewBox="0 0 24 24"><use href="#ic-flux"/></svg>Revenus &amp; dépenses</button>
+      <button data-vue="projection"><svg class="ic" viewBox="0 0 24 24"><use href="#ic-projection"/></svg>Projection</button>
+      <button data-vue="calendrier"><svg class="ic" viewBox="0 0 24 24"><use href="#ic-calendrier"/></svg>Calendrier</button>
+      <button data-vue="categories"><svg class="ic" viewBox="0 0 24 24"><use href="#ic-categories"/></svg>Catégories</button>
+      <button data-vue="objectifs"><svg class="ic" viewBox="0 0 24 24"><use href="#ic-objectifs"/></svg>Objectifs</button>
+      <button data-vue="scenarios"><svg class="ic" viewBox="0 0 24 24"><use href="#ic-scenarios"/></svg>Scénarios</button>
+      <button data-vue="comptes"><svg class="ic" viewBox="0 0 24 24"><use href="#ic-comptes"/></svg>Comptes</button>
+      <button data-vue="reglages"><svg class="ic" viewBox="0 0 24 24"><use href="#ic-reglages"/></svg>Réglages</button>
+    </nav>
+
+    <div class="rail-pied">
+      <div class="l"><span>Aujourd'hui</span><b id="rail-solde">—</b></div>
+      <div class="sep-fin"></div>
+      <div class="l"><span id="rail-fin-etiq">À l'horizon</span><b id="rail-fin">—</b></div>
+      <div class="l"><span>Chaque mois</span><b id="rail-net">—</b></div>
     </div>
+  </aside>
+
+  <div id="zone">
+    <header id="tete">
+      <div class="tete-titre">
+        <span class="eyebrow" id="tete-eyebrow">Prévoyant</span>
+        <h1 id="tete-titre">Tableau de bord</h1>
+      </div>
+      <div class="tete-outils">
+        <span class="pilule masque" id="pilule-solde" title="Solde de départ, tous comptes confondus">
+          Aujourd'hui <b id="pilule-solde-val">—</b>
+        </span>
+        <label class="pilule select">
+          Horizon
+          <select id="sel-horizon" aria-label="Horizon de projection">
+            <option value="3">3 mois</option>
+            <option value="6">6 mois</option>
+            <option value="12">12 mois</option>
+            <option value="24">24 mois</option>
+            <option value="36">36 mois</option>
+            <option value="60">5 ans</option>
+          </select>
+        </label>
+        <button class="btn primaire" data-act="flux-nouveau">+ Flux</button>
+        <button class="outil" id="btn-aide" title="Raccourcis clavier" aria-label="Raccourcis clavier">
+          <svg viewBox="0 0 24 24"><use href="#ic-aide"/></svg>
+        </button>
+        <button class="outil" id="btn-theme" title="Changer de thème" aria-label="Changer de thème">
+          <svg viewBox="0 0 24 24"><use href="#ic-theme"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section id="vue-tableau" class="vue pile"></section>
+      <section id="vue-flux" class="vue pile masque"></section>
+      <section id="vue-projection" class="vue pile masque"></section>
+      <section id="vue-calendrier" class="vue pile masque"></section>
+      <section id="vue-categories" class="vue pile masque"></section>
+      <section id="vue-objectifs" class="vue pile masque"></section>
+      <section id="vue-scenarios" class="vue pile masque"></section>
+      <section id="vue-comptes" class="vue pile masque"></section>
+      <section id="vue-reglages" class="vue pile masque"></section>
+    </main>
   </div>
-
-  <nav id="onglets" aria-label="Sections">
-    <button data-vue="tableau" class="on">Tableau de bord</button>
-    <button data-vue="flux">Revenus &amp; dépenses</button>
-    <button data-vue="projection">Projection</button>
-    <button data-vue="categories">Catégories</button>
-    <button data-vue="objectifs">Objectifs</button>
-    <button data-vue="scenarios">Scénarios</button>
-    <button data-vue="comptes">Comptes</button>
-    <button data-vue="reglages">Réglages</button>
-  </nav>
-</header>
-
-<main>
-  <section id="vue-tableau" class="vue pile"></section>
-  <section id="vue-flux" class="vue pile masque"></section>
-  <section id="vue-projection" class="vue pile masque"></section>
-  <section id="vue-categories" class="vue pile masque"></section>
-  <section id="vue-objectifs" class="vue pile masque"></section>
-  <section id="vue-scenarios" class="vue pile masque"></section>
-  <section id="vue-comptes" class="vue pile masque"></section>
-  <section id="vue-reglages" class="vue pile masque"></section>
-</main>
+</div>
 
 <div id="voile" class="masque">
   <div id="dialogue" role="dialog" aria-modal="true" aria-labelledby="dialogue-titre">
     <div id="dialogue-tete">
       <h2 id="dialogue-titre"></h2>
-      <button class="btn fantome petit" id="dialogue-x" aria-label="Fermer">✕</button>
+      <button class="btn fantome icone" id="dialogue-x" aria-label="Fermer">
+        <svg viewBox="0 0 24 24"><use href="#ic-croix"/></svg>
+      </button>
     </div>
     <div id="dialogue-corps"></div>
     <div id="dialogue-pied"></div>
@@ -735,17 +900,17 @@ const CATEGORIES_DEFAUT = [
   { id: "cat-salaire",   nom: "Salaire",            type: "revenu",  teinte: 2 },
   { id: "cat-primes",    nom: "Primes & extras",    type: "revenu",  teinte: 6 },
   { id: "cat-aides",     nom: "Aides & allocations", type: "revenu", teinte: 4 },
-  { id: "cat-logement",  nom: "Logement",           type: "depense", teinte: 1, plafond: null },
-  { id: "cat-courses",   nom: "Courses",            type: "depense", teinte: 2, plafond: null },
-  { id: "cat-energie",   nom: "Énergie & eau",      type: "depense", teinte: 3, plafond: null },
-  { id: "cat-transport", nom: "Transport",          type: "depense", teinte: 4, plafond: null },
-  { id: "cat-sante",     nom: "Santé",              type: "depense", teinte: 6, plafond: null },
-  { id: "cat-abos",      nom: "Abonnements",        type: "depense", teinte: 8, plafond: null },
-  { id: "cat-loisirs",   nom: "Loisirs & sorties",  type: "depense", teinte: 5, plafond: null },
-  { id: "cat-impots",    nom: "Impôts & taxes",     type: "depense", teinte: 7, plafond: null },
-  { id: "cat-credits",   nom: "Crédits",            type: "depense", teinte: 5, plafond: null },
-  { id: "cat-epargne",   nom: "Épargne",            type: "depense", teinte: 1, plafond: null },
-  { id: "cat-divers",    nom: "Divers",             type: "depense", teinte: 7, plafond: null },
+  { id: "cat-logement",  nom: "Logement",           type: "depense", teinte: 1, plafond: null, essentiel: true },
+  { id: "cat-courses",   nom: "Courses",            type: "depense", teinte: 2, plafond: null, essentiel: true },
+  { id: "cat-energie",   nom: "Énergie & eau",      type: "depense", teinte: 3, plafond: null, essentiel: true },
+  { id: "cat-transport", nom: "Transport",          type: "depense", teinte: 4, plafond: null, essentiel: true },
+  { id: "cat-sante",     nom: "Santé",              type: "depense", teinte: 6, plafond: null, essentiel: true },
+  { id: "cat-abos",      nom: "Abonnements",        type: "depense", teinte: 8, plafond: null, essentiel: false },
+  { id: "cat-loisirs",   nom: "Loisirs & sorties",  type: "depense", teinte: 5, plafond: null, essentiel: false },
+  { id: "cat-impots",    nom: "Impôts & taxes",     type: "depense", teinte: 7, plafond: null, essentiel: true },
+  { id: "cat-credits",   nom: "Crédits",            type: "depense", teinte: 5, plafond: null, essentiel: true },
+  { id: "cat-epargne",   nom: "Épargne",            type: "depense", teinte: 1, plafond: null, essentiel: false },
+  { id: "cat-divers",    nom: "Divers",             type: "depense", teinte: 7, plafond: null, essentiel: false },
 ];
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -941,6 +1106,9 @@ function normaliserCategorie(brut, i) {
     type,
     teinte: nombreSur(brut.teinte, (i % TEINTES_MAX) + 1, 1, TEINTES_MAX),
     plafond: brut.plafond === null || brut.plafond === undefined ? null : nombreSur(brut.plafond, null, 0),
+    // une dépense non classée est comptée comme contrainte : c'est
+    // l'hypothèse prudente pour le reste à vivre
+    essentiel: type === "depense" ? brut.essentiel !== false : false,
   };
 }
 
@@ -953,6 +1121,28 @@ function normaliserCompte(brut, i) {
     solde: arrondi2(nombreSur(brut.solde, 0)),
     teinte: nombreSur(brut.teinte, (i % TEINTES_MAX) + 1, 1, TEINTES_MAX),
   };
+}
+
+/**
+ * Les corrections apportées à une échéance précise : un montant différent
+ * ce mois-ci, ou une échéance qui n'aura pas lieu. Une entrée sans effet —
+ * ni montant, ni saut — n'est pas une correction et disparaît.
+ */
+function normaliserExceptions(brut) {
+  if (!Array.isArray(brut)) return [];
+  const vues = new Set();
+  const res = [];
+  for (const e of brut.slice(0, 400)) {
+    if (!e || typeof e !== "object" || !estIso(e.date) || vues.has(e.date)) continue;
+    const ignore = e.ignore === true;
+    const montant = e.montant === null || e.montant === undefined
+      ? null : Math.abs(arrondi2(nombreSur(e.montant, 0, -1e12, 1e12)));
+    if (!ignore && montant === null) continue;
+    vues.add(e.date);
+    res.push({ date: e.date, montant: ignore ? null : montant, ignore });
+  }
+  res.sort((a, b) => (a.date < b.date ? -1 : 1));
+  return res;
 }
 
 function normaliserFlux(brut, i, comptes, categories) {
@@ -987,6 +1177,7 @@ function normaliserFlux(brut, i, comptes, categories) {
     indexation: nombreSur(brut.indexation, 0, -50, 50),
     actif: brut.actif !== false,
     note: texteSur(brut.note, "", 300),
+    exceptions: normaliserExceptions(brut.exceptions),
   };
 }
 
@@ -1099,11 +1290,20 @@ function occurrences(flux, du, au, reference) {
   if (flux.debut > borneFin || du > borneFin) return res;
 
   const freq = FREQ[flux.frequence] || FREQ.mensuel;
+  const corrections = new Map((flux.exceptions || []).map((e) => [e.date, e]));
+
+  /* Une échéance corrigée prend le montant saisi pour ce jour-là ; une
+     échéance sautée ne produit rien. */
+  const poser = (date) => {
+    const c = corrections.get(date);
+    if (c && c.ignore) return;
+    res.push(c
+      ? { date, montant: c.montant, ajuste: true }
+      : { date, montant: arrondi2(montantA(flux, date, reference)) });
+  };
 
   if (freq.id === "ponctuel") {
-    if (flux.debut >= du && flux.debut <= borneFin) {
-      res.push({ date: flux.debut, montant: arrondi2(montantA(flux, flux.debut, reference)) });
-    }
+    if (flux.debut >= du && flux.debut <= borneFin) poser(flux.debut);
     return res;
   }
 
@@ -1127,10 +1327,24 @@ function occurrences(flux, du, au, reference) {
 
   garde = 0;
   while (date <= borneFin && garde++ < OCCURRENCES_MAX) {
-    res.push({ date, montant: arrondi2(montantA(flux, date, reference)) });
+    poser(date);
     date = dateDuRang(++k);
   }
   return res;
+}
+
+/** La correction posée sur une échéance, s'il y en a une. */
+function exceptionDe(flux, date) {
+  return (flux && flux.exceptions ? flux.exceptions.find((e) => e.date === date) : null) || null;
+}
+
+/** Pose, remplace ou retire la correction d'une échéance. */
+function poserException(fluxId, date, correction) {
+  const f = ETAT.flux.find((x) => x.id === fluxId);
+  if (!f || !estIso(date)) return;
+  f.exceptions = (f.exceptions || []).filter((e) => e.date !== date);
+  if (correction) f.exceptions.push({ date, montant: correction.montant, ignore: !!correction.ignore });
+  f.exceptions = normaliserExceptions(f.exceptions);
 }
 
 /** Rythme mensuel moyen d'un flux, sans tenir compte des dates. */
@@ -1171,7 +1385,7 @@ function projeter(options) {
   const operations = [];
   for (const f of listeFlux) {
     for (const oc of occurrences(f, du, au, du)) {
-      const commun = { date: oc.date, brut: oc.montant, type: f.type, libelle: f.libelle, fluxId: f.id };
+      const commun = { date: oc.date, brut: oc.montant, type: f.type, libelle: f.libelle, fluxId: f.id, ajuste: !!oc.ajuste };
       if (f.type === "virement") {
         const source = dansPerimetre(f.compteId);
         const destination = dansPerimetre(f.compteDest);
@@ -1375,6 +1589,73 @@ function enveloppes(projection) {
     .sort((a, b) => b.mensuel - a.mensuel);
 }
 
+/* ── Reste à vivre ────────────────────────────────────────────────────── */
+
+/**
+ * Ce qui reste une fois les dépenses contraintes payées.
+ *
+ * Le partage entre contraint et choisi vient des catégories, pas d'un
+ * classement automatique : ce qui est un loisir chez l'un est un besoin
+ * chez l'autre. Les virements entre comptes n'entrent nulle part — mettre
+ * de côté n'est pas dépenser.
+ */
+function resteAVivre(projection) {
+  let essentiel = 0, choisi = 0;
+  for (const e of projection.parCategorie.values()) {
+    if (e.type !== "depense") continue;
+    const c = categorie(e.categorieId);
+    if (c && c.essentiel === false) choisi += e.total; else essentiel += e.total;
+  }
+  const mois = projection.nbMois;
+  const revenus = projection.totaux.revenusMensuels;
+  const contraint = arrondi2(essentiel / mois);
+  const libre = arrondi2(choisi / mois);
+  const reste = arrondi2(revenus - contraint);
+  return {
+    revenus, contraint, libre, reste,
+    parJour: arrondi2(reste / 30.44),
+    partContrainte: revenus > 0 ? (contraint / revenus) * 100 : null,
+  };
+}
+
+/* ── Calendrier d'un mois ─────────────────────────────────────────────── */
+
+/** 0 = lundi, 6 = dimanche. */
+function jourSemaine(iso) { return (new Date(versUTC(iso)).getUTCDay() + 6) % 7; }
+
+/**
+ * Les jours d'un mois, chacun avec ses opérations et le solde au soir.
+ * Les jours hors fenêtre de projection sont rendus quand même, sans solde :
+ * un calendrier troué serait plus déroutant qu'utile.
+ */
+function calendrier(projection, cle) {
+  const premier = debutDeMois(cle);
+  const dernier = finDeMois(cle);
+  const parJour = new Map();
+  for (const op of projection.operations) {
+    if (op.date < premier || op.date > dernier) continue;
+    if (!parJour.has(op.date)) parJour.set(op.date, []);
+    parJour.get(op.date).push(op);
+  }
+
+  const jours = [];
+  for (let d = premier; d <= dernier; d = ajouterJours(d, 1)) {
+    const ops = parJour.get(d) || [];
+    const dedans = d >= projection.du && d <= projection.au;
+    jours.push({
+      date: d,
+      jour: Number(d.slice(8, 10)),
+      semaine: jourSemaine(d),
+      operations: ops,
+      entrees: arrondi2(ops.filter((o) => o.montant > 0).reduce((t, o) => t + o.montant, 0)),
+      sorties: arrondi2(ops.filter((o) => o.montant < 0).reduce((t, o) => t - o.montant, 0)),
+      solde: dedans ? soldeALaDate(projection, d) : null,
+      dedans,
+    });
+  }
+  return { cle, jours, decalage: jours.length ? jours[0].semaine : 0 };
+}
+
 /* ── Prêt : mensualité d'un emprunt amortissable ──────────────────────── */
 
 /** Mensualité constante d'un prêt — formule d'annuité classique. */
@@ -1415,10 +1696,32 @@ function enregistrerEtat() {
   }
 }
 
-function modifier(action) {
+/* Toute modification est réversible : l'état d'avant est empilé, et la
+   dernière opération peut être défaite — par le bouton du message, ou par
+   Ctrl+Z. Trente pas suffisent ; au-delà, l'export JSON est la sauvegarde. */
+const HISTORIQUE = [];
+const HISTORIQUE_MAX = 30;
+
+function memoriser() {
+  HISTORIQUE.push(JSON.stringify(ETAT));
+  if (HISTORIQUE.length > HISTORIQUE_MAX) HISTORIQUE.shift();
+}
+
+function modifier(action, libelle) {
+  memoriser();
   action();
   enregistrerEtat();
   rendre();
+  if (libelle) message(libelle, { annuler: true });
+}
+
+function annuler() {
+  const avant = HISTORIQUE.pop();
+  if (avant === undefined) { message("Rien à annuler."); return; }
+  ETAT = normaliser(JSON.parse(avant));
+  enregistrerEtat();
+  rendre();
+  message("Modification annulée.");
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -1516,6 +1819,33 @@ function jeuDemo() {
    rendu de la vue courante.
    ══════════════════════════════════════════════════════════════════════ */
 
+let _idGraphe = 0;
+
+/** Une courbe minuscule, sans axe ni repère, posée au fond d'un indicateur. */
+function etincelle(points, couleur, options) {
+  const o = options || {};
+  const L = o.largeur || 220, H = o.hauteur || 34;
+  if (!points || points.length < 2) return "";
+  const t0 = versUTC(points[0].date);
+  const t1 = versUTC(points[points.length - 1].date);
+  const etendue = Math.max(1, t1 - t0);
+  let min = Infinity, max = -Infinity;
+  for (const p of points) { if (p.solde < min) min = p.solde; if (p.solde > max) max = p.solde; }
+  const amplitude = max - min || 1;
+  const gx = (iso) => ((versUTC(iso) - t0) / etendue) * L;
+  const gy = (v) => H - 3 - ((v - min) / amplitude) * (H - 6);
+  let d = "", px = null, py = null;
+  for (const p of points) {
+    const x = gx(p.date), y = gy(p.solde);
+    if (px === null) d = "M" + x.toFixed(1) + "," + y.toFixed(1);
+    else d += "L" + x.toFixed(1) + "," + py.toFixed(1) + "L" + x.toFixed(1) + "," + y.toFixed(1);
+    px = x; py = y;
+  }
+  return '<svg class="etincelle" viewBox="0 0 ' + L + " " + H + '" preserveAspectRatio="none" aria-hidden="true">' +
+    '<path d="' + d + "L" + L + "," + H + "L0," + H + 'Z" fill="' + couleur + '" opacity=".13"/>' +
+    '<path d="' + d + '" fill="none" stroke="' + couleur + '" stroke-width="1.5" vector-effect="non-scaling-stroke" opacity=".55"/></svg>';
+}
+
 function largeurDe(cible, defaut) {
   const l = cible && cible.clientWidth ? cible.clientWidth : 0;
   return Math.max(300, l || defaut || 720);
@@ -1586,7 +1916,12 @@ function grapheCourbes(cible, series, options) {
   const gy = (v) => mg.h + h - ((v - min) / (max - min || 1)) * h;
 
   const ticks = graduations(min, max, 5);
+  const cleGrad = "grad-" + (++_idGraphe);
   let svg = '<svg class="graphe" width="' + L + '" height="' + H + '" viewBox="0 0 ' + L + ' ' + H + '" role="img" aria-label="' + esc(o.titreAccessible || "Solde projeté") + '">';
+  svg += "<defs>" + utiles.map((serie, i) =>
+    '<linearGradient id="' + cleGrad + "-" + i + '" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0%" stop-color="' + serie.couleur + '" stop-opacity=".30"/>' +
+    '<stop offset="100%" stop-color="' + serie.couleur + '" stop-opacity=".02"/></linearGradient>').join("") + "</defs>";
 
   for (const t of ticks) {
     const y = gy(t);
@@ -1612,7 +1947,7 @@ function grapheCourbes(cible, series, options) {
   }
 
   // courbes en escalier : entre deux échéances, le solde ne bouge pas
-  for (const s of utiles) {
+  utiles.forEach((s, rang) => {
     let d = "";
     let px = null, py = null;
     for (const p of s.points) {
@@ -1623,10 +1958,14 @@ function grapheCourbes(cible, series, options) {
     }
     if (s.remplir) {
       const base = Math.min(mg.h + h, Math.max(mg.h, gy(Math.max(0, min))));
-      svg += '<path d="' + d + "L" + px.toFixed(1) + "," + base.toFixed(1) + "L" + gx(s.points[0].date).toFixed(1) + "," + base.toFixed(1) + 'Z" fill="' + s.couleur + '" opacity=".10"/>';
+      svg += '<path d="' + d + "L" + px.toFixed(1) + "," + base.toFixed(1) + "L" + gx(s.points[0].date).toFixed(1) + "," + base.toFixed(1) + 'Z" fill="url(#' + cleGrad + "-" + rang + ')"/>';
     }
     svg += '<path d="' + d + '" fill="none" stroke="' + s.couleur + '" stroke-width="' + (s.epaisseur || 2) + '" stroke-linejoin="round" stroke-linecap="round"' + (s.pointille ? ' stroke-dasharray="5 4"' : "") + "/>";
-  }
+    // le point d'arrivée porte sa valeur : c'est le chiffre qu'on vient lire
+    if (s.marquerFin !== false) {
+      svg += '<circle cx="' + px.toFixed(1) + '" cy="' + py.toFixed(1) + '" r="3.5" fill="' + s.couleur + '" stroke="var(--surface)" stroke-width="1.5"/>';
+    }
+  });
 
   // marqueur de découvert
   if (o.marqueur && o.marqueur.date >= utiles[0].points[0].date) {
@@ -1700,27 +2039,30 @@ function grapheBarres(cible, mois, options) {
     svg += '<text class="axe" x="' + (mg.g - 8) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end">' + esc(argentCourt(t)) + "</text>";
   }
 
+  // les zones de survol sont posées d'abord : surlignées, elles doivent
+  // passer derrière les barres, pas devant
   const pasEtiquette = Math.max(1, Math.ceil(mois.length / Math.max(2, Math.floor(l / 78))));
+  let barres = "";
   mois.forEach((m, i) => {
     const centre = mg.g + i * pas + pas / 2;
-    const xr = centre - largeurBarre - 1;
-    const xd = centre + 1;
-    svg += '<rect x="' + xr.toFixed(1) + '" y="' + gy(m.revenus).toFixed(1) + '" width="' + largeurBarre.toFixed(1) +
-      '" height="' + Math.max(0, mg.h + h - gy(m.revenus)).toFixed(1) + '" rx="2" fill="var(--revenu)"/>';
-    svg += '<rect x="' + xd.toFixed(1) + '" y="' + gy(m.depenses).toFixed(1) + '" width="' + largeurBarre.toFixed(1) +
-      '" height="' + Math.max(0, mg.h + h - gy(m.depenses)).toFixed(1) + '" rx="2" fill="var(--depense)"/>';
+    svg += '<rect class="colonne" data-i="' + i + '" x="' + (mg.g + i * pas).toFixed(1) + '" y="' + mg.h + '" width="' + pas.toFixed(1) +
+      '" height="' + h + '" fill="transparent" rx="4"/>';
+    barres += '<rect class="barre" x="' + (centre - largeurBarre - 1).toFixed(1) + '" y="' + gy(m.revenus).toFixed(1) +
+      '" width="' + largeurBarre.toFixed(1) + '" height="' + Math.max(0, mg.h + h - gy(m.revenus)).toFixed(1) + '" rx="3" fill="var(--revenu)"/>';
+    barres += '<rect class="barre" x="' + (centre + 1).toFixed(1) + '" y="' + gy(m.depenses).toFixed(1) +
+      '" width="' + largeurBarre.toFixed(1) + '" height="' + Math.max(0, mg.h + h - gy(m.depenses)).toFixed(1) + '" rx="3" fill="var(--depense)"/>';
     if (i % pasEtiquette === 0) {
-      svg += '<text class="axe" x="' + centre.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle">' + esc(libelleMois(m.cle, true)) + "</text>";
+      barres += '<text class="axe" x="' + centre.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle">' + esc(libelleMois(m.cle, true)) + "</text>";
     }
-    svg += '<rect class="colonne" data-i="' + i + '" x="' + (mg.g + i * pas).toFixed(1) + '" y="' + mg.h + '" width="' + pas.toFixed(1) + '" height="' + h + '" fill="transparent"/>';
   });
-  svg += "</svg>";
+  svg += barres + "</svg>";
   cible.innerHTML = svg;
   cible.classList.add("boite-graphe");
 
   const bulle = infobulleDe(cible);
   cible.querySelectorAll(".colonne").forEach((r) => {
     r.addEventListener("mouseenter", () => {
+      r.setAttribute("fill", "var(--surface-2)");
       const m = mois[Number(r.dataset.i)];
       bulle.innerHTML = '<div class="t">' + esc(libelleMois(m.cle)) + "</div>" +
         '<div class="l"><span><i class="puce" style="background:var(--revenu)"></i>Revenus</span><b>' + esc(argent(m.revenus)) + "</b></div>" +
@@ -1729,7 +2071,7 @@ function grapheBarres(cible, mois, options) {
         '<div class="l"><span>Solde fin de mois</span><b>' + esc(argent(m.soldeFin)) + "</b></div>";
       placerBulle(bulle, cible, Number(r.getAttribute("x")) + Number(r.getAttribute("width")) / 2, mg.h + 6);
     });
-    r.addEventListener("mouseleave", () => { bulle.style.opacity = "0"; });
+    r.addEventListener("mouseleave", () => { r.setAttribute("fill", "transparent"); bulle.style.opacity = "0"; });
   });
 }
 
@@ -1774,7 +2116,20 @@ function grapheAnneau(cible, parts, options) {
    9. Vues
    ══════════════════════════════════════════════════════════════════════ */
 
-const VUES = ["tableau", "flux", "projection", "categories", "objectifs", "scenarios", "comptes", "reglages"];
+const VUES = ["tableau", "flux", "projection", "calendrier", "categories", "objectifs", "scenarios", "comptes", "reglages"];
+
+const TITRES = {
+  tableau: ["Vue d'ensemble", "Tableau de bord"],
+  flux: ["Ce qui entre et ce qui sort", "Revenus & dépenses"],
+  projection: ["Mois par mois", "Projection"],
+  calendrier: ["Jour par jour", "Calendrier"],
+  categories: ["Où part l'argent", "Catégories & enveloppes"],
+  objectifs: ["Ce que vous visez", "Objectifs d'épargne"],
+  scenarios: ["Et si ?", "Scénarios"],
+  comptes: ["Vos comptes", "Comptes"],
+  reglages: ["Préférences et données", "Réglages"],
+};
+
 let vueActive = "tableau";
 let PROJECTION = null;
 
@@ -1784,17 +2139,29 @@ const ui = {
   tri: "montant",
   compteProjection: "",
   moisOuverts: new Set(),
+  moisCalendrier: null,
 };
+
+function icone(nom, classe) {
+  return '<svg class="' + (classe || "ic") + '" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-' + nom + '"/></svg>';
+}
 
 function boite(id) { return document.getElementById(id); }
 
-function message(texte) {
+function message(texte, options) {
+  const o = options || {};
   const zone = boite("messages");
   const el = document.createElement("div");
   el.className = "message";
-  el.textContent = texte;
+  el.appendChild(document.createTextNode(texte));
+  if (o.annuler && HISTORIQUE.length) {
+    const bouton = document.createElement("button");
+    bouton.textContent = "Annuler";
+    bouton.addEventListener("click", () => { el.remove(); annuler(); });
+    el.appendChild(bouton);
+  }
   zone.appendChild(el);
-  setTimeout(() => el.remove(), 3200);
+  setTimeout(() => el.remove(), o.annuler ? 6000 : 3200);
 }
 
 function carte(contenu, options) {
@@ -1822,8 +2189,8 @@ function contexteOperation(op) {
   return nomCompte(op.compteId) + " → " + nomCompte(op.compteDest);
 }
 
-function kpi(etiquette, valeur, note, couleur) {
-  return '<div class="kpi"><span class="etiq">' + esc(etiquette) + "</span>" +
+function kpi(etiquette, valeur, note, couleur, fond) {
+  return '<div class="kpi">' + (fond || "") + '<span class="etiq">' + esc(etiquette) + "</span>" +
     '<span class="val"' + (couleur ? ' style="color:' + couleur + '"' : "") + ">" + esc(valeur) + "</span>" +
     (note ? '<span class="note">' + note + "</span>" : "") + "</div>";
 }
@@ -1835,50 +2202,53 @@ function rendreTableau(cible, p) {
 
   const t = p.totaux;
   const evolution = arrondi2(p.soldeFinal - p.soldeInitial);
+  const rav = resteAVivre(p);
   const horizonTexte = ETAT.parametres.horizon + " mois";
 
-  const kpis = carte(
-    '<div class="grille g4">' +
+  const kpis = '<div class="kpis">' +
     kpi("Solde aujourd'hui", argent(p.soldeInitial),
       esc(ETAT.comptes.length + (ETAT.comptes.length > 1 ? " comptes" : " compte"))) +
     kpi("Dans " + horizonTexte, argent(p.soldeFinal),
       '<span class="' + (evolution >= 0 ? "pos" : "neg") + '">' + esc(argent(evolution, { signe: true })) + "</span> sur la période",
-      evolution >= 0 ? "var(--revenu-texte)" : "var(--depense-texte)") +
+      evolution >= 0 ? "var(--revenu-texte)" : "var(--depense-texte)",
+      etincelle(p.points, evolution >= 0 ? "var(--revenu)" : "var(--depense)")) +
     kpi("Reste chaque mois", argent(t.netMensuel, { signe: true }),
       esc(argent(t.revenusMensuels) + " − " + argent(t.depensesMensuelles)),
       t.netMensuel >= 0 ? "var(--revenu-texte)" : "var(--depense-texte)") +
-    kpi("Taux d'épargne", t.tauxEpargne === null ? "—" : pourcent(t.tauxEpargne, 1),
-      "part des revenus non dépensée") +
-    "</div>", { classe: "kpis" });
+    kpi("Reste à vivre", argent(rav.reste),
+      esc(argent(rav.parJour) + " par jour, une fois les charges contraintes payées"),
+      "var(--accent)") +
+    "</div>";
 
   const a = p.alerte;
   let bandeau;
   if (a.dateDecouvert) {
-    bandeau = '<div class="bandeau rouge"><span class="ic">⚠</span><div><b>Découvert le ' + esc(libelleDate(a.dateDecouvert)) +
+    bandeau = '<div class="bandeau rouge">' + icone("alerte", "ic") + "<div><b>Découvert le " + esc(libelleDate(a.dateDecouvert)) +
       "</b> — au rythme actuel, le solde passe sous zéro dans " + esc(nombre(Math.max(0, joursEntre(p.du, a.dateDecouvert)))) +
       " jours, et descend jusqu'à <b>" + esc(argent(a.soldeMin)) + "</b> le " + esc(libelleDate(a.dateSoldeMin)) +
       ". Il manque environ <b>" + esc(argent(Math.abs(a.soldeMin))) + "</b> pour tenir la période.</div></div>";
   } else if (a.dateSousSeuil) {
-    bandeau = '<div class="bandeau ambre"><span class="ic">◉</span><div><b>Sous votre seuil de sécurité le ' + esc(libelleDate(a.dateSousSeuil)) +
+    bandeau = '<div class="bandeau ambre">' + icone("oeil", "ic") + "<div><b>Sous votre seuil de sécurité le " + esc(libelleDate(a.dateSousSeuil)) +
       "</b> — le solde reste positif, mais descend à " + esc(argent(a.soldeMin)) + " le " + esc(libelleDate(a.dateSoldeMin)) +
       " alors que vous vous êtes fixé un plancher de " + esc(argent(a.seuil)) + ".</div></div>";
   } else {
-    bandeau = '<div class="bandeau vert"><span class="ic">✓</span><div><b>Aucune rupture sur ' + esc(horizonTexte) + "</b> — le point bas est de " +
+    bandeau = '<div class="bandeau vert">' + icone("ok", "ic") + "<div><b>Aucune rupture sur " + esc(horizonTexte) + "</b> — le point bas est de " +
       esc(argent(a.soldeMin)) + " le " + esc(libelleDate(a.dateSoldeMin)) +
       (a.seuil > 0 ? ", au-dessus de votre seuil de " + esc(argent(a.seuil)) : "") + ".</div></div>";
   }
 
   const courbe = carte('<div id="g-solde"></div>' +
-    '<div class="legende"><span><i class="puce" style="background:var(--epargne)"></i>Solde projeté</span>' +
-    (ETAT.parametres.seuilAlerte > 0 ? '<span><svg width="18" height="8"><line x1="0" y1="4" x2="18" y2="4" class="ligne-seuil"/></svg>&nbsp;Seuil de sécurité</span>' : "") +
+    '<div class="legende"><span><i class="puce" style="background:var(--accent)"></i>Solde projeté</span>' +
+    (ETAT.parametres.seuilAlerte > 0 ? '<span><svg width="18" height="8" aria-hidden="true"><line x1="0" y1="4" x2="18" y2="4" class="ligne-seuil"/></svg>&nbsp;Seuil de sécurité</span>' : "") +
+    (a.dateDecouvert ? '<span><i class="puce" style="background:var(--depense)"></i>Passage sous zéro</span>' : "") +
     "</div>",
-    { titre: "Solde jour par jour", sous: "Chaque marche est une échéance. Le tracé suppose que tous les flux ci-dessous se réalisent comme prévu.",
+    { titre: "Solde jour par jour", sous: "Chaque marche est une échéance. Le tracé suppose que tous les flux se réalisent comme prévu.",
       droite: esc(libelleDate(p.du, true) + " → " + libelleDate(p.au, true)) });
 
   const barres = carte('<div id="g-mois"></div>' +
     '<div class="legende"><span><i class="puce" style="background:var(--revenu)"></i>Revenus</span>' +
     '<span><i class="puce" style="background:var(--depense)"></i>Dépenses</span></div>',
-    { titre: "Mois par mois" });
+    { titre: "Mois par mois", droite: esc(nombre(p.mois.length) + " mois") });
 
   // agenda : les 45 prochains jours
   const limite = ajouterJours(p.du, 45);
@@ -1888,11 +2258,15 @@ function rendreTableau(cible, p) {
       ? '<ul class="agenda">' + prochaines.map((op) =>
           '<li><span class="quand">' + esc(delaiTexte(op.date, p.du)) + "</span>" +
           '<span class="quoi"><i class="puce" style="background:' + teinte(categorie(op.categorieId) ? categorie(op.categorieId).teinte : 1) + '"></i>' + esc(op.libelle) +
+          (op.ajuste ? ' <span class="etiquette acc">ajusté</span>' : "") +
           (op.type === "virement" ? ' <span class="faible">· ' + esc(contexteOperation(op)) + "</span>" : "") + "</span>" +
-          '<span class="combien">' + montantOperation(op) + "</span></li>").join("")
+          '<span class="combien">' + montantOperation(op) + "</span>" +
+          '<span class="actions"><button class="btn fantome icone" data-act="op-ajuster" data-flux="' + esc(op.fluxId) +
+          '" data-date="' + op.date + '" title="Ajuster cette échéance">' + icone("crayon", "") + "</button></span></li>").join("")
         + "</ul>"
       : '<div class="vide">Rien de prévu dans les 45 prochains jours.</div>',
-    { titre: "À venir", sous: "Les 45 prochains jours." });
+    { titre: "À venir", sous: "Les 45 prochains jours. Une échéance peut être corrigée ou sautée sans toucher au flux.",
+      droite: '<button class="btn petit" data-act="vue-calendrier">Calendrier</button>' });
 
   // répartition des dépenses
   const parts = [...p.parCategorie.values()]
@@ -1904,22 +2278,46 @@ function rendreTableau(cible, p) {
     });
   const totalDep = parts.reduce((s, x) => s + x.valeur, 0);
   const repartition = carte(
-    '<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;justify-content:center">' +
+    '<div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap;justify-content:center">' +
     '<div id="g-anneau"></div>' +
-    '<div style="flex:1;min-width:190px">' +
+    '<div style="flex:1;min-width:200px">' +
     parts.slice(0, 7).map((x) =>
-      '<div class="l" style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;font-size:13.5px">' +
+      '<div style="display:flex;justify-content:space-between;gap:12px;padding:3.5px 0;font-size:13.5px">' +
       '<span><i class="puce" style="background:' + x.couleur + '"></i>' + esc(x.nom) + "</span>" +
       '<span class="mono dim">' + esc(pourcent((x.valeur / totalDep) * 100, 0)) + " · " + esc(argent(x.valeur / p.nbMois)) + "/mois</span></div>").join("") +
-    (parts.length > 7 ? '<div class="faible" style="font-size:12.5px;padding-top:4px">+ ' + (parts.length - 7) + " autres catégories</div>" : "") +
+    (parts.length > 7 ? '<div class="faible" style="font-size:12.5px;padding-top:5px">+ ' + (parts.length - 7) + " autres catégories</div>" : "") +
     "</div></div>",
-    { titre: "Où part l'argent", sous: "Sur toute la période projetée, dépenses seulement." });
+    { titre: "Où part l'argent", sous: "Sur toute la période projetée, dépenses seulement.",
+      droite: '<button class="btn petit" data-act="vue-categories">Enveloppes</button>' });
+
+  // contraint / choisi
+  const partContrainte = rav.revenus > 0 ? Math.min(100, (rav.contraint / rav.revenus) * 100) : 0;
+  const partChoisie = rav.revenus > 0 ? Math.min(100 - partContrainte, (rav.libre / rav.revenus) * 100) : 0;
+  const equilibre = carte(
+    '<div class="jauge" style="height:11px;display:flex">' +
+    '<i style="width:' + partContrainte.toFixed(1) + '%;background:var(--serie-1);border-radius:0"></i>' +
+    '<i style="width:' + partChoisie.toFixed(1) + '%;background:var(--serie-3);border-radius:0"></i>' +
+    "</div>" +
+    '<div class="grille g3" style="margin-top:13px;gap:10px">' +
+    '<div><span class="eyebrow"><i class="puce" style="background:var(--serie-1)"></i>Contraint</span>' +
+    '<div class="chiffre" style="font-family:var(--display);font-weight:700;font-size:19px">' + esc(argent(rav.contraint)) + "</div>" +
+    '<div class="faible" style="font-size:12px">logement, courses, crédits…</div></div>' +
+    '<div><span class="eyebrow"><i class="puce" style="background:var(--serie-3)"></i>Choisi</span>' +
+    '<div class="chiffre" style="font-family:var(--display);font-weight:700;font-size:19px">' + esc(argent(rav.libre)) + "</div>" +
+    '<div class="faible" style="font-size:12px">loisirs, abonnements, épargne…</div></div>' +
+    '<div><span class="eyebrow">Reste après contraint</span>' +
+    '<div class="chiffre" style="font-family:var(--display);font-weight:700;font-size:19px;color:var(--accent)">' + esc(argent(rav.reste)) + "</div>" +
+    '<div class="faible" style="font-size:12px">soit ' + esc(argent(rav.parJour)) + " par jour</div></div></div>",
+    { titre: "Contraint et choisi",
+      sous: "Le partage vient de vos catégories, pas d'un classement automatique : ce qui est un loisir chez l'un est un besoin chez l'autre.",
+      droite: rav.partContrainte === null ? "" : esc(pourcent(rav.partContrainte, 0) + " des revenus") });
 
   cible.innerHTML = kpis + bandeau + courbe +
-    '<div class="grille g-2-1">' + barres + agenda + "</div>" + repartition;
+    '<div class="grille g-2-1">' + barres + agenda + "</div>" +
+    '<div class="grille g-2-1">' + repartition + equilibre + "</div>";
 
   grapheCourbes(boite("g-solde"), [{
-    nom: "Solde", couleur: "var(--epargne)", points: p.points, remplir: true,
+    nom: "Solde", couleur: "var(--accent)", points: p.points, remplir: true, epaisseur: 2.2,
   }], {
     seuil: ETAT.parametres.seuilAlerte,
     marqueur: a.dateDecouvert ? { date: a.dateDecouvert, valeur: soldeALaDate(p, a.dateDecouvert) } : null,
@@ -1931,7 +2329,7 @@ function rendreTableau(cible, p) {
 
 function etatVide() {
   return carte(
-    '<div class="vide"><p style="font-size:16px;color:var(--texte);font-family:var(--display);font-weight:700">Rien à projeter — pour l\'instant.</p>' +
+    '<div class="vide"><p class="titre-vide">Rien à projeter — pour l\'instant.</p>' +
     "<p>Un budget prévisionnel se construit à partir de vos flux : ce qui rentre, ce qui sort, à quel rythme, " +
     "et à partir de quand. Ajoutez-les un par un, ou partez d'un foyer d'exemple et remplacez les montants.</p>" +
     '<div class="rangee" style="justify-content:center">' +
@@ -1955,18 +2353,17 @@ function rendreFlux(cible, p) {
   const rythmeD = depenses.reduce((s, f) => s + mensualiteMoyenne(f), 0);
   const rythmeV = virements.reduce((s, f) => s + mensualiteMoyenne(f), 0);
 
-  const entete = carte(
-    '<div class="grille g3">' +
+  const entete = '<div class="kpis">' +
     kpi("Revenus, rythme mensuel", argent(rythmeR), esc(revenus.length + " flux actifs"), "var(--revenu-texte)") +
     kpi("Dépenses, rythme mensuel", argent(rythmeD), esc(depenses.length + " flux actifs"), "var(--depense-texte)") +
     kpi("Écart", argent(rythmeR - rythmeD, { signe: true }),
       rythmeR > 0 ? esc(pourcent(((rythmeR - rythmeD) / rythmeR) * 100, 1) + " des revenus") : "",
       rythmeR - rythmeD >= 0 ? "var(--revenu-texte)" : "var(--depense-texte)") +
-    "</div>" +
-    '<p class="sous" style="margin:10px 0 0">Rythme moyen, ponctuels exclus : un trimestriel de 300 € compte pour 100 €/mois. ' +
-    "La projection, elle, place chaque échéance à sa date." +
-    (virements.length ? " S'y ajoutent " + esc(nombre(rythmeV)) + " € par mois de virements entre vos comptes, qui ne sont ni des revenus ni des dépenses." : "") +
-    "</p>");
+    kpi("Virements internes", virements.length ? argent(rythmeV) : "—",
+      virements.length
+        ? esc(virements.length + (virements.length > 1 ? " virements entre vos comptes" : " virement entre vos comptes"))
+        : "aucun mouvement entre comptes") +
+    "</div>";
 
   const barreOutils = '<div class="rangee" style="margin-bottom:12px">' +
     '<input type="text" id="rech" placeholder="Rechercher un flux…" value="' + esc(ui.recherche) + '" style="max-width:240px">' +
@@ -2010,6 +2407,8 @@ function rendreFlux(cible, p) {
       "<td><div style=\"font-weight:500\">" + esc(f.libelle) +
         (f.actif ? "" : ' <span class="etiquette off">en pause</span>') +
         (f.indexation ? ' <span class="etiquette" title="Revalorisation annuelle">+' + esc(nombre(f.indexation, 1)) + " %/an</span>" : "") +
+        (f.exceptions && f.exceptions.length ? ' <span class="etiquette acc" title="Échéances corrigées ou sautées">' +
+          f.exceptions.length + " ajusté" + (f.exceptions.length > 1 ? "es" : "e") + "</span>" : "") +
         "</div>" +
         '<div class="faible" style="font-size:12.5px"><i class="puce" style="background:' + teinte(c ? c.teinte : 1) + '"></i>' +
         (f.type === "virement"
@@ -2023,10 +2422,11 @@ function rendreFlux(cible, p) {
       '<td class="num dim">' + esc(argent(mensualiteMoyenne(f))) + "</td>" +
       '<td class="dim">' + (s ? esc(libelleDate(s.date, true)) : '<span class="faible">—</span>') + "</td>" +
       '<td class="num dim">' + esc(argent(totalHorizon.get(f.id) || 0)) + "</td>" +
-      '<td class="num" style="white-space:nowrap">' +
-        '<button class="btn fantome petit" data-act="flux-basculer" data-id="' + esc(f.id) + '" title="' + (f.actif ? "Mettre en pause" : "Réactiver") + '">' + (f.actif ? "⏸" : "▶") + "</button>" +
-        '<button class="btn fantome petit" data-act="flux-dupliquer" data-id="' + esc(f.id) + '" title="Dupliquer">⧉</button>' +
-        '<button class="btn fantome petit" data-act="flux-supprimer" data-id="' + esc(f.id) + '" title="Supprimer">✕</button></td></tr>';
+      '<td class="actions">' +
+        '<button class="btn fantome icone" data-act="flux-basculer" data-id="' + esc(f.id) + '" title="' +
+          (f.actif ? "Mettre en pause" : "Réactiver") + '">' + icone(f.actif ? "pause" : "lecture", "") + "</button>" +
+        '<button class="btn fantome icone" data-act="flux-dupliquer" data-id="' + esc(f.id) + '" title="Dupliquer">' + icone("copie", "") + "</button>" +
+        '<button class="btn fantome icone" data-act="flux-supprimer" data-id="' + esc(f.id) + '" title="Supprimer">' + icone("croix", "") + "</button></td></tr>";
   }).join("");
 
   const table = liste.length
@@ -2035,7 +2435,12 @@ function rendreFlux(cible, p) {
       '<th class="num">Sur ' + ETAT.parametres.horizon + " mois</th><th></th></tr></thead><tbody>" + lignes + "</tbody></table></div>"
     : '<div class="vide">Aucun flux ne correspond à cette recherche.</div>';
 
-  cible.innerHTML = (ETAT.flux.length ? entete : "") + carte(barreOutils + table);
+  cible.innerHTML = (ETAT.flux.length ? entete : "") +
+    carte(barreOutils + table, {
+      sous: ETAT.flux.length
+        ? "« Par mois » lisse chaque flux sur l'année : un trimestriel de 300 € y compte pour 100 €. La projection, elle, place chaque échéance à sa date."
+        : "",
+    });
 
   const rech = boite("rech");
   if (rech) {
@@ -2061,6 +2466,17 @@ function rendreProjection(cible, p) {
     ETAT.comptes.map((c) => '<option value="' + esc(c.id) + '"' + (filtre === c.id ? " selected" : "") + ">" + esc(c.nom) + "</option>").join("") +
     "</select></label>";
 
+  /* Sur plus d'une année, un sous-total annuel évite de faire l'addition
+     de tête sur douze lignes. */
+  const annees = new Map();
+  for (const m of proj.mois) {
+    const an = m.cle.slice(0, 4);
+    if (!annees.has(an)) annees.set(an, { revenus: 0, depenses: 0, dernier: m });
+    const e = annees.get(an);
+    e.revenus += m.revenus; e.depenses += m.depenses; e.dernier = m;
+  }
+  const plusieursAnnees = annees.size > 1;
+
   const lignes = proj.mois.map((m) => {
     const ouvert = ui.moisOuverts.has(m.cle);
     let html = '<tr class="cliquable" data-act="mois-detail" data-cle="' + m.cle + '">' +
@@ -2074,11 +2490,22 @@ function rendreProjection(cible, p) {
       html += '<tr class="repli"><td colspan="6"><div style="padding:6px 10px 10px"><table>' +
         m.operations.map((op) =>
           "<tr><td style=\"width:88px\" class=\"dim\">" + esc(libelleDate(op.date, true)) + "</td>" +
-          "<td><i class=\"puce\" style=\"background:" + teinte(categorie(op.categorieId) ? categorie(op.categorieId).teinte : 1) + "\"></i>" + esc(op.libelle) + "</td>" +
+          "<td><i class=\"puce\" style=\"background:" + teinte(categorie(op.categorieId) ? categorie(op.categorieId).teinte : 1) + "\"></i>" + esc(op.libelle) +
+          (op.ajuste ? ' <span class="etiquette acc">ajusté</span>' : "") + "</td>" +
           '<td class="dim">' + esc(contexteOperation(op)) + "</td>" +
           '<td class="num">' + montantOperation(op) + "</td>" +
-          '<td class="num dim">' + esc(argent(op.solde)) + "</td></tr>").join("") +
+          '<td class="num dim">' + esc(argent(op.solde)) + "</td>" +
+          '<td class="actions"><button class="btn fantome icone" data-act="op-ajuster" data-flux="' + esc(op.fluxId) +
+          '" data-date="' + op.date + '" title="Ajuster cette échéance">' + icone("crayon", "") + "</button></td></tr>").join("") +
         "</table></div></td></tr>";
+    }
+    const an = annees.get(m.cle.slice(0, 4));
+    if (plusieursAnnees && an && an.dernier === m) {
+      html += '<tr class="annee"><td>Total ' + m.cle.slice(0, 4) + "</td>" +
+        '<td class="num">' + esc(argent(arrondi2(an.revenus))) + "</td>" +
+        '<td class="num">' + esc(argent(arrondi2(an.depenses))) + "</td>" +
+        '<td class="num">' + esc(argent(arrondi2(an.revenus - an.depenses), { signe: true })) + "</td>" +
+        '<td class="num">' + esc(argent(m.soldeFin)) + "</td><td></td></tr>";
     }
     return html;
   }).join("");
@@ -2101,8 +2528,160 @@ function rendreProjection(cible, p) {
       "<tbody>" + lignes + total + "</tbody></table></div>",
       { titre: "Mois par mois", sous: "Cliquez une ligne pour voir le détail des opérations du mois." });
 
-  grapheCourbes(boite("g-proj"), [{ nom: "Solde", couleur: "var(--epargne)", points: proj.points, remplir: true }],
+  grapheCourbes(boite("g-proj"), [{ nom: "Solde", couleur: "var(--accent)", points: proj.points, remplir: true }],
     { seuil: filtre ? 0 : ETAT.parametres.seuilAlerte, hauteur: 260 });
+}
+
+
+/* ── Calendrier ───────────────────────────────────────────────────────── */
+
+const JOURS_COURTS = ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"];
+
+function moisCalendrier(p) {
+  const dans = (cle) => cle >= cleMois(p.du) && cle <= cleMois(p.au);
+  if (ui.moisCalendrier && dans(ui.moisCalendrier)) return ui.moisCalendrier;
+  return cleMois(p.du);
+}
+
+function rendreCalendrier(cible, p) {
+  const cle = moisCalendrier(p);
+  const cal = calendrier(p, cle);
+  const mois = p.mois.find((m) => m.cle === cle);
+  const premier = cleMois(p.du), dernier = cleMois(p.au);
+
+  const cases = [];
+  for (let i = 0; i < cal.decalage; i++) cases.push('<div class="cal-case vide"></div>');
+  for (const j of cal.jours) {
+    const net = arrondi2(j.entrees - j.sorties);
+    const points = j.operations.slice(0, 8).map((op) => {
+      const c = categorie(op.categorieId);
+      return '<i style="background:' + (op.type === "virement" ? "var(--faible)" : teinte(c ? c.teinte : 1)) + '"></i>';
+    }).join("");
+    cases.push('<button class="cal-case' +
+      (j.date === aujourdhui() ? " aujourdhui" : "") +
+      (!j.dedans ? " hors" : "") +
+      (j.solde !== null && j.solde < 0 ? " rouge" : "") +
+      '" data-act="cal-jour" data-date="' + j.date + '"' +
+      (j.operations.length ? "" : " tabindex=\"-1\"") + ">" +
+      '<span class="jour">' + j.jour + "</span>" +
+      (j.entrees ? '<span class="mv pos">+ ' + esc(argentCourt(j.entrees)) + "</span>" : "") +
+      (j.sorties ? '<span class="mv neg">− ' + esc(argentCourt(j.sorties)) + "</span>" : "") +
+      (points ? '<span class="points">' + points + "</span>" : "") +
+      (j.solde !== null ? '<span class="solde">' + esc(argentCourt(j.solde)) + "</span>" : "") +
+      "</button>");
+  }
+
+  const jours = [...cal.jours];
+  const gros = jours.slice().sort((a, b) => b.sorties - a.sorties).filter((j) => j.sorties > 0).slice(0, 5);
+  const creux = jours.filter((j) => j.solde !== null).sort((a, b) => a.solde - b.solde)[0];
+
+  cible.innerHTML = carte(
+    '<div class="rangee" style="margin-bottom:14px">' +
+    '<button class="btn petit" data-act="cal-precedent"' + (cle <= premier ? " disabled" : "") + '>‹ Mois précédent</button>' +
+    '<b style="font-family:var(--display);font-size:17px">' + esc(libelleMois(cle)) + "</b>" +
+    '<button class="btn petit" data-act="cal-suivant"' + (cle >= dernier ? " disabled" : "") + '>Mois suivant ›</button>' +
+    '<button class="btn petit fantome" data-act="cal-aujourdhui">Ce mois-ci</button>' +
+    '<span class="pousse dim" style="font-size:13px">' +
+    (mois ? esc(argent(mois.revenus) + " entrent, " + argent(mois.depenses) +
+      " sortent · solde le " + libelleDate(finDeMois(cle), true) + " : " + argent(mois.soldeFin)) : "") +
+    "</span></div>" +
+    '<div class="cal-grille" style="margin-bottom:6px">' +
+    JOURS_COURTS.map((j) => '<div class="cal-jour-nom">' + j + "</div>").join("") + "</div>" +
+    '<div class="cal-grille">' + cases.join("") + "</div>",
+    { titre: "Le mois au jour le jour",
+      sous: "Chaque case porte les mouvements du jour et le solde au soir ; les jours en rouge passent sous zéro. Cliquez un jour pour le détail." }) +
+    '<div class="grille g2">' +
+    carte(gros.length
+      ? '<ul class="agenda">' + gros.map((j) =>
+          '<li><span class="quand">' + esc(libelleJourMois(j.date)) + "</span>" +
+          '<span class="quoi">' + esc(j.operations.filter((o) => o.montant < 0).map((o) => o.libelle).join(", ")) + "</span>" +
+          '<span class="combien neg">− ' + esc(argent(j.sorties)) + "</span></li>").join("") + "</ul>"
+      : '<div class="vide">Aucune sortie ce mois-ci.</div>',
+      { titre: "Les journées les plus chargées", sous: "C'est là que se joue le point bas du mois." }) +
+    carte(creux
+      ? '<div class="kpi" style="padding:0"><span class="etiq">Point bas du mois</span>' +
+        '<span class="val" style="color:' + (creux.solde < 0 ? "var(--depense-texte)" : "var(--texte)") + '">' + esc(argent(creux.solde)) + "</span>" +
+        '<span class="note">le ' + esc(libelleDate(creux.date)) + "</span></div>" +
+        '<p class="sous" style="margin:14px 0 0">' +
+        (creux.solde < 0
+          ? "Ce mois-ci ne passe pas : il manque " + esc(argent(Math.abs(creux.solde))) + " au plus bas. Décaler une échéance de quelques jours suffit parfois — cliquez la journée concernée."
+          : "Le mois tient. La marge la plus faible est de " + esc(argent(creux.solde)) + ".") + "</p>"
+      : '<div class="vide">Ce mois est hors de la fenêtre de projection.</div>',
+      { titre: "Marge du mois" }) +
+    "</div>";
+}
+
+function ouvrirJour(date) {
+  const ops = PROJECTION.operations.filter((op) => op.date === date);
+  const solde = soldeALaDate(PROJECTION, date);
+  const corps = ops.length
+    ? '<ul class="agenda">' + ops.map((op) =>
+        '<li><span class="quoi"><i class="puce" style="background:' +
+        teinte(categorie(op.categorieId) ? categorie(op.categorieId).teinte : 1) + '"></i>' + esc(op.libelle) +
+        (op.ajuste ? ' <span class="etiquette acc">ajusté</span>' : "") +
+        '<div class="faible" style="font-size:12px;padding-left:17px">' + esc(contexteOperation(op)) + "</div></span>" +
+        '<span class="combien">' + montantOperation(op) + "</span>" +
+        '<span class="actions"><button class="btn petit" data-act="op-ajuster" data-flux="' + esc(op.fluxId) +
+        '" data-date="' + op.date + '">Ajuster</button></span></li>').join("") + "</ul>" +
+      '<div class="sep"></div><div class="rangee"><span class="dim">Solde au soir</span>' +
+      '<b class="pousse chiffre" style="font-family:var(--display);font-size:17px' +
+      (solde < 0 ? ";color:var(--depense-texte)" : "") + '">' + esc(argent(solde)) + "</b></div>"
+    : '<p class="sous" style="margin:0">Rien n\'est prévu ce jour-là. Le solde y est de <b>' + esc(argent(solde)) + "</b>.</p>";
+
+  ouvrirDialogue(libelleDate(date), corps, [
+    { texte: "Ajouter un flux ici", gauche: true, action: () => { fermerDialogue(); ouvrirFlux(null, { debut: date, frequence: "ponctuel" }); } },
+    { texte: "Fermer", classe: "primaire", action: fermerDialogue },
+  ]);
+}
+
+/* ── Ajuster une échéance ─────────────────────────────────────────────── */
+
+/**
+ * Corriger une échéance précise sans toucher au flux : la facture d'énergie
+ * de ce mois-ci, la prime qui tombe une fois plus haut, le prélèvement qui
+ * n'aura pas lieu. C'est ce qui sépare une prévision d'un tableur figé.
+ */
+function ouvrirAjustement(fluxId, date) {
+  const f = ETAT.flux.find((x) => x.id === fluxId);
+  if (!f || !estIso(date)) return;
+  const exc = exceptionDe(f, date);
+  const theorique = arrondi2(montantA(f, date, PROJECTION.du));
+
+  const corps =
+    '<p class="sous" style="margin:0">Vous modifiez la seule échéance du <b>' + esc(libelleDate(date)) +
+    "</b> de « " + esc(f.libelle) + " ». Les autres échéances gardent leur montant de " + esc(argent(theorique)) + ".</p>" +
+    '<label class="champ"><span class="ttl">Montant pour cette échéance</span>' +
+    '<input type="number" id="aj-montant" min="0" step="0.01" value="' + esc(exc && !exc.ignore ? exc.montant : theorique) + '"></label>' +
+    '<label class="case"><input type="checkbox" id="aj-sauter"' + (exc && exc.ignore ? " checked" : "") +
+    "> Cette échéance n'aura pas lieu</label>" +
+    (exc ? '<p class="sous" style="margin:0">Cette échéance est déjà ajustée. « Rétablir » lui rend son montant normal.</p>' : "");
+
+  const boutons = [];
+  if (exc) boutons.push({ texte: "Rétablir", gauche: true, action: () => {
+    modifier(() => poserException(fluxId, date, null), "Échéance rétablie.");
+    fermerDialogue();
+  } });
+  boutons.push({ texte: "Annuler", action: fermerDialogue });
+  boutons.push({ texte: "Enregistrer", classe: "primaire", action: () => {
+    const sauter = boite("aj-sauter").checked;
+    const montant = Number(String(boite("aj-montant").value).replace(",", "."));
+    if (!sauter && !(montant >= 0)) { message("Le montant doit être un nombre positif."); return; }
+    if (!sauter && arrondi2(montant) === theorique) {
+      modifier(() => poserException(fluxId, date, null), "Échéance rétablie.");
+    } else {
+      modifier(() => poserException(fluxId, date, { montant: arrondi2(montant), ignore: sauter }),
+        sauter ? "Échéance sautée." : "Échéance ajustée.");
+    }
+    fermerDialogue();
+  } });
+
+  ouvrirDialogue("Ajuster une échéance", corps, boutons, () => {
+    const sauter = boite("aj-sauter");
+    const champ = boite("aj-montant");
+    const refleter = () => { champ.disabled = sauter.checked; };
+    sauter.addEventListener("change", refleter);
+    refleter();
+  });
 }
 
 /* ── Catégories ───────────────────────────────────────────────────────── */
@@ -2117,7 +2696,8 @@ function rendreCategories(cible, p) {
   const lignesDep = env.map((e) => {
     const c = e.categorie;
     const depassement = e.ratio !== null && e.ratio > 1;
-    return '<tr><td><i class="puce" style="background:' + teinte(c.teinte) + '"></i>' + esc(c.nom) + "</td>" +
+    return '<tr><td><i class="puce" style="background:' + teinte(c.teinte) + '"></i>' + esc(c.nom) +
+      (c.essentiel === false ? ' <span class="etiquette">choisi</span>' : ' <span class="etiquette acc">contraint</span>') + "</td>" +
       '<td class="num">' + esc(argent(e.mensuel)) + '<div class="faible" style="font-size:11.5px">par mois</div></td>' +
       '<td class="num dim">' + esc(argent(e.total)) + "</td>" +
       '<td class="num dim">' + (totalDep ? esc(pourcent((e.mensuel / totalDep) * 100, 1)) : "—") + "</td>" +
@@ -2128,9 +2708,9 @@ function rendreCategories(cible, p) {
             '<div style="font-size:12px;margin-top:3px" class="' + (depassement ? "neg" : "dim") + '">' +
             esc(argent(e.plafond)) + " · " + esc(argent(e.ecart, { signe: true })) + "</div>"
           : '<span class="faible" style="font-size:12.5px">aucun plafond</span>') + "</td>" +
-      '<td class="num" style="white-space:nowrap">' +
-        '<button class="btn fantome petit" data-act="cat-editer" data-id="' + esc(c.id) + '">Modifier</button>' +
-        '<button class="btn fantome petit" data-act="cat-supprimer" data-id="' + esc(c.id) + '" title="Supprimer">✕</button></td></tr>';
+      '<td class="actions">' +
+        '<button class="btn fantome icone" data-act="cat-editer" data-id="' + esc(c.id) + '" title="Modifier">' + icone("crayon", "") + "</button>" +
+        '<button class="btn fantome icone" data-act="cat-supprimer" data-id="' + esc(c.id) + '" title="Supprimer">' + icone("croix", "") + "</button></td></tr>";
   }).join("");
 
   const revenusCats = ETAT.categories.filter((c) => c.type === "revenu").map((c) => {
@@ -2139,8 +2719,8 @@ function rendreCategories(cible, p) {
     return '<tr><td><i class="puce" style="background:' + teinte(c.teinte) + '"></i>' + esc(c.nom) + "</td>" +
       '<td class="num">' + esc(argent(total / p.nbMois)) + "</td>" +
       '<td class="num dim">' + esc(argent(total)) + "</td>" +
-      '<td class="num"><button class="btn fantome petit" data-act="cat-editer" data-id="' + esc(c.id) + '">Modifier</button>' +
-      '<button class="btn fantome petit" data-act="cat-supprimer" data-id="' + esc(c.id) + '">✕</button></td></tr>';
+      '<td class="actions"><button class="btn fantome icone" data-act="cat-editer" data-id="' + esc(c.id) + '" title="Modifier">' + icone("crayon", "") + "</button>" +
+      '<button class="btn fantome icone" data-act="cat-supprimer" data-id="' + esc(c.id) + '" title="Supprimer">' + icone("croix", "") + "</button></td></tr>";
   }).join("");
 
   const depassees = env.filter((e) => e.ratio !== null && e.ratio > 1);
@@ -2217,7 +2797,7 @@ function rendreObjectifs(cible, p) {
 
 function rendreScenarios(cible, p) {
   const actifs = ETAT.scenarios.filter((s) => s.actif);
-  const series = [{ nom: "Référence", couleur: "var(--epargne)", points: p.points, remplir: true, epaisseur: 2.4 }];
+  const series = [{ nom: "Référence", couleur: "var(--accent)", points: p.points, remplir: !actifs.length, epaisseur: 2.4 }];
   const projections = new Map();
   for (const s of actifs) {
     const pr = projeterScenario(s, p.du, p.au);
@@ -2242,9 +2822,11 @@ function rendreScenarios(cible, p) {
       '<td class="num ' + (ecart >= 0 ? "pos" : "neg") + '" style="font-weight:600">' + esc(argent(ecart, { signe: true })) + "</td>" +
       '<td class="num ' + (pr.totaux.netMensuel >= 0 ? "pos" : "neg") + '">' + esc(argent(pr.totaux.netMensuel, { signe: true })) + "</td>" +
       "<td class=\"dim\">" + (pr.alerte.dateDecouvert ? '<span class="neg">découvert le ' + esc(libelleDate(pr.alerte.dateDecouvert, true)) + "</span>" : "jamais à découvert") + "</td>" +
-      '<td class="num" style="white-space:nowrap">' +
-      '<button class="btn fantome petit" data-act="scn-editer" data-id="' + esc(s.id) + '">Modifier</button>' +
-      '<button class="btn fantome petit" data-act="scn-supprimer" data-id="' + esc(s.id) + '">✕</button></td></tr>';
+      '<td class="actions">' +
+      '<button class="btn petit" data-act="scn-adopter" data-id="' + esc(s.id) + '" title="Faire de ce scénario votre budget">Adopter</button>' +
+      '<button class="btn fantome icone" data-act="scn-editer" data-id="' + esc(s.id) + '" title="Modifier">' + icone("crayon", "") + "</button>" +
+      '<button class="btn fantome icone" data-act="scn-dupliquer" data-id="' + esc(s.id) + '" title="Dupliquer">' + icone("copie", "") + "</button>" +
+      '<button class="btn fantome icone" data-act="scn-supprimer" data-id="' + esc(s.id) + '" title="Supprimer">' + icone("croix", "") + "</button></td></tr>";
   }).join("");
 
   cible.innerHTML =
@@ -2277,18 +2859,24 @@ function rendreComptes(cible, p) {
       '<td class="num">' + esc(argent(c.solde)) + "</td>" +
       '<td class="num" style="font-weight:600' + (pr.soldeFinal < 0 ? ";color:var(--depense-texte)" : "") + '">' + esc(argent(pr.soldeFinal)) + "</td>" +
       '<td class="num ' + (pr.totaux.net >= 0 ? "pos" : "neg") + '">' + esc(argent(pr.totaux.net, { signe: true })) + "</td>" +
-      '<td class="num" style="white-space:nowrap">' +
-      '<button class="btn fantome petit" data-act="cpt-editer" data-id="' + esc(c.id) + '">Modifier</button>' +
-      '<button class="btn fantome petit" data-act="cpt-supprimer" data-id="' + esc(c.id) + '">✕</button></td></tr>';
+      '<td class="actions">' +
+      '<button class="btn fantome icone" data-act="cpt-editer" data-id="' + esc(c.id) + '" title="Modifier">' + icone("crayon", "") + "</button>" +
+      '<button class="btn fantome icone" data-act="cpt-supprimer" data-id="' + esc(c.id) + '" title="Supprimer">' + icone("croix", "") + "</button></td></tr>";
   }).join("");
 
-  cible.innerHTML = carte(
-    '<div class="grille g3" style="margin-bottom:14px">' +
-    kpi("Total aujourd'hui", argent(soldeDepart())) +
-    kpi("Total à l'horizon", argent(p.soldeFinal), esc(argent(p.soldeFinal - p.soldeInitial, { signe: true }) + " sur " + ETAT.parametres.horizon + " mois")) +
-    kpi("Comptes", nombre(ETAT.comptes.length)) +
+  cible.innerHTML = '<div class="kpis">' +
+    kpi("Total aujourd'hui", argent(soldeDepart()),
+      esc(ETAT.comptes.filter((c) => c.type === "epargne").length + " d'épargne, " +
+          ETAT.comptes.filter((c) => c.type !== "epargne").length + " courant(s)")) +
+    kpi("Total à l'horizon", argent(p.soldeFinal),
+      esc(argent(p.soldeFinal - p.soldeInitial, { signe: true }) + " sur " + ETAT.parametres.horizon + " mois"),
+      p.soldeFinal >= p.soldeInitial ? "var(--revenu-texte)" : "var(--depense-texte)",
+      etincelle(p.points, "var(--accent)")) +
+    kpi("Épargne aujourd'hui", argent(ETAT.comptes.filter((c) => c.type === "epargne").reduce((t, c) => t + c.solde, 0)),
+      "hors comptes courants") +
+    kpi("Flux rattachés", nombre(ETAT.flux.length), "répartis sur vos comptes") +
     "</div>" +
-    '<div class="tableau-boite"><table><thead><tr><th>Compte</th><th class="num">Solde actuel</th>' +
+    carte('<div class="tableau-boite"><table><thead><tr><th>Compte</th><th class="num">Solde actuel</th>' +
     '<th class="num">Solde à l\'horizon</th><th class="num">Variation</th><th></th></tr></thead><tbody>' + lignes + "</tbody></table></div>" +
     '<div class="rangee" style="margin-top:12px"><button class="btn primaire" data-act="cpt-nouveau">+ Nouveau compte</button></div>',
     { titre: "Comptes",
@@ -2342,14 +2930,15 @@ function rendreReglages(cible, p) {
     "Vos données ne quittent jamais cet appareil : elles sont écrites dans le stockage local du navigateur, " +
     "pas sur un serveur. Vider les données du site les efface — l'export JSON est votre sauvegarde. " +
     "Le fichier réimporté remplace intégralement le contenu actuel.</p>" +
-    '<div class="sep" style="margin:14px 0"></div>' +
-    '<div class="grille g4">' +
-    kpi("Flux", nombre(ETAT.flux.length)) +
-    kpi("Comptes", nombre(ETAT.comptes.length)) +
-    kpi("Catégories", nombre(ETAT.categories.length)) +
-    kpi("Opérations projetées", nombre(p.operations.length)) +
-    "</div>",
-    { titre: "Vos données" });
+    "",
+    { titre: "Vos données" }) +
+    '<div class="kpis">' +
+    kpi("Flux", nombre(ETAT.flux.length), esc(ETAT.flux.filter((f) => !f.actif).length + " en pause")) +
+    kpi("Comptes", nombre(ETAT.comptes.length), esc(ETAT.categories.length + " catégories")) +
+    kpi("Échéances ajustées", nombre(ETAT.flux.reduce((t, f) => t + (f.exceptions ? f.exceptions.length : 0), 0)),
+      "corrigées ou sautées à la main") +
+    kpi("Opérations projetées", nombre(p.operations.length), esc("sur " + ETAT.parametres.horizon + " mois")) +
+    "</div>";
 
   const apropos = carte(
     "<p class=\"sous\">Le solde projeté n'est pas une prévision de ce qui arrivera : c'est la conséquence arithmétique " +
@@ -2416,11 +3005,11 @@ function optionsComptes(choisi) {
 
 /* ── Formulaire d'un flux ─────────────────────────────────────────────── */
 
-function formulaireFlux(flux) {
-  const f = flux || {
+function formulaireFlux(flux, prereglage) {
+  const f = flux || Object.assign({
     id: null, libelle: "", type: "depense", montant: "", categorieId: null, compteId: ETAT.comptes[0].id,
     compteDest: null, frequence: "mensuel", debut: aujourdhui(), fin: null, indexation: 0, actif: true, note: "",
-  };
+  }, prereglage || {});
   const plusieursComptes = ETAT.comptes.length > 1;
 
   const corps =
@@ -2527,9 +3116,9 @@ function formulaireFlux(flux) {
   return { corps, lire, brancher, existant: !!flux };
 }
 
-function ouvrirFlux(id) {
+function ouvrirFlux(id, prereglage) {
   const flux = id ? ETAT.flux.find((f) => f.id === id) : null;
-  const form = formulaireFlux(flux);
+  const form = formulaireFlux(flux, prereglage);
   const boutons = [];
   if (flux) {
     boutons.push({ texte: "Supprimer", classe: "danger gauche", action: () => { fermerDialogue(); supprimerFlux(flux.id); } });
@@ -2549,10 +3138,11 @@ function ouvrirFlux(id) {
       modifier(() => {
         const propre = normaliserFlux(brut, 0, ETAT.comptes, ETAT.categories);
         const i = ETAT.flux.findIndex((f) => f.id === brut.id);
-        if (i >= 0) ETAT.flux[i] = propre; else ETAT.flux.push(propre);
-      });
+        // les ajustements d'échéance appartiennent au flux, pas au formulaire
+        if (i >= 0) { propre.exceptions = ETAT.flux[i].exceptions; ETAT.flux[i] = propre; }
+        else ETAT.flux.push(propre);
+      }, flux ? "Flux mis à jour." : "Flux ajouté.");
       fermerDialogue();
-      message(flux ? "Flux mis à jour." : "Flux ajouté.");
     },
   });
   ouvrirDialogue(flux ? "Modifier un flux" : "Nouveau flux", form.corps, boutons, form.brancher);
@@ -2566,8 +3156,7 @@ function supprimerFlux(id) {
       modifier(() => {
         ETAT.flux = ETAT.flux.filter((x) => x.id !== id);
         for (const s of ETAT.scenarios) s.exclus = s.exclus.filter((x) => x !== id);
-      });
-      message("Flux supprimé.");
+      }, "« " + f.libelle + " » supprimé.");
     });
 }
 
@@ -2575,10 +3164,9 @@ function dupliquerFlux(id) {
   const f = ETAT.flux.find((x) => x.id === id);
   if (!f) return;
   modifier(() => {
-    const copie = Object.assign({}, f, { id: identifiant("flx"), libelle: f.libelle + " (copie)" });
+    const copie = Object.assign({}, f, { id: identifiant("flx"), libelle: f.libelle + " (copie)", exceptions: [] });
     ETAT.flux.splice(ETAT.flux.indexOf(f) + 1, 0, copie);
-  });
-  message("Flux dupliqué.");
+  }, "Flux dupliqué.");
 }
 
 /* ── Compte, catégorie, objectif ──────────────────────────────────────── */
@@ -2647,7 +3235,10 @@ function ouvrirCategorie(id, type) {
     (t === "depense"
       ? '<label class="champ"><span class="ttl">Plafond mensuel <span class="faible">(facultatif)</span></span>' +
         '<input type="number" id="k-plafond" min="0" step="10" value="' + esc(c && c.plafond !== null ? c.plafond : "") + '">' +
-        '<span class="aide">L\'enveloppe que vous ne voulez pas dépasser en moyenne sur un mois. Vide = pas de plafond.</span></label>'
+        '<span class="aide">L\'enveloppe que vous ne voulez pas dépasser en moyenne sur un mois. Vide = pas de plafond.</span></label>' +
+        '<label class="case"><input type="checkbox" id="k-essentiel"' + (!c || c.essentiel !== false ? " checked" : "") +
+        "> Dépense contrainte (elle tombe quoi qu'il arrive)</label>" +
+        '<p class="sous" style="margin:0">Ce partage sert au « reste à vivre » : ce qui reste une fois les charges contraintes payées.</p>'
       : "");
 
   ouvrirDialogue(c ? "Modifier la catégorie" : "Nouvelle catégorie", corps, [
@@ -2662,6 +3253,7 @@ function ouvrirCategorie(id, type) {
             id: c ? c.id : identifiant("cat"), nom, type: t,
             teinte: Number(boite("k-teinte").value),
             plafond: champPlafond && champPlafond.value !== "" ? Number(champPlafond.value.replace(",", ".")) : null,
+            essentiel: boite("k-essentiel") ? boite("k-essentiel").checked : true,
           }, ETAT.categories.length);
           const i = ETAT.categories.findIndex((x) => x.id === propre.id);
           if (i >= 0) ETAT.categories[i] = propre; else ETAT.categories.push(propre);
@@ -2831,6 +3423,43 @@ function ouvrirScenario(id) {
   dessiner();
 }
 
+/**
+ * Adopter un scénario, c'est en faire le budget de référence : ses flux
+ * remplacent les vôtres, son décalage de solde est reporté sur le premier
+ * compte. Une seule action, annulable comme les autres — sinon il faudrait
+ * ressaisir à la main ce que le scénario décrivait déjà.
+ */
+function adopterScenario(id) {
+  const s = ETAT.scenarios.find((x) => x.id === id);
+  if (!s) return;
+  const liste = fluxDuScenario(s);
+  const retires = ETAT.flux.length - liste.length + (s.extras || []).length;
+  confirmer("Adopter « " + s.nom + " » ?",
+    "Vos flux seront remplacés par ceux du scénario : " + liste.length +
+    (liste.length > 1 ? " flux au total" : " flux au total") +
+    (retires > 0 ? ", " + retires + " retiré" + (retires > 1 ? "s" : "") : "") +
+    (s.soldeDelta ? ", et " + argent(s.soldeDelta, { signe: true }) + " sur « " + ETAT.comptes[0].nom + " »" : "") +
+    ". Le scénario disparaît une fois adopté ; « Annuler » revient en arrière.",
+    "Adopter", () => {
+      modifier(() => {
+        ETAT.flux = liste.map((f, i) => normaliserFlux(f, i, ETAT.comptes, ETAT.categories));
+        if (s.soldeDelta) ETAT.comptes[0].solde = arrondi2(ETAT.comptes[0].solde + s.soldeDelta);
+        ETAT.scenarios = ETAT.scenarios.filter((x) => x.id !== id);
+      }, "Scénario adopté.");
+      allerA("tableau");
+    });
+}
+
+function dupliquerScenario(id) {
+  const s = ETAT.scenarios.find((x) => x.id === id);
+  if (!s) return;
+  modifier(() => {
+    ETAT.scenarios.splice(ETAT.scenarios.indexOf(s) + 1, 0,
+      normaliserScenario(Object.assign({}, s, { id: identifiant("scn"), nom: s.nom + " (copie)" }),
+        ETAT.scenarios.length, ETAT.comptes, ETAT.categories));
+  }, "Scénario dupliqué.");
+}
+
 /* ══════════════════════════════════════════════════════════════════════
    11. Import / export
    ══════════════════════════════════════════════════════════════════════ */
@@ -2920,10 +3549,11 @@ function importerJson() {
         "Le fichier contient " + propre.flux.length + " flux, " + propre.comptes.length + " comptes et " +
         propre.objectifs.length + " objectifs. Vos données actuelles seront écrasées.",
         "Importer", () => {
+          memoriser();
           ETAT = propre;
           enregistrerEtat();
           rendre();
-          message("Données importées.");
+          message("Données importées.", { annuler: true });
         });
     };
     lecteur.readAsText(fichier);
@@ -2935,35 +3565,46 @@ function importerJson() {
    12. Rendu général et événements
    ══════════════════════════════════════════════════════════════════════ */
 
+function libelleHorizon() {
+  const h = ETAT.parametres.horizon;
+  return h % 12 === 0 ? "Dans " + (h / 12) + (h === 12 ? " an" : " ans") : "Dans " + h + " mois";
+}
+
 function rendre() {
   PROJECTION = projeter({});
 
-  boite("pilule-solde-val").textContent = argent(PROJECTION.soldeInitial);
-  const fin = boite("pilule-fin-val");
+  const solde = argent(PROJECTION.soldeInitial);
+  boite("rail-solde").textContent = solde;
+  boite("pilule-solde-val").textContent = solde;
+  boite("rail-fin-etiq").textContent = libelleHorizon();
+  const fin = boite("rail-fin");
   fin.textContent = argent(PROJECTION.soldeFinal);
   fin.style.color = PROJECTION.soldeFinal < 0 ? "var(--depense-texte)"
     : (PROJECTION.alerte.dateSousSeuil ? "var(--alerte-texte)" : "");
-  boite("pilule-fin-etiq").textContent = ETAT.parametres.horizon % 12 === 0
-    ? "Dans " + (ETAT.parametres.horizon / 12) + (ETAT.parametres.horizon === 12 ? " an" : " ans")
-    : "Dans " + ETAT.parametres.horizon + " mois";
+  const net = boite("rail-net");
+  net.textContent = argent(PROJECTION.totaux.netMensuel, { signe: true });
+  net.style.color = PROJECTION.totaux.netMensuel >= 0 ? "var(--revenu-texte)" : "var(--depense-texte)";
+
   boite("sel-horizon").value = String(ETAT.parametres.horizon);
+  boite("tete-eyebrow").textContent = TITRES[vueActive][0];
+  boite("tete-titre").textContent = TITRES[vueActive][1];
   document.title = ETAT.parametres.titre + " — Prévoyant";
 
-  for (const v of VUES) {
-    const section = boite("vue-" + v);
-    section.classList.toggle("masque", v !== vueActive);
-  }
+  for (const v of VUES) boite("vue-" + v).classList.toggle("masque", v !== vueActive);
   document.querySelectorAll("#onglets button").forEach((b) => {
-    b.classList.toggle("on", b.dataset.vue === vueActive);
+    const actif = b.dataset.vue === vueActive;
+    b.classList.toggle("on", actif);
+    b.setAttribute("aria-current", actif ? "page" : "false");
+    // sur téléphone le rail défile : l'onglet courant doit rester en vue
+    if (actif && b.scrollIntoView) b.scrollIntoView({ block: "nearest", inline: "nearest" });
   });
 
-  const cible = boite("vue-" + vueActive);
   const rendus = {
     tableau: rendreTableau, flux: rendreFlux, projection: rendreProjection,
-    categories: rendreCategories, objectifs: rendreObjectifs, scenarios: rendreScenarios,
-    comptes: rendreComptes, reglages: rendreReglages,
+    calendrier: rendreCalendrier, categories: rendreCategories, objectifs: rendreObjectifs,
+    scenarios: rendreScenarios, comptes: rendreComptes, reglages: rendreReglages,
   };
-  rendus[vueActive](cible, PROJECTION);
+  rendus[vueActive](boite("vue-" + vueActive), PROJECTION);
 }
 
 function allerA(vue) {
@@ -2997,10 +3638,11 @@ const NOMS_THEME = { auto: "automatique", light: "clair", dark: "sombre" };
 function chargerDemo() {
   confirmer("Charger l'exemple ?", "Le budget d'exemple remplacera ce que contient actuellement l'application.",
     "Charger", () => {
+      memoriser();
       ETAT = jeuDemo();
       enregistrerEtat();
       rendre();
-      message("Exemple chargé — remplacez les montants par les vôtres.");
+      message("Exemple chargé — remplacez les montants par les vôtres.", { annuler: true });
     });
 }
 
@@ -3008,10 +3650,11 @@ function toutEffacer() {
   confirmer("Tout effacer ?", "Flux, comptes, objectifs et scénarios seront supprimés définitivement. " +
     "Pensez à exporter vos données avant si vous voulez pouvoir y revenir.",
     "Tout effacer", () => {
+      memoriser();
       ETAT = normaliser(null);
       enregistrerEtat();
       allerA("flux");
-      message("Application remise à zéro.");
+      message("Application remise à zéro.", { annuler: true });
     });
 }
 
@@ -3064,6 +3707,23 @@ const ACTIONS = {
     const s = ETAT.scenarios.find((x) => x.id === b.dataset.id);
     if (s) s.actif = !s.actif;
   }),
+  "scn-adopter": (b) => adopterScenario(b.dataset.id),
+  "scn-dupliquer": (b) => dupliquerScenario(b.dataset.id),
+  "op-ajuster": (b) => ouvrirAjustement(b.dataset.flux, b.dataset.date),
+  "cal-jour": (b) => ouvrirJour(b.dataset.date),
+  "cal-precedent": () => {
+    const cle = moisCalendrier(PROJECTION);
+    ui.moisCalendrier = cle.slice(5) === "01"
+      ? (Number(cle.slice(0, 4)) - 1) + "-12"
+      : cle.slice(0, 4) + "-" + deuxChiffres(Number(cle.slice(5)) - 1);
+    rendre();
+  },
+  "cal-suivant": () => { ui.moisCalendrier = moisSuivant(moisCalendrier(PROJECTION)); rendre(); },
+  "cal-aujourdhui": () => { ui.moisCalendrier = cleMois(aujourdhui()); rendre(); },
+  "vue-calendrier": () => allerA("calendrier"),
+  "vue-categories": () => allerA("categories"),
+  "annuler": annuler,
+  "aide": ouvrirAide,
   "theme": (b) => { appliquerTheme(b.dataset.v); rendre(); },
   "demo": chargerDemo,
   "raz": toutEffacer,
@@ -3074,10 +3734,37 @@ const ACTIONS = {
   "import-json": importerJson,
 };
 
+const RACCOURCIS = [
+  ["1 … 9", "changer de vue"],
+  ["N", "nouveau flux"],
+  ["/", "chercher un flux"],
+  ["C", "calendrier du mois en cours"],
+  ["Ctrl / ⌘ + Z", "annuler la dernière modification"],
+  ["T", "changer de thème"],
+  ["Échap", "fermer la fenêtre ouverte"],
+  ["?", "afficher cette aide"],
+];
+
+function ouvrirAide() {
+  ouvrirDialogue("Raccourcis et repères",
+    '<div>' + RACCOURCIS.map(([touche, quoi]) =>
+      '<div class="rangee" style="justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--grille)">' +
+      "<span>" + esc(quoi) + '</span><kbd>' + esc(touche) + "</kbd></div>").join("") + "</div>" +
+    '<div class="sep"></div>' +
+    '<p class="sous" style="margin:0"><b>Trois repères pour que la projection dise vrai.</b> Le montant saisi est celui ' +
+    "d'aujourd'hui : la revalorisation annuelle part de là, à date anniversaire. Les charges annuelles se saisissent à leur " +
+    "date réelle, pas lissées — c'est exactement ce qui creuse les mois difficiles. Et une échéance particulière " +
+    "(la facture d'énergie de ce mois-ci) se corrige au cas par cas depuis le calendrier, sans toucher au flux.</p>",
+    [{ texte: "Fermer", classe: "primaire", action: fermerDialogue }]);
+}
+
 function brancherEvenements() {
   document.addEventListener("click", (ev) => {
     const b = ev.target.closest("[data-act]");
-    if (!b || b.closest("#dialogue-corps")) return;
+    if (!b) return;
+    // les lignes de flux d'un scénario sont gérées par le dialogue lui-même,
+    // qui doit relire ce qui est saisi avant de se redessiner
+    if (b.dataset.act.indexOf("scn-extra-") === 0) return;
     const action = ACTIONS[b.dataset.act];
     if (!action) return;
     ev.preventDefault();
@@ -3111,6 +3798,8 @@ function brancherEvenements() {
     b.addEventListener("click", () => allerA(b.dataset.vue));
   });
 
+  boite("btn-aide").addEventListener("click", ouvrirAide);
+
   boite("btn-theme").addEventListener("click", () => {
     const ordre = ["auto", "light", "dark"];
     const actuel = lireLocal(CLE_THEME) || "auto";
@@ -3125,7 +3814,33 @@ function brancherEvenements() {
     if (ev.target === boite("voile")) fermerDialogue();
   });
   document.addEventListener("keydown", (ev) => {
-    if (ev.key === "Escape" && !boite("voile").classList.contains("masque")) fermerDialogue();
+    const dialogueOuvert = !boite("voile").classList.contains("masque");
+    if (ev.key === "Escape" && dialogueOuvert) { fermerDialogue(); return; }
+
+    if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "z" && !ev.shiftKey) {
+      const champ = document.activeElement;
+      // dans un champ de saisie, Ctrl+Z appartient au navigateur
+      if (!champ || !champ.matches("input, textarea, select")) { ev.preventDefault(); annuler(); }
+      return;
+    }
+
+    // les raccourcis d'une seule touche ne doivent pas manger la frappe
+    if (dialogueOuvert || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    const champ = document.activeElement;
+    if (champ && champ.matches("input, textarea, select")) return;
+
+    const touche = ev.key;
+    if (touche >= "1" && touche <= "9" && VUES[Number(touche) - 1]) { ev.preventDefault(); allerA(VUES[Number(touche) - 1]); }
+    else if (touche === "n" || touche === "N") { ev.preventDefault(); ouvrirFlux(null); }
+    else if (touche === "c" || touche === "C") { ev.preventDefault(); ui.moisCalendrier = cleMois(aujourdhui()); allerA("calendrier"); }
+    else if (touche === "t" || touche === "T") { ev.preventDefault(); boite("btn-theme").click(); }
+    else if (touche === "?") { ev.preventDefault(); ouvrirAide(); }
+    else if (touche === "/") {
+      ev.preventDefault();
+      if (vueActive !== "flux") allerA("flux");
+      const rech = boite("rech");
+      if (rech) rech.focus();
+    }
   });
 
   window.addEventListener("hashchange", () => {
@@ -3178,6 +3893,7 @@ if (typeof globalThis !== "undefined") {
   globalThis.Prevoyant = {
     normaliser, occurrences, projeter, soldeALaDate, mensualiteMoyenne, mensualitePret,
     evaluerObjectif, enveloppes, fluxDuScenario, projeterScenario, jeuDemo, montantA,
+    resteAVivre, calendrier, jourSemaine, exceptionDe, poserException, normaliserExceptions,
     ajouterMois, ajouterJours, moisEntre, joursEntre, joursDansMois, estIso, cleMois,
     finDeMois, moisSuivant, graduations, arrondi2,
     etat: () => ETAT,
