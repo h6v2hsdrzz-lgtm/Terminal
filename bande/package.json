@@ -10,7 +10,9 @@
     "db:migrer": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
-    "verifier:palette": "node scripts/valider-palette.mjs"
+    "verifier:palette": "node scripts/valider-palette.mjs",
+    "test": "vitest run",
+    "test:suivi": "vitest"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
@@ -24,7 +26,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^22.20.1",
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -33,6 +35,7 @@
     "prisma": "^7.10.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.0.0"
   }
 }
