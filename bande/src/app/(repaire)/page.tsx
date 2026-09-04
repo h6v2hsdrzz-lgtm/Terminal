@@ -30,7 +30,7 @@ export default async function Page() {
       annuaire={{ profils: contexte.profils, declencheurs: contexte.declencheurs }}
       moi={contexte.moi}
       monEntree={duJour.find((e) => e.profil === contexte.moi.id) ?? null}
-      entreesDesAutres={duJour.filter((e) => e.profil !== contexte.moi.id)}
+      entreesDuJour={duJour}
       serieCollective={serieCollective(new Set(entrees.map((e) => e.jour)), jour)}
       revelerApresPost={contexte.groupe.revelerApresPost}
     />

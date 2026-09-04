@@ -1,5 +1,6 @@
 import { Avatar } from "./Avatar";
 import { Carte } from "./Carte";
+import { PiedEntree } from "./PiedEntree";
 import { couleurJoie, couleurProfil } from "@/lib/couleurs";
 import type { Annuaire, Entree } from "@/lib/types";
 
@@ -13,10 +14,13 @@ import type { Annuaire, Entree } from "@/lib/types";
 export function CarteEntree({
   entree,
   annuaire,
+  moi,
   floute = false,
 }: {
   entree: Entree;
   annuaire: Annuaire;
+  /** Donné, la carte devient interactive : on peut réagir et commenter. */
+  moi?: string;
   floute?: boolean;
 }) {
   const profil = annuaire.profils.find((p) => p.id === entree.profil);
@@ -68,23 +72,35 @@ export function CarteEntree({
           </div>
         </div>
 
-        {(entree.reactions.length > 0 || entree.commentaires.length > 0) && (
-          <div className="flex items-center gap-2 border-t border-trait px-4 py-2.5">
-            {entree.reactions.map((r) => (
-              <span
-                key={r.emoji}
-                className="inline-flex items-center gap-1 rounded-[var(--radius-pilule)] border border-trait bg-surface-2 px-2 py-1 text-[13px]"
-              >
-                {r.emoji}
-                <span className="chiffres text-[12px] text-encre-2">{r.parQui.length}</span>
-              </span>
-            ))}
-            {entree.commentaires.length > 0 && (
-              <span className="ml-auto text-[12px] text-encre-3">
-                {entree.commentaires.length} commentaire{entree.commentaires.length > 1 ? "s" : ""}
-              </span>
-            )}
-          </div>
+        {/* Le pied n'apparaît qu'une fois le voile levé : réagir à une carte
+            floutée reviendrait à commenter ce qu'on n'a pas lu. */}
+        {moi && !floute ? (
+          <PiedEntree
+            entreeId={entree.id}
+            reactions={entree.reactions}
+            commentaires={entree.commentaires}
+            annuaire={annuaire}
+            moi={moi}
+          />
+        ) : (
+          (entree.reactions.length > 0 || entree.commentaires.length > 0) && (
+            <div className="flex items-center gap-2 border-t border-trait px-4 py-2.5">
+              {entree.reactions.map((r) => (
+                <span
+                  key={r.emoji}
+                  className="inline-flex items-center gap-1 rounded-[var(--radius-pilule)] border border-trait bg-surface-2 px-2 py-1 text-[13px]"
+                >
+                  {r.emoji}
+                  <span className="chiffres text-[12px] text-encre-2">{r.parQui.length}</span>
+                </span>
+              ))}
+              {entree.commentaires.length > 0 && (
+                <span className="ml-auto text-[12px] text-encre-3">
+                  {entree.commentaires.length} commentaire{entree.commentaires.length > 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+          )
         )}
       </div>
     </Carte>

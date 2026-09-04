@@ -12,7 +12,7 @@
  *
  *   npm run db:seed
  */
-import { existsSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -199,9 +199,25 @@ async function main() {
 
   console.log(`Bande « ${groupe.nom} » — code ${CODE_BANDE}`);
   console.log(`${lignes.length} journées, ${PROFILS.length} membres, ${DECLENCHEURS.length} déclencheurs.`);
+  // Les codes sont aussi écrits sur disque : sans ça, rejouer le peuplement
+  // fait perdre les précédents, et on se retrouve à ne plus pouvoir se
+  // connecter à sa propre bande de démonstration. Le fichier est ignoré par
+  // git — ce sont malgré tout des secrets, même jetables.
+  const fiche = join(import.meta.dirname, "..", ".codes-demo.txt");
+  writeFileSync(
+    fiche,
+    [
+      `Bande « ${groupe.nom} » — code d'invitation ${CODE_BANDE}`,
+      "",
+      ...PROFILS.map((p, i) => `${p.pseudo.padEnd(6)} ${codes[i].enClair}`),
+      "",
+    ].join("\n"),
+    { mode: 0o600 },
+  );
+
   console.log("\nCodes de reprise (pour se connecter en tant que quelqu'un) :");
   PROFILS.forEach((p, i) => console.log(`  ${p.pseudo.padEnd(6)} ${codes[i].enClair}`));
-  console.log("");
+  console.log(`\nAussi écrits dans bande/.codes-demo.txt (ignoré par git).\n`);
 
   await prisma.$disconnect();
 }

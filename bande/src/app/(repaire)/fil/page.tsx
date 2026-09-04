@@ -54,7 +54,7 @@ export default async function Page() {
                 </TitreSection>
                 <div className="space-y-3">
                   {duJour.map((entree) => (
-                    <CarteEntree key={entree.id} entree={entree} annuaire={annuaire} />
+                    <CarteEntree key={entree.id} entree={entree} annuaire={annuaire} moi={contexte.moi.id} />
                   ))}
                 </div>
               </section>

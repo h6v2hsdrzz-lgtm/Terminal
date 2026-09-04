@@ -32,6 +32,7 @@ export type Reaction = {
 
 export type Commentaire = {
   id: string;
+  auteurId: string;
   auteur: string;
   texte: string;
   quand: string;

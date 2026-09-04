@@ -5,11 +5,18 @@ import { redirect } from "next/navigation";
 
 import {
   ErreurMetier,
+  ajouterDeclencheur,
+  basculerReaction,
   chargerContexte,
+  commenter,
   creerBande,
   poserJournee,
+  reglerDevoilement,
   rejoindreBande,
+  renommerBande,
   reprendreCompte,
+  retirerDeclencheur,
+  supprimerCommentaire,
 } from "./depot";
 import { fermerSession, garderCodeReprise, membreConnecte, oublierCodeReprise, ouvrirSession } from "./session";
 import { ETAT_INITIAL, type Etat } from "./formulaire";
@@ -84,22 +91,93 @@ export async function actionReprendre(_precedent: Etat, donnees: FormData): Prom
 
 export async function actionPoserJournee(_precedent: Etat, donnees: FormData): Promise<Etat> {
   return tenter(async () => {
-    const membreId = await membreConnecte();
-    if (!membreId) throw new ErreurMetier("Ta session a expiré. Recharge la page.");
-
-    const contexte = await chargerContexte(membreId);
-    if (!contexte) throw new ErreurMetier("Ce compte n'existe plus.");
-
+    const { membreId, contexte } = await quiAgit();
     await poserJournee(membreId, contexte.groupe.id, jourDeLaBande(), {
       joie: Number(texte(donnees, "joie")),
       note: texte(donnees, "note"),
       declencheurs: donnees.getAll("declencheurs").filter((d): d is string => typeof d === "string"),
     });
 
-    // Poser sa journée change les quatre écrans à la fois : le fil, les stats
-    // et le profil ne sont pas « la page courante », mais ils sont faux dès
-    // l'instant où l'entrée existe.
-    for (const chemin of ["/", "/fil", "/stats", "/profil"]) revalidatePath(chemin);
+    rafraichirTout();
+  });
+}
+
+/**
+ * Toute écriture change plusieurs écrans à la fois.
+ *
+ * Le fil, les stats et le profil ne sont jamais « la page courante » quand on
+ * pose une journée, mais ils deviennent faux à l'instant où la ligne existe.
+ */
+function rafraichirTout() {
+  for (const chemin of ["/", "/fil", "/stats", "/profil", "/reglages", "/souvenirs"]) {
+    revalidatePath(chemin);
+  }
+}
+
+/** L'identité de celui qui agit, et sa bande. Toute action passe par là. */
+async function quiAgit() {
+  const membreId = await membreConnecte();
+  if (!membreId) throw new ErreurMetier("Ta session a expiré. Recharge la page.");
+  const contexte = await chargerContexte(membreId);
+  if (!contexte) throw new ErreurMetier("Ce compte n'existe plus.");
+  return { membreId, contexte };
+}
+
+export async function actionReagir(entreeId: string, emoji: string): Promise<Etat> {
+  return tenter(async () => {
+    const { membreId } = await quiAgit();
+    await basculerReaction(membreId, entreeId, emoji);
+    rafraichirTout();
+  });
+}
+
+export async function actionCommenter(_precedent: Etat, donnees: FormData): Promise<Etat> {
+  return tenter(async () => {
+    const { membreId } = await quiAgit();
+    await commenter(membreId, texte(donnees, "entree"), texte(donnees, "texte"));
+    rafraichirTout();
+  });
+}
+
+export async function actionSupprimerCommentaire(commentaireId: string): Promise<Etat> {
+  return tenter(async () => {
+    const { membreId } = await quiAgit();
+    await supprimerCommentaire(membreId, commentaireId);
+    rafraichirTout();
+  });
+}
+
+// ── Réglages de la bande ─────────────────────────────────────────────────────
+
+export async function actionRenommerBande(_precedent: Etat, donnees: FormData): Promise<Etat> {
+  return tenter(async () => {
+    const { contexte } = await quiAgit();
+    await renommerBande(contexte.groupe.id, texte(donnees, "nom"));
+    rafraichirTout();
+  });
+}
+
+export async function actionReglerDevoilement(reveler: boolean): Promise<Etat> {
+  return tenter(async () => {
+    const { contexte } = await quiAgit();
+    await reglerDevoilement(contexte.groupe.id, reveler);
+    rafraichirTout();
+  });
+}
+
+export async function actionAjouterDeclencheur(_precedent: Etat, donnees: FormData): Promise<Etat> {
+  return tenter(async () => {
+    const { contexte } = await quiAgit();
+    await ajouterDeclencheur(contexte.groupe.id, texte(donnees, "nom"), texte(donnees, "emoji"));
+    rafraichirTout();
+  });
+}
+
+export async function actionRetirerDeclencheur(declencheurId: string): Promise<Etat> {
+  return tenter(async () => {
+    const { contexte } = await quiAgit();
+    await retirerDeclencheur(contexte.groupe.id, declencheurId);
+    rafraichirTout();
   });
 }
 

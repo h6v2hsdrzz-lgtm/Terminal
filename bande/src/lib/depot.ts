@@ -127,7 +127,7 @@ const AVEC_TOUT = {
   reactions: { select: { emoji: true, membreId: true } },
   commentaires: {
     orderBy: { creeLe: "asc" },
-    select: { id: true, texte: true, creeLe: true, membre: { select: { pseudo: true } } },
+    select: { id: true, texte: true, creeLe: true, membreId: true, membre: { select: { pseudo: true } } },
   },
 } satisfies Prisma.EntreeInclude;
 
@@ -154,6 +154,7 @@ function versEntree(ligne: LigneEntree): Entree {
     reactions: [...parEmoji].map(([emoji, parQui]) => ({ emoji, parQui })),
     commentaires: ligne.commentaires.map((c) => ({
       id: c.id,
+      auteurId: c.membreId,
       auteur: c.membre.pseudo,
       texte: c.texte,
       quand: HEURE.format(c.creeLe),
@@ -251,4 +252,149 @@ export async function poserJournee(
 
   await prisma.membre.update({ where: { id: membreId }, data: { vuLe: new Date() } });
   return versEntree(ligne);
+}
+
+// ── Réagir et commenter ──────────────────────────────────────────────────────
+
+/**
+ * Les émojis de réaction, fixes.
+ *
+ * Un sélecteur d'émoji complet transformerait le fil en concours de trouvailles ;
+ * six touches suffisent à dire ce qu'on a à dire, et elles restent lisibles à
+ * la taille d'une pastille.
+ */
+export const EMOJIS = ["❤️", "😂", "🔥", "🫂", "🙌", "👀"] as const;
+
+/** Bascule : réagir deux fois avec le même émoji, c'est retirer sa réaction. */
+export async function basculerReaction(membreId: string, entreeId: string, emoji: string) {
+  if (!EMOJIS.includes(emoji as (typeof EMOJIS)[number])) {
+    throw new ErreurMetier("Cet émoji n'est pas au menu.");
+  }
+  // L'entrée doit appartenir à la bande du membre : sans ce contrôle, un
+  // identifiant deviné laisserait réagir chez les autres.
+  const entree = await memeBande(membreId, entreeId);
+
+  const existante = await prisma.reaction.findUnique({
+    where: { entreeId_membreId_emoji: { entreeId, membreId, emoji } },
+    select: { id: true },
+  });
+  if (existante) await prisma.reaction.delete({ where: { id: existante.id } });
+  else await prisma.reaction.create({ data: { entreeId, membreId, emoji } });
+
+  return entree.groupeId;
+}
+
+export const LONGUEUR_COMMENTAIRE = 280;
+
+export async function commenter(membreId: string, entreeId: string, texte: string) {
+  const propre = texte.trim();
+  if (!propre) throw new ErreurMetier("Un commentaire vide n'en est pas un.");
+  const entree = await memeBande(membreId, entreeId);
+
+  await prisma.commentaire.create({
+    data: { entreeId, membreId, texte: propre.slice(0, LONGUEUR_COMMENTAIRE) },
+  });
+  return entree.groupeId;
+}
+
+/** On ne supprime que ses propres commentaires. */
+export async function supprimerCommentaire(membreId: string, commentaireId: string) {
+  const commentaire = await prisma.commentaire.findUnique({
+    where: { id: commentaireId },
+    select: { membreId: true, entree: { select: { groupeId: true } } },
+  });
+  if (!commentaire) throw new ErreurMetier("Ce commentaire n'existe plus.");
+  if (commentaire.membreId !== membreId) throw new ErreurMetier("Ce commentaire n'est pas le tien.");
+
+  await prisma.commentaire.delete({ where: { id: commentaireId } });
+  return commentaire.entree.groupeId;
+}
+
+/**
+ * Vérifie qu'une entrée est bien dans la bande de la personne qui agit.
+ *
+ * Les identifiants sont des cuid, donc impossibles à deviner en pratique — mais
+ * « impossible à deviner » n'est pas une autorisation, et c'est le genre de
+ * contrôle qu'on n'ajoute jamais après coup.
+ */
+async function memeBande(membreId: string, entreeId: string) {
+  const membre = await prisma.membre.findUnique({
+    where: { id: membreId },
+    select: { groupeId: true },
+  });
+  const entree = await prisma.entree.findUnique({
+    where: { id: entreeId },
+    select: { groupeId: true },
+  });
+  if (!membre || !entree || membre.groupeId !== entree.groupeId) {
+    throw new ErreurMetier("Cette journée n'est pas dans ta bande.");
+  }
+  return entree;
+}
+
+// ── Réglages de la bande ─────────────────────────────────────────────────────
+
+export const LONGUEUR_NOM_BANDE = 40;
+export const LONGUEUR_NOM_DECLENCHEUR = 24;
+/** Au-delà, le formulaire du soir devient une liste de courses. */
+export const MAX_DECLENCHEURS = 8;
+
+export async function renommerBande(groupeId: string, nom: string) {
+  const propre = nom.trim();
+  if (!propre) throw new ErreurMetier("Une bande a besoin d'un nom.");
+  await prisma.groupe.update({
+    where: { id: groupeId },
+    data: { nom: propre.slice(0, LONGUEUR_NOM_BANDE) },
+  });
+}
+
+export async function reglerDevoilement(groupeId: string, reveler: boolean) {
+  await prisma.groupe.update({ where: { id: groupeId }, data: { revelerApresPost: reveler } });
+}
+
+export async function ajouterDeclencheur(groupeId: string, nom: string, emoji: string) {
+  const propre = nom.trim();
+  if (!propre) throw new ErreurMetier("Donne un nom au déclencheur.");
+
+  const actifs = await prisma.declencheur.count({ where: { groupeId, actif: true } });
+  if (actifs >= MAX_DECLENCHEURS) {
+    throw new ErreurMetier(
+      `${MAX_DECLENCHEURS} déclencheurs, c'est déjà beaucoup à cocher tous les soirs. Désactives-en un.`,
+    );
+  }
+
+  const dernier = await prisma.declencheur.findFirst({
+    where: { groupeId },
+    orderBy: { ordre: "desc" },
+    select: { ordre: true },
+  });
+
+  await prisma.declencheur.create({
+    data: {
+      groupeId,
+      nom: propre.slice(0, LONGUEUR_NOM_DECLENCHEUR),
+      // Un émoji peut faire plusieurs points de code (drapeaux, familles) :
+      // on découpe par grappes de graphèmes, pas par caractères.
+      emoji: [...new Intl.Segmenter().segment(emoji.trim())].map((s) => s.segment)[0] ?? "•",
+      ordre: (dernier?.ordre ?? -1) + 1,
+    },
+  });
+}
+
+/**
+ * Désactiver plutôt que supprimer.
+ *
+ * Un déclencheur supprimé emporterait avec lui toutes les journées qui le
+ * portaient, et l'historique des statistiques avec. On le retire du formulaire,
+ * on garde le passé.
+ */
+export async function retirerDeclencheur(groupeId: string, declencheurId: string) {
+  const declencheur = await prisma.declencheur.findUnique({
+    where: { id: declencheurId },
+    select: { groupeId: true },
+  });
+  if (!declencheur || declencheur.groupeId !== groupeId) {
+    throw new ErreurMetier("Ce déclencheur n'est pas celui de ta bande.");
+  }
+  await prisma.declencheur.update({ where: { id: declencheurId }, data: { actif: false } });
 }

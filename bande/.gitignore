@@ -37,6 +37,9 @@ yarn-error.log*
 # client Prisma généré : il se régénère avec `npx prisma generate`
 /src/generated/
 
+# codes de reprise de la bande de démonstration — jetables, mais secrets
+/.codes-demo.txt
+
 # vercel
 .vercel
 

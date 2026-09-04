@@ -1,9 +1,10 @@
+import Link from "next/link";
+
 import { Avatar } from "@/composants/Avatar";
 import { Carte, TitreSection } from "@/composants/Carte";
 import { Calendrier } from "@/composants/Calendrier";
-import { BoiteInvitation } from "@/composants/BoiteInvitation";
 import { badgesDe, serieEnCours } from "@/lib/badges";
-import { TAILLE_MAX_BANDE, couleurProfil } from "@/lib/couleurs";
+import { couleurProfil } from "@/lib/couleurs";
 import { entreesDeLaBande, exigerContexte } from "@/lib/repaire";
 import { actionQuitter } from "@/lib/actions";
 import { enTexteLong, jourDeLaBande } from "@/lib/dates";
@@ -53,14 +54,6 @@ export default async function Page() {
       </div>
 
       <section className="mt-7">
-        <TitreSection>Inviter</TitreSection>
-        <BoiteInvitation
-          code={contexte.groupe.codeInvitation}
-          places={TAILLE_MAX_BANDE - contexte.profils.length}
-        />
-      </section>
-
-      <section className="mt-7">
         <TitreSection>Tes dix dernières semaines</TitreSection>
         <Carte className="p-4">
           <div className="flex justify-center">
@@ -101,6 +94,18 @@ export default async function Page() {
             ))}
           </ul>
         </Carte>
+      </section>
+
+      <section className="mt-7">
+        <Link
+          href="/reglages"
+          className="flex items-center justify-between rounded-[var(--radius-carte)] border border-trait bg-surface px-4 py-3.5 shadow-[var(--ombre-1)] transition hover:border-trait-fort"
+        >
+          <span className="text-[15px] font-medium">Réglages de la bande</span>
+          <span className="text-[13px] text-encre-3">
+            inviter · nom · déclencheurs →
+          </span>
+        </Link>
       </section>
 
       <section className="mt-7">

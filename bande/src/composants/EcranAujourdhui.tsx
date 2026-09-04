@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useActionState, useState } from "react";
+import { useRef, useState, useTransition } from "react";
 
 import { Avatar } from "./Avatar";
 import { Carte, TitreSection } from "./Carte";
@@ -56,7 +56,7 @@ export function EcranAujourdhui({
   annuaire,
   moi,
   monEntree,
-  entreesDesAutres,
+  entreesDuJour,
   serieCollective,
   revelerApresPost,
 }: {
@@ -65,23 +65,47 @@ export function EcranAujourdhui({
   annuaire: Annuaire;
   moi: Profil;
   monEntree: Entree | null;
-  entreesDesAutres: Entree[];
+  /** Toutes les journées du jour, la mienne comprise. */
+  entreesDuJour: Entree[];
   serieCollective: number;
   revelerApresPost: boolean;
 }) {
-  const [etat, envoyer, enCours] = useActionState(actionPoserJournee, ETAT_INITIAL);
+  const [etat, setEtat] = useState(ETAT_INITIAL);
+  const [enCours, demarrer] = useTransition();
   const [maJoie, setMaJoie] = useState(monEntree?.joie ?? 7);
+  const formulaire = useRef<HTMLFormElement>(null);
+  // Une journée se corrige : on s'est trompé d'un cran, on a oublié la note.
+  // Le formulaire réapparaît prérempli, et l'envoi remplace la ligne du jour.
+  const [correction, setCorrection] = useState(false);
 
-  const poste = monEntree !== null;
+  const poste = monEntree !== null && !correction;
+
+  /**
+   * On appelle l'action à la main plutôt que par `useActionState`.
+   *
+   * La raison tient en une ligne : il faut refermer le formulaire de correction
+   * quand — et seulement quand — l'envoi a réussi. Un état qui ne distingue pas
+   * « rien envoyé » de « envoyé sans erreur » ne le permet pas, et le détecter
+   * dans un effet reviendrait à deviner.
+   */
+  function envoyer(donnees: FormData) {
+    demarrer(async () => {
+      const resultat = await actionPoserJournee(ETAT_INITIAL, donnees);
+      setEtat(resultat);
+      if (!resultat.erreur) {
+        setCorrection(false);
+        formulaire.current?.reset();
+      }
+    });
+  }
   const voile = revelerApresPost && !poste;
 
-  const entreesVisibles = monEntree ? [monEntree, ...entreesDesAutres] : entreesDesAutres;
-  const moyenne = entreesVisibles.length
-    ? entreesVisibles.reduce((s, e) => s + e.joie, 0) / entreesVisibles.length
+  const moyenne = entreesDuJour.length
+    ? entreesDuJour.reduce((s, e) => s + e.joie, 0) / entreesDuJour.length
     : null;
 
   const manquants = annuaire.profils.filter(
-    (p) => !entreesVisibles.some((e) => e.profil === p.id),
+    (p) => !entreesDuJour.some((e) => e.profil === p.id),
   );
 
   return (
@@ -112,10 +136,21 @@ export function EcranAujourdhui({
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
           >
             <Carte className="p-5">
-              <form action={envoyer}>
-                <p className="mb-4 text-[13px] font-semibold uppercase tracking-[0.08em] text-encre-3">
-                  Ta journée
-                </p>
+              <form ref={formulaire} action={envoyer}>
+                <div className="mb-4 flex items-baseline justify-between gap-3">
+                  <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-encre-3">
+                    {correction ? "Corriger ta journée" : "Ta journée"}
+                  </p>
+                  {correction && (
+                    <button
+                      type="button"
+                      onClick={() => setCorrection(false)}
+                      className="text-[13px] text-encre-3 underline underline-offset-2 hover:text-encre-2"
+                    >
+                      laisser comme ça
+                    </button>
+                  )}
+                </div>
 
                 <CurseurJoie nom="joie" valeurInitiale={maJoie} onChange={setMaJoie} />
 
@@ -123,7 +158,13 @@ export function EcranAujourdhui({
                   <legend className="sr-only">Ce qui a marqué la journée</legend>
                   <div className="flex flex-wrap gap-2">
                     {annuaire.declencheurs.map((d) => (
-                      <PuceDeclencheur key={d.id} emoji={d.emoji} nom={d.nom} valeur={d.id} />
+                      <PuceDeclencheur
+                        key={d.id}
+                        emoji={d.emoji}
+                        nom={d.nom}
+                        valeur={d.id}
+                        coche={correction && (monEntree?.declencheurs.includes(d.id) ?? false)}
+                      />
                     ))}
                   </div>
                 </fieldset>
@@ -134,6 +175,7 @@ export function EcranAujourdhui({
                 <textarea
                   id="note"
                   name="note"
+                  defaultValue={correction ? (monEntree?.note ?? "") : ""}
                   rows={2}
                   maxLength={280}
                   placeholder="Ce qui a fait la journée… (facultatif)"
@@ -152,7 +194,7 @@ export function EcranAujourdhui({
                   className="mt-4 w-full rounded-[var(--radius-pilule)] py-3.5 text-[15px] font-semibold transition active:scale-[0.99] disabled:opacity-55"
                   style={{ background: "var(--encre)", color: "var(--surface)" }}
                 >
-                  {enCours ? "Un instant…" : "Poser ma joie du jour"}
+                  {enCours ? "Un instant…" : correction ? "Corriger" : "Poser ma joie du jour"}
                 </button>
               </form>
             </Carte>
@@ -167,12 +209,16 @@ export function EcranAujourdhui({
             <Carte className="flex items-center gap-4 p-5">
               <VisageJoie valeur={monEntree.joie} taille={64} />
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] text-encre-3">C&apos;est posé pour aujourd&apos;hui</p>
-                <p className="mt-0.5 text-[15px] text-encre-2">
-                  {monEntree.note || "Sans commentaire, et c'est très bien."}
-                </p>
+                <p className="text-[15px] font-medium">C&apos;est posé pour aujourd&apos;hui.</p>
+                <button
+                  type="button"
+                  onClick={() => { setMaJoie(monEntree.joie); setCorrection(true); }}
+                  className="mt-0.5 text-[13px] text-encre-3 underline underline-offset-2 transition hover:text-encre-2"
+                >
+                  corriger ta journée
+                </button>
               </div>
-              <span className="chiffres text-[26px]" style={{ color: "var(--joie-encre)" }}>
+              <span className="chiffres shrink-0 text-[30px]" style={{ color: "var(--joie-encre)" }}>
                 {monEntree.joie}
               </span>
             </Carte>
@@ -186,7 +232,7 @@ export function EcranAujourdhui({
         <Carte className="p-4">
           <div className="flex items-center gap-3">
             {annuaire.profils.map((profil) => {
-              const aPoste = entreesVisibles.some((e) => e.profil === profil.id);
+              const aPoste = entreesDuJour.some((e) => e.profil === profil.id);
               // Avant d'avoir posé, savoir qui a déjà posté est une information
               // neutre : ça ne dit rien de leur journée, seulement qu'ils sont
               // passés. C'est le chiffre qu'on cache, pas la présence.
@@ -233,7 +279,7 @@ export function EcranAujourdhui({
       <section className="mt-7">
         <TitreSection>Aujourd&apos;hui</TitreSection>
 
-        {entreesDesAutres.length === 0 ? (
+        {entreesDuJour.length === 0 ? (
           <Carte className="p-5">
             <p className="text-[14px] leading-snug text-encre-2">
               {poste
@@ -243,14 +289,21 @@ export function EcranAujourdhui({
           </Carte>
         ) : (
           <div className="relative space-y-3">
-            {entreesDesAutres.map((entree, index) => (
+            {entreesDuJour.map((entree, index) => (
               <motion.div
                 key={entree.id}
                 initial={false}
                 animate={{ opacity: 1 }}
                 transition={{ delay: voile ? 0 : index * 0.06, type: "spring", stiffness: 300, damping: 28 }}
               >
-                <CarteEntree entree={entree} annuaire={annuaire} floute={voile} />
+                {/* Ma propre journée n'est jamais floutée : le voile protège
+                    le jugement des autres, pas le mien. */}
+                <CarteEntree
+                  entree={entree}
+                  annuaire={annuaire}
+                  moi={moi.id}
+                  floute={voile && entree.profil !== moi.id}
+                />
               </motion.div>
             ))}
 
@@ -281,10 +334,26 @@ export function EcranAujourdhui({
  * case : elle part avec le formulaire sans JavaScript de collecte, et le
  * clavier comme les lecteurs d'écran la traitent pour ce qu'elle est.
  */
-function PuceDeclencheur({ emoji, nom, valeur }: { emoji: string; nom: string; valeur: string }) {
+function PuceDeclencheur({
+  emoji,
+  nom,
+  valeur,
+  coche = false,
+}: {
+  emoji: string;
+  nom: string;
+  valeur: string;
+  coche?: boolean;
+}) {
   return (
     <label className="cursor-pointer">
-      <input type="checkbox" name="declencheurs" value={valeur} className="peer sr-only" />
+      <input
+        type="checkbox"
+        name="declencheurs"
+        value={valeur}
+        defaultChecked={coche}
+        className="peer sr-only"
+      />
       <span
         className="inline-block rounded-[var(--radius-pilule)] border border-trait-fort bg-surface-2 px-3.5 py-2 text-[14px] text-encre-2 transition
                    hover:border-encre-3
