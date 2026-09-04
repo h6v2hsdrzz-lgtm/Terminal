@@ -3,11 +3,13 @@ import Link from "next/link";
 import { Avatar } from "@/composants/Avatar";
 import { Carte, TitreSection } from "@/composants/Carte";
 import { Calendrier } from "@/composants/Calendrier";
-import { badgesDe, serieEnCours } from "@/lib/badges";
+import { ClassementAssiduite } from "@/composants/ClassementAssiduite";
+import { MurBadges } from "@/composants/MurBadges";
+import { badgesDe, classementAssiduite, plusLongueSerie, serieEnCours } from "@/lib/badges";
 import { couleurProfil } from "@/lib/couleurs";
 import { entreesDeLaBande, exigerContexte } from "@/lib/repaire";
 import { actionQuitter } from "@/lib/actions";
-import { enTexteLong, jourDeLaBande } from "@/lib/dates";
+import { jourDeLaBande } from "@/lib/dates";
 
 export default async function Page() {
   const contexte = await exigerContexte();
@@ -18,12 +20,11 @@ export default async function Page() {
   const moyenne = miennes.length
     ? miennes.reduce((s, e) => s + e.joie, 0) / miennes.length
     : null;
-  const serie = serieEnCours(new Set(miennes.map((e) => e.jour)), aujourdhui);
+  const mesJours = new Set(miennes.map((e) => e.jour));
+  const serie = serieEnCours(mesJours, aujourdhui);
+  const record = plusLongueSerie(mesJours);
 
-  const badges = badgesDe(miennes);
-  const obtenus = badges.filter((b) => b.obtenuLe);
-  const aVenir = badges.filter((b) => !b.obtenuLe);
-
+  const badges = badgesDe(miennes, entrees, contexte.moi.id);
   return (
     <div className="px-4 pt-3">
       <header className="mb-6 flex items-center gap-4 zone-sure-haute">
@@ -43,7 +44,7 @@ export default async function Page() {
       <div className="grid grid-cols-3 gap-3">
         {[
           { valeur: serie.toString(), libelle: serie > 1 ? "jours d'affilée" : "jour d'affilée" },
-          { valeur: moyenne === null ? "—" : moyenne.toFixed(1).replace(".", ","), libelle: "de moyenne" },
+          { valeur: record.toString(), libelle: "ton record" },
           { valeur: miennes.length.toString(), libelle: "journées posées" },
         ].map((tuile) => (
           <Carte key={tuile.libelle} className="px-3 py-4 text-center">
@@ -53,48 +54,34 @@ export default async function Page() {
         ))}
       </div>
 
+      <ClassementAssiduite
+        classement={classementAssiduite(entrees, contexte.profils.map((p) => p.id), aujourdhui)}
+        profils={contexte.profils}
+        entrees={entrees}
+        aujourdhui={aujourdhui}
+        moi={contexte.moi.id}
+      />
+
       <section className="mt-7">
         <TitreSection>Tes dix dernières semaines</TitreSection>
         <Carte className="p-4">
           <div className="flex justify-center">
             <Calendrier entrees={miennes} jusquA={aujourdhui} />
           </div>
-          <p className="mt-3 text-[12px] text-encre-3">
+          <p className="mt-3 text-[12px] leading-snug text-encre-3">
             Une case par jour. Les cases vides sont les jours sans check-in — elles ne
             reprochent rien, elles racontent juste.
+            {moyenne !== null && (
+              <>
+                {" "}Ta moyenne sur l&apos;ensemble :{" "}
+                <span className="chiffres">{moyenne.toFixed(1).replace(".", ",")}</span>.
+              </>
+            )}
           </p>
         </Carte>
       </section>
 
-      <section className="mt-7">
-        <TitreSection action={<span className="text-[13px] text-encre-3">{obtenus.length} / {badges.length}</span>}>
-          Badges
-        </TitreSection>
-        <Carte className="p-4">
-          <ul className="grid grid-cols-2 gap-3">
-            {obtenus.map((badge) => (
-              <li key={badge.cle} className="flex items-start gap-2.5 rounded-2xl bg-surface-2 p-3">
-                <span className="text-[22px] leading-none">{badge.emoji}</span>
-                <span className="min-w-0">
-                  <span className="block text-[14px] font-semibold tracking-tight">{badge.nom}</span>
-                  <span className="block text-[12px] leading-snug text-encre-3">
-                    {enTexteLong(badge.obtenuLe!)}
-                  </span>
-                </span>
-              </li>
-            ))}
-            {aVenir.map((badge) => (
-              <li key={badge.cle} className="flex items-start gap-2.5 rounded-2xl border border-dashed border-trait-fort p-3 opacity-60">
-                <span className="text-[22px] leading-none grayscale">{badge.emoji}</span>
-                <span className="min-w-0">
-                  <span className="block text-[14px] font-semibold tracking-tight">{badge.nom}</span>
-                  <span className="block text-[12px] leading-snug text-encre-3">{badge.description}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Carte>
-      </section>
+      <MurBadges badges={badges} />
 
       <section className="mt-7">
         <Link
