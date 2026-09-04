@@ -1,0 +1,118 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { motion } from "motion/react";
+
+/**
+ * Navigation principale, en bas de l'écran : c'est là que le pouce arrive.
+ * L'onglet actif est signalé par une pastille qui se déplace d'un onglet à
+ * l'autre plutôt que d'apparaître et disparaître — le mouvement dit d'où l'on
+ * vient.
+ */
+const ONGLETS = [
+  { href: "/", nom: "Aujourd'hui", icone: SoleilIcone },
+  { href: "/fil", nom: "Fil", icone: FilIcone },
+  { href: "/stats", nom: "Stats", icone: StatsIcone },
+  { href: "/profil", nom: "Profil", icone: ProfilIcone },
+];
+
+export function BarreOnglets() {
+  const chemin = usePathname();
+
+  return (
+    <nav
+      aria-label="Navigation principale"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-trait bg-[var(--voile)] backdrop-blur-xl zone-sure-basse"
+    >
+      <ul className="mx-auto flex max-w-lg items-stretch">
+        {ONGLETS.map((onglet) => {
+          const actif = chemin === onglet.href;
+          const Icone = onglet.icone;
+          return (
+            <li key={onglet.href} className="flex-1">
+              <Link
+                href={onglet.href}
+                aria-current={actif ? "page" : undefined}
+                className="relative flex flex-col items-center gap-1 px-2 pt-2.5 pb-2"
+              >
+                {actif && (
+                  <motion.span
+                    layoutId="onglet-actif"
+                    transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                    className="absolute inset-x-3 top-1 h-9 rounded-[var(--radius-pilule)] bg-surface-2"
+                  />
+                )}
+                <span className={`relative ${actif ? "text-encre" : "text-encre-3"}`}>
+                  <Icone actif={actif} />
+                </span>
+                <span
+                  className={`relative text-[11px] font-medium tracking-tight ${
+                    actif ? "text-encre" : "text-encre-3"
+                  }`}
+                >
+                  {onglet.nom}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
+/* Icônes dessinées ici plutôt qu'importées d'une bibliothèque : quatre
+   tracés ne justifient pas une dépendance, et ils partagent ainsi exactement
+   la même graisse que la typographie. */
+
+type PropsIcone = { actif: boolean };
+
+function base(actif: boolean) {
+  return {
+    width: 22,
+    height: 22,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: actif ? 2.1 : 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+}
+
+function SoleilIcone({ actif }: PropsIcone) {
+  return (
+    <svg {...base(actif)} aria-hidden>
+      <circle cx="12" cy="12" r="4.2" />
+      <path d="M12 3v1.6M12 19.4V21M3 12h1.6M19.4 12H21M5.6 5.6l1.2 1.2M17.2 17.2l1.2 1.2M18.4 5.6l-1.2 1.2M6.8 17.2l-1.2 1.2" />
+    </svg>
+  );
+}
+
+function FilIcone({ actif }: PropsIcone) {
+  return (
+    <svg {...base(actif)} aria-hidden>
+      <rect x="3.5" y="4.5" width="17" height="6" rx="2.2" />
+      <rect x="3.5" y="13.5" width="17" height="6" rx="2.2" />
+    </svg>
+  );
+}
+
+function StatsIcone({ actif }: PropsIcone) {
+  return (
+    <svg {...base(actif)} aria-hidden>
+      <path d="M4 15.5l4.5-5 3.5 3 4-6.5 4 4.5" />
+      <path d="M3.5 20h17" />
+    </svg>
+  );
+}
+
+function ProfilIcone({ actif }: PropsIcone) {
+  return (
+    <svg {...base(actif)} aria-hidden>
+      <circle cx="12" cy="8.5" r="3.8" />
+      <path d="M4.8 20c1.1-3.6 3.9-5.4 7.2-5.4s6.1 1.8 7.2 5.4" />
+    </svg>
+  );
+}

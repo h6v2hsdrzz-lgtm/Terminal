@@ -1,0 +1,238 @@
+@import "tailwindcss";
+@import "./polices.css";
+
+/* Le thème suit le système, et un choix explicite le remplace. */
+@custom-variant sombre (&:where(.sombre, .sombre *));
+
+/* ════════════════════════════════════════════════════════════════════
+   JETONS
+
+   Une règle tient tout le châssis : il ne porte pas de couleur. Le gris
+   est légèrement chaud en clair (un papier, pas un écran) et légèrement
+   froid en sombre. Toute la couleur vient des personnes et des données.
+
+   Les cinq teintes de profil sont validées ensemble — bande de clarté,
+   plancher de chroma, séparation en vision daltonienne, contraste sur la
+   surface — séparément pour chaque thème. Le sombre n'est pas l'inverse
+   du clair : ce sont deux jeux choisis.
+
+   L'échelle de joie ne va jamais du rouge au vert. Une mauvaise journée
+   n'est pas une alerte : c'est la même couleur, en plus calme. Une seule
+   famille chaude, du discret au rayonnant.
+   ════════════════════════════════════════════════════════════════════ */
+
+:root {
+  color-scheme: light;
+
+  --sol: #fbfaf8;
+  --surface: #ffffff;
+  --surface-2: #f4f2ee;
+  --surface-3: #eae7e1;
+  --trait: #ecece7;
+  --trait-fort: #dcd9d3;
+
+  --encre: #14161a;
+  --encre-2: #5b6167;
+  --encre-3: #8f959c;
+
+  --profil-1: #2f6fd0;
+  --profil-2: #14926a;
+  --profil-3: #c98410;
+  --profil-4: #8f57c9;
+  --profil-5: #d4483f;
+
+  /* Rampe de joie : une seule famille, du calme au rayonnant. */
+  /* L'écart entre 1 et 10 doit se voir d'un coup d'œil sur une grille de
+     sept cents cases : la première version tenait sur quatre tons de caramel,
+     et la heatmap ne racontait rien. */
+  --joie-1: #f1eee8;
+  --joie-2: #ece4d6;
+  --joie-3: #e7dac3;
+  --joie-4: #e1cfae;
+  --joie-5: #dac298;
+  --joie-6: #d3b380;
+  --joie-7: #caa366;
+  --joie-8: #bf914b;
+  --joie-9: #b17d32;
+  --joie-10: #a1671b;
+  --joie-encre: #8a5709;
+
+  --ombre-1: 0 1px 2px rgb(20 22 26 / .04), 0 1px 3px rgb(20 22 26 / .06);
+  --ombre-2: 0 2px 4px rgb(20 22 26 / .04), 0 8px 20px -8px rgb(20 22 26 / .14);
+  --ombre-3: 0 10px 40px -12px rgb(20 22 26 / .22);
+
+  --voile: rgb(251 250 248 / .72);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.clair) {
+    color-scheme: dark;
+
+    --sol: #0b0c0e;
+    --surface: #141619;
+    --surface-2: #1c1f23;
+    --surface-3: #24282d;
+    --trait: #23262b;
+    --trait-fort: #333941;
+
+    --encre: #edeef0;
+    --encre-2: #9ba1a9;
+    --encre-3: #6a7079;
+
+    --profil-1: #4a85dd;
+    --profil-2: #17a077;
+    --profil-3: #b8871f;
+    --profil-4: #9f63cf;
+    --profil-5: #d4574e;
+
+    --joie-1: #212327;
+    --joie-2: #292a29;
+    --joie-3: #32322d;
+    --joie-4: #3d3a32;
+    --joie-5: #4a4337;
+    --joie-6: #594e3c;
+    --joie-7: #6a5a41;
+    --joie-8: #7d6747;
+    --joie-9: #92764d;
+    --joie-10: #a98754;
+    --joie-encre: #dcae63;
+
+    --ombre-1: 0 1px 2px rgb(0 0 0 / .5);
+    --ombre-2: 0 2px 4px rgb(0 0 0 / .4), 0 10px 24px -10px rgb(0 0 0 / .7);
+    --ombre-3: 0 12px 44px -14px rgb(0 0 0 / .85);
+
+    --voile: rgb(11 12 14 / .72);
+  }
+}
+
+.sombre {
+  color-scheme: dark;
+
+  --sol: #0b0c0e;
+  --surface: #141619;
+  --surface-2: #1c1f23;
+  --surface-3: #24282d;
+  --trait: #23262b;
+  --trait-fort: #333941;
+
+  --encre: #edeef0;
+  --encre-2: #9ba1a9;
+  --encre-3: #6a7079;
+
+  --profil-1: #4a85dd;
+  --profil-2: #17a077;
+  --profil-3: #b8871f;
+  --profil-4: #9f63cf;
+  --profil-5: #d4574e;
+
+  --joie-1: #212327;
+  --joie-2: #292a29;
+  --joie-3: #32322d;
+  --joie-4: #3d3a32;
+  --joie-5: #4a4337;
+  --joie-6: #594e3c;
+  --joie-7: #6a5a41;
+  --joie-8: #7d6747;
+  --joie-9: #92764d;
+  --joie-10: #a98754;
+  --joie-encre: #dcae63;
+
+  --ombre-1: 0 1px 2px rgb(0 0 0 / .5);
+  --ombre-2: 0 2px 4px rgb(0 0 0 / .4), 0 10px 24px -10px rgb(0 0 0 / .7);
+  --ombre-3: 0 12px 44px -14px rgb(0 0 0 / .85);
+
+  --voile: rgb(11 12 14 / .72);
+}
+
+@theme inline {
+  --color-sol: var(--sol);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-trait: var(--trait);
+  --color-trait-fort: var(--trait-fort);
+  --color-encre: var(--encre);
+  --color-encre-2: var(--encre-2);
+  --color-encre-3: var(--encre-3);
+  --color-joie: var(--joie-encre);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-carte: 24px;
+  --radius-feuille: 28px;
+  --radius-pilule: 999px;
+
+  --shadow-1: var(--ombre-1);
+  --shadow-2: var(--ombre-2);
+  --shadow-3: var(--ombre-3);
+}
+
+/* ── Base ────────────────────────────────────────────────────────────
+   Ces règles vivent dans `@layer base`, et ce n'est pas cosmétique : une
+   déclaration hors couche l'emporte sur toute déclaration en couche, quelle
+   que soit la spécificité. Un `button { background: none; border: none }`
+   laissé hors couche annule donc silencieusement `bg-*` et `border-*` de
+   Tailwind sur tous les boutons de l'application — ce qui est exactement ce
+   qui s'était produit.
+   ────────────────────────────────────────────────────────────────────── */
+
+@layer base {
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  html {
+    background: var(--sol);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--sol);
+    color: var(--encre);
+    font-family: var(--font-sans);
+    font-size: 15px;               /* jamais moins sur téléphone */
+    line-height: 1.5;
+    font-feature-settings: "cv05" 1, "ss03" 1;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
+  }
+
+/* Les chiffres s'alignent en colonne et se resserrent : c'est ce qui fait
+   qu'un grand nombre a l'air dessiné plutôt que tapé. */
+.chiffres {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  font-weight: 650;
+}
+
+  button { font: inherit; color: inherit; background: none; border: none; padding: 0; cursor: pointer; }
+  input, textarea, select { font: inherit; color: inherit; }
+  a { color: inherit; text-decoration: none; }
+
+  :focus-visible {
+    outline: 2px solid var(--encre);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  ::selection { background: color-mix(in oklab, var(--joie-encre) 26%, transparent); }
+
+  /* Barres de défilement discrètes sur bureau, invisibles sur téléphone. */
+  @media (pointer: fine) {
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--trait-fort); border: 3px solid var(--sol); border-radius: 999px; }
+  }
+}
+
+/* Zone sûre : la barre d'onglets doit dégager la barre d'accueil iOS. */
+.marge-basse { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+.zone-sure-basse { padding-bottom: env(safe-area-inset-bottom); }
+.zone-sure-haute { padding-top: env(safe-area-inset-top); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
