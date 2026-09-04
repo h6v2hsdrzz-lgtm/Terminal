@@ -1,40 +1,40 @@
 import { Avatar } from "@/composants/Avatar";
 import { Carte, TitreSection } from "@/composants/Carte";
 import { Calendrier } from "@/composants/Calendrier";
-import { couleurProfil } from "@/lib/couleurs";
-import { BADGES, ENTREES, MOI, PROFILS } from "@/lib/factices";
-import { decaler, jourDeLaBande } from "@/lib/dates";
+import { BoiteInvitation } from "@/composants/BoiteInvitation";
+import { badgesDe, serieEnCours } from "@/lib/badges";
+import { TAILLE_MAX_BANDE, couleurProfil } from "@/lib/couleurs";
+import { entreesDeLaBande, exigerContexte } from "@/lib/repaire";
+import { actionQuitter } from "@/lib/actions";
+import { enTexteLong, jourDeLaBande } from "@/lib/dates";
 
-export default function Page() {
-  const moi = PROFILS.find((p) => p.id === MOI)!;
-  const miennes = ENTREES.filter((e) => e.profil === MOI);
+export default async function Page() {
+  const contexte = await exigerContexte();
   const aujourdhui = jourDeLaBande();
+  const entrees = await entreesDeLaBande(contexte.groupe.id);
+  const miennes = entrees.filter((e) => e.profil === contexte.moi.id);
 
-  const moyenne = miennes.reduce((s, e) => s + e.joie, 0) / miennes.length;
-  const jours = new Set(miennes.map((e) => e.jour));
+  const moyenne = miennes.length
+    ? miennes.reduce((s, e) => s + e.joie, 0) / miennes.length
+    : null;
+  const serie = serieEnCours(new Set(miennes.map((e) => e.jour)), aujourdhui);
 
-  let curseur = jours.has(aujourdhui) ? aujourdhui : decaler(aujourdhui, -1);
-  let serie = 0;
-  while (jours.has(curseur)) {
-    serie += 1;
-    curseur = decaler(curseur, -1);
-  }
-
-  const obtenus = BADGES.filter((b) => b.obtenuLe);
-  const aVenir = BADGES.filter((b) => !b.obtenuLe);
+  const badges = badgesDe(miennes);
+  const obtenus = badges.filter((b) => b.obtenuLe);
+  const aVenir = badges.filter((b) => !b.obtenuLe);
 
   return (
     <div className="px-4 pt-3">
       <header className="mb-6 flex items-center gap-4 zone-sure-haute">
-        <Avatar profil={moi} taille={64} anneau />
-        <div>
-          <h1 className="text-[26px] font-semibold tracking-[-0.02em]">{moi.pseudo}</h1>
+        <Avatar profil={contexte.moi} taille={64} anneau />
+        <div className="min-w-0">
+          <h1 className="truncate text-[26px] font-semibold tracking-[-0.02em]">{contexte.moi.pseudo}</h1>
           <p className="mt-0.5 flex items-center gap-1.5 text-[14px] text-encre-3">
             <span
-              className="inline-block h-2.5 w-2.5 rounded-full"
-              style={{ background: couleurProfil(moi) }}
+              className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ background: couleurProfil(contexte.moi) }}
             />
-            ta couleur dans la bande
+            ta couleur dans {contexte.groupe.nom}
           </p>
         </div>
       </header>
@@ -42,7 +42,7 @@ export default function Page() {
       <div className="grid grid-cols-3 gap-3">
         {[
           { valeur: serie.toString(), libelle: serie > 1 ? "jours d'affilée" : "jour d'affilée" },
-          { valeur: moyenne.toFixed(1).replace(".", ","), libelle: "de moyenne" },
+          { valeur: moyenne === null ? "—" : moyenne.toFixed(1).replace(".", ","), libelle: "de moyenne" },
           { valeur: miennes.length.toString(), libelle: "journées posées" },
         ].map((tuile) => (
           <Carte key={tuile.libelle} className="px-3 py-4 text-center">
@@ -51,6 +51,14 @@ export default function Page() {
           </Carte>
         ))}
       </div>
+
+      <section className="mt-7">
+        <TitreSection>Inviter</TitreSection>
+        <BoiteInvitation
+          code={contexte.groupe.codeInvitation}
+          places={TAILLE_MAX_BANDE - contexte.profils.length}
+        />
+      </section>
 
       <section className="mt-7">
         <TitreSection>Tes dix dernières semaines</TitreSection>
@@ -66,7 +74,7 @@ export default function Page() {
       </section>
 
       <section className="mt-7">
-        <TitreSection action={<span className="text-[13px] text-encre-3">{obtenus.length} / {BADGES.length}</span>}>
+        <TitreSection action={<span className="text-[13px] text-encre-3">{obtenus.length} / {badges.length}</span>}>
           Badges
         </TitreSection>
         <Carte className="p-4">
@@ -76,7 +84,9 @@ export default function Page() {
                 <span className="text-[22px] leading-none">{badge.emoji}</span>
                 <span className="min-w-0">
                   <span className="block text-[14px] font-semibold tracking-tight">{badge.nom}</span>
-                  <span className="block text-[12px] leading-snug text-encre-3">{badge.description}</span>
+                  <span className="block text-[12px] leading-snug text-encre-3">
+                    {enTexteLong(badge.obtenuLe!)}
+                  </span>
                 </span>
               </li>
             ))}
@@ -91,6 +101,20 @@ export default function Page() {
             ))}
           </ul>
         </Carte>
+      </section>
+
+      <section className="mt-7">
+        <form action={actionQuitter}>
+          <button
+            type="submit"
+            className="w-full rounded-[var(--radius-pilule)] border border-trait-fort bg-surface py-3 text-[14px] font-medium text-encre-2 transition hover:border-encre-3"
+          >
+            Se déconnecter de cet appareil
+          </button>
+        </form>
+        <p className="mt-2 text-center text-[12px] leading-snug text-encre-3">
+          Tes journées restent dans la bande. Il faudra ton code de reprise pour revenir.
+        </p>
       </section>
     </div>
   );

@@ -7,7 +7,13 @@
  */
 import type { Profil } from "./types";
 
-export const TEINTES = [1, 2, 3, 4, 5] as const;
+/**
+ * Les emplacements de la palette de profils. Leur nombre plafonne la taille
+ * d'une bande : sept personnes, sept couleurs qu'on distingue vraiment.
+ * `scripts/valider-palette.mjs` le vérifie sur les jetons livrés.
+ */
+export const TEINTES = [1, 2, 3, 4, 5, 6, 7] as const;
+export const TAILLE_MAX_BANDE = TEINTES.length;
 
 export function couleurProfil(profil: Pick<Profil, "teinte">): string {
   return `var(--profil-${profil.teinte})`;

@@ -16,9 +16,12 @@ import { couleurJoie, motJoie } from "@/lib/couleurs";
 export function CurseurJoie({
   valeurInitiale = 7,
   onChange,
+  nom,
 }: {
   valeurInitiale?: number;
   onChange?: (valeur: number) => void;
+  /** Donné, le curseur devient un champ de formulaire à part entière. */
+  nom?: string;
 }) {
   const [valeur, setValeur] = useState(valeurInitiale);
 
@@ -72,6 +75,7 @@ export function CurseurJoie({
         </div>
         <input
           type="range"
+          name={nom}
           min={1}
           max={10}
           step={1}

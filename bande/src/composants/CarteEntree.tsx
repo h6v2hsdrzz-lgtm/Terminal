@@ -1,8 +1,7 @@
 import { Avatar } from "./Avatar";
 import { Carte } from "./Carte";
 import { couleurJoie, couleurProfil } from "@/lib/couleurs";
-import { DECLENCHEURS, PROFILS } from "@/lib/factices";
-import type { Entree } from "@/lib/types";
+import type { Annuaire, Entree } from "@/lib/types";
 
 /**
  * Une journée dans le fil.
@@ -11,12 +10,25 @@ import type { Entree } from "@/lib/types";
  * même place, même dignité. Seule la teinte du disque change, et elle ne
  * vire jamais au rouge.
  */
-export function CarteEntree({ entree, floute = false }: { entree: Entree; floute?: boolean }) {
-  const profil = PROFILS.find((p) => p.id === entree.profil)!;
+export function CarteEntree({
+  entree,
+  annuaire,
+  floute = false,
+}: {
+  entree: Entree;
+  annuaire: Annuaire;
+  floute?: boolean;
+}) {
+  const profil = annuaire.profils.find((p) => p.id === entree.profil);
+  // Une entrée peut survivre à son auteur — quelqu'un quitte la bande, ses
+  // journées restent dans les statistiques. La carte ne doit pas s'effondrer
+  // pour autant.
+  if (!profil) return null;
+
   const couleur = couleurProfil(profil);
   const declencheurs = entree.declencheurs
-    .map((id) => DECLENCHEURS.find((d) => d.id === id))
-    .filter(Boolean);
+    .map((id) => annuaire.declencheurs.find((d) => d.id === id))
+    .filter((d) => d !== undefined);
 
   return (
     <Carte accent={couleur} className="overflow-hidden">
@@ -38,10 +50,10 @@ export function CarteEntree({ entree, floute = false }: { entree: Entree; floute
               <ul className="mt-2.5 flex flex-wrap gap-1.5">
                 {declencheurs.map((d) => (
                   <li
-                    key={d!.id}
+                    key={d.id}
                     className="rounded-[var(--radius-pilule)] border border-trait bg-surface-2 px-2 py-0.5 text-[12px] text-encre-2"
                   >
-                    {d!.emoji} {d!.nom}
+                    {d.emoji} {d.nom}
                   </li>
                 ))}
               </ul>

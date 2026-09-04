@@ -35,11 +35,19 @@
   --encre-2: #5b6167;
   --encre-3: #8f959c;
 
-  --profil-1: #2f6fd0;
-  --profil-2: #14926a;
-  --profil-3: #c98410;
-  --profil-4: #8f57c9;
-  --profil-5: #d4483f;
+  /* Couleurs de profil — sept emplacements, validés toutes paires : bande de
+     clarté, plancher de chroma, écart sous protanopie et deutéranopie, contraste
+     sur le fond. Sept et pas huit : au-delà, la bande de clarté du thème sombre
+     est trop étroite pour garder un rouge et un vert séparés pour un œil
+     daltonien. Une bande plus large demandera un second encodage — un trait
+     pointillé sur les courbes — plutôt qu'une huitième teinte. */
+  --profil-1: #094bae;
+  --profil-2: #0fabbd;
+  --profil-3: #b29700;
+  --profil-4: #d24c4c;
+  --profil-5: #a97cf0;
+  --profil-6: #2d6101;
+  --profil-7: #8a1a6f;
 
   /* Rampe de joie : une seule famille, du calme au rayonnant. */
   /* L'écart entre 1 et 10 doit se voir d'un coup d'œil sur une grille de
@@ -79,11 +87,15 @@
     --encre-2: #9ba1a9;
     --encre-3: #6a7079;
 
-    --profil-1: #4a85dd;
-    --profil-2: #17a077;
-    --profil-3: #b8871f;
-    --profil-4: #9f63cf;
-    --profil-5: #d4574e;
+    /* Mêmes teintes, transposées dans la bande de clarté du thème sombre : une
+       personne garde sa couleur d'un thème à l'autre. */
+    --profil-1: #105bcd;
+    --profil-2: #00a4b6;
+    --profil-3: #ab9100;
+    --profil-4: #dd4347;
+    --profil-5: #a570f3;
+    --profil-6: #377500;
+    --profil-7: #a42384;
 
     --joie-1: #212327;
     --joie-2: #292a29;
@@ -119,11 +131,15 @@
   --encre-2: #9ba1a9;
   --encre-3: #6a7079;
 
-  --profil-1: #4a85dd;
-  --profil-2: #17a077;
-  --profil-3: #b8871f;
-  --profil-4: #9f63cf;
-  --profil-5: #d4574e;
+  /* Mêmes teintes, transposées dans la bande de clarté du thème sombre : une
+     personne garde sa couleur d'un thème à l'autre. */
+  --profil-1: #105bcd;
+  --profil-2: #00a4b6;
+  --profil-3: #ab9100;
+  --profil-4: #dd4347;
+  --profil-5: #a570f3;
+  --profil-6: #377500;
+  --profil-7: #a42384;
 
   --joie-1: #212327;
   --joie-2: #292a29;

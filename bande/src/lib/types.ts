@@ -3,8 +3,8 @@
 export type Profil = {
   id: string;
   pseudo: string;
-  /** 1 à 5 — index dans la palette validée, jamais un code couleur en dur. */
-  teinte: 1 | 2 | 3 | 4 | 5;
+  /** 1 à 7 — index dans la palette validée, jamais un code couleur en dur. */
+  teinte: number;
   initiales: string;
 };
 
@@ -12,6 +12,17 @@ export type Declencheur = {
   id: string;
   nom: string;
   emoji: string;
+};
+
+/**
+ * De quoi traduire les identifiants d'une entrée en personnes et en
+ * déclencheurs. Les entrées ne portent que des identifiants : dupliquer le
+ * pseudo dans chaque ligne, ce serait le voir changer partout sauf dans le
+ * passé le jour où quelqu'un le modifie.
+ */
+export type Annuaire = {
+  profils: Profil[];
+  declencheurs: Declencheur[];
 };
 
 export type Reaction = {

@@ -15,6 +15,14 @@ export function moyenne(valeurs: number[]): number | null {
   return valeurs.reduce((somme, v) => somme + v, 0) / valeurs.length;
 }
 
+export function ecartType(valeurs: number[]): number {
+  if (valeurs.length < 2) return 0;
+  const m = valeurs.reduce((s, v) => s + v, 0) / valeurs.length;
+  // Diviseur n−1 : on estime l'écart d'une population à partir d'un
+  // échantillon, on ne décrit pas l'échantillon lui-même.
+  return Math.sqrt(valeurs.reduce((s, v) => s + (v - m) ** 2, 0) / (valeurs.length - 1));
+}
+
 export type EffetDeclencheur = {
   declencheur: string;
   avec: number | null;
@@ -24,6 +32,18 @@ export type EffetDeclencheur = {
   ecart: number | null;
   /** Faux tant qu'un des deux côtés n'a pas atteint le seuil. */
   concluant: boolean;
+  /**
+   * Vrai quand l'écart dépasse deux fois son incertitude — l'ordre de grandeur
+   * d'un intervalle à 95 %.
+   *
+   * Sans ce garde-fou, l'écran affiche « +0,2 » avec le même aplomb qu'un
+   * « +1,3 », alors que le premier est le genre de chiffre que deux séries
+   * tirées au hasard produisent une fois sur trois. Le seuil de cinq jours dit
+   * qu'on a assez de données ; celui-ci dit qu'elles disent quelque chose.
+   */
+  net: boolean;
+  /** L'incertitude elle-même, pour pouvoir l'afficher plutôt que la cacher. */
+  incertitude: number | null;
 };
 
 export function effetDeclencheur(entrees: Entree[], declencheur: string): EffetDeclencheur {
@@ -31,6 +51,12 @@ export function effetDeclencheur(entrees: Entree[], declencheur: string): EffetD
   const sans = entrees.filter((e) => !e.declencheurs.includes(declencheur)).map((e) => e.joie);
   const ma = moyenne(avec);
   const ms = moyenne(sans);
+  const ecart = ma !== null && ms !== null ? ma - ms : null;
+
+  // Erreur type de la différence de deux moyennes indépendantes.
+  const incertitude = avec.length >= 2 && sans.length >= 2
+    ? Math.sqrt(ecartType(avec) ** 2 / avec.length + ecartType(sans) ** 2 / sans.length)
+    : null;
 
   return {
     declencheur,
@@ -38,8 +64,10 @@ export function effetDeclencheur(entrees: Entree[], declencheur: string): EffetD
     sans: ms,
     joursAvec: avec.length,
     joursSans: sans.length,
-    ecart: ma !== null && ms !== null ? ma - ms : null,
+    ecart,
     concluant: avec.length >= SEUIL_CONCLUANT && sans.length >= SEUIL_CONCLUANT,
+    net: ecart !== null && incertitude !== null && Math.abs(ecart) > 2 * incertitude,
+    incertitude,
   };
 }
 

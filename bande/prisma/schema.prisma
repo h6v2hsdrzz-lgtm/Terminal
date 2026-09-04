@@ -1,0 +1,148 @@
+// Modèle de données du repaire.
+//
+// Les tables portent le préfixe `bande_` : elles partagent la base hébergée
+// avec la v1, qui garde les siennes. Séparer par un préfixe plutôt que par un
+// schéma PostgreSQL évite d'avoir à créer quoi que ce soit à la main dans la
+// console Neon — le déploiement reste une seule variable à coller.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Une bande. Le code d'invitation est le seul secret qui protège le groupe :
+/// il est court pour être dicté au téléphone, mais tiré au hasard sur un
+/// alphabet sans caractères ambigus.
+model Groupe {
+  id              String   @id @default(cuid())
+  nom             String
+  codeInvitation  String   @unique @map("code_invitation")
+  /// Quand c'est vrai, on ne voit les journées des autres qu'après avoir posé
+  /// la sienne. Réglable par le groupe.
+  revelerApresPost Boolean @default(true) @map("reveler_apres_post")
+  creeLe          DateTime @default(now()) @map("cree_le")
+
+  membres      Membre[]
+  declencheurs Declencheur[]
+  entrees      Entree[]
+
+  @@map("bande_groupes")
+}
+
+/// Une personne dans une bande.
+///
+/// Pas d'email, pas de mot de passe : l'identité tient dans un cookie signé.
+/// Le code de reprise est l'unique moyen de retrouver son compte depuis un
+/// autre appareil, et il vient en deux moitiés : `poigneeReprise` est publique
+/// et indexée — elle seule permet de retrouver la ligne sans balayer la table —
+/// tandis que le secret n'est gardé que sous forme d'empreinte. C'est un mot de
+/// passe, il en mérite le traitement.
+model Membre {
+  id          String   @id @default(cuid())
+  groupeId    String   @map("groupe_id")
+  pseudo      String
+  /// 1 à 7 — index dans la palette validée. Le plafond de sept membres par
+  /// bande vient de là : au-delà, deux teintes ne se distinguent plus.
+  teinte      Int
+  poigneeReprise String @unique @map("poignee_reprise")
+  codeReprise String   @map("code_reprise")
+  creeLe      DateTime @default(now()) @map("cree_le")
+  vuLe        DateTime @default(now()) @map("vu_le")
+
+  groupe        Groupe        @relation(fields: [groupeId], references: [id], onDelete: Cascade)
+  entrees       Entree[]
+  reactions     Reaction[]
+  commentaires  Commentaire[]
+
+  @@unique([groupeId, pseudo])
+  @@index([groupeId])
+  @@map("bande_membres")
+}
+
+/// Les vannes internes de la bande, configurables : biberon, plante verte, ce
+/// que le groupe voudra.
+model Declencheur {
+  id       String  @id @default(cuid())
+  groupeId String  @map("groupe_id")
+  nom      String
+  emoji    String
+  ordre    Int     @default(0)
+  actif    Boolean @default(true)
+
+  groupe  Groupe          @relation(fields: [groupeId], references: [id], onDelete: Cascade)
+  entrees EntreeDeclencheur[]
+
+  @@index([groupeId])
+  @@map("bande_declencheurs")
+}
+
+/// Une journée posée.
+///
+/// `jour` est une date ISO en texte, calée sur la journée de la bande — celle
+/// qui ferme à 4 h du matin, pas à minuit. La contrainte d'unicité est le
+/// cœur du rituel : une mesure par personne et par jour.
+model Entree {
+  id        String   @id @default(cuid())
+  groupeId  String   @map("groupe_id")
+  membreId  String   @map("membre_id")
+  jour      String
+  joie      Int
+  note      String?
+  photo     String?
+  creeLe    DateTime @default(now()) @map("cree_le")
+  modifieLe DateTime @updatedAt @map("modifie_le")
+
+  groupe       Groupe              @relation(fields: [groupeId], references: [id], onDelete: Cascade)
+  membre       Membre              @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  declencheurs EntreeDeclencheur[]
+  reactions    Reaction[]
+  commentaires Commentaire[]
+
+  @@unique([membreId, jour])
+  @@index([groupeId, jour])
+  @@map("bande_entrees")
+}
+
+model EntreeDeclencheur {
+  entreeId      String @map("entree_id")
+  declencheurId String @map("declencheur_id")
+
+  entree      Entree      @relation(fields: [entreeId], references: [id], onDelete: Cascade)
+  declencheur Declencheur @relation(fields: [declencheurId], references: [id], onDelete: Cascade)
+
+  @@id([entreeId, declencheurId])
+  @@map("bande_entree_declencheurs")
+}
+
+model Reaction {
+  id       String   @id @default(cuid())
+  entreeId String   @map("entree_id")
+  membreId String   @map("membre_id")
+  emoji    String
+  creeLe   DateTime @default(now()) @map("cree_le")
+
+  entree Entree @relation(fields: [entreeId], references: [id], onDelete: Cascade)
+  membre Membre @relation(fields: [membreId], references: [id], onDelete: Cascade)
+
+  @@unique([entreeId, membreId, emoji])
+  @@index([entreeId])
+  @@map("bande_reactions")
+}
+
+model Commentaire {
+  id       String   @id @default(cuid())
+  entreeId String   @map("entree_id")
+  membreId String   @map("membre_id")
+  texte    String
+  creeLe   DateTime @default(now()) @map("cree_le")
+
+  entree Entree @relation(fields: [entreeId], references: [id], onDelete: Cascade)
+  membre Membre @relation(fields: [membreId], references: [id], onDelete: Cascade)
+
+  @@index([entreeId])
+  @@map("bande_commentaires")
+}
