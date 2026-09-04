@@ -235,9 +235,10 @@ Le dossier `algo/` contient un paquet Python indépendant (backtest et forward
 test d'une stratégie or/argent), sans lien avec le poste web.
 
 Le dossier `joie/` contient une seconde application, elle aussi indépendante :
-un journal de suivi du niveau de joie quotidien (Next.js, Prisma, SQLite). Elle
-a son propre `README.md` et son propre cycle de développement — le poste web
-reste statique et sans build.
+un journal de suivi du niveau de joie quotidien (Next.js, Prisma, PostgreSQL),
+déployé sur https://journal-de-joie.vercel.app. Elle a son propre `README.md`
+et son propre cycle de développement — le poste web reste statique et sans
+build.
 
 `joie/autonome/` en est une version d'un seul fichier, sans dépendance ni
 construction, qui garde ses données dans le navigateur. Celle-là suit la règle
