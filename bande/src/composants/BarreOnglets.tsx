@@ -5,10 +5,17 @@ import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
 
 /**
- * Navigation principale, en bas de l'écran : c'est là que le pouce arrive.
- * L'onglet actif est signalé par une pastille qui se déplace d'un onglet à
- * l'autre plutôt que d'apparaître et disparaître — le mouvement dit d'où l'on
- * vient.
+ * La navigation principale, sous deux formes.
+ *
+ * Sur téléphone, une barre en bas : c'est là que le pouce arrive. Sur grand
+ * écran, un rail à gauche — une barre d'onglets en bas d'un écran de 1440
+ * pixels est une barre qu'on ne regarde jamais, et la colonne de contenu
+ * flottait au milieu d'un désert.
+ *
+ * Dans les deux cas, l'onglet actif est signalé par une pastille qui se déplace
+ * d'un onglet à l'autre plutôt que d'apparaître et disparaître : le mouvement
+ * dit d'où l'on vient. Les deux formes ont leur propre `layoutId`, sinon la
+ * pastille traverserait l'écran en diagonale au changement de taille.
  */
 const ONGLETS = [
   { href: "/", nom: "Aujourd'hui", icone: SoleilIcone },
@@ -22,44 +29,88 @@ export function BarreOnglets() {
   const chemin = usePathname();
 
   return (
-    <nav
-      aria-label="Navigation principale"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-trait bg-[var(--voile)] backdrop-blur-xl zone-sure-basse"
-    >
-      <ul className="mx-auto flex max-w-lg items-stretch">
-        {ONGLETS.map((onglet) => {
-          const actif = chemin === onglet.href;
-          const Icone = onglet.icone;
-          return (
-            <li key={onglet.href} className="flex-1">
-              <Link
-                href={onglet.href}
-                aria-current={actif ? "page" : undefined}
-                className="relative flex flex-col items-center gap-1 px-2 pt-2.5 pb-2"
-              >
-                {actif && (
-                  <motion.span
-                    layoutId="onglet-actif"
-                    transition={{ type: "spring", stiffness: 420, damping: 34 }}
-                    className="absolute inset-x-3 top-1 h-9 rounded-[var(--radius-pilule)] bg-surface-2"
-                  />
-                )}
-                <span className={`relative ${actif ? "text-encre" : "text-encre-3"}`}>
-                  <Icone actif={actif} />
-                </span>
-                <span
-                  className={`relative text-[11px] font-medium tracking-tight ${
-                    actif ? "text-encre" : "text-encre-3"
-                  }`}
+    <>
+      {/* Téléphone : la barre du bas. */}
+      <nav
+        aria-label="Navigation principale"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-trait bg-[var(--voile)] backdrop-blur-xl zone-sure-basse lg:hidden"
+      >
+        <ul className="mx-auto flex max-w-lg items-stretch">
+          {ONGLETS.map((onglet) => {
+            const actif = chemin === onglet.href;
+            const Icone = onglet.icone;
+            return (
+              <li key={onglet.href} className="flex-1">
+                <Link
+                  href={onglet.href}
+                  aria-current={actif ? "page" : undefined}
+                  className="relative flex flex-col items-center gap-1 px-2 pt-2.5 pb-2"
                 >
-                  {onglet.nom}
-                </span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+                  {actif && (
+                    <motion.span
+                      layoutId="onglet-actif-bas"
+                      transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                      className="absolute inset-x-3 top-1 h-9 rounded-[var(--radius-pilule)] bg-surface-2"
+                    />
+                  )}
+                  <span className={`relative ${actif ? "text-encre" : "text-encre-3"}`}>
+                    <Icone actif={actif} />
+                  </span>
+                  <span
+                    className={`relative text-[11px] font-medium tracking-tight ${
+                      actif ? "text-encre" : "text-encre-3"
+                    }`}
+                  >
+                    {onglet.nom}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      {/* Grand écran : le rail de gauche. */}
+      <nav
+        aria-label="Navigation principale"
+        className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-trait bg-surface px-3 py-6 lg:flex"
+      >
+        <p className="mb-6 px-3 text-[15px] font-semibold tracking-tight">Journal de joie</p>
+        <ul className="space-y-1">
+          {ONGLETS.map((onglet) => {
+            const actif = chemin === onglet.href;
+            const Icone = onglet.icone;
+            return (
+              <li key={onglet.href}>
+                <Link
+                  href={onglet.href}
+                  aria-current={actif ? "page" : undefined}
+                  className="relative flex items-center gap-3 rounded-[var(--radius-pilule)] px-3 py-2.5"
+                >
+                  {actif && (
+                    <motion.span
+                      layoutId="onglet-actif-rail"
+                      transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                      className="absolute inset-0 rounded-[var(--radius-pilule)] bg-surface-2"
+                    />
+                  )}
+                  <span className={`relative ${actif ? "text-encre" : "text-encre-3"}`}>
+                    <Icone actif={actif} />
+                  </span>
+                  <span
+                    className={`relative text-[15px] font-medium tracking-tight ${
+                      actif ? "text-encre" : "text-encre-2"
+                    }`}
+                  >
+                    {onglet.nom}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </>
   );
 }
 

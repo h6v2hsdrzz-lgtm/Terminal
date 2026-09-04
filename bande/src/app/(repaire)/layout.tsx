@@ -23,7 +23,11 @@ export default async function Layout({ children }: { children: React.ReactNode }
   return (
     <>
       <Synchronisation version={await versionBande(contexte.groupe.id)} />
-      <div className="mx-auto min-h-dvh w-full max-w-lg marge-basse">{children}</div>
+      {/* La marge basse ne sert que sous la barre du bas ; à gauche, elle fait
+          place au rail. */}
+      <div className="min-h-dvh lg:pl-60">
+        <div className="mx-auto w-full max-w-lg marge-basse lg:pb-10">{children}</div>
+      </div>
       <BarreOnglets />
     </>
   );

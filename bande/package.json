@@ -12,7 +12,8 @@
     "db:studio": "prisma studio",
     "verifier:palette": "node scripts/valider-palette.mjs",
     "test": "vitest run",
-    "test:suivi": "vitest"
+    "test:suivi": "vitest",
+    "vercel-build": "prisma migrate deploy && next build"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

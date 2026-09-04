@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 
 import { Avatar } from "./Avatar";
 import { Carte, TitreSection } from "./Carte";
@@ -12,6 +12,7 @@ import { MessageErreur } from "./Champ";
 import { VisageJoie } from "./VisageJoie";
 import { actionPoserJournee } from "@/lib/actions";
 import { ETAT_INITIAL } from "@/lib/formulaire";
+import { garderEnAttente, lireEnAttente, oublierAttente, sAbonnerAttente, yaUneAttente } from "@/lib/attente";
 import { enTexteLong } from "@/lib/dates";
 import type { Annuaire, Entree, Profil } from "@/lib/types";
 
@@ -79,25 +80,60 @@ export function EcranAujourdhui({
   // Le formulaire réapparaît prérempli, et l'envoi remplace la ligne du jour.
   const [correction, setCorrection] = useState(false);
 
+  /**
+   * L'attente se lit dans le stockage local, elle n'est pas recopiée dans un
+   * état.
+   *
+   * C'est un système extérieur à React : le recopier obligerait à le
+   * resynchroniser dans un effet à chaque écriture, et à choisir quoi rendre
+   * pendant l'hydratation. L'instantané côté serveur vaut faux — le serveur ne
+   * sait rien de ce téléphone.
+   */
+  const enAttente = useSyncExternalStore(
+    sAbonnerAttente,
+    () => yaUneAttente(jour),
+    () => false,
+  );
+
   const poste = monEntree !== null && !correction;
 
   /**
    * On appelle l'action à la main plutôt que par `useActionState`.
    *
-   * La raison tient en une ligne : il faut refermer le formulaire de correction
-   * quand — et seulement quand — l'envoi a réussi. Un état qui ne distingue pas
-   * « rien envoyé » de « envoyé sans erreur » ne le permet pas, et le détecter
-   * dans un effet reviendrait à deviner.
+   * Deux raisons. Il faut refermer le formulaire de correction quand — et
+   * seulement quand — l'envoi a réussi ; un état qui ne distingue pas « rien
+   * envoyé » de « envoyé sans erreur » ne le permet pas. Et il faut pouvoir
+   * rattraper l'échec réseau pour garder la journée sur l'appareil.
    */
-  function envoyer(donnees: FormData) {
-    demarrer(async () => {
-      const resultat = await actionPoserJournee(ETAT_INITIAL, donnees);
-      setEtat(resultat);
-      if (!resultat.erreur) {
-        setCorrection(false);
-        formulaire.current?.reset();
+  const poser = useCallback(
+    async (donnees: FormData) => {
+      try {
+        const resultat = await actionPoserJournee(ETAT_INITIAL, donnees);
+        setEtat(resultat);
+        if (!resultat.erreur) {
+          oublierAttente();
+          setCorrection(false);
+          formulaire.current?.reset();
+        }
+        return !resultat.erreur;
+      } catch {
+        // Une action serveur qui échoue au transport, c'est le réseau. On garde
+        // la journée sur l'appareil plutôt que de la perdre, et on la renverra.
+        garderEnAttente({
+          jour,
+          joie: Number(donnees.get("joie")) || 7,
+          note: String(donnees.get("note") ?? ""),
+          declencheurs: donnees.getAll("declencheurs").map(String),
+        });
+        setEtat({ erreur: null });
+        return false;
       }
-    });
+    },
+    [jour],
+  );
+
+  function envoyer(donnees: FormData) {
+    demarrer(async () => { await poser(donnees); });
   }
   const voile = revelerApresPost && !poste;
 
@@ -108,6 +144,36 @@ export function EcranAujourdhui({
   const manquants = annuaire.profils.filter(
     (p) => !entreesDuJour.some((e) => e.profil === p.id),
   );
+
+  /**
+   * Le renvoi de la journée gardée hors ligne.
+   *
+   * Il se déclenche au montage et au retour du réseau, pas sur un minuteur :
+   * réessayer toutes les dix secondes dans un tunnel ne fait que vider la
+   * batterie.
+   */
+  useEffect(() => {
+    // `enAttente` est dans les dépendances, et ce n'est pas cosmétique : sans
+    // lui, l'effet ne tourne qu'au montage. Une journée écrite APRÈS le montage
+    // — le cas exact du métro : on ouvre l'application avec du réseau, on le
+    // perd, on écrit — n'aurait jamais eu d'écouteur « online », et serait
+    // restée sur l'appareil jusqu'au rechargement suivant.
+    if (!enAttente) return;
+
+    const renvoyer = async () => {
+      const encore = lireEnAttente(jour);
+      if (!encore) return;
+      const donnees = new FormData();
+      donnees.set("joie", String(encore.joie));
+      donnees.set("note", encore.note);
+      for (const d of encore.declencheurs) donnees.append("declencheurs", d);
+      await poser(donnees);
+    };
+
+    renvoyer();
+    window.addEventListener("online", renvoyer);
+    return () => window.removeEventListener("online", renvoyer);
+  }, [enAttente, jour, poser]);
 
   return (
     <div className="px-4 pt-3">
@@ -127,6 +193,16 @@ export function EcranAujourdhui({
           </div>
         )}
       </header>
+
+      {enAttente && !poste && (
+        <p
+          role="status"
+          className="mb-4 rounded-2xl border border-trait-fort bg-surface-2 px-4 py-3 text-[14px] leading-snug text-encre-2"
+        >
+          Ta journée est écrite et gardée sur ce téléphone. Elle partira toute seule
+          dès que le réseau revient.
+        </p>
+      )}
 
       {/* ── Le check-in, ou ce qu'on vient d'écrire ─────────────────── */}
       <AnimatePresence mode="wait" initial={false}>
