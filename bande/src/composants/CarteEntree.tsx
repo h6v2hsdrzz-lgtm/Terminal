@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { Avatar } from "./Avatar";
 import { Carte } from "./Carte";
 import { PiedEntree } from "./PiedEntree";
@@ -71,6 +73,19 @@ export function CarteEntree({
             <span className="chiffres text-[19px] text-encre">{entree.joie}</span>
           </div>
         </div>
+
+        {entree.photo && (
+          <div className="border-t border-trait">
+            <Image
+              src={entree.photo}
+              alt={`La journée de ${profil.pseudo} en image`}
+              width={1200}
+              height={900}
+              unoptimized
+              className="h-auto w-full"
+            />
+          </div>
+        )}
 
         {/* Le pied n'apparaît qu'une fois le voile levé : réagir à une carte
             floutée reviendrait à commenter ce qu'on n'a pas lu. */}

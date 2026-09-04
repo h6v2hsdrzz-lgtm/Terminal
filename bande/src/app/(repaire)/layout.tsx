@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 
 import { BarreOnglets } from "@/composants/BarreOnglets";
-import { chargerContexte } from "@/lib/depot";
+import { Synchronisation } from "@/composants/Synchronisation";
+import { chargerContexte, versionBande } from "@/lib/depot";
 import { membreConnecte } from "@/lib/session";
 
 /**
@@ -16,10 +17,12 @@ export default async function Layout({ children }: { children: React.ReactNode }
   if (!membreId) redirect("/bienvenue");
 
   // Le cookie peut survivre à la personne : bande supprimée, base réinitialisée.
-  if (!(await chargerContexte(membreId))) redirect("/bienvenue");
+  const contexte = await chargerContexte(membreId);
+  if (!contexte) redirect("/bienvenue");
 
   return (
     <>
+      <Synchronisation version={await versionBande(contexte.groupe.id)} />
       <div className="mx-auto min-h-dvh w-full max-w-lg marge-basse">{children}</div>
       <BarreOnglets />
     </>

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Carte, TitreSection } from "@/composants/Carte";
 import { BoiteInvitation } from "@/composants/BoiteInvitation";
 import { ReglagesBande } from "@/composants/ReglagesBande";
+import { ZoneDepart } from "@/composants/ZoneDepart";
 import { Avatar } from "@/composants/Avatar";
 import { TAILLE_MAX_BANDE } from "@/lib/couleurs";
 import { exigerContexte } from "@/lib/repaire";
@@ -54,6 +55,8 @@ export default async function Page() {
         revelerApresPost={contexte.groupe.revelerApresPost}
         declencheurs={contexte.declencheurs}
       />
+
+      <ZoneDepart nomBande={contexte.groupe.nom} seul={contexte.profils.length === 1} />
     </div>
   );
 }

@@ -92,7 +92,6 @@ model Entree {
   jour      String
   joie      Int
   note      String?
-  photo     String?
   creeLe    DateTime @default(now()) @map("cree_le")
   modifieLe DateTime @updatedAt @map("modifie_le")
 
@@ -101,10 +100,40 @@ model Entree {
   declencheurs EntreeDeclencheur[]
   reactions    Reaction[]
   commentaires Commentaire[]
+  photo        Photo?
 
   @@unique([membreId, jour])
   @@index([groupeId, jour])
   @@map("bande_entrees")
+}
+
+/// La photo d'une journée, gardée dans la base.
+///
+/// Un stockage d'objets serait le choix normal, mais il demanderait un compte
+/// de plus. À l'échelle d'une bande — une photo par journée, redimensionnée à
+/// 1200 pixels dans le navigateur avant l'envoi, donc autour de cent kilo-octets —
+/// une année complète pour sept personnes tient dans quelques centaines de
+/// méga-octets. Le jour où ça déborde, `depot.ts` est le seul fichier à rouvrir.
+model Photo {
+  id       String   @id @default(cuid())
+  entreeId String   @unique @map("entree_id")
+  mime     String
+  octets   Bytes
+  largeur  Int
+  hauteur  Int
+  creeLe   DateTime @default(now()) @map("cree_le")
+  /// Remplacer une photo ne change ni le nombre de photos ni leur date de
+  /// création : sans cette colonne, le remplacement passerait inaperçu du
+  /// sondage, et les autres garderaient l'ancienne image à l'écran.
+  ///
+  /// Le `@default(now())` n'est pas décoratif : une colonne obligatoire ajoutée
+  /// sans valeur par défaut fait échouer la migration dès qu'il existe une
+  /// ligne — en développement comme en production.
+  modifieLe DateTime @default(now()) @updatedAt @map("modifie_le")
+
+  entree Entree @relation(fields: [entreeId], references: [id], onDelete: Cascade)
+
+  @@map("bande_photos")
 }
 
 model EntreeDeclencheur {

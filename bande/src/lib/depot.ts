@@ -125,6 +125,9 @@ const AVEC_TOUT = {
   membre: { select: { id: true } },
   declencheurs: { select: { declencheurId: true } },
   reactions: { select: { emoji: true, membreId: true } },
+  // Seulement l'existence, jamais les octets : charger une photo pour savoir
+  // qu'elle existe transformerait le fil en téléchargement de plusieurs méga-octets.
+  photo: { select: { id: true } },
   commentaires: {
     orderBy: { creeLe: "asc" },
     select: { id: true, texte: true, creeLe: true, membreId: true, membre: { select: { pseudo: true } } },
@@ -150,7 +153,7 @@ function versEntree(ligne: LigneEntree): Entree {
     joie: ligne.joie,
     note: ligne.note,
     declencheurs: ligne.declencheurs.map((d) => d.declencheurId),
-    photo: ligne.photo,
+    photo: ligne.photo ? `/api/photo/${ligne.id}` : null,
     reactions: [...parEmoji].map(([emoji, parQui]) => ({ emoji, parQui })),
     commentaires: ligne.commentaires.map((c) => ({
       id: c.id,
@@ -177,7 +180,11 @@ export async function chargerContexte(membreId: string): Promise<Contexte | null
     include: {
       groupe: {
         include: {
-          membres: { orderBy: { creeLe: "asc" } },
+          // La teinte est unique dans une bande et suit l'ordre d'arrivée :
+          // trier dessus donne un ordre stable, là où deux `creeLe` identiques
+          // — le script de peuplement les crée d'un seul coup — laissent les
+          // avatars changer de place d'un rendu à l'autre.
+          membres: { orderBy: { teinte: "asc" } },
           declencheurs: { where: { actif: true }, orderBy: { ordre: "asc" } },
         },
       },
@@ -397,4 +404,189 @@ export async function retirerDeclencheur(groupeId: string, declencheurId: string
     throw new ErreurMetier("Ce déclencheur n'est pas celui de ta bande.");
   }
   await prisma.declencheur.update({ where: { id: declencheurId }, data: { actif: false } });
+}
+
+// ── Photos ──────────────────────────────────────────────────────────────────
+
+/** Au-delà, c'est que le redimensionnement du navigateur n'a pas eu lieu. */
+export const POIDS_MAX_PHOTO = 2 * 1024 * 1024;
+const MIMES_PHOTO = ["image/jpeg", "image/webp", "image/png"];
+
+export async function enregistrerPhoto(
+  membreId: string,
+  jour: string,
+  // `Uint8Array<ArrayBuffer>` et non le `Uint8Array` par défaut : Prisma 7 exige
+  // un tampon possédé, pas une vue sur un `SharedArrayBuffer` possible.
+  fichier: { mime: string; octets: Uint8Array<ArrayBuffer>; largeur: number; hauteur: number },
+) {
+  if (!MIMES_PHOTO.includes(fichier.mime)) {
+    throw new ErreurMetier("Ce format d'image n'est pas accepté.");
+  }
+  if (fichier.octets.byteLength > POIDS_MAX_PHOTO) {
+    throw new ErreurMetier("Cette image est trop lourde.");
+  }
+
+  const entree = await prisma.entree.findUnique({
+    where: { membreId_jour: { membreId, jour } },
+    select: { id: true, groupeId: true },
+  });
+  // On n'illustre que sa propre journée, et seulement après l'avoir posée.
+  if (!entree) throw new ErreurMetier("Pose ta journée avant d'y mettre une photo.");
+
+  await prisma.photo.upsert({
+    where: { entreeId: entree.id },
+    create: { entreeId: entree.id, ...fichier },
+    update: fichier,
+  });
+  return entree.groupeId;
+}
+
+export async function retirerPhoto(membreId: string, jour: string) {
+  const entree = await prisma.entree.findUnique({
+    where: { membreId_jour: { membreId, jour } },
+    select: { id: true, groupeId: true },
+  });
+  if (!entree) throw new ErreurMetier("Cette journée n'existe pas.");
+  await prisma.photo.deleteMany({ where: { entreeId: entree.id } });
+  return entree.groupeId;
+}
+
+/** Les octets, pour la route qui les sert. Contrôle d'appartenance compris. */
+export async function lirePhoto(membreId: string, entreeId: string) {
+  const photo = await prisma.photo.findUnique({
+    where: { entreeId },
+    select: { mime: true, octets: true, creeLe: true, entree: { select: { groupeId: true } } },
+  });
+  if (!photo) return null;
+
+  const membre = await prisma.membre.findUnique({
+    where: { id: membreId },
+    select: { groupeId: true },
+  });
+  // La photo d'une autre bande ne se sert pas, même avec le bon identifiant.
+  if (!membre || membre.groupeId !== photo.entree.groupeId) return null;
+
+  return { mime: photo.mime, octets: photo.octets, creeLe: photo.creeLe };
+}
+
+// ── Synchronisation ─────────────────────────────────────────────────────────
+
+/**
+ * Une empreinte de l'état de la bande, à comparer d'un sondage à l'autre.
+ *
+ * Compter et prendre le dernier horodatage coûte trois agrégats, là où
+ * relire le fil coûterait tout le fil. C'est ce qui rend acceptable un sondage
+ * toutes les trois secondes sur une base gratuite.
+ */
+export async function versionBande(groupeId: string): Promise<string> {
+  const [entrees, reactions, commentaires, photos, membres] = await Promise.all([
+    prisma.entree.aggregate({ where: { groupeId }, _count: true, _max: { modifieLe: true } }),
+    prisma.reaction.aggregate({ where: { entree: { groupeId } }, _count: true, _max: { creeLe: true } }),
+    prisma.commentaire.aggregate({ where: { entree: { groupeId } }, _count: true, _max: { creeLe: true } }),
+    // Les photos comptent au même titre : ajouter une image ne touche à aucun
+    // des autres agrégats, et elle resterait invisible chez les autres.
+    prisma.photo.aggregate({ where: { entree: { groupeId } }, _count: true, _max: { modifieLe: true } }),
+    // Et les membres : quelqu'un qui rejoint ou qui part change l'écran de tout
+    // le monde.
+    prisma.membre.aggregate({ where: { groupeId }, _count: true, _max: { creeLe: true } }),
+  ]);
+
+  return [
+    entrees._count, entrees._max.modifieLe?.getTime() ?? 0,
+    reactions._count, reactions._max.creeLe?.getTime() ?? 0,
+    commentaires._count, commentaires._max.creeLe?.getTime() ?? 0,
+    photos._count, photos._max.modifieLe?.getTime() ?? 0,
+    membres._count, membres._max.creeLe?.getTime() ?? 0,
+  ].join("-");
+}
+
+// ── Partir, et emporter ses affaires ────────────────────────────────────────
+
+/**
+ * Tout ce que la bande a écrit, dans une seule structure.
+ *
+ * Exporter n'est pas une fonctionnalité de confort : c'est ce qui fait qu'on
+ * peut partir. Une application où les données ne sortent pas est une
+ * application qui vous retient.
+ */
+export async function exporter(groupeId: string) {
+  const groupe = await prisma.groupe.findUnique({
+    where: { id: groupeId },
+    include: {
+      membres: { orderBy: { teinte: "asc" }, select: { id: true, pseudo: true, teinte: true, creeLe: true } },
+      declencheurs: { orderBy: { ordre: "asc" }, select: { id: true, nom: true, emoji: true, actif: true } },
+      entrees: {
+        orderBy: [{ jour: "asc" }, { creeLe: "asc" }],
+        include: AVEC_TOUT,
+      },
+    },
+  });
+  if (!groupe) throw new ErreurMetier("Cette bande n'existe plus.");
+
+  const pseudo = new Map(groupe.membres.map((m) => [m.id, m.pseudo]));
+  const declencheur = new Map(groupe.declencheurs.map((d) => [d.id, d.nom]));
+
+  return {
+    bande: groupe.nom,
+    exporteLe: new Date().toISOString(),
+    membres: groupe.membres.map((m) => ({ pseudo: m.pseudo, teinte: m.teinte, arriveLe: m.creeLe })),
+    declencheurs: groupe.declencheurs.map((d) => ({ nom: d.nom, emoji: d.emoji, actif: d.actif })),
+    journees: groupe.entrees.map((e) => ({
+      jour: e.jour,
+      qui: pseudo.get(e.membreId) ?? "?",
+      joie: e.joie,
+      note: e.note,
+      declencheurs: e.declencheurs.map((d) => declencheur.get(d.declencheurId) ?? "?"),
+      photo: e.photo !== null,
+      reactions: e.reactions.map((r) => ({ emoji: r.emoji, de: pseudo.get(r.membreId) ?? "?" })),
+      commentaires: e.commentaires.map((c) => ({
+        de: c.membre.pseudo, texte: c.texte, quand: c.creeLe,
+      })),
+      posteLe: e.creeLe,
+    })),
+  };
+}
+
+/** Le même contenu, à plat, pour un tableur. */
+export function versCsv(donnees: Awaited<ReturnType<typeof exporter>>): string {
+  // Un champ contenant une virgule, un guillemet ou un retour à la ligne doit
+  // être entouré de guillemets, les guillemets internes étant doublés.
+  const cellule = (valeur: unknown) => {
+    const texte = valeur === null || valeur === undefined ? "" : String(valeur);
+    return /[",\n\r]/.test(texte) ? `"${texte.replaceAll('"', '""')}"` : texte;
+  };
+
+  const lignes = [
+    ["jour", "qui", "joie", "note", "declencheurs", "photo", "reactions", "commentaires"],
+    ...donnees.journees.map((j) => [
+      j.jour, j.qui, j.joie, j.note ?? "",
+      j.declencheurs.join(" | "),
+      j.photo ? "oui" : "non",
+      j.reactions.map((r) => `${r.de} ${r.emoji}`).join(" | "),
+      j.commentaires.map((c) => `${c.de} : ${c.texte}`).join(" | "),
+    ]),
+  ];
+  // Un BOM, parce qu'Excel lit sinon un fichier UTF-8 comme du latin-1 et
+  // affiche « journÃ©e ».
+  return "﻿" + lignes.map((l) => l.map(cellule).join(",")).join("\r\n") + "\r\n";
+}
+
+/**
+ * Quitter la bande.
+ *
+ * Les journées partent avec la personne : ce sont les siennes. Les cascades
+ * emportent aussi ses réactions et ses commentaires. La dernière personne à
+ * partir emporte la bande elle-même — un groupe vide n'a personne pour y
+ * revenir, et son code d'invitation resterait valide dans le vide.
+ */
+export async function quitterBande(membreId: string) {
+  const membre = await prisma.membre.findUnique({
+    where: { id: membreId },
+    select: { groupeId: true },
+  });
+  if (!membre) return;
+
+  await prisma.membre.delete({ where: { id: membreId } });
+  const restants = await prisma.membre.count({ where: { groupeId: membre.groupeId } });
+  if (restants === 0) await prisma.groupe.delete({ where: { id: membre.groupeId } });
 }

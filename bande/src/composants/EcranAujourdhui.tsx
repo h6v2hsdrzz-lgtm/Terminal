@@ -6,6 +6,7 @@ import { useRef, useState, useTransition } from "react";
 import { Avatar } from "./Avatar";
 import { Carte, TitreSection } from "./Carte";
 import { CarteEntree } from "./CarteEntree";
+import { BoitePhoto } from "./BoitePhoto";
 import { CurseurJoie } from "./CurseurJoie";
 import { MessageErreur } from "./Champ";
 import { VisageJoie } from "./VisageJoie";
@@ -206,21 +207,24 @@ export function EcranAujourdhui({
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: "spring", stiffness: 320, damping: 28 }}
           >
-            <Carte className="flex items-center gap-4 p-5">
-              <VisageJoie valeur={monEntree.joie} taille={64} />
-              <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-medium">C&apos;est posé pour aujourd&apos;hui.</p>
-                <button
-                  type="button"
-                  onClick={() => { setMaJoie(monEntree.joie); setCorrection(true); }}
-                  className="mt-0.5 text-[13px] text-encre-3 underline underline-offset-2 transition hover:text-encre-2"
-                >
-                  corriger ta journée
-                </button>
+            <Carte className="p-5">
+              <div className="flex items-center gap-4">
+                <VisageJoie valeur={monEntree.joie} taille={64} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-medium">C&apos;est posé pour aujourd&apos;hui.</p>
+                  <button
+                    type="button"
+                    onClick={() => { setMaJoie(monEntree.joie); setCorrection(true); }}
+                    className="mt-0.5 text-[13px] text-encre-3 underline underline-offset-2 transition hover:text-encre-2"
+                  >
+                    corriger ta journée
+                  </button>
+                </div>
+                <span className="chiffres shrink-0 text-[30px]" style={{ color: "var(--joie-encre)" }}>
+                  {monEntree.joie}
+                </span>
               </div>
-              <span className="chiffres shrink-0 text-[30px]" style={{ color: "var(--joie-encre)" }}>
-                {monEntree.joie}
-              </span>
+              <BoitePhoto photo={monEntree.photo} />
             </Carte>
           </motion.div>
         )}

@@ -14,8 +14,11 @@ import {
   reglerDevoilement,
   rejoindreBande,
   renommerBande,
+  enregistrerPhoto,
+  quitterBande,
   reprendreCompte,
   retirerDeclencheur,
+  retirerPhoto,
   supprimerCommentaire,
 } from "./depot";
 import { fermerSession, garderCodeReprise, membreConnecte, oublierCodeReprise, ouvrirSession } from "./session";
@@ -189,5 +192,56 @@ export async function actionCodeNote(): Promise<void> {
 
 export async function actionQuitter(): Promise<void> {
   await fermerSession();
+  redirect("/bienvenue");
+}
+
+// ── Photos ──────────────────────────────────────────────────────────────────
+
+export async function actionEnvoyerPhoto(_precedent: Etat, donnees: FormData): Promise<Etat> {
+  return tenter(async () => {
+    const { membreId } = await quiAgit();
+    const fichier = donnees.get("photo");
+    if (!(fichier instanceof File) || fichier.size === 0) {
+      throw new ErreurMetier("Choisis une image.");
+    }
+
+    await enregistrerPhoto(membreId, jourDeLaBande(), {
+      mime: fichier.type,
+      octets: new Uint8Array(await fichier.arrayBuffer()),
+      largeur: Number(texte(donnees, "largeur")) || 0,
+      hauteur: Number(texte(donnees, "hauteur")) || 0,
+    });
+    rafraichirTout();
+  });
+}
+
+export async function actionRetirerPhoto(): Promise<Etat> {
+  return tenter(async () => {
+    const { membreId } = await quiAgit();
+    await retirerPhoto(membreId, jourDeLaBande());
+    rafraichirTout();
+  });
+}
+
+// ── Partir ──────────────────────────────────────────────────────────────────
+
+/**
+ * Quitter la bande pour de bon : les journées, les réactions et les
+ * commentaires partent avec la personne. Irréversible, et l'écran le dit
+ * clairement avant d'y arriver.
+ */
+export async function actionQuitterLaBande(_precedent: Etat, donnees: FormData): Promise<Etat> {
+  const etat = await tenter(async () => {
+    const { membreId, contexte } = await quiAgit();
+    // On demande de recopier le nom de la bande : un bouton seul se clique par
+    // erreur, une phrase à retaper ne s'écrit pas par accident.
+    if (texte(donnees, "confirmation").trim() !== contexte.groupe.nom) {
+      throw new ErreurMetier("Le nom recopié ne correspond pas. Rien n'a été supprimé.");
+    }
+    await quitterBande(membreId);
+    await fermerSession();
+  });
+
+  if (etat.erreur) return etat;
   redirect("/bienvenue");
 }
