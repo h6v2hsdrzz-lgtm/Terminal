@@ -6,6 +6,10 @@ export const metadata: Metadata = {
   title: "Journal de joie — Momo, Sam & Samy",
   description:
     "Suivi quotidien du niveau de joie de Momo, Sam et Samy, et mesure de l'effet des déclencheurs Biberon et Plante verte.",
+  // iOS ignore le manifeste : ce sont ces deux-là qui font qu'une icône
+  // posée sur l'écran d'accueil s'ouvre en plein écran plutôt que dans Safari.
+  appleWebApp: { capable: true, title: "Joie", statusBarStyle: "default" },
+  icons: { icon: "/icone-192.png", apple: "/icone-apple-180.png" },
 };
 
 export const viewport: Viewport = {

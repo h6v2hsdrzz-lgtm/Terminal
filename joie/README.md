@@ -1,5 +1,8 @@
 # Journal de joie — Momo, Sam & Samy
 
+**En ligne : https://journal-de-joie.vercel.app** — journal commun, ouvert à
+tous, sans compte, et installable sur un écran d'accueil.
+
 Application de suivi quotidien du niveau de joie de trois personnes, et mesure
 de l'effet de deux déclencheurs : le **facteur biberon** et le **facteur plante
 verte**.
@@ -111,6 +114,31 @@ bancaire.
 Le déploiement joue les migrations tout seul (`prisma migrate deploy` fait
 partie du build) et rend une adresse publique, que tout le monde peut ouvrir
 sans compte.
+
+### Deux adresses de base, et pourquoi
+
+| Variable | Adresse | Sert à |
+|---|---|---|
+| `DATABASE_URL` | **avec** pool (`-pooler`) | l'application : beaucoup de requêtes courtes |
+| `MIGRATE_DATABASE_URL` | **directe** (sans `-pooler`) | les migrations, au build |
+
+Prisma pose un verrou consultatif PostgreSQL avant de migrer. Ce verrou vit le
+temps d'une *session* — or un pool en mode transaction ne garantit pas de
+rester sur la même session d'une requête à l'autre : le verrou n'est jamais
+obtenu, et la migration échoue au bout de dix secondes sur `P1002`. D'où la
+seconde adresse.
+
+Si un verrou reste malgré tout coincé — une session d'un déploiement précédent
+qui ne s'est pas refermée —, la variable `PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK`
+à `true` fait sauter le verrou. Il ne protège que contre deux migrations
+simultanées, ce qu'une chaîne de déploiement unique ne produit pas.
+
+### Sur l'écran d'accueil
+
+L'application sert son propre manifeste et ses icônes : depuis Safari sur
+iPhone, Partager → « Sur l'écran d'accueil » ; depuis Chrome sur Android, menu
+⋮ → « Installer l'application ». À la différence de la version autonome, celle-ci
+montre à tout le monde **le même journal**.
 
 Pour partir d'un journal garni plutôt que d'une page vide, une fois l'adresse
 obtenue : `DATABASE_URL="…" npm run db:seed`.
