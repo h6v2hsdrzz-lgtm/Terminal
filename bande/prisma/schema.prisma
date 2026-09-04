@@ -29,6 +29,7 @@ model Groupe {
   membres      Membre[]
   declencheurs Declencheur[]
   entrees      Entree[]
+  capsules     Capsule[]
 
   @@map("bande_groupes")
 }
@@ -57,6 +58,7 @@ model Membre {
   entrees       Entree[]
   reactions     Reaction[]
   commentaires  Commentaire[]
+  capsules      Capsule[]
 
   @@unique([groupeId, pseudo])
   @@index([groupeId])
@@ -145,6 +147,27 @@ model EntreeDeclencheur {
 
   @@id([entreeId, declencheurId])
   @@map("bande_entree_declencheurs")
+}
+
+/// Un mot écrit aujourd'hui, scellé jusqu'à une date choisie.
+///
+/// Le texte est en clair en base : ce n'est pas un secret cryptographique, et
+/// prétendre le contraire serait mentir. C'est une convention entre amis — le
+/// serveur ne le rend simplement pas avant la date. Le README le dit aussi.
+model Capsule {
+  id        String   @id @default(cuid())
+  groupeId  String   @map("groupe_id")
+  membreId  String   @map("membre_id")
+  texte     String
+  /// Jour d'ouverture, ISO `AAAA-MM-JJ`, calé sur la journée de la bande.
+  ouvrirLe  String   @map("ouvrir_le")
+  creeLe    DateTime @default(now()) @map("cree_le")
+
+  groupe Groupe @relation(fields: [groupeId], references: [id], onDelete: Cascade)
+  membre Membre @relation(fields: [membreId], references: [id], onDelete: Cascade)
+
+  @@index([groupeId, ouvrirLe])
+  @@map("bande_capsules")
 }
 
 model Reaction {

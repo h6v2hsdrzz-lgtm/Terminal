@@ -14,6 +14,7 @@ const ONGLETS = [
   { href: "/", nom: "Aujourd'hui", icone: SoleilIcone },
   { href: "/fil", nom: "Fil", icone: FilIcone },
   { href: "/stats", nom: "Stats", icone: StatsIcone },
+  { href: "/souvenirs", nom: "Souvenirs", icone: SouvenirsIcone },
   { href: "/profil", nom: "Profil", icone: ProfilIcone },
 ];
 
@@ -104,6 +105,16 @@ function StatsIcone({ actif }: PropsIcone) {
     <svg {...base(actif)} aria-hidden>
       <path d="M4 15.5l4.5-5 3.5 3 4-6.5 4 4.5" />
       <path d="M3.5 20h17" />
+    </svg>
+  );
+}
+
+function SouvenirsIcone({ actif }: PropsIcone) {
+  return (
+    <svg {...base(actif)} aria-hidden>
+      <rect x="3.5" y="5" width="17" height="14" rx="2.4" />
+      <circle cx="9" cy="10" r="1.6" />
+      <path d="M4.5 17l4.2-4 3 2.6 3.4-3.6 4.4 4.4" />
     </svg>
   );
 }

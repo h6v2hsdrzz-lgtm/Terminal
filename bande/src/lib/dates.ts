@@ -44,16 +44,32 @@ export function jourSemaine(iso: string): number {
   return enDate(iso).getDay();
 }
 
-/** « mardi 4 septembre » */
+/** Le premier du mois se dit « 1er », les autres se disent simplement. */
+function quantieme(jour: number): string {
+  return jour === 1 ? "1er" : String(jour);
+}
+
+/** « mardi 4 septembre », « mardi 1er septembre » */
 export function enTexteLong(iso: string): string {
   const d = enDate(iso);
-  return `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`;
+  return `${JOURS[d.getDay()]} ${quantieme(d.getDate())} ${MOIS[d.getMonth()]}`;
+}
+
+/**
+ * « mardi 4 septembre », avec l'année quand elle n'est pas celle en cours.
+ *
+ * Une capsule qui s'ouvre « le jeudi 1er juillet » sans année laisse croire à
+ * dans quelques mois alors qu'il s'agit de l'an prochain.
+ */
+export function enTexteLongAvecAnnee(iso: string, reference: string): string {
+  const meme = iso.slice(0, 4) === reference.slice(0, 4);
+  return meme ? enTexteLong(iso) : `${enTexteLong(iso)} ${iso.slice(0, 4)}`;
 }
 
 /** « 4 sept. » */
 export function enTexteCourt(iso: string): string {
   const d = enDate(iso);
-  return `${d.getDate()} ${MOIS[d.getMonth()].slice(0, 4)}${MOIS[d.getMonth()].length > 4 ? "." : ""}`;
+  return `${quantieme(d.getDate())} ${MOIS[d.getMonth()].slice(0, 4)}${MOIS[d.getMonth()].length > 4 ? "." : ""}`;
 }
 
 /** « aujourd'hui », « hier », sinon la date. */

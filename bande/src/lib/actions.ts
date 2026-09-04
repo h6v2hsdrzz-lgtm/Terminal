@@ -14,11 +14,13 @@ import {
   reglerDevoilement,
   rejoindreBande,
   renommerBande,
+  ecrireCapsule,
   enregistrerPhoto,
   quitterBande,
   reprendreCompte,
   retirerDeclencheur,
   retirerPhoto,
+  supprimerCapsule,
   supprimerCommentaire,
 } from "./depot";
 import { fermerSession, garderCodeReprise, membreConnecte, oublierCodeReprise, ouvrirSession } from "./session";
@@ -219,6 +221,30 @@ export async function actionRetirerPhoto(): Promise<Etat> {
   return tenter(async () => {
     const { membreId } = await quiAgit();
     await retirerPhoto(membreId, jourDeLaBande());
+    rafraichirTout();
+  });
+}
+
+// ── Capsules temporelles ────────────────────────────────────────────────────
+
+export async function actionEcrireCapsule(_precedent: Etat, donnees: FormData): Promise<Etat> {
+  return tenter(async () => {
+    const { membreId, contexte } = await quiAgit();
+    await ecrireCapsule(
+      membreId,
+      contexte.groupe.id,
+      texte(donnees, "texte"),
+      texte(donnees, "ouvrirLe"),
+      jourDeLaBande(),
+    );
+    rafraichirTout();
+  });
+}
+
+export async function actionSupprimerCapsule(capsuleId: string): Promise<Etat> {
+  return tenter(async () => {
+    const { membreId } = await quiAgit();
+    await supprimerCapsule(membreId, capsuleId);
     rafraichirTout();
   });
 }

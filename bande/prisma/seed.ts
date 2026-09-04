@@ -26,6 +26,14 @@ import { decaler, jourDeLaBande } from "../src/lib/dates";
 // resterait introuvable.
 const CODE_BANDE = "FR9M4G";
 const GRAINE = 20260904;
+/**
+ * Quatre cents jours, pas quatre-vingt-dix.
+ *
+ * Il en faut plus d'un an pour que « ce jour-là » ait quelque chose à montrer,
+ * et pour que la rétrospective ait plusieurs mois à comparer. Une démonstration
+ * qui ne peut pas exercer ses propres écrans ne démontre rien.
+ */
+const JOURS = 400;
 
 const PROFILS = [
   { pseudo: "Momo", teinte: 1, base: 6.4, amplitude: 2.1, presence: 0.94, sensible: 1 },
@@ -114,7 +122,7 @@ async function main() {
   };
   const lignes: Ligne[] = [];
 
-  for (let recul = 89; recul >= 0; recul -= 1) {
+  for (let recul = JOURS - 1; recul >= 0; recul -= 1) {
     const jour = decaler(aujourdhui, -recul);
     const [a, m, j] = jour.split("-").map(Number);
     const jourSemaine = new Date(a, m - 1, j).getDay();
@@ -197,8 +205,23 @@ async function main() {
     }
   }
 
+  await prisma.capsule.createMany({
+    data: [
+      {
+        groupeId: groupe.id, membreId: membres[0].id,
+        texte: "Si on relit ça dans un an : on venait de commencer ce journal, et on ne savait pas encore si on tiendrait plus d'une semaine.",
+        ouvrirLe: decaler(aujourdhui, -30),
+      },
+      {
+        groupeId: groupe.id, membreId: membres[1].id,
+        texte: "Pour dans un an : est-ce qu'on va toujours au même bar ?",
+        ouvrirLe: decaler(aujourdhui, 300),
+      },
+    ],
+  });
+
   console.log(`Bande « ${groupe.nom} » — code ${CODE_BANDE}`);
-  console.log(`${lignes.length} journées, ${PROFILS.length} membres, ${DECLENCHEURS.length} déclencheurs.`);
+  console.log(`${lignes.length} journées sur ${JOURS} jours, ${PROFILS.length} membres, ${DECLENCHEURS.length} déclencheurs.`);
   // Les codes sont aussi écrits sur disque : sans ça, rejouer le peuplement
   // fait perdre les précédents, et on se retrouve à ne plus pouvoir se
   // connecter à sa propre bande de démonstration. Le fichier est ignoré par

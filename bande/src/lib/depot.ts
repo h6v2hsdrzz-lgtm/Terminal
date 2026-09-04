@@ -4,6 +4,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "./db";
 import { TAILLE_MAX_BANDE, TEINTES } from "./couleurs";
 import { codeInvitation, creerCodeReprise, decouperCodeReprise, normaliserCode, verifierCodeReprise } from "./codes";
+import { decaler } from "./dates";
 import { initialesDeLaBande } from "./initiales";
 import type { Declencheur, Entree, Profil } from "./types";
 
@@ -491,12 +492,20 @@ export async function versionBande(groupeId: string): Promise<string> {
     prisma.membre.aggregate({ where: { groupeId }, _count: true, _max: { creeLe: true } }),
   ]);
 
+  // Les capsules aussi : en écrire une change l'écran des souvenirs de tout le
+  // monde. Leur ouverture, elle, dépend de la date et non d'une écriture — le
+  // rendu du serveur s'en charge au prochain passage.
+  const capsules = await prisma.capsule.aggregate({
+    where: { groupeId }, _count: true, _max: { creeLe: true },
+  });
+
   return [
     entrees._count, entrees._max.modifieLe?.getTime() ?? 0,
     reactions._count, reactions._max.creeLe?.getTime() ?? 0,
     commentaires._count, commentaires._max.creeLe?.getTime() ?? 0,
     photos._count, photos._max.modifieLe?.getTime() ?? 0,
     membres._count, membres._max.creeLe?.getTime() ?? 0,
+    capsules._count, capsules._max.creeLe?.getTime() ?? 0,
   ].join("-");
 }
 
@@ -589,4 +598,81 @@ export async function quitterBande(membreId: string) {
   await prisma.membre.delete({ where: { id: membreId } });
   const restants = await prisma.membre.count({ where: { groupeId: membre.groupeId } });
   if (restants === 0) await prisma.groupe.delete({ where: { id: membre.groupeId } });
+}
+
+// ── Capsules temporelles ────────────────────────────────────────────────────
+
+export const LONGUEUR_CAPSULE = 1000;
+/** Une capsule qu'on peut ouvrir demain n'est pas une capsule. */
+export const DELAI_MIN_CAPSULE = 7;
+
+export type Capsule = {
+  id: string;
+  auteur: string;
+  auteurId: string;
+  ouvrirLe: string;
+  creeLe: string;
+  /** Absent tant que la date n'est pas venue : le serveur ne l'envoie pas. */
+  texte: string | null;
+  mienne: boolean;
+};
+
+export async function ecrireCapsule(
+  membreId: string,
+  groupeId: string,
+  texte: string,
+  ouvrirLe: string,
+  aujourdhui: string,
+) {
+  const propre = texte.trim();
+  if (!propre) throw new ErreurMetier("Écris quelque chose à ouvrir plus tard.");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ouvrirLe)) throw new ErreurMetier("Cette date n'a pas la bonne forme.");
+
+  // Le contrôle est ici et pas seulement dans le formulaire : le champ `min`
+  // d'un sélecteur de date se contourne en trois secondes.
+  const minimum = decaler(aujourdhui, DELAI_MIN_CAPSULE);
+  if (ouvrirLe < minimum) {
+    throw new ErreurMetier(`Choisis une date d'au moins ${DELAI_MIN_CAPSULE} jours — sinon ce n'est pas une capsule.`);
+  }
+
+  await prisma.capsule.create({
+    data: { groupeId, membreId, texte: propre.slice(0, LONGUEUR_CAPSULE), ouvrirLe },
+  });
+}
+
+export async function listerCapsules(
+  groupeId: string,
+  membreId: string,
+  aujourdhui: string,
+): Promise<Capsule[]> {
+  const lignes = await prisma.capsule.findMany({
+    where: { groupeId },
+    orderBy: { ouvrirLe: "asc" },
+    select: {
+      id: true, ouvrirLe: true, creeLe: true, texte: true, membreId: true,
+      membre: { select: { pseudo: true } },
+    },
+  });
+
+  return lignes.map((c) => ({
+    id: c.id,
+    auteur: c.membre.pseudo,
+    auteurId: c.membreId,
+    ouvrirLe: c.ouvrirLe,
+    creeLe: c.creeLe.toISOString().slice(0, 10),
+    // Scellée : le texte ne quitte pas le serveur. Le cacher côté client
+    // reviendrait à l'envoyer et à demander poliment de ne pas regarder.
+    texte: c.ouvrirLe <= aujourdhui ? c.texte : null,
+    mienne: c.membreId === membreId,
+  }));
+}
+
+export async function supprimerCapsule(membreId: string, capsuleId: string) {
+  const capsule = await prisma.capsule.findUnique({
+    where: { id: capsuleId },
+    select: { membreId: true },
+  });
+  if (!capsule) throw new ErreurMetier("Cette capsule n'existe plus.");
+  if (capsule.membreId !== membreId) throw new ErreurMetier("Cette capsule n'est pas la tienne.");
+  await prisma.capsule.delete({ where: { id: capsuleId } });
 }

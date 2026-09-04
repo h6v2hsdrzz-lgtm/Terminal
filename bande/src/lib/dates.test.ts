@@ -5,6 +5,7 @@ import {
   decaler,
   enTexteCourt,
   enTexteLong,
+  enTexteLongAvecAnnee,
   enTexteRelatif,
   jourDeLaBande,
   jourSemaine,
@@ -82,5 +83,28 @@ describe("le texte des dates", () => {
     expect(enTexteRelatif("2026-09-04", "2026-09-04")).toBe("aujourd'hui");
     expect(enTexteRelatif("2026-09-03", "2026-09-04")).toBe("hier");
     expect(enTexteRelatif("2026-09-02", "2026-09-04")).toBe("mercredi 2 septembre");
+  });
+});
+
+describe("enTexteLongAvecAnnee", () => {
+  it("tait l'année quand c'est la même", () => {
+    expect(enTexteLongAvecAnnee("2026-09-04", "2026-01-01")).toBe("vendredi 4 septembre");
+  });
+
+  it("la donne quand elle diffère — une capsule de l'an prochain doit le dire", () => {
+    expect(enTexteLongAvecAnnee("2027-07-01", "2026-09-04")).toBe("jeudi 1er juillet 2027");
+    expect(enTexteLongAvecAnnee("2024-07-01", "2026-09-04")).toBe("lundi 1er juillet 2024");
+  });
+});
+
+describe("le premier du mois", () => {
+  it("s'écrit « 1er », pas « 1 »", () => {
+    expect(enTexteLong("2026-09-01")).toBe("mardi 1er septembre");
+    expect(enTexteCourt("2026-09-01")).toBe("1er sept.");
+  });
+
+  it("laisse les autres quantièmes tranquilles", () => {
+    expect(enTexteLong("2026-09-02")).toBe("mercredi 2 septembre");
+    expect(enTexteLong("2026-09-21")).toBe("lundi 21 septembre");
   });
 });
