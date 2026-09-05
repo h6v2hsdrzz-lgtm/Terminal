@@ -10,11 +10,14 @@ réponse : on avance sur ce qui n'en dépend pas.
 
 ## Prochaine action exacte
 
-**A3a — modifier son pseudo.** Une action serveur `actionRenommerMembre` dans
-`src/lib/actions.ts`, une fonction `renommerMembre` dans `src/lib/depot.ts`
-(unicité dans la bande, comme à l'inscription — voir `rejoindreBande`), et un
-champ dans l'en-tête du profil. Les initiales de l'avatar se recalculent :
-`initialesDeLaBande` est déjà fait pour ça.
+**A3b — la photo de profil.** Le schéma n'a pas de colonne pour ça : ajouter
+`avatar Bytes?` et `avatarMime String?` sur `Membre` (migration additive, comme
+celle des médias). Réutiliser `preparerPhoto` de `src/lib/transcodage.ts` en
+recadrant au carré avant, servir par une route `/api/avatar/[membre]` calquée
+sur `/api/vignette/[media]`. Le recadrage au doigt est la seule vraie nouveauté :
+un carré déplaçable au-dessus de l'image, pas de bibliothèque.
+
+Ensuite **A5** (album personnel), qui ne dépend d'aucune question.
 
 A1b (calme → rire) et A2 (fil en accueil) attendent les réponses 1 et 2.
 
@@ -35,6 +38,9 @@ du plan. Correspondance à la fin de ce fichier.
   → **Lieu** dans l'interface et l'export.
 - **A4** — les trois compteurs du profil (« jours d'affilée », « ton record »,
   « journées posées ») sont retirés.
+- **A3a** — on change son pseudo depuis le profil. Unicité dans la bande à la
+  casse près, et reprendre son propre nom en changeant la casse passe. Le
+  pseudo n'étant recopié nulle part, le passé change avec.
 
 État : 174 tests unitaires, 43 de bout en bout (WebKit + grand écran), build
 sans avertissement, `tsc --noEmit` propre.
@@ -75,6 +81,8 @@ En ligne : https://journal-de-joie-v2.vercel.app
   copiés en base à la création de la bande. Sans migration `UPDATE`, la
   production aurait gardé l'ancien nom. Et un `DELETE` + `INSERT` aurait emporté
   la table de liaison par cascade — des mois de données pour un mot.
+- Next pose son propre `role="alert"` (l'annonceur de route) : un test qui
+  cherche un message d'erreur par ce rôle doit prendre `.first()`.
 - `plusLongueSerie` et `serieEnCours` (`src/lib/badges.ts`) ne servent plus à
   aucun écran depuis A4. Elles restent, avec leurs tests : E4 refond les badges
   et tranchera. Ne pas les supprimer « au passage ».
@@ -97,7 +105,7 @@ En ligne : https://journal-de-joie-v2.vercel.app
 | --- | --- |
 | A1 renommages | **A1a fait** · A1b (calme → rire) en attente de la Q1 |
 | A2 fil en accueil | à faire — dépend de la question 2 |
-| A3 profil : photo et nom | à faire |
+| A3 profil : photo et nom | **A3a (nom) fait** · A3b (photo) à faire |
 | A4 retirer les 3 compteurs | **fait** |
 | A5 album personnel + stats discrètes | à faire |
 | B1 pipeline d'upload | **fait**, sauf HEIC (question 4) |

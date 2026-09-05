@@ -14,6 +14,7 @@ import {
   reglerDevoilement,
   rejoindreBande,
   renommerBande,
+  renommerMembre,
   ecrireCapsule,
   ajouterMedia,
   enregistrerAudio,
@@ -173,6 +174,27 @@ export async function actionSupprimerCommentaire(commentaireId: string): Promise
     await supprimerCommentaire(membreId, commentaireId);
     rafraichirTout();
   });
+}
+
+/**
+ * Changer son pseudo.
+ *
+ * Il apparaît partout — les cartes du fil, les avatars, les commentaires, les
+ * statistiques — et nulle part il n'est recopié : rafraîchir tous les écrans
+ * suffit à le voir changer jusque dans les journées d'il y a un an.
+ */
+export async function actionRenommerMembre(_precedent: Etat, donnees: FormData): Promise<Etat> {
+  return tenter(async () => {
+    const { membreId } = await quiAgit();
+    await renommerMembre(membreId, texte(donnees, "pseudo"));
+    rafraichirTout();
+  });
+}
+
+/** Sans JavaScript : une soumission classique attend une navigation. */
+export async function actionRenommerMembreSimple(donnees: FormData): Promise<void> {
+  await actionRenommerMembre(ETAT_INITIAL, donnees);
+  redirect("/profil");
 }
 
 // ── Réglages de la bande ─────────────────────────────────────────────────────

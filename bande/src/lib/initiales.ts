@@ -1,3 +1,6 @@
+/** Ce qui tient sur un avatar et dans une carte du fil. */
+export const LONGUEUR_PSEUDO = 24;
+
 /** Deux lettres tirées du pseudo. */
 function deuxLettres(pseudo: string): string {
   const mots = pseudo.trim().split(/\s+/).filter(Boolean);

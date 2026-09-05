@@ -5,7 +5,7 @@ import { prisma } from "./db";
 import { TAILLE_MAX_BANDE, TEINTES } from "./couleurs";
 import { codeInvitation, creerCodeReprise, decouperCodeReprise, normaliserCode, verifierCodeReprise } from "./codes";
 import { decaler } from "./dates";
-import { initialesDeLaBande } from "./initiales";
+import { LONGUEUR_PSEUDO, initialesDeLaBande } from "./initiales";
 import type { Declencheur, Entree, Profil } from "./types";
 import { MAX_ETIQUETTES, cleEtiquette, nettoyerEtiquette } from "./etiquettes";
 import { DUREE_MAX_VIDEO, LONGUEUR_LEGENDE, MAX_MEDIAS, POIDS_MAX_MEDIA } from "./media";
@@ -435,6 +435,41 @@ async function memeBande(membreId: string, entreeId: string) {
     throw new ErreurMetier("Cette journée n'est pas dans ta bande.");
   }
   return entree;
+}
+
+/**
+ * Changer de pseudo.
+ *
+ * Le pseudo vit sur le membre, jamais recopié dans les journées : le changer
+ * met donc à jour le passé en même temps que le présent, ce qui est bien ce
+ * qu'on veut — on ne relit pas ses souvenirs sous un nom qu'on n'a plus.
+ *
+ * Même contrôle d'unicité qu'à l'arrivée dans la bande, à une exception près :
+ * reprendre son propre nom en changeant seulement la casse doit passer.
+ */
+export async function renommerMembre(membreId: string, pseudo: string) {
+  const nom = pseudo.trim();
+  if (!nom) throw new ErreurMetier("Il faut bien un nom.");
+
+  const membre = await prisma.membre.findUnique({
+    where: { id: membreId },
+    select: { groupeId: true },
+  });
+  if (!membre) throw new ErreurMetier("Ce compte n'existe plus.");
+
+  const voisins = await prisma.membre.findMany({
+    where: { groupeId: membre.groupeId, id: { not: membreId } },
+    select: { pseudo: true },
+  });
+  const pris = voisins.find((m) => m.pseudo.toLowerCase() === nom.toLowerCase());
+  if (pris) {
+    throw new ErreurMetier(`« ${pris.pseudo} » est déjà pris dans cette bande. Prends une variante.`);
+  }
+
+  await prisma.membre.update({
+    where: { id: membreId },
+    data: { pseudo: nom.slice(0, LONGUEUR_PSEUDO) },
+  });
 }
 
 // ── Réglages de la bande ─────────────────────────────────────────────────────

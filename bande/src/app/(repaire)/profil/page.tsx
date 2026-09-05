@@ -5,6 +5,7 @@ import { Carte, TitreSection } from "@/composants/Carte";
 import { Calendrier } from "@/composants/Calendrier";
 import { ClassementAssiduite } from "@/composants/ClassementAssiduite";
 import { MurBadges } from "@/composants/MurBadges";
+import { NomDuProfil } from "@/composants/NomDuProfil";
 import { badgesDe, classementAssiduite } from "@/lib/badges";
 import { couleurProfil } from "@/lib/couleurs";
 import { entreesDeLaBande, exigerContexte } from "@/lib/repaire";
@@ -26,7 +27,7 @@ export default async function Page() {
       <header className="mb-6 flex items-center gap-4 zone-sure-haute">
         <Avatar profil={contexte.moi} taille={64} anneau />
         <div className="min-w-0">
-          <h1 className="truncate text-[26px] font-semibold tracking-[-0.02em]">{contexte.moi.pseudo}</h1>
+          <NomDuProfil pseudo={contexte.moi.pseudo} />
           <p className="mt-0.5 flex items-center gap-1.5 text-[14px] text-encre-3">
             <span
               className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
