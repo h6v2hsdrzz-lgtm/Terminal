@@ -10,11 +10,11 @@ réponse : on avance sur ce qui n'en dépend pas.
 
 ## Prochaine action exacte
 
-**A4 — retirer les trois compteurs du profil** (« jours d'affilée », « journées
-postées », « ton record ») dans `src/app/(repaire)/profil/page.tsx`, lignes 46-47
-et les appels à `serieEnCours` / `plusLongueSerie` juste au-dessus. Garder les
-fonctions dans `src/lib/badges.ts` : les badges 30/100 jours s'en servent.
-Ensuite **A3a — modifier son pseudo**.
+**A3a — modifier son pseudo.** Une action serveur `actionRenommerMembre` dans
+`src/lib/actions.ts`, une fonction `renommerMembre` dans `src/lib/depot.ts`
+(unicité dans la bande, comme à l'inscription — voir `rejoindreBande`), et un
+champ dans l'en-tête du profil. Les initiales de l'avatar se recalculent :
+`initialesDeLaBande` est déjà fait pour ça.
 
 A1b (calme → rire) et A2 (fil en accueil) attendent les réponses 1 et 2.
 
@@ -33,6 +33,8 @@ du plan. Correspondance à la fin de ce fichier.
   données : la ligne garde son identifiant, les 496 journées qui la portaient
   restent liées), « ce qui a fait la journée » → **l'anecdote**, « étiquettes »
   → **Lieu** dans l'interface et l'export.
+- **A4** — les trois compteurs du profil (« jours d'affilée », « ton record »,
+  « journées posées ») sont retirés.
 
 État : 174 tests unitaires, 43 de bout en bout (WebKit + grand écran), build
 sans avertissement, `tsc --noEmit` propre.
@@ -73,6 +75,9 @@ En ligne : https://journal-de-joie-v2.vercel.app
   copiés en base à la création de la bande. Sans migration `UPDATE`, la
   production aurait gardé l'ancien nom. Et un `DELETE` + `INSERT` aurait emporté
   la table de liaison par cascade — des mois de données pour un mot.
+- `plusLongueSerie` et `serieEnCours` (`src/lib/badges.ts`) ne servent plus à
+  aucun écran depuis A4. Elles restent, avec leurs tests : E4 refond les badges
+  et tranchera. Ne pas les supprimer « au passage ».
 - **Le stockage garde ses anciens noms** quand l'interface change : la table
   s'appelle `bande_photos` (elle porte les vidéos), le modèle des lieux
   s'appelle `Etiquette`. Renommer pour un mot d'interface, c'est une migration
@@ -93,7 +98,7 @@ En ligne : https://journal-de-joie-v2.vercel.app
 | A1 renommages | **A1a fait** · A1b (calme → rire) en attente de la Q1 |
 | A2 fil en accueil | à faire — dépend de la question 2 |
 | A3 profil : photo et nom | à faire |
-| A4 retirer les 3 compteurs | à faire (20 min) |
+| A4 retirer les 3 compteurs | **fait** |
 | A5 album personnel + stats discrètes | à faire |
 | B1 pipeline d'upload | **fait**, sauf HEIC (question 4) |
 | B2 visionneuse plein écran | **à moitié** : plein écran, défilement, légendes, position. Manquent le zoom au pincement, le balayage vers le bas, le double-tap pour réagir, l'enregistrement dans la pellicule |

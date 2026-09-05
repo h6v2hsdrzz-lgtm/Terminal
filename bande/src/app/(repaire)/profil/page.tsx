@@ -5,7 +5,7 @@ import { Carte, TitreSection } from "@/composants/Carte";
 import { Calendrier } from "@/composants/Calendrier";
 import { ClassementAssiduite } from "@/composants/ClassementAssiduite";
 import { MurBadges } from "@/composants/MurBadges";
-import { badgesDe, classementAssiduite, plusLongueSerie, serieEnCours } from "@/lib/badges";
+import { badgesDe, classementAssiduite } from "@/lib/badges";
 import { couleurProfil } from "@/lib/couleurs";
 import { entreesDeLaBande, exigerContexte } from "@/lib/repaire";
 import { actionQuitter } from "@/lib/actions";
@@ -20,10 +20,6 @@ export default async function Page() {
   const moyenne = miennes.length
     ? miennes.reduce((s, e) => s + e.joie, 0) / miennes.length
     : null;
-  const mesJours = new Set(miennes.map((e) => e.jour));
-  const serie = serieEnCours(mesJours, aujourdhui);
-  const record = plusLongueSerie(mesJours);
-
   const badges = badgesDe(miennes, entrees, contexte.moi.id);
   return (
     <div className="px-4 pt-3">
@@ -40,19 +36,6 @@ export default async function Page() {
           </p>
         </div>
       </header>
-
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { valeur: serie.toString(), libelle: serie > 1 ? "jours d'affilée" : "jour d'affilée" },
-          { valeur: record.toString(), libelle: "ton record" },
-          { valeur: miennes.length.toString(), libelle: "journées posées" },
-        ].map((tuile) => (
-          <Carte key={tuile.libelle} className="px-3 py-4 text-center">
-            <p className="chiffres text-[26px]">{tuile.valeur}</p>
-            <p className="mt-1 text-[12px] leading-tight text-encre-3">{tuile.libelle}</p>
-          </Carte>
-        ))}
-      </div>
 
       <ClassementAssiduite
         classement={classementAssiduite(entrees, contexte.profils.map((p) => p.id), aujourdhui)}
