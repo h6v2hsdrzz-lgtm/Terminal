@@ -18,7 +18,7 @@ export default async function Page() {
           <br />à trois ou à sept.
         </h1>
         <p className="mt-3 max-w-[22rem] text-[15px] leading-snug text-encre-2">
-          Dix secondes le soir : une note de 1 à 10, ce qui a fait la journée. Les
+          Dix secondes le soir : une note de 1 à 10, et l&apos;anecdote du jour. Les
           journées des autres se dévoilent quand tu as posé la tienne.
         </p>
       </div>

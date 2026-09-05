@@ -5,16 +5,18 @@
 
 ## Lot en cours
 
-**Aucun.** `PLAN.md` vient d'arriver dans le repo. Audit initial fait,
-cinq questions posées, plan du LOT A proposé. **En attente du feu vert.**
+**LOT A.** Feu vert donné. A1a fait. Les questions 1, 2, 4 et 5 restent sans
+réponse : on avance sur ce qui n'en dépend pas.
 
 ## Prochaine action exacte
 
-Répondre aux cinq questions de la session du 5 septembre (voir « Questions en
-attente » plus bas), puis attaquer **A1 — renommages**. Rien d'autre.
+**A4 — retirer les trois compteurs du profil** (« jours d'affilée », « journées
+postées », « ton record ») dans `src/app/(repaire)/profil/page.tsx`, lignes 46-47
+et les appels à `serieEnCours` / `plusLongueSerie` juste au-dessus. Garder les
+fonctions dans `src/lib/badges.ts` : les badges 30/100 jours s'en servent.
+Ensuite **A3a — modifier son pseudo**.
 
-Si les réponses tardent et qu'il faut avancer : A4 (retirer les trois
-compteurs du profil) ne dépend d'aucune question et se fait en vingt minutes.
+A1b (calme → rire) et A2 (fil en accueil) attendent les réponses 1 et 2.
 
 ## Terminé
 
@@ -27,6 +29,10 @@ du plan. Correspondance à la fin de ce fichier.
   énergie/calme, multi-photos, note vocale de 30 s. En ligne.
 - Lot 2 — la vidéo (réencodage WebCodecs dans le navigateur), les vignettes,
   la galerie, les légendes, la place occupée. En ligne.
+- **A1a** — renommages : « Plante verte » → **Marie Jane** (migration de
+  données : la ligne garde son identifiant, les 496 journées qui la portaient
+  restent liées), « ce qui a fait la journée » → **l'anecdote**, « étiquettes »
+  → **Lieu** dans l'interface et l'export.
 
 État : 174 tests unitaires, 43 de bout en bout (WebKit + grand écran), build
 sans avertissement, `tsc --noEmit` propre.
@@ -63,6 +69,14 @@ En ligne : https://journal-de-joie-v2.vercel.app
 - `prisma migrate dev --create-only`, **relire le SQL**, puis appliquer.
 - Un test qui dépend d'un classement (le mur des souvenirs) passe une fois sur
   deux : c'est le peuplement qui doit garantir la donnée, pas la chance.
+- **Renommer un libellé ne suffit pas** : les déclencheurs par défaut sont
+  copiés en base à la création de la bande. Sans migration `UPDATE`, la
+  production aurait gardé l'ancien nom. Et un `DELETE` + `INSERT` aurait emporté
+  la table de liaison par cascade — des mois de données pour un mot.
+- **Le stockage garde ses anciens noms** quand l'interface change : la table
+  s'appelle `bande_photos` (elle porte les vidéos), le modèle des lieux
+  s'appelle `Etiquette`. Renommer pour un mot d'interface, c'est une migration
+  risquée sans rien de visible.
 
 ## Questions en attente
 
@@ -76,7 +90,7 @@ En ligne : https://journal-de-joie-v2.vercel.app
 
 | Plan | État |
 | --- | --- |
-| A1 renommages | à faire |
+| A1 renommages | **A1a fait** · A1b (calme → rire) en attente de la Q1 |
 | A2 fil en accueil | à faire — dépend de la question 2 |
 | A3 profil : photo et nom | à faire |
 | A4 retirer les 3 compteurs | à faire (20 min) |

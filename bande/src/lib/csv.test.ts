@@ -56,7 +56,7 @@ describe("versCsv", () => {
 
   it("annonce dans l'en-tête tout ce qu'il exporte", () => {
     const entete = versCsv(fichier([])).replace(/^\ufeff/, "").split("\r\n")[0];
-    for (const colonne of ["titre", "etiquettes", "vocal", "energie", "calme"]) {
+    for (const colonne of ["titre", "lieux", "vocal", "energie", "calme"]) {
       expect(entete).toContain(colonne);
     }
   });

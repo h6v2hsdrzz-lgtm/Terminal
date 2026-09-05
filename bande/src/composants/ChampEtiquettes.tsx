@@ -9,12 +9,16 @@ import { RESSORT } from "@/lib/mouvement";
 import { LONGUEUR_ETIQUETTE, MAX_ETIQUETTES, cleEtiquette as cle, nettoyerEtiquette } from "@/lib/etiquettes";
 
 /**
- * Les étiquettes d'une journée.
+ * Le lieu d'une journée — plusieurs, au besoin.
  *
- * Les déclencheurs sont fixes et décidés par la bande ; les étiquettes sont
- * libres et s'inventent au fil des mois. Les deux coexistent : « boulot » est
- * un déclencheur qu'on retrouve chaque semaine, « déménagement » est une
- * étiquette qui n'aura de sens que cette année-là.
+ * Les déclencheurs sont fixes et décidés par la bande ; les lieux sont libres
+ * et s'inventent au fil des mois. Les deux coexistent : « boulot » est un
+ * déclencheur qu'on retrouve chaque semaine, « chez Mamie » est un lieu qui
+ * n'aura de sens que cette année-là.
+ *
+ * Le stockage s'appelle encore « étiquette », et c'est voulu : renommer les
+ * tables et les colonnes pour un mot d'interface, ce serait une migration
+ * risquée sans rien de visible. Le libellé change, la donnée reste.
  *
  * Ce qui part au serveur est un champ caché : une chaîne séparée par des
  * virgules. Ça garde le formulaire fonctionnel sans JavaScript — on tape
@@ -91,8 +95,8 @@ export function ChampEtiquettes({
           onBlur={() => ajouter(saisie)}
           maxLength={LONGUEUR_ETIQUETTE}
           disabled={complet}
-          aria-label="Ajouter une étiquette"
-          placeholder={choisies.length === 0 ? "Étiquettes… (facultatif)" : ""}
+          aria-label="Ajouter un lieu"
+          placeholder={choisies.length === 0 ? "Où ? (facultatif)" : ""}
           // `champ-saisie` tient la taille à 16px : en dessous, Safari zoome sur
           // le champ à la mise au point et ne dézoome jamais.
           className="champ-saisie min-w-[7rem] flex-1 bg-transparent py-0.5 placeholder:text-encre-3 focus:outline-none"

@@ -26,7 +26,7 @@ export function versCsv(donnees: Export): string {
   // les commentaires sous « photos ».
   const lignes = [
     [
-      "jour", "qui", "joie", "titre", "note", "declencheurs", "etiquettes",
+      "jour", "qui", "joie", "titre", "note", "declencheurs", "lieux",
       "photos", "vocal", "energie", "calme", "reactions", "commentaires",
     ],
     ...donnees.journees.map((j) => [

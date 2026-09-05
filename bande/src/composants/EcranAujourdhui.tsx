@@ -316,7 +316,7 @@ export function EcranAujourdhui({
                 />
 
                 <label htmlFor="note" className="sr-only">
-                  Ce qui a fait la journée
+                  L&apos;anecdote
                 </label>
                 <textarea
                   id="note"
@@ -324,7 +324,7 @@ export function EcranAujourdhui({
                   defaultValue={correction ? (monEntree?.note ?? "") : ""}
                   rows={2}
                   maxLength={280}
-                  placeholder="Ce qui a fait la journée… (facultatif)"
+                  placeholder="L'anecdote du jour… (facultatif)"
                   className="champ-saisie mt-2.5 w-full resize-none rounded-2xl border border-trait bg-surface-2 px-3.5 py-3 placeholder:text-encre-3 focus:border-trait-fort focus:outline-none"
                 />
 

@@ -1,0 +1,11 @@
+-- Renommer un déclencheur, sans toucher aux journées qui le portent.
+--
+-- « Plante verte » devient « Marie Jane ». C'est un changement de LIBELLÉ : la
+-- ligne garde son identifiant, donc toutes les journées déjà cochées restent
+-- cochées, et les statistiques d'effet gardent leur historique. Supprimer puis
+-- recréer aurait emporté la table de liaison par cascade — c'est-à-dire des
+-- mois de données, pour un mot.
+--
+-- Le `WHERE` sur le nom exact : une bande qui aurait déjà renommé le sien à la
+-- main n'est pas concernée.
+UPDATE "bande_declencheurs" SET "nom" = 'Marie Jane' WHERE "nom" = 'Plante verte';
