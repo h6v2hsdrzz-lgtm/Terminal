@@ -223,6 +223,33 @@ export async function listerEntrees(groupeId: string, depuis?: string): Promise<
   return lignes.map(versEntree);
 }
 
+/**
+ * Une entrée réduite à ce qu'on a le droit de montrer sous le voile.
+ *
+ * Flouter en CSS ne suffit pas, et de loin : le texte part quand même dans le
+ * HTML, et les propriétés d'un composant client sont en plus sérialisées dans
+ * la page pour l'hydratation. Un coup d'œil dans les outils du navigateur
+ * suffisait donc à lire la journée des autres avant d'avoir posé la sienne.
+ *
+ * On ne retire pas la personne ni le jour : savoir QUI est passé est une
+ * information neutre, et l'écran s'en sert pour dire qui manque à l'appel.
+ * C'est le contenu qu'on garde.
+ */
+export function masquerEntree(entree: Entree): Entree {
+  return {
+    id: entree.id,
+    jour: entree.jour,
+    profil: entree.profil,
+    joie: 0,
+    note: null,
+    declencheurs: [],
+    photo: null,
+    reactions: [],
+    commentaires: [],
+    posteA: "",
+  };
+}
+
 // ── Écrire ───────────────────────────────────────────────────────────────────
 
 export async function poserJournee(

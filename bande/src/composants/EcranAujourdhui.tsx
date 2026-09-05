@@ -10,7 +10,7 @@ import { BoitePhoto } from "./BoitePhoto";
 import { CurseurJoie } from "./CurseurJoie";
 import { MessageErreur } from "./Champ";
 import { VisageJoie } from "./VisageJoie";
-import { actionPoserJournee } from "@/lib/actions";
+import { actionPoserJournee, actionPoserJourneeSimple } from "@/lib/actions";
 import { ETAT_INITIAL } from "@/lib/formulaire";
 import { garderEnAttente, lireEnAttente, oublierAttente, sAbonnerAttente, yaUneAttente } from "@/lib/attente";
 import { enTexteLong } from "@/lib/dates";
@@ -132,14 +132,30 @@ export function EcranAujourdhui({
     [jour],
   );
 
-  function envoyer(donnees: FormData) {
+  /**
+   * Le formulaire vise une vraie action serveur, et on l'intercepte quand le
+   * navigateur sait exécuter du JavaScript.
+   *
+   * Sans cette interception, on perdrait la mise en attente hors ligne ; sans
+   * l'action serveur derrière, le formulaire ne partirait pas du tout quand le
+   * JavaScript n'a pas chargé. Les deux chemins mènent à la même écriture.
+   */
+  function intercepter(evenement: React.FormEvent<HTMLFormElement>) {
+    evenement.preventDefault();
+    const donnees = new FormData(evenement.currentTarget);
     demarrer(async () => { await poser(donnees); });
   }
-  const voile = revelerApresPost && !poste;
+  // Le voile suit ce que le serveur a réellement masqué, pas l'état local du
+  // formulaire : corriger sa journée ne doit pas re-flouter celles des autres,
+  // qui sont déjà arrivées en clair.
+  const voile = revelerApresPost && monEntree === null;
 
-  const moyenne = entreesDuJour.length
-    ? entreesDuJour.reduce((s, e) => s + e.joie, 0) / entreesDuJour.length
-    : null;
+  // Sous le voile, les notes des autres valent zéro — elles ont été vidées par
+  // le serveur. Il n'y a donc pas de moyenne à calculer, et l'écran n'en
+  // affiche pas non plus.
+  const moyenne = voile || entreesDuJour.length === 0
+    ? null
+    : entreesDuJour.reduce((s, e) => s + e.joie, 0) / entreesDuJour.length;
 
   const manquants = annuaire.profils.filter(
     (p) => !entreesDuJour.some((e) => e.profil === p.id),
@@ -213,7 +229,7 @@ export function EcranAujourdhui({
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
           >
             <Carte className="p-5">
-              <form ref={formulaire} action={envoyer}>
+              <form ref={formulaire} action={actionPoserJourneeSimple} onSubmit={intercepter}>
                 <div className="mb-4 flex items-baseline justify-between gap-3">
                   <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-encre-3">
                     {correction ? "Corriger ta journée" : "Ta journée"}

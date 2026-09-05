@@ -3,6 +3,8 @@
 Version 2, en cours de construction. La v1 (`joie/`) reste en ligne pendant ce
 temps et n'est pas touchée.
 
+**En ligne :** https://journal-de-joie-v2.vercel.app
+
 ## L'application est complète
 
 Cinq écrans, une base PostgreSQL, la synchronisation en temps réel, les photos,
@@ -131,6 +133,21 @@ n'est pas du chiffrement pour autant : le texte est lisible en base par qui
 l'administre. C'est une convention entre amis, et il vaut mieux le dire que le
 laisser croire.
 
+**Chaque formulaire se soumet sans JavaScript.** Ce n'est pas de la coquetterie :
+quand l'`action` d'un formulaire React est une fonction cliente plutôt qu'une
+action serveur, React rend `action="javascript:throw new Error(...)"` — le
+formulaire *lève* au lieu de partir dès que le script n'a pas chargé. Chaque
+formulaire vise donc une vraie action serveur et intercepte la soumission quand
+le JavaScript est disponible ; les deux chemins mènent à la même écriture. Le
+départ définitif passe par un `<details>` pour la même raison : supprimer ses
+données ne doit dépendre de rien.
+
+**Sous le voile, le contenu n'est pas envoyé.** Flouter en CSS ne suffit pas —
+le texte part quand même dans le HTML, et les propriétés d'un composant client
+sont en plus sérialisées dans la page pour l'hydratation. Le serveur vide donc
+les entrées des autres avant de les envoyer : il ne reste que la personne et le
+jour, parce que savoir qui est passé est une information neutre.
+
 **On peut tout exporter, et on peut partir.** L'export vient avant le départ, et
 pas seulement dans l'ordre de la page : une application dont les données ne
 sortent pas est une application qui retient. Le départ demande de recopier le
@@ -242,6 +259,10 @@ npm run db:studio          # explorer la base
 npm test                   # la suite de tests
 npm run verifier:palette   # revérifier les couleurs de profil
 ```
+
+`GET /api/sante` répond `{"base":"ok"}` quand l'application atteint son
+stockage — et rien d'autre : une sonde publique n'a aucune raison de renseigner
+un curieux sur ce que contient la base.
 
 ## Mettre en ligne
 

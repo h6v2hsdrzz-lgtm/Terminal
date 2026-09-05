@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 
 import { Carte, TitreSection } from "./Carte";
 import { MessageErreur, styleChamp } from "./Champ";
-import { actionQuitterLaBande } from "@/lib/actions";
+import { actionQuitterLaBande, actionQuitterLaBandeSimple } from "@/lib/actions";
 import { ETAT_INITIAL } from "@/lib/formulaire";
 
 /**
@@ -54,22 +54,23 @@ export function ZoneDepart({ nomBande, seul }: { nomBande: string; seul: boolean
       <section className="mt-7 mb-4">
         <TitreSection>Partir</TitreSection>
         <Carte className="p-4">
-          {!ouvert ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setOuvert(true)}
-                className="w-full rounded-[var(--radius-pilule)] border border-trait-fort bg-surface py-2.5 text-[14px] font-medium text-encre-2 transition hover:border-encre-3"
-              >
-                Quitter la bande
-              </button>
-              <p className="mt-2.5 text-[13px] leading-snug text-encre-3">
-                Tes journées partent avec toi, ainsi que tes réactions et tes
-                commentaires. C&apos;est définitif — pense à exporter avant.
-              </p>
-            </>
-          ) : (
-            <form action={(donnees) => demarrer(async () => setEtat(await actionQuitterLaBande(ETAT_INITIAL, donnees)))}>
+          {/* Un `<details>` plutôt qu'un bouton et un état : la confirmation
+              s'ouvre sans JavaScript, et supprimer ses données ne doit jamais
+              en dépendre. */}
+          <details open={ouvert} onToggle={(e) => setOuvert(e.currentTarget.open)}>
+            <summary className="cursor-pointer list-none rounded-[var(--radius-pilule)] border border-trait-fort bg-surface py-2.5 text-center text-[14px] font-medium text-encre-2 transition hover:border-encre-3">
+              Quitter la bande
+            </summary>
+
+            <form
+              action={actionQuitterLaBandeSimple}
+              onSubmit={(e) => {
+                e.preventDefault();
+                const donnees = new FormData(e.currentTarget);
+                demarrer(async () => setEtat(await actionQuitterLaBande(ETAT_INITIAL, donnees)));
+              }}
+              className="mt-3"
+            >
               <p className="text-[14px] leading-snug">
                 {seul ? (
                   <>
@@ -103,25 +104,21 @@ export function ZoneDepart({ nomBande, seul }: { nomBande: string; seul: boolean
                 </div>
               )}
 
-              <div className="mt-3 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => { setOuvert(false); setSaisi(""); setEtat(ETAT_INITIAL); }}
-                  className="flex-1 rounded-[var(--radius-pilule)] border border-trait-fort bg-surface py-2.5 text-[14px] font-medium transition hover:border-encre-3"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={enCours || saisi !== nomBande}
-                  style={{ background: "var(--encre)", color: "var(--surface)" }}
-                  className="flex-1 rounded-[var(--radius-pilule)] py-2.5 text-[14px] font-semibold transition disabled:opacity-40"
-                >
-                  {enCours ? "…" : "Partir"}
-                </button>
-              </div>
+              <button
+                type="submit"
+                disabled={enCours}
+                style={{ background: "var(--encre)", color: "var(--surface)" }}
+                className="mt-3 w-full rounded-[var(--radius-pilule)] py-2.5 text-[14px] font-semibold transition disabled:opacity-40"
+              >
+                {enCours ? "…" : "Partir pour de bon"}
+              </button>
             </form>
-          )}
+          </details>
+
+          <p className="mt-2.5 text-[13px] leading-snug text-encre-3">
+            Tes journées partent avec toi, ainsi que tes réactions et tes
+            commentaires. C&apos;est définitif — pense à exporter avant.
+          </p>
         </Carte>
       </section>
     </>

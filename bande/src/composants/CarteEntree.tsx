@@ -32,13 +32,45 @@ export function CarteEntree({
   if (!profil) return null;
 
   const couleur = couleurProfil(profil);
+
+  /**
+   * Sous le voile, on n'envoie rien.
+   *
+   * La première version rendait la carte entière et la floutait en CSS : le
+   * texte partait donc dans le HTML, et un coup d'œil dans les outils du
+   * navigateur suffisait à lire la journée des autres avant d'avoir posé la
+   * sienne. Le voile n'est pas un dispositif de sécurité, mais il perd tout son
+   * sens s'il se contourne en trois clics.
+   *
+   * On rend donc une carte muette : la personne, sa couleur, et des blocs
+   * inertes qui disent qu'il y a quelque chose à lire.
+   */
+  if (floute) {
+    return (
+      <Carte accent={couleur} className="overflow-hidden">
+        <div className="flex items-start gap-3 p-4" aria-hidden>
+          <Avatar profil={profil} taille={38} />
+          <div className="min-w-0 flex-1 space-y-2 pt-1">
+            <span className="block h-3 w-24 rounded-full bg-surface-2" />
+            <span className="block h-3 w-full rounded-full bg-surface-2" />
+            <span className="block h-3 w-2/3 rounded-full bg-surface-2" />
+          </div>
+          <span className="h-12 w-12 shrink-0 rounded-2xl bg-surface-2" />
+        </div>
+        <span className="sr-only">
+          {profil.pseudo} a posé sa journée. Pose la tienne pour la lire.
+        </span>
+      </Carte>
+    );
+  }
+
   const declencheurs = entree.declencheurs
     .map((id) => annuaire.declencheurs.find((d) => d.id === id))
     .filter((d) => d !== undefined);
 
   return (
     <Carte accent={couleur} className="overflow-hidden">
-      <div className={floute ? "pointer-events-none select-none blur-[10px]" : ""} aria-hidden={floute}>
+      <div>
         <div className="flex items-start gap-3 p-4">
           <Avatar profil={profil} taille={38} />
 

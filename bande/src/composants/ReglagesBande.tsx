@@ -6,7 +6,9 @@ import { Carte, TitreSection } from "./Carte";
 import { MessageErreur, styleChamp } from "./Champ";
 import {
   actionAjouterDeclencheur,
+  actionAjouterDeclencheurSimple,
   actionRenommerBande,
+  actionRenommerBandeSimple,
   actionReglerDevoilement,
   actionRetirerDeclencheur,
 } from "@/lib/actions";
@@ -40,7 +42,11 @@ export function ReglagesBande({
         <TitreSection>Le nom</TitreSection>
         <Carte className="p-4">
           <form
-            action={(donnees) => lancer(() => actionRenommerBande(ETAT_INITIAL, donnees))}
+            action={actionRenommerBandeSimple}
+            onSubmit={(e) => {
+              e.preventDefault();
+              lancer(() => actionRenommerBande(ETAT_INITIAL, new FormData(e.currentTarget)));
+            }}
             className="flex gap-2"
           >
             <label htmlFor="nom-bande" className="sr-only">Nom de la bande</label>
@@ -126,7 +132,10 @@ export function ReglagesBande({
 
           {declencheurs.length < MAX_DECLENCHEURS && (
             <form
-              action={(donnees) => {
+              action={actionAjouterDeclencheurSimple}
+              onSubmit={(e) => {
+                e.preventDefault();
+                const donnees = new FormData(e.currentTarget);
                 lancer(async () => {
                   const resultat = await actionAjouterDeclencheur(ETAT_INITIAL, donnees);
                   if (!resultat.erreur) { setNouveauNom(""); setNouvelEmoji(""); }

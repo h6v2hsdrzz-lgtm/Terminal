@@ -217,6 +217,60 @@ export async function actionEnvoyerPhoto(_precedent: Etat, donnees: FormData): P
   });
 }
 
+/**
+ * Poser sa journée sans JavaScript.
+ *
+ * C'est la cible du `action` du formulaire, et elle n'a l'air de rien : sans
+ * une vraie action serveur à cet endroit, React rend
+ * `action="javascript:throw ..."` et le formulaire lève au lieu de s'envoyer.
+ * Le chemin avec JavaScript, lui, intercepte la soumission pour pouvoir garder
+ * la journée sur l'appareil quand le réseau manque.
+ *
+ * Elle prend la `FormData` seule — une action passée à `action=` ne reçoit pas
+ * d'état précédent — et redirige, parce qu'une soumission sans JavaScript
+ * attend une réponse de navigation.
+ */
+export async function actionPoserJourneeSimple(donnees: FormData): Promise<void> {
+  await actionPoserJournee(ETAT_INITIAL, donnees);
+  redirect("/");
+}
+
+/**
+ * Les variantes « sans JavaScript » des formulaires.
+ *
+ * Une action passée à `action=` reçoit la `FormData` seule et doit rediriger :
+ * une soumission classique attend une navigation. Elles existent surtout pour
+ * que React rende un vrai formulaire — sans elles, il rend
+ * `action="javascript:throw ..."`, et le formulaire lève au lieu de partir dès
+ * que le JavaScript n'a pas chargé.
+ */
+export async function actionRenommerBandeSimple(donnees: FormData): Promise<void> {
+  await actionRenommerBande(ETAT_INITIAL, donnees);
+  redirect("/reglages");
+}
+
+export async function actionAjouterDeclencheurSimple(donnees: FormData): Promise<void> {
+  await actionAjouterDeclencheur(ETAT_INITIAL, donnees);
+  redirect("/reglages");
+}
+
+export async function actionCommenterSimple(donnees: FormData): Promise<void> {
+  await actionCommenter(ETAT_INITIAL, donnees);
+  redirect("/fil");
+}
+
+export async function actionQuitterLaBandeSimple(donnees: FormData): Promise<void> {
+  // Sans JavaScript, on ne peut pas afficher l'erreur dans la carte : un nom mal
+  // recopié ramène simplement à l'écran des réglages, où rien n'a changé.
+  await actionQuitterLaBande(ETAT_INITIAL, donnees);
+  redirect("/reglages");
+}
+
+export async function actionEcrireCapsuleSimple(donnees: FormData): Promise<void> {
+  await actionEcrireCapsule(ETAT_INITIAL, donnees);
+  redirect("/souvenirs");
+}
+
 export async function actionRetirerPhoto(): Promise<Etat> {
   return tenter(async () => {
     const { membreId } = await quiAgit();

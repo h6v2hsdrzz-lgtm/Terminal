@@ -1,4 +1,5 @@
 import { EcranAujourdhui } from "@/composants/EcranAujourdhui";
+import { masquerEntree } from "@/lib/depot";
 import { entreesDeLaBande, exigerContexte } from "@/lib/repaire";
 import { decaler, jourDeLaBande } from "@/lib/dates";
 
@@ -22,6 +23,14 @@ export default async function Page() {
   // La série se calcule sur l'historique, pas sur les seules entrées du jour.
   const entrees = await entreesDeLaBande(contexte.groupe.id);
   const duJour = entrees.filter((e) => e.jour === jour);
+  const monEntree = duJour.find((e) => e.profil === contexte.moi.id) ?? null;
+
+  // Le vidage se fait ici, sur le serveur : tout ce qui descend dans un
+  // composant client est lisible par qui ouvre les outils du navigateur.
+  const voile = contexte.groupe.revelerApresPost && monEntree === null;
+  const visibles = voile
+    ? duJour.map((e) => (e.profil === contexte.moi.id ? e : masquerEntree(e)))
+    : duJour;
 
   return (
     <EcranAujourdhui
@@ -29,8 +38,8 @@ export default async function Page() {
       nomBande={contexte.groupe.nom}
       annuaire={{ profils: contexte.profils, declencheurs: contexte.declencheurs }}
       moi={contexte.moi}
-      monEntree={duJour.find((e) => e.profil === contexte.moi.id) ?? null}
-      entreesDuJour={duJour}
+      monEntree={monEntree}
+      entreesDuJour={visibles}
       serieCollective={serieCollective(new Set(entrees.map((e) => e.jour)), jour)}
       revelerApresPost={contexte.groupe.revelerApresPost}
     />
