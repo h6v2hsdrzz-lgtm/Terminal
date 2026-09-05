@@ -1,6 +1,6 @@
-import Image from "next/image";
-
 import { Avatar } from "./Avatar";
+import { Carrousel } from "./Carrousel";
+import { LecteurVocal } from "./LecteurVocal";
 import { Carte } from "./Carte";
 import { PiedEntree } from "./PiedEntree";
 import { couleurJoie, couleurProfil } from "@/lib/couleurs";
@@ -80,12 +80,26 @@ export function CarteEntree({
               <span className="text-[12px] text-encre-3">{entree.posteA}</span>
             </div>
 
+            {entree.titre && (
+              <p className="mt-1 text-[19px] font-semibold leading-tight tracking-[-0.01em]">
+                {entree.titre}
+              </p>
+            )}
+
             {entree.note && (
               <p className="mt-1.5 text-[15px] leading-snug text-encre-2">{entree.note}</p>
             )}
 
-            {declencheurs.length > 0 && (
+            {(declencheurs.length > 0 || entree.etiquettes.length > 0) && (
               <ul className="mt-2.5 flex flex-wrap gap-1.5">
+                {entree.etiquettes.map((e) => (
+                  <li
+                    key={e.id}
+                    className="rounded-[var(--radius-pilule)] bg-surface-3 px-2 py-0.5 text-[12px] text-encre-2"
+                  >
+                    {e.nom}
+                  </li>
+                ))}
                 {declencheurs.map((d) => (
                   <li
                     key={d.id}
@@ -106,17 +120,12 @@ export function CarteEntree({
           </div>
         </div>
 
-        {entree.photo && (
-          <div className="border-t border-trait">
-            <Image
-              src={entree.photo}
-              alt={`La journée de ${profil.pseudo} en image`}
-              width={1200}
-              height={900}
-              unoptimized
-              className="h-auto w-full"
-            />
-          </div>
+        {entree.photos.length > 0 && (
+          <Carrousel photos={entree.photos} legende={`La journée de ${profil.pseudo}`} />
+        )}
+
+        {entree.audio && (
+          <LecteurVocal audio={entree.audio} couleur={couleur} nom={profil.pseudo} />
         )}
 
         {/* Le pied n'apparaît qu'une fois le voile levé : réagir à une carte

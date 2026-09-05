@@ -12,9 +12,39 @@ les badges, les souvenirs, et l'installation sur l'écran d'accueil. Ce fichier
 dit comment la faire tourner, ce qui a été décidé et pourquoi.
 
 **Ce qu'on en fait, un soir :** on ouvre, on fait glisser un curseur de 1 à 10,
-on coche éventuellement ce qui a marqué la journée, on écrit deux lignes si on
-veut. Dix secondes. Les journées des autres, floutées jusque-là, se dévoilent
-d'un coup.
+on coche éventuellement ce qui a marqué la journée, on écrit trois mots et deux
+lignes si on veut. Dix secondes. Les journées des autres, cachées jusque-là, se
+dévoilent d'un coup.
+
+## La figure du jour
+
+C'est l'objet autour duquel tout le reste s'organise, et il n'a de sens qu'à
+trois ou quatre.
+
+Un sommet par personne, placé sur un cercle, tiré vers l'extérieur par sa note
+du jour. Derrière, en pointillés, le contour de la journée parfaite. Ça se lit
+sans y penser :
+
+| Ce qu'on voit | Ce que ça veut dire |
+| --- | --- |
+| Une figure large et régulière | Vous avez tous eu à peu près la même journée, et elle était bonne |
+| Une figure petite et régulière | Vous êtes d'accord aussi. C'était juste une journée moyenne |
+| Une figure penchée | Quelqu'un ne vit pas la même chose que les autres |
+| Un sommet effondré, en pointillés | Cette personne n'a pas encore posé sa journée |
+
+Trois règles la tiennent, et elles ne sont pas négociables :
+
+- **ce n'est pas un classement.** Il n'y a ni premier ni dernier, et la phrase
+  qui accompagne la figure ne nomme jamais personne. Le sommet court se voit
+  déjà, dans la couleur de la personne ;
+- **aucune note n'est punie.** Une journée à 1 garde un tiers du rayon. C'est
+  une présence, pas un point ;
+- **rien ne fuit sous le voile.** Tant qu'on n'a pas posé sa journée, la figure
+  est construite sans les notes des autres — elle n'est pas dessinée puis
+  floutée, ce qui reviendrait à les envoyer dans la page.
+
+Dans les souvenirs, **le mur des formes** aligne les vingt-huit derniers jours.
+Une figure est un dessin ; trente figures sont une année.
 
 ## Démarrer
 
@@ -23,13 +53,18 @@ cd bande
 npm install
 cp .env.example .env          # puis renseigner DATABASE_URL et SECRET_SESSION
 npx prisma migrate dev        # crée les tables
-npm run db:seed               # une bande de démonstration, 3 profils × 400 jours
+npm run db:seed               # une bande de démonstration, 4 profils × 400 jours
 npm run dev                   # http://localhost:3000
 ```
 
-Le script de peuplement affiche à la fin les **codes de reprise** des trois
-profils de démonstration : ils servent à se connecter en tant que Momo, Sam ou
-Samy depuis `/reprendre`. Le code d'invitation de la bande est `FR9M4G`.
+Le script de peuplement affiche à la fin les **codes de reprise** des quatre
+profils de démonstration : ils servent à se connecter en tant que Momo, Sam,
+Samy ou Lou depuis `/reprendre`. Le code d'invitation de la bande est `FR9M4G`.
+
+Aujourd'hui, il fait poster tout le monde **sauf Momo**. C'est délibéré :
+ouvrir l'application en tant que Momo montre d'un coup le voile, la figure du
+jour et le formulaire, c'est-à-dire l'état réel d'un début de soirée. Se
+connecter en tant que Sam montre l'autre moitié.
 
 ### Une base PostgreSQL en local
 
@@ -57,10 +92,10 @@ qu'il faut y mettre.
 
 | Écran | Ce qu'on y fait |
 | --- | --- |
-| **Aujourd'hui** | Poser sa journée, la corriger, y mettre une photo. Voir celles des autres — floutées tant qu'on n'a pas posé la sienne. Réagir, commenter. |
+| **Aujourd'hui** | La figure du jour. Poser sa journée : une note, un titre en trois mots, des étiquettes, jusqu'à quatre photos, une note vocale de trente secondes, et deux curseurs facultatifs. Voir celles des autres — cachées tant qu'on n'a pas posé la sienne. Réagir, commenter. |
 | **Le fil** | Toutes les journées de la bande, groupées par jour, avec la moyenne du jour. |
 | **Les stats** | Courbe lissée sur trente jours, calendrier façon damier, effet des déclencheurs, écarts par jour de semaine, synchronicité entre deux personnes. |
-| **Les souvenirs** | Rétrospective d'un mois avec image partageable, « ce jour-là », capsules temporelles, mur des moments. |
+| **Les souvenirs** | Le mur des formes, rétrospective d'un mois avec image partageable, « ce jour-là », capsules temporelles, mur des moments. |
 | **Profil** | Séries, badges, classement d'assiduité de la semaine, calendrier personnel, réglages de la bande, export, départ. |
 
 ## Les décisions
@@ -201,7 +236,7 @@ dit plus haut.
 ## Tests
 
 ```bash
-npm test                       # 110 tests sur la logique pure
+npm test                       # 146 tests sur la logique pure
 npx playwright test            # iPhone 15 (WebKit) + bureau 1440×900
 npx playwright test --project=iphone
 ADRESSE=https://journal-de-joie-v2.vercel.app npx playwright test  # contre la prod
@@ -299,6 +334,8 @@ Ce que la suite vérifie toute seule, à chaque exécution :
 | Aucun débordement horizontal | sinon la page glisse latéralement à chaque geste |
 | Zone sûre sur la barre d'onglets | sans quoi elle passe sous la barre d'accueil |
 | Session bien ouverte avant chaque capture | un test qui photographie la mauvaise page ne teste rien |
+| Le voile ne laisse pas fuir les notes des autres | on relit le HTML, pas l'écran |
+| La note vocale se sert avec son type, et pas sans session | Safari refuse un son mal typé sans rien dire |
 
 Ce qui ne se vérifie qu'à la main, sur un vrai téléphone :
 
@@ -306,6 +343,15 @@ Ce qui ne se vérifie qu'à la main, sur un vrai téléphone :
       rouvrir : pas de barre d'adresse, l'icône est la bonne.
 - [ ] En mode écran d'accueil, la barre du bas ne passe pas sous la barre
       d'accueil de l'iPhone.
+- [ ] **Enregistrer une note vocale** : l'autorisation micro est demandée au
+      moment du geste, la forme d'onde bouge pendant l'enregistrement, et la
+      **pastille orange s'éteint** dès qu'on arrête. Elle reste allumée si la
+      piste n'a pas été relâchée — c'est le défaut le plus facile à laisser
+      passer, et le plus inquiétant pour celui qui le voit.
+- [ ] **Réécouter** la note enregistrée, puis en lancer une autre : la première
+      doit s'arrêter. Deux sons qui se chevauchent, c'est un fil illisible.
+- [ ] Le carrousel de photos suit le doigt et **ne se bagarre pas avec le geste
+      de retour** du système (le défilement est natif, pas réimplémenté).
 - [ ] Toucher le champ « ce qui a fait la journée » : **la page ne doit pas
       zoomer**, et la barre d'onglets doit s'effacer pour laisser la place au
       clavier.

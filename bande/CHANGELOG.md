@@ -3,6 +3,63 @@
 Les entrées vont de la plus récente à la plus ancienne. Chaque lot du chantier
 v3 y ajoute une section ; les jalons v2 sont regroupés en tête d'historique.
 
+## Lot 1 — La figure du jour, et de quoi raconter une journée
+
+### Le concept
+- **La figure du jour.** Un sommet par personne, tiré vers l'extérieur par sa
+  note ; le contour en pointillés derrière est la journée parfaite. On y lit
+  d'un coup ce qu'aucun chiffre ne montre aussi vite : si la bande est d'accord
+  (figure régulière), si quelqu'un vit autre chose (figure penchée), s'il manque
+  quelqu'un (sommet effondré). Ce n'est pas un classement — c'est une forme, et
+  elle n'a de sens qu'à trois ou quatre.
+- Une journée à 1 garde un tiers du rayon. **Aucune note n'est punie** : c'est
+  une présence, pas un point.
+- La phrase qui accompagne la figure **ne nomme jamais personne** et se tait
+  plus souvent qu'elle ne parle. Dire « untel décroche » serait un classement
+  déguisé ; le sommet court se voit déjà, dans la couleur de la personne.
+- **Le mur des formes**, dans les souvenirs : les vingt-huit derniers jours
+  côte à côte. Une figure est un dessin, trente figures sont une année.
+
+### Ajouté
+- **Un titre en trois mots** sur la journée, avant la note. C'est ce qu'on
+  relira dans un an.
+- **Des étiquettes libres**, avec les propositions de la bande. « Soirée »,
+  « soiree » et « SOIRÉE » sont la même : la normalisation est partagée entre
+  le navigateur et le serveur, dans un seul module, pour qu'elle ne diverge pas.
+- **Énergie et calme**, deux curseurs facultatifs repliés derrière « aller plus
+  loin ». Ils n'entrent dans aucune moyenne et dans aucun classement. Un curseur
+  auquel on n'a pas touché ne vaut pas cinq : il ne vaut rien, et l'écran
+  affiche un tiret.
+- **Jusqu'à quatre photos** par journée, en carrousel à défilement natif avec
+  ouverture en plein écran.
+- **Une note vocale de trente secondes**, avec sa forme d'onde mesurée à
+  l'enregistrement. Le format est choisi à l'exécution — MP4/AAC sur iPhone,
+  WebM/Opus ailleurs — et la piste micro est relâchée à la fin, sans quoi la
+  pastille orange de l'iPhone reste allumée.
+- Base de démonstration : titres, étiquettes, curseurs et **de vraies notes
+  vocales** — un encodeur WAV de cent lignes, dont on mesure les niveaux, pour
+  que l'onde affichée soit celle du son qu'on entend.
+- Aujourd'hui, la base de démonstration fait poster tout le monde **sauf** le
+  premier profil : c'est l'état dans lequel on ouvre l'application le soir, et
+  le seul où le voile, la figure et le formulaire se jugent ensemble.
+- Sept tests de bout en bout sur WebKit pour le lot, et trente-six tests
+  unitaires de plus (géométrie de la figure, normalisation des étiquettes,
+  export CSV).
+
+### Corrigé
+- **Une note vocale restait muette sur les autres téléphones.** Enregistrer un
+  son ne modifie pas la ligne de la journée : sans agrégat dédié, l'empreinte de
+  synchronisation ne bougeait pas et la note n'arrivait qu'au prochain
+  commentaire. Même défaut que les photos avaient eu, même correction.
+- **L'export CSV annonçait huit colonnes et en écrivait treize.** Le tableur
+  ouvrait le fichier sans broncher et rangeait les commentaires sous
+  « photos ». L'en-tête est complet, et un test compare désormais les largeurs.
+- **Appuyer sur une étiquette proposée ne l'ajoutait pas.** Le champ perdait le
+  focus, ce qui posait le mot à moitié tapé, refiltrait la liste et faisait
+  disparaître le bouton sous le doigt avant l'arrivée du clic.
+- **Une journée écrite hors ligne perdait son titre et ses étiquettes** au
+  renvoi : la file d'attente ne gardait que la note et les déclencheurs.
+
 ## Lot 0 — Fondations et iPhone
 
 ### Corrigé

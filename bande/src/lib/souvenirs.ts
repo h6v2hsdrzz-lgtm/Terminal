@@ -69,7 +69,7 @@ export function murDeSouvenirs(entrees: Entree[], limite = 12): Moment[] {
 
     // Le seuil d'entrée est 4. Une photo suffit, une vraie histoire aussi ;
     // une note courte seule non — sinon le mur devient le fil.
-    if (entree.photo) { points += 4; raisons.push("une photo"); }
+    if (entree.photos.length) { points += 4; raisons.push(entree.photos.length > 1 ? "des photos" : "une photo"); }
     if (entree.note && entree.note.length > 60) { points += 4; raisons.push("une vraie histoire"); }
     else if (entree.note) { points += 1; }
 
@@ -197,7 +197,7 @@ export function retrospective(entrees: Entree[], mois: string, profils: string[]
     }),
     meilleurJourSemaine: meilleureMoyenneSem < 0 ? null : jourSem.findIndex((m) => m === meilleureMoyenneSem),
     notesEcrites: dedans.filter((e) => e.note).length,
-    photos: dedans.filter((e) => e.photo).length,
+    photos: dedans.reduce((s, e) => s + e.photos.length, 0),
     reactions: dedans.reduce((s, e) => s + e.reactions.reduce((t, r) => t + r.parQui.length, 0), 0),
     commentaires: dedans.reduce((s, e) => s + e.commentaires.length, 0),
   };

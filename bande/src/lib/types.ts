@@ -38,15 +38,45 @@ export type Commentaire = {
   quand: string;
 };
 
+/** Une photo de journée, telle que l'écran la reçoit. */
+export type Photo = {
+  id: string;
+  /** Adresse de la route qui la sert. */
+  url: string;
+  largeur: number;
+  hauteur: number;
+};
+
+/** La note vocale, sans ses octets : ils passent par une route dédiée. */
+export type Audio = {
+  url: string;
+  /** En millisecondes. */
+  duree: number;
+  /** L'enveloppe sonore mesurée à l'enregistrement, pour la forme d'onde. */
+  niveaux: number[];
+};
+
+export type Etiquette = {
+  id: string;
+  nom: string;
+};
+
 export type Entree = {
   id: string;
   /** Jour de la mesure, ISO `AAAA-MM-JJ`. */
   jour: string;
   profil: string;
   joie: number;
+  /** Trois mots maximum, ou rien. */
+  titre: string | null;
   note: string | null;
+  /** Facultatifs, et hors de tout classement. */
+  energie: number | null;
+  calme: number | null;
   declencheurs: string[];
-  photo: string | null;
+  etiquettes: Etiquette[];
+  photos: Photo[];
+  audio: Audio | null;
   reactions: Reaction[];
   commentaires: Commentaire[];
   posteA: string;

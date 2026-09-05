@@ -15,7 +15,9 @@ import {
   rejoindreBande,
   renommerBande,
   ecrireCapsule,
-  enregistrerPhoto,
+  ajouterPhoto,
+  enregistrerAudio,
+  retirerAudio,
   quitterBande,
   reprendreCompte,
   retirerDeclencheur,
@@ -38,6 +40,19 @@ import { jourDeLaBande } from "./dates";
 function texte(donnees: FormData, cle: string): string {
   const valeur = donnees.get(cle);
   return typeof valeur === "string" ? valeur : "";
+}
+
+/**
+ * Un champ qu'on a le droit de ne pas remplir.
+ *
+ * Le champ absent et le champ vide veulent dire la même chose — « je n'ai pas
+ * répondu » — et ce n'est pas zéro : un zéro serait une réponse.
+ */
+function nombreFacultatif(donnees: FormData, cle: string): number | null {
+  const brut = texte(donnees, cle).trim();
+  if (!brut) return null;
+  const valeur = Number(brut);
+  return Number.isFinite(valeur) ? valeur : null;
 }
 
 /** Traduit ce que l'utilisateur peut corriger ; laisse remonter le reste. */
@@ -101,6 +116,13 @@ export async function actionPoserJournee(_precedent: Etat, donnees: FormData): P
       joie: Number(texte(donnees, "joie")),
       note: texte(donnees, "note"),
       declencheurs: donnees.getAll("declencheurs").filter((d): d is string => typeof d === "string"),
+      titre: texte(donnees, "titre"),
+      // Les étiquettes arrivent en une seule chaîne séparée par des virgules :
+      // un champ de texte marche partout, là où une liste de champs cachés
+      // dépend du JavaScript pour exister.
+      etiquettes: texte(donnees, "etiquettes").split(",").map((e) => e.trim()).filter(Boolean),
+      energie: nombreFacultatif(donnees, "energie"),
+      calme: nombreFacultatif(donnees, "calme"),
     });
 
     rafraichirTout();
@@ -207,12 +229,50 @@ export async function actionEnvoyerPhoto(_precedent: Etat, donnees: FormData): P
       throw new ErreurMetier("Choisis une image.");
     }
 
-    await enregistrerPhoto(membreId, jourDeLaBande(), {
+    await ajouterPhoto(membreId, jourDeLaBande(), {
       mime: fichier.type,
+      // `new Uint8Array(ArrayBuffer)` et pas le tableau du `Buffer` de Node :
+      // Prisma veut un `Uint8Array<ArrayBuffer>` pour un champ `Bytes`.
       octets: new Uint8Array(await fichier.arrayBuffer()),
       largeur: Number(texte(donnees, "largeur")) || 0,
       hauteur: Number(texte(donnees, "hauteur")) || 0,
     });
+    rafraichirTout();
+  });
+}
+
+// ── Note vocale ─────────────────────────────────────────────────────────────
+
+export async function actionEnvoyerAudio(_precedent: Etat, donnees: FormData): Promise<Etat> {
+  return tenter(async () => {
+    const { membreId } = await quiAgit();
+    const fichier = donnees.get("audio");
+    if (!(fichier instanceof File) || fichier.size === 0) {
+      throw new ErreurMetier("L'enregistrement est vide.");
+    }
+
+    // Les niveaux servent à dessiner l'onde : ils sont calculés pendant
+    // l'enregistrement, parce que les relire depuis les octets côté serveur
+    // demanderait de décoder l'audio, donc une dépendance native.
+    const niveaux = texte(donnees, "niveaux")
+      .split(",")
+      .map(Number)
+      .filter((n) => Number.isFinite(n));
+
+    await enregistrerAudio(membreId, jourDeLaBande(), {
+      mime: fichier.type,
+      octets: new Uint8Array(await fichier.arrayBuffer()),
+      duree: Number(texte(donnees, "duree")) || 0,
+      niveaux,
+    });
+    rafraichirTout();
+  });
+}
+
+export async function actionRetirerAudio(): Promise<Etat> {
+  return tenter(async () => {
+    const { membreId } = await quiAgit();
+    await retirerAudio(membreId, jourDeLaBande());
     rafraichirTout();
   });
 }
@@ -271,10 +331,11 @@ export async function actionEcrireCapsuleSimple(donnees: FormData): Promise<void
   redirect("/souvenirs");
 }
 
-export async function actionRetirerPhoto(): Promise<Etat> {
+/** Une photo précise, maintenant qu'une journée peut en porter plusieurs. */
+export async function actionRetirerPhoto(photoId: string): Promise<Etat> {
   return tenter(async () => {
     const { membreId } = await quiAgit();
-    await retirerPhoto(membreId, jourDeLaBande());
+    await retirerPhoto(membreId, photoId);
     rafraichirTout();
   });
 }

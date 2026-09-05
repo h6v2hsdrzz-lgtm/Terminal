@@ -7,15 +7,21 @@ import { Avatar } from "./Avatar";
 import { Carte, TitreSection } from "./Carte";
 import { CarteEntree } from "./CarteEntree";
 import { BoitePhoto } from "./BoitePhoto";
+import { BoiteVocale } from "./BoiteVocale";
+import { ChampEtiquettes } from "./ChampEtiquettes";
+import { CurseurDiscret } from "./CurseurDiscret";
+import { FigureDuJour } from "./FigureDuJour";
 import { CurseurJoie } from "./CurseurJoie";
 import { MessageErreur } from "./Champ";
 import { VisageJoie } from "./VisageJoie";
 import { actionPoserJournee, actionPoserJourneeSimple } from "@/lib/actions";
 import { RESSORT, retard } from "@/lib/mouvement";
+import { figure, lireFigure } from "@/lib/figure";
 import { ETAT_INITIAL } from "@/lib/formulaire";
 import { garderEnAttente, lireEnAttente, oublierAttente, sAbonnerAttente, yaUneAttente } from "@/lib/attente";
 import { enTexteLong } from "@/lib/dates";
-import type { Annuaire, Entree, Profil } from "@/lib/types";
+import { couleurProfil } from "@/lib/couleurs";
+import type { Annuaire, Entree, Etiquette, Profil } from "@/lib/types";
 
 /**
  * L'écran d'accueil, et le cœur du produit.
@@ -62,6 +68,7 @@ export function EcranAujourdhui({
   entreesDuJour,
   serieCollective,
   revelerApresPost,
+  etiquettesConnues,
 }: {
   jour: string;
   nomBande: string;
@@ -72,6 +79,8 @@ export function EcranAujourdhui({
   entreesDuJour: Entree[];
   serieCollective: number;
   revelerApresPost: boolean;
+  /** Celles que la bande a déjà posées, pour les proposer plutôt que les faire retaper. */
+  etiquettesConnues: Etiquette[];
 }) {
   const [etat, setEtat] = useState(ETAT_INITIAL);
   const [enCours, demarrer] = useTransition();
@@ -125,6 +134,12 @@ export function EcranAujourdhui({
           joie: Number(donnees.get("joie")) || 7,
           note: String(donnees.get("note") ?? ""),
           declencheurs: donnees.getAll("declencheurs").map(String),
+          titre: String(donnees.get("titre") ?? ""),
+          etiquettes: String(donnees.get("etiquettes") ?? "").split(",").filter(Boolean),
+          // `null` et pas zéro : le curseur auquel on n'a pas touché n'a pas de
+          // valeur, et zéro en serait une.
+          energie: donnees.get("energie") === null ? null : Number(donnees.get("energie")),
+          calme: donnees.get("calme") === null ? null : Number(donnees.get("calme")),
         });
         setEtat({ erreur: null });
         return false;
@@ -163,6 +178,21 @@ export function EcranAujourdhui({
   );
 
   /**
+   * La figure du jour.
+   *
+   * Sous le voile, les entrées reçues ont été vidées par le serveur : les
+   * valeurs de cette table ne veulent rien dire, et `masquee` les fait ignorer.
+   * Ce n'est donc pas un flou par-dessus des notes envoyées, c'est un dessin
+   * fait sans elles.
+   */
+  const notes = new Map<string, number | null>(
+    annuaire.profils.map((p) => [p.id, entreesDuJour.find((e) => e.profil === p.id)?.joie ?? null]),
+  );
+  const lectureFigure = voile
+    ? null
+    : lireFigure(figure([...notes].map(([profil, joie]) => ({ profil, joie })), 100));
+
+  /**
    * Le renvoi de la journée gardée hors ligne.
    *
    * Il se déclenche au montage et au retour du réseau, pas sur un minuteur :
@@ -184,6 +214,12 @@ export function EcranAujourdhui({
       donnees.set("joie", String(encore.joie));
       donnees.set("note", encore.note);
       for (const d of encore.declencheurs) donnees.append("declencheurs", d);
+      // Ce qui a été écrit dans le métro part en entier : perdre le titre au
+      // renvoi serait pire que d'avoir refusé l'écriture.
+      donnees.set("titre", encore.titre ?? "");
+      donnees.set("etiquettes", (encore.etiquettes ?? []).join(","));
+      if (encore.energie != null) donnees.set("energie", String(encore.energie));
+      if (encore.calme != null) donnees.set("calme", String(encore.calme));
       await poser(donnees);
     };
 
@@ -263,6 +299,22 @@ export function EcranAujourdhui({
                   </div>
                 </fieldset>
 
+                {/* Le titre, avant la note. C'est ce qu'on relira dans un an :
+                    trois mots retiennent une journée mieux qu'un paragraphe. */}
+                <label htmlFor="titre" className="sr-only">
+                  Le titre de la journée, en trois mots
+                </label>
+                <input
+                  id="titre"
+                  name="titre"
+                  type="text"
+                  defaultValue={correction ? (monEntree?.titre ?? "") : ""}
+                  maxLength={60}
+                  autoComplete="off"
+                  placeholder="En trois mots… (facultatif)"
+                  className="champ-saisie mt-5 w-full rounded-2xl border border-trait bg-surface-2 px-3.5 py-3 font-medium placeholder:font-normal placeholder:text-encre-3 focus:border-trait-fort focus:outline-none"
+                />
+
                 <label htmlFor="note" className="sr-only">
                   Ce qui a fait la journée
                 </label>
@@ -273,8 +325,51 @@ export function EcranAujourdhui({
                   rows={2}
                   maxLength={280}
                   placeholder="Ce qui a fait la journée… (facultatif)"
-                  className="champ-saisie mt-4 w-full resize-none rounded-2xl border border-trait bg-surface-2 px-3.5 py-3 placeholder:text-encre-3 focus:border-trait-fort focus:outline-none"
+                  className="champ-saisie mt-2.5 w-full resize-none rounded-2xl border border-trait bg-surface-2 px-3.5 py-3 placeholder:text-encre-3 focus:border-trait-fort focus:outline-none"
                 />
+
+                <ChampEtiquettes
+                  proposees={etiquettesConnues}
+                  initiales={correction ? (monEntree?.etiquettes.map((e) => e.nom) ?? []) : []}
+                />
+
+                {/* Repliés par défaut, et c'est délibéré : le rituel du soir
+                    doit tenir en un curseur et un bouton. Ce qui est en dessous
+                    est pour les soirs où on a envie d'en dire plus. */}
+                {/* `group` et `group-open` : le chevron pivote à l'ouverture.
+                    Sans lui, le dépliant fermé se lit comme un troisième champ
+                    de saisie vide — c'est ce que montrait la capture iPhone. */}
+                <details className="group mt-4 rounded-2xl border border-trait px-3.5 py-2.5">
+                  <summary className="cible-tactile flex cursor-pointer list-none items-center gap-1.5 text-[13px] text-encre-2 marker:hidden">
+                    <svg
+                      width="10" height="10" viewBox="0 0 10 10" aria-hidden
+                      className="shrink-0 transition-transform duration-[var(--duree-courte)] group-open:rotate-90"
+                    >
+                      <path d="M3 1.5 L7 5 L3 8.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Énergie et calme
+                  </summary>
+                  <div className="mt-2 border-t border-trait pt-2">
+                    <CurseurDiscret
+                      nom="energie"
+                      etiquette="Énergie"
+                      bas="vidé"
+                      haut="à fond"
+                      valeurInitiale={correction ? (monEntree?.energie ?? null) : null}
+                    />
+                    <CurseurDiscret
+                      nom="calme"
+                      etiquette="Calme"
+                      bas="agité"
+                      haut="posé"
+                      valeurInitiale={correction ? (monEntree?.calme ?? null) : null}
+                    />
+                    <p className="mt-1 text-[12px] leading-snug text-encre-3">
+                      Ni l&apos;un ni l&apos;autre n&apos;entre dans une moyenne ou un classement.
+                      C&apos;est pour relire, plus tard.
+                    </p>
+                  </div>
+                </details>
 
                 {etat.erreur && (
                   <div className="mt-4">
@@ -317,7 +412,30 @@ export function EcranAujourdhui({
                   {monEntree.joie}
                 </span>
               </div>
-              <BoitePhoto photo={monEntree.photo} />
+              {(monEntree.titre || monEntree.etiquettes.length > 0) && (
+                <div className="mt-3 border-t border-trait pt-3">
+                  {monEntree.titre && (
+                    <p className="text-[17px] font-semibold leading-tight tracking-[-0.01em]">
+                      {monEntree.titre}
+                    </p>
+                  )}
+                  {monEntree.etiquettes.length > 0 && (
+                    <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                      {monEntree.etiquettes.map((e) => (
+                        <li
+                          key={e.id}
+                          className="rounded-[var(--radius-pilule)] bg-surface-3 px-2 py-0.5 text-[12px] text-encre-2"
+                        >
+                          {e.nom}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
+              <BoitePhoto photos={monEntree.photos} />
+              <BoiteVocale audio={monEntree.audio} couleur={couleurProfil(moi)} />
             </Carte>
           </motion.div>
         )}
@@ -327,7 +445,44 @@ export function EcranAujourdhui({
       <section className="mt-7">
         <TitreSection>La bande</TitreSection>
         <Carte className="p-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            {/* La figure du jour. Sous le voile elle n'est pas floutée : elle est
+                dessinée sans les notes, qui ne descendent donc pas dans la page. */}
+            <FigureDuJour
+              profils={annuaire.profils}
+              notes={notes}
+              taille={158}
+              masquee={voile}
+              presents={entreesDuJour.map((e) => e.profil)}
+            />
+
+            <div className="min-w-0 flex-1">
+              {!voile && moyenne !== null ? (
+                <>
+                  <div className="flex items-baseline gap-1">
+                    <span className="chiffres text-[32px]" style={{ color: "var(--joie-encre)" }}>
+                      {moyenne.toFixed(1).replace(".", ",")}
+                    </span>
+                    <span className="text-[12px] text-encre-3">/ 10</span>
+                  </div>
+                  <p className="text-[12px] text-encre-3">humeur du jour</p>
+                  {lectureFigure && (
+                    <p className="mt-2 text-[13px] leading-snug text-encre-2">{lectureFigure}</p>
+                  )}
+                </>
+              ) : (
+                <p className="text-[13px] leading-snug text-encre-3">
+                  {voile
+                    ? entreesDuJour.length > 0
+                      ? "Les sommets vides sont ceux qui ont posé. Ils se remplissent quand tu poses la tienne."
+                      : "La figure du jour se dessine quand tu as posé la tienne."
+                    : "Personne n'a encore posé sa journée."}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center gap-3 border-t border-trait pt-3">
             {annuaire.profils.map((profil) => {
               const aPoste = entreesDuJour.some((e) => e.profil === profil.id);
               // Avant d'avoir posé, savoir qui a déjà posté est une information
@@ -335,37 +490,17 @@ export function EcranAujourdhui({
               // passés. C'est le chiffre qu'on cache, pas la présence.
               return (
                 <div key={profil.id} className="flex flex-col items-center gap-1.5">
-                  <Avatar profil={profil} taille={44} anneau={aPoste} attenue={!aPoste} />
+                  <Avatar profil={profil} taille={40} anneau={aPoste} attenue={!aPoste} />
                   <span className={`text-[12px] ${aPoste ? "text-encre-2" : "text-encre-3"}`}>
                     {profil.id === moi.id ? "toi" : profil.pseudo}
                   </span>
                 </div>
               );
             })}
-
-            <div className="ml-auto text-right">
-              {!voile && moyenne !== null ? (
-                <>
-                  <div className="flex items-baseline justify-end gap-1">
-                    <span className="chiffres text-[30px]" style={{ color: "var(--joie-encre)" }}>
-                      {moyenne.toFixed(1).replace(".", ",")}
-                    </span>
-                    <span className="text-[12px] text-encre-3">/ 10</span>
-                  </div>
-                  <p className="text-[12px] text-encre-3">humeur du jour</p>
-                </>
-              ) : (
-                <p className="max-w-[8.5rem] text-[12px] leading-snug text-encre-3">
-                  {voile
-                    ? "L'humeur de la bande se dévoile quand tu as posé la tienne."
-                    : "Personne n'a encore posé sa journée."}
-                </p>
-              )}
-            </div>
           </div>
 
           {manquants.length > 0 && (
-            <p className="mt-3 border-t border-trait pt-3 text-[13px] text-encre-3">
+            <p className="mt-3 text-[13px] text-encre-3">
               {phraseManquants(manquants, moi.id)}
             </p>
           )}

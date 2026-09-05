@@ -14,10 +14,14 @@ import type { Entree } from "./types";
 function entree(jour: string, profil = "a", joie = 6, extra: Partial<Entree> = {}): Entree {
   return {
     id: `${jour}-${profil}`, jour, profil, joie,
-    note: null, declencheurs: [], photo: null, reactions: [], commentaires: [], posteA: "20:00",
+    titre: null, note: null, energie: null, calme: null, declencheurs: [],
+    etiquettes: [], photos: [], audio: null, reactions: [], commentaires: [], posteA: "20:00",
     ...extra,
   };
 }
+
+/** Une photo de test : le mur ne regarde que « il y en a une », pas laquelle. */
+const UNE_PHOTO = [{ id: "p1", url: "/api/photo/p1", largeur: 800, hauteur: 600 }];
 
 describe("ceJourLa", () => {
   it("retrouve la même date l'an dernier", () => {
@@ -55,7 +59,7 @@ describe("murDeSouvenirs", () => {
   });
 
   it("retient une journée avec photo", () => {
-    const avec = entree("2026-01-01", "a", 5, { photo: "/api/photo/x" });
+    const avec = entree("2026-01-01", "a", 5, { photos: UNE_PHOTO });
     expect(murDeSouvenirs([avec, entree("2026-01-02")])).toHaveLength(1);
   });
 
@@ -72,14 +76,14 @@ describe("murDeSouvenirs", () => {
   });
 
   it("classe la plus récente devant, à égalité de points", () => {
-    const a = entree("2026-01-01", "a", 5, { photo: "/x" });
-    const b = entree("2026-06-01", "b", 5, { photo: "/y" });
+    const a = entree("2026-01-01", "a", 5, { photos: UNE_PHOTO });
+    const b = entree("2026-06-01", "b", 5, { photos: UNE_PHOTO });
     expect(murDeSouvenirs([a, b])[0].entree.jour).toBe("2026-06-01");
   });
 
   it("respecte la limite demandée", () => {
     const beaucoup = Array.from({ length: 30 }, (_, i) =>
-      entree(`2026-01-${String(i + 1).padStart(2, "0")}`, "a", 5, { photo: "/x" }));
+      entree(`2026-01-${String(i + 1).padStart(2, "0")}`, "a", 5, { photos: UNE_PHOTO }));
     expect(murDeSouvenirs(beaucoup, 5)).toHaveLength(5);
   });
 });
@@ -132,7 +136,7 @@ describe("retrospective", () => {
   it("compte notes, photos, réactions et commentaires", () => {
     const entrees = [
       entree("2026-01-01", "a", 7, {
-        note: "voilà", photo: "/x",
+        note: "voilà", photos: UNE_PHOTO,
         reactions: [{ emoji: "❤️", parQui: ["b", "c"] }],
         commentaires: [{ id: "1", auteurId: "b", auteur: "B", texte: "oui", quand: "20:00" }],
       }),
@@ -185,7 +189,7 @@ describe("le mur ne répète pas le même motif", () => {
     const dix = Array.from({ length: 6 }, (_, i) =>
       entree(`2026-01-0${i + 1}`, "a", 10, { note: "belle journée" }));
     const photos = Array.from({ length: 3 }, (_, i) =>
-      entree(`2026-02-0${i + 1}`, "a", 6, { photo: "/x" }));
+      entree(`2026-02-0${i + 1}`, "a", 6, { photos: UNE_PHOTO }));
     const mur = murDeSouvenirs([...dix, ...photos], 4);
     expect(mur.filter((m) => m.raison === "une journée à 10").length).toBeLessThanOrEqual(2);
     expect(mur.some((m) => m.raison === "une photo")).toBe(true);
@@ -203,7 +207,7 @@ describe("le mur ne répète pas le même motif", () => {
     const dix = Array.from({ length: 6 }, (_, i) =>
       entree(`2026-01-0${i + 1}`, "a", 10, { note: "belle journée" }));
     const photos = Array.from({ length: 3 }, (_, i) =>
-      entree(`2026-02-0${i + 1}`, "a", 6, { photo: "/x" }));
+      entree(`2026-02-0${i + 1}`, "a", 6, { photos: UNE_PHOTO }));
     const raisons = new Set(murDeSouvenirs([...dix, ...photos]).map((m) => m.raison));
     expect(raisons.has("une photo")).toBe(true);
     expect(raisons.has("une journée à 10")).toBe(true);

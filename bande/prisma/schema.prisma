@@ -30,6 +30,7 @@ model Groupe {
   declencheurs Declencheur[]
   entrees      Entree[]
   capsules     Capsule[]
+  etiquettes   Etiquette[]
 
   @@map("bande_groupes")
 }
@@ -93,16 +94,25 @@ model Entree {
   membreId  String   @map("membre_id")
   jour      String
   joie      Int
+  /// Trois mots maximum. C'est ce qu'on relira dans un an, et la contrainte
+  /// n'est pas décorative : une phrase entière ne se retient pas.
+  titre     String?
   note      String?
+  /// Facultatifs, repliés par défaut. Ils n'entrent dans aucun classement :
+  /// ce sont deux axes de plus pour se relire, pas deux notes de plus.
+  energie   Int?
+  calme     Int?
   creeLe    DateTime @default(now()) @map("cree_le")
   modifieLe DateTime @updatedAt @map("modifie_le")
 
   groupe       Groupe              @relation(fields: [groupeId], references: [id], onDelete: Cascade)
   membre       Membre              @relation(fields: [membreId], references: [id], onDelete: Cascade)
   declencheurs EntreeDeclencheur[]
+  etiquettes   EntreeEtiquette[]
   reactions    Reaction[]
   commentaires Commentaire[]
-  photo        Photo?
+  photos       Photo[]
+  audio        Audio?
 
   @@unique([membreId, jour])
   @@index([groupeId, jour])
@@ -118,7 +128,10 @@ model Entree {
 /// méga-octets. Le jour où ça déborde, `depot.ts` est le seul fichier à rouvrir.
 model Photo {
   id       String   @id @default(cuid())
-  entreeId String   @unique @map("entree_id")
+  /// Plusieurs photos par journée : l'unicité d'origine est levée, et l'ordre
+  /// décide de la place dans le carrousel.
+  entreeId String   @map("entree_id")
+  ordre    Int      @default(0)
   mime     String
   octets   Bytes
   largeur  Int
@@ -135,7 +148,62 @@ model Photo {
 
   entree Entree @relation(fields: [entreeId], references: [id], onDelete: Cascade)
 
+  @@index([entreeId, ordre])
   @@map("bande_photos")
+}
+
+/// La note vocale d'une journée : trente secondes, pas plus.
+///
+/// `niveaux` garde l'enveloppe sonore mesurée à l'enregistrement — une
+/// soixantaine d'entiers. La forme d'onde du fil se dessine donc à partir du
+/// vrai son, et non d'un motif décoratif qui serait le même pour tout le monde.
+/// Sans ça, il faudrait décoder l'audio à chaque affichage.
+model Audio {
+  id       String   @id @default(cuid())
+  entreeId String   @unique @map("entree_id")
+  mime     String
+  octets   Bytes
+  /// En millisecondes.
+  duree    Int
+  niveaux  Int[]
+  creeLe   DateTime @default(now()) @map("cree_le")
+  modifieLe DateTime @default(now()) @updatedAt @map("modifie_le")
+
+  entree Entree @relation(fields: [entreeId], references: [id], onDelete: Cascade)
+
+  @@map("bande_audios")
+}
+
+/// Une étiquette libre de la bande : sport, taf, soirée, glandage.
+///
+/// Elle vit au niveau du groupe et non de la journée : c'est ce qui permet
+/// l'autocomplétion sur celles déjà utilisées, et ce qui rend les statistiques
+/// possibles. Le nom normalisé sert de clé — « Soirée » et « soirée » sont la
+/// même étiquette.
+model Etiquette {
+  id         String   @id @default(cuid())
+  groupeId   String   @map("groupe_id")
+  nom        String
+  cle        String
+  creeLe     DateTime @default(now()) @map("cree_le")
+
+  groupe  Groupe            @relation(fields: [groupeId], references: [id], onDelete: Cascade)
+  entrees EntreeEtiquette[]
+
+  @@unique([groupeId, cle])
+  @@map("bande_etiquettes")
+}
+
+model EntreeEtiquette {
+  entreeId    String @map("entree_id")
+  etiquetteId String @map("etiquette_id")
+
+  entree    Entree    @relation(fields: [entreeId], references: [id], onDelete: Cascade)
+  etiquette Etiquette @relation(fields: [etiquetteId], references: [id], onDelete: Cascade)
+
+  @@id([entreeId, etiquetteId])
+  @@index([etiquetteId])
+  @@map("bande_entree_etiquettes")
 }
 
 model EntreeDeclencheur {

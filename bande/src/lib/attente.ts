@@ -46,6 +46,18 @@ export type JourneeEnAttente = {
   joie: number;
   note: string;
   declencheurs: string[];
+  /**
+   * Les champs du check-in enrichi.
+   *
+   * Ils sont facultatifs dans le type, et pas seulement parce qu'ils le sont
+   * dans le formulaire : une journée gardée par une version précédente de
+   * l'application est encore dans le stockage local au moment de la mise à
+   * jour, et elle ne les porte pas. La lire doit marcher quand même.
+   */
+  titre?: string;
+  etiquettes?: string[];
+  energie?: number | null;
+  calme?: number | null;
   ecriteA: number;
 };
 

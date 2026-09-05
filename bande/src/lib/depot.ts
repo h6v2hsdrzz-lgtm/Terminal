@@ -7,6 +7,9 @@ import { codeInvitation, creerCodeReprise, decouperCodeReprise, normaliserCode, 
 import { decaler } from "./dates";
 import { initialesDeLaBande } from "./initiales";
 import type { Declencheur, Entree, Profil } from "./types";
+import { MAX_ETIQUETTES, cleEtiquette, nettoyerEtiquette } from "./etiquettes";
+// Réexporté pour que la route d'export n'ait pas à savoir qu'il a déménagé.
+export { versCsv } from "./csv";
 
 /**
  * Tout ce qui touche la base passe par ici.
@@ -126,9 +129,13 @@ const AVEC_TOUT = {
   membre: { select: { id: true } },
   declencheurs: { select: { declencheurId: true } },
   reactions: { select: { emoji: true, membreId: true } },
-  // Seulement l'existence, jamais les octets : charger une photo pour savoir
-  // qu'elle existe transformerait le fil en téléchargement de plusieurs méga-octets.
-  photo: { select: { id: true } },
+  etiquettes: { select: { etiquette: { select: { id: true, nom: true } } } },
+  // Jamais les octets : charger une photo ou un son pour savoir qu'il existe
+  // transformerait le fil en téléchargement de plusieurs méga-octets. Les
+  // niveaux, eux, sont une soixantaine d'entiers — c'est la forme d'onde, et
+  // elle doit être là dès le rendu.
+  photos: { select: { id: true, largeur: true, hauteur: true }, orderBy: { ordre: "asc" } },
+  audio: { select: { duree: true, niveaux: true } },
   commentaires: {
     orderBy: { creeLe: "asc" },
     select: { id: true, texte: true, creeLe: true, membreId: true, membre: { select: { pseudo: true } } },
@@ -152,9 +159,21 @@ function versEntree(ligne: LigneEntree): Entree {
     jour: ligne.jour,
     profil: ligne.membreId,
     joie: ligne.joie,
+    titre: ligne.titre,
     note: ligne.note,
+    energie: ligne.energie,
+    calme: ligne.calme,
     declencheurs: ligne.declencheurs.map((d) => d.declencheurId),
-    photo: ligne.photo ? `/api/photo/${ligne.id}` : null,
+    etiquettes: ligne.etiquettes.map((e) => e.etiquette),
+    photos: ligne.photos.map((p) => ({
+      id: p.id,
+      url: `/api/photo/${p.id}`,
+      largeur: p.largeur,
+      hauteur: p.hauteur,
+    })),
+    audio: ligne.audio
+      ? { url: `/api/audio/${ligne.id}`, duree: ligne.audio.duree, niveaux: ligne.audio.niveaux }
+      : null,
     reactions: [...parEmoji].map(([emoji, parQui]) => ({ emoji, parQui })),
     commentaires: ligne.commentaires.map((c) => ({
       id: c.id,
@@ -241,9 +260,14 @@ export function masquerEntree(entree: Entree): Entree {
     jour: entree.jour,
     profil: entree.profil,
     joie: 0,
+    titre: null,
     note: null,
+    energie: null,
+    calme: null,
     declencheurs: [],
-    photo: null,
+    etiquettes: [],
+    photos: [],
+    audio: null,
     reactions: [],
     commentaires: [],
     posteA: "",
@@ -252,17 +276,47 @@ export function masquerEntree(entree: Entree): Entree {
 
 // ── Écrire ───────────────────────────────────────────────────────────────────
 
+/** Trois mots. Au-delà, ce n'est plus un titre, c'est la note. */
+export const LONGUEUR_TITRE = 60;
+
+export type Saisie = {
+  joie: number;
+  note: string | null;
+  declencheurs: string[];
+  titre?: string | null;
+  etiquettes?: string[];
+  energie?: number | null;
+  calme?: number | null;
+};
+
+/**
+ * Les deux curseurs secondaires.
+ *
+ * Ils sont facultatifs, et le restent : une journée sans énergie ni calme est
+ * une journée complète. Une valeur hors bornes est ignorée plutôt que refusée —
+ * un curseur mal câblé ne doit pas empêcher de poser sa journée.
+ */
+function auxiliaire(valeur: number | null | undefined): number | null {
+  if (valeur === null || valeur === undefined) return null;
+  const arrondi = Math.round(valeur);
+  if (!Number.isFinite(arrondi) || arrondi < 1 || arrondi > 10) return null;
+  return arrondi;
+}
+
 export async function poserJournee(
   membreId: string,
   groupeId: string,
   jour: string,
-  saisie: { joie: number; note: string | null; declencheurs: string[] },
+  saisie: Saisie,
 ): Promise<Entree> {
   const joie = Math.round(saisie.joie);
   if (!Number.isFinite(joie) || joie < 1 || joie > 10) {
     throw new ErreurMetier("Une joie se note de 1 à 10.");
   }
   const note = saisie.note?.trim() ? saisie.note.trim().slice(0, 280) : null;
+  const titre = saisie.titre?.trim() ? saisie.titre.trim().slice(0, LONGUEUR_TITRE) : null;
+  const energie = auxiliaire(saisie.energie);
+  const calme = auxiliaire(saisie.calme);
 
   // Les déclencheurs viennent du formulaire : on ne garde que ceux qui
   // appartiennent vraiment à cette bande.
@@ -270,17 +324,20 @@ export async function poserJournee(
     where: { groupeId, id: { in: saisie.declencheurs } },
     select: { id: true },
   });
+  const etiquettes = await resoudreEtiquettes(groupeId, saisie.etiquettes ?? []);
 
   const ligne = await prisma.entree.upsert({
     where: { membreId_jour: { membreId, jour } },
     create: {
-      groupeId, membreId, jour, joie, note,
+      groupeId, membreId, jour, joie, note, titre, energie, calme,
       declencheurs: { create: connus.map((d) => ({ declencheurId: d.id })) },
+      etiquettes: { create: etiquettes.map((id) => ({ etiquetteId: id })) },
     },
     update: {
-      joie, note,
+      joie, note, titre, energie, calme,
       // Remplacer plutôt que fusionner : la case décochée doit disparaître.
       declencheurs: { deleteMany: {}, create: connus.map((d) => ({ declencheurId: d.id })) },
+      etiquettes: { deleteMany: {}, create: etiquettes.map((id) => ({ etiquetteId: id })) },
     },
     include: AVEC_TOUT,
   });
@@ -438,13 +495,23 @@ export async function retirerDeclencheur(groupeId: string, declencheurId: string
 
 /** Au-delà, c'est que le redimensionnement du navigateur n'a pas eu lieu. */
 export const POIDS_MAX_PHOTO = 2 * 1024 * 1024;
+/** Assez pour raconter une journée, pas assez pour en faire un album. */
+export const MAX_PHOTOS = 4;
 const MIMES_PHOTO = ["image/jpeg", "image/webp", "image/png"];
 
-export async function enregistrerPhoto(
+async function maJournee(membreId: string, jour: string) {
+  const entree = await prisma.entree.findUnique({
+    where: { membreId_jour: { membreId, jour } },
+    select: { id: true, groupeId: true },
+  });
+  // On n'illustre que sa propre journée, et seulement après l'avoir posée.
+  if (!entree) throw new ErreurMetier("Pose ta journée avant d'y ajouter quelque chose.");
+  return entree;
+}
+
+export async function ajouterPhoto(
   membreId: string,
   jour: string,
-  // `Uint8Array<ArrayBuffer>` et non le `Uint8Array` par défaut : Prisma 7 exige
-  // un tampon possédé, pas une vue sur un `SharedArrayBuffer` possible.
   fichier: { mime: string; octets: Uint8Array<ArrayBuffer>; largeur: number; hauteur: number },
 ) {
   if (!MIMES_PHOTO.includes(fichier.mime)) {
@@ -454,36 +521,34 @@ export async function enregistrerPhoto(
     throw new ErreurMetier("Cette image est trop lourde.");
   }
 
-  const entree = await prisma.entree.findUnique({
-    where: { membreId_jour: { membreId, jour } },
-    select: { id: true, groupeId: true },
-  });
-  // On n'illustre que sa propre journée, et seulement après l'avoir posée.
-  if (!entree) throw new ErreurMetier("Pose ta journée avant d'y mettre une photo.");
+  const entree = await maJournee(membreId, jour);
+  const deja = await prisma.photo.count({ where: { entreeId: entree.id } });
+  if (deja >= MAX_PHOTOS) {
+    throw new ErreurMetier(`${MAX_PHOTOS} photos par journée, c'est déjà un album.`);
+  }
 
-  await prisma.photo.upsert({
-    where: { entreeId: entree.id },
-    create: { entreeId: entree.id, ...fichier },
-    update: fichier,
-  });
+  await prisma.photo.create({ data: { entreeId: entree.id, ordre: deja, ...fichier } });
   return entree.groupeId;
 }
 
-export async function retirerPhoto(membreId: string, jour: string) {
-  const entree = await prisma.entree.findUnique({
-    where: { membreId_jour: { membreId, jour } },
-    select: { id: true, groupeId: true },
+/** On ne retire que ses propres photos. */
+export async function retirerPhoto(membreId: string, photoId: string) {
+  const photo = await prisma.photo.findUnique({
+    where: { id: photoId },
+    select: { entree: { select: { membreId: true, groupeId: true } } },
   });
-  if (!entree) throw new ErreurMetier("Cette journée n'existe pas.");
-  await prisma.photo.deleteMany({ where: { entreeId: entree.id } });
-  return entree.groupeId;
+  if (!photo) throw new ErreurMetier("Cette photo n'existe plus.");
+  if (photo.entree.membreId !== membreId) throw new ErreurMetier("Cette photo n'est pas la tienne.");
+
+  await prisma.photo.delete({ where: { id: photoId } });
+  return photo.entree.groupeId;
 }
 
 /** Les octets, pour la route qui les sert. Contrôle d'appartenance compris. */
-export async function lirePhoto(membreId: string, entreeId: string) {
+export async function lirePhoto(membreId: string, photoId: string) {
   const photo = await prisma.photo.findUnique({
-    where: { entreeId },
-    select: { mime: true, octets: true, creeLe: true, entree: { select: { groupeId: true } } },
+    where: { id: photoId },
+    select: { mime: true, octets: true, entree: { select: { groupeId: true } } },
   });
   if (!photo) return null;
 
@@ -494,7 +559,105 @@ export async function lirePhoto(membreId: string, entreeId: string) {
   // La photo d'une autre bande ne se sert pas, même avec le bon identifiant.
   if (!membre || membre.groupeId !== photo.entree.groupeId) return null;
 
-  return { mime: photo.mime, octets: photo.octets, creeLe: photo.creeLe };
+  return { mime: photo.mime, octets: photo.octets };
+}
+
+// ── Note vocale ─────────────────────────────────────────────────────────────
+
+/** Trente secondes. Au-delà, ce n'est plus une note, c'est un message. */
+export const DUREE_MAX_AUDIO = 30_000;
+export const POIDS_MAX_AUDIO = 2 * 1024 * 1024;
+/**
+ * Les formats acceptés.
+ *
+ * Safari produit du MP4/AAC, Chrome et Firefox du WebM/Opus. Le navigateur
+ * choisit à l'enregistrement — coder un format en dur ferait échouer
+ * l'enregistrement sur la moitié des téléphones, et sur iPhone en particulier.
+ */
+const MIMES_AUDIO = ["audio/mp4", "audio/aac", "audio/webm", "audio/ogg", "audio/mpeg"];
+
+export async function enregistrerAudio(
+  membreId: string,
+  jour: string,
+  son: { mime: string; octets: Uint8Array<ArrayBuffer>; duree: number; niveaux: number[] },
+) {
+  const type = son.mime.split(";")[0].trim();
+  if (!MIMES_AUDIO.includes(type)) throw new ErreurMetier("Ce format de son n'est pas accepté.");
+  if (son.octets.byteLength > POIDS_MAX_AUDIO) throw new ErreurMetier("Ce son est trop lourd.");
+  if (son.duree > DUREE_MAX_AUDIO + 2000) throw new ErreurMetier("Trente secondes maximum.");
+
+  const entree = await maJournee(membreId, jour);
+  const donnees = {
+    mime: type,
+    octets: son.octets,
+    duree: Math.min(son.duree, DUREE_MAX_AUDIO),
+    // Une soixantaine de barres suffit à dessiner une onde lisible ; en garder
+    // mille ferait grossir chaque page du fil pour rien.
+    niveaux: son.niveaux.slice(0, 64).map((n) => Math.max(0, Math.min(100, Math.round(n)))),
+  };
+  await prisma.audio.upsert({
+    where: { entreeId: entree.id },
+    create: { entreeId: entree.id, ...donnees },
+    update: donnees,
+  });
+  return entree.groupeId;
+}
+
+export async function retirerAudio(membreId: string, jour: string) {
+  const entree = await maJournee(membreId, jour);
+  await prisma.audio.deleteMany({ where: { entreeId: entree.id } });
+  return entree.groupeId;
+}
+
+export async function lireAudio(membreId: string, entreeId: string) {
+  const audio = await prisma.audio.findUnique({
+    where: { entreeId },
+    select: { mime: true, octets: true, entree: { select: { groupeId: true } } },
+  });
+  if (!audio) return null;
+
+  const membre = await prisma.membre.findUnique({
+    where: { id: membreId },
+    select: { groupeId: true },
+  });
+  if (!membre || membre.groupeId !== audio.entree.groupeId) return null;
+
+  return { mime: audio.mime, octets: audio.octets };
+}
+
+// ── Étiquettes ──────────────────────────────────────────────────────────────
+
+/** Celles que la bande a déjà utilisées, les plus fréquentes d'abord. */
+export async function etiquettesDeLaBande(groupeId: string) {
+  const lignes = await prisma.etiquette.findMany({
+    where: { groupeId },
+    select: { id: true, nom: true, _count: { select: { entrees: true } } },
+  });
+  return lignes
+    .sort((a, b) => b._count.entrees - a._count.entrees || a.nom.localeCompare(b.nom))
+    .map((e) => ({ id: e.id, nom: e.nom, usages: e._count.entrees }));
+}
+
+/** Trouve ou crée les étiquettes d'une journée, et rend leurs identifiants. */
+async function resoudreEtiquettes(groupeId: string, noms: string[]): Promise<string[]> {
+  const propres = [...new Set(
+    noms.map(nettoyerEtiquette).filter((n) => cleEtiquette(n).length > 0),
+  )].slice(0, MAX_ETIQUETTES);
+
+  const ids: string[] = [];
+  for (const nom of propres) {
+    const cle = cleEtiquette(nom);
+    // `upsert` plutôt que « chercher puis créer » : deux personnes qui posent la
+    // même étiquette au même moment ne doivent pas se marcher dessus.
+    const etiquette = await prisma.etiquette.upsert({
+      where: { groupeId_cle: { groupeId, cle } },
+      create: { groupeId, cle, nom },
+      update: {},
+      select: { id: true },
+    });
+    ids.push(etiquette.id);
+  }
+  return ids;
 }
 
 // ── Synchronisation ─────────────────────────────────────────────────────────
@@ -507,13 +670,18 @@ export async function lirePhoto(membreId: string, entreeId: string) {
  * toutes les trois secondes sur une base gratuite.
  */
 export async function versionBande(groupeId: string): Promise<string> {
-  const [entrees, reactions, commentaires, photos, membres] = await Promise.all([
+  const [entrees, reactions, commentaires, photos, audios, membres] = await Promise.all([
     prisma.entree.aggregate({ where: { groupeId }, _count: true, _max: { modifieLe: true } }),
     prisma.reaction.aggregate({ where: { entree: { groupeId } }, _count: true, _max: { creeLe: true } }),
     prisma.commentaire.aggregate({ where: { entree: { groupeId } }, _count: true, _max: { creeLe: true } }),
     // Les photos comptent au même titre : ajouter une image ne touche à aucun
     // des autres agrégats, et elle resterait invisible chez les autres.
     prisma.photo.aggregate({ where: { entree: { groupeId } }, _count: true, _max: { modifieLe: true } }),
+    // Les notes vocales pour la même raison, et elle n'est pas théorique :
+    // enregistrer un son ne modifie pas la ligne de la journée, donc sans cet
+    // agrégat la note resterait muette sur les autres téléphones jusqu'à ce
+    // qu'une réaction ou un commentaire vienne remuer l'empreinte.
+    prisma.audio.aggregate({ where: { entree: { groupeId } }, _count: true, _max: { modifieLe: true } }),
     // Et les membres : quelqu'un qui rejoint ou qui part change l'écran de tout
     // le monde.
     prisma.membre.aggregate({ where: { groupeId }, _count: true, _max: { creeLe: true } }),
@@ -531,6 +699,7 @@ export async function versionBande(groupeId: string): Promise<string> {
     reactions._count, reactions._max.creeLe?.getTime() ?? 0,
     commentaires._count, commentaires._max.creeLe?.getTime() ?? 0,
     photos._count, photos._max.modifieLe?.getTime() ?? 0,
+    audios._count, audios._max.modifieLe?.getTime() ?? 0,
     membres._count, membres._max.creeLe?.getTime() ?? 0,
     capsules._count, capsules._max.creeLe?.getTime() ?? 0,
   ].join("-");
@@ -573,7 +742,12 @@ export async function exporter(groupeId: string) {
       joie: e.joie,
       note: e.note,
       declencheurs: e.declencheurs.map((d) => declencheur.get(d.declencheurId) ?? "?"),
-      photo: e.photo !== null,
+      photos: e.photos.length,
+      vocal: e.audio !== null,
+      titre: e.titre,
+      etiquettes: e.etiquettes.map((x) => x.etiquette.nom),
+      energie: e.energie,
+      calme: e.calme,
       reactions: e.reactions.map((r) => ({ emoji: r.emoji, de: pseudo.get(r.membreId) ?? "?" })),
       commentaires: e.commentaires.map((c) => ({
         de: c.membre.pseudo, texte: c.texte, quand: c.creeLe,
@@ -583,29 +757,6 @@ export async function exporter(groupeId: string) {
   };
 }
 
-/** Le même contenu, à plat, pour un tableur. */
-export function versCsv(donnees: Awaited<ReturnType<typeof exporter>>): string {
-  // Un champ contenant une virgule, un guillemet ou un retour à la ligne doit
-  // être entouré de guillemets, les guillemets internes étant doublés.
-  const cellule = (valeur: unknown) => {
-    const texte = valeur === null || valeur === undefined ? "" : String(valeur);
-    return /[",\n\r]/.test(texte) ? `"${texte.replaceAll('"', '""')}"` : texte;
-  };
-
-  const lignes = [
-    ["jour", "qui", "joie", "note", "declencheurs", "photo", "reactions", "commentaires"],
-    ...donnees.journees.map((j) => [
-      j.jour, j.qui, j.joie, j.note ?? "",
-      j.declencheurs.join(" | "),
-      j.photo ? "oui" : "non",
-      j.reactions.map((r) => `${r.de} ${r.emoji}`).join(" | "),
-      j.commentaires.map((c) => `${c.de} : ${c.texte}`).join(" | "),
-    ]),
-  ];
-  // Un BOM, parce qu'Excel lit sinon un fichier UTF-8 comme du latin-1 et
-  // affiche « journÃ©e ».
-  return "﻿" + lignes.map((l) => l.map(cellule).join(",")).join("\r\n") + "\r\n";
-}
 
 /**
  * Quitter la bande.

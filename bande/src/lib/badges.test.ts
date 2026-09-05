@@ -6,8 +6,9 @@ import type { Entree } from "./types";
 
 function entree(jour: string, joie = 6, note: string | null = null): Entree {
   return {
-    id: jour, jour, profil: "moi", joie, note,
-    declencheurs: [], photo: null, reactions: [], commentaires: [], posteA: "20:00",
+    id: jour, jour, profil: "moi", joie,
+    titre: null, note, energie: null, calme: null, declencheurs: [],
+    etiquettes: [], photos: [], audio: null, reactions: [], commentaires: [], posteA: "20:00",
   };
 }
 const suite = (debut: string, n: number) => Array.from({ length: n }, (_, i) => decaler(debut, i));

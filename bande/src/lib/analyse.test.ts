@@ -16,7 +16,8 @@ import type { Entree } from "./types";
 function entree(jour: string, profil: string, joie: number, declencheurs: string[] = []): Entree {
   return {
     id: `${jour}-${profil}`, jour, profil, joie,
-    note: null, declencheurs, photo: null, reactions: [], commentaires: [], posteA: "20:00",
+    titre: null, note: null, energie: null, calme: null, declencheurs,
+    etiquettes: [], photos: [], audio: null, reactions: [], commentaires: [], posteA: "20:00",
   };
 }
 

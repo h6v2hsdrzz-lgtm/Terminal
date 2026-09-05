@@ -19,7 +19,9 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { ALPHABET, creerCodeReprise, normaliserCode } from "../src/lib/codes";
 import { imageFactice } from "./image-factice";
+import { sonFactice } from "./son-factice";
 import { decaler, jourDeLaBande } from "../src/lib/dates";
+import { cleEtiquette } from "../src/lib/etiquettes";
 
 // Un code fixe, pour que l'adresse de démonstration ne change pas d'une
 // exécution à l'autre. Il doit tenir dans l'alphabet des codes : un « 0 » ou un
@@ -70,6 +72,30 @@ const NOTES = [
   "Trop de monde partout, j'ai fui.",
   "Soirée improvisée, la meilleure sorte.",
   null, null, null,
+];
+
+/**
+ * Les titres et les étiquettes.
+ *
+ * Ils vont par paire : un titre appelle ses mots. « Le bar de l'an dernier »
+ * avec l'étiquette « travail » donnerait une base incohérente, et une base
+ * incohérente ne permet pas de juger un écran — on ne saurait pas si ce qu'on
+ * voit est un défaut d'affichage ou un défaut de données.
+ */
+const MOMENTS: { titre: string; etiquettes: string[] }[] = [
+  { titre: "Grasse matinée méritée", etiquettes: ["repos"] },
+  { titre: "Pluie toute la journée", etiquettes: ["maison", "repos"] },
+  { titre: "Réunion interminable", etiquettes: ["travail"] },
+  { titre: "Le bar de l'an dernier", etiquettes: ["sortie", "amis"] },
+  { titre: "Bonne nouvelle au bureau", etiquettes: ["travail"] },
+  { titre: "Rien de spécial", etiquettes: [] },
+  { titre: "Le chat sur le clavier", etiquettes: ["maison"] },
+  { titre: "Enfin fini", etiquettes: ["travail"] },
+  { titre: "Trop de monde", etiquettes: ["fatigue"] },
+  { titre: "Soirée improvisée", etiquettes: ["sortie", "amis"] },
+  { titre: "Longue marche", etiquettes: ["sport", "dehors"] },
+  { titre: "Coup de barre", etiquettes: ["fatigue"] },
+  { titre: "Dimanche lent", etiquettes: ["repos", "maison"] },
 ];
 
 const REACTIONS = ["❤️", "😂", "🔥", "🫂", "🙌", "👀"];
@@ -148,6 +174,8 @@ async function main() {
 
   type Ligne = {
     membreId: string; jour: string; joie: number; note: string | null;
+    titre: string | null; etiquettes: string[];
+    energie: number | null; calme: number | null;
     declencheurs: string[]; creeLe: Date;
   };
   const lignes: Ligne[] = [];
@@ -165,9 +193,14 @@ async function main() {
 
     for (let i = 0; i < PROFILS.length; i += 1) {
       const profil = PROFILS[i];
-      // Personne n'a encore posté aujourd'hui : c'est l'état dans lequel on
-      // ouvre l'application le soir, et donc celui qu'il faut pouvoir regarder.
-      if (recul === 0) continue;
+      // Aujourd'hui, tout le monde a posté sauf le premier profil.
+      //
+      // C'est l'état le plus intéressant à regarder, et de loin : c'est celui
+      // dans lequel on ouvre l'application le soir. Les autres sont passés, le
+      // voile est en place, la figure du jour montre qui est là sans montrer
+      // combien — et le formulaire attend. Une base où personne n'a rien posé
+      // aujourd'hui ne permet de juger aucun de ces quatre éléments.
+      if (recul === 0 && i === 0) continue;
       if (tirage() > profil.presence) continue;
 
       const bruit = (tirage() - 0.5) * profil.amplitude;
@@ -185,15 +218,41 @@ async function main() {
       // hasard à l'intérieur d'une journée.
       const creeLe = new Date(a, m - 1, j, 19 + Math.floor(tirage() * 4), Math.floor(tirage() * 60));
 
+      // Un titre deux fois sur trois, et les curseurs secondaires une fois sur
+      // deux : ils sont facultatifs dans l'application, ils doivent l'être ici
+      // aussi. Une base où tout est rempli ne montre jamais l'écran réel.
+      const moment = tirage() < 0.66 ? MOMENTS[Math.floor(tirage() * MOMENTS.length)] : null;
+      const auxiliaire = (autour: number) =>
+        tirage() < 0.5
+          ? null
+          : Math.max(1, Math.min(10, Math.round(autour + (tirage() - 0.5) * 4)));
+
       lignes.push({
         membreId: membres[i].id,
         jour,
         joie,
         note: NOTES[Math.floor(tirage() * NOTES.length)],
+        titre: moment?.titre ?? null,
+        etiquettes: moment?.etiquettes ?? [],
+        // L'énergie suit la joie de loin, le calme s'en écarte : une bonne
+        // soirée peut être épuisante, une journée creuse peut être paisible.
+        energie: auxiliaire(joie),
+        calme: auxiliaire(11 - joie / 2),
         declencheurs: actifs.map((d) => groupe.declencheurs.find((x) => x.nom === d.nom)!.id),
         creeLe,
       });
     }
+  }
+
+  // Les étiquettes d'abord : elles sont partagées par toute la bande, et il en
+  // faut l'identifiant pour rattacher les journées.
+  const nomsEtiquettes = [...new Set(lignes.flatMap((l) => l.etiquettes))];
+  const etiquettes = new Map<string, string>();
+  for (const nom of nomsEtiquettes) {
+    const ligne = await prisma.etiquette.create({
+      data: { groupeId: groupe.id, nom, cle: cleEtiquette(nom) },
+    });
+    etiquettes.set(nom, ligne.id);
   }
 
   for (const ligne of lignes) {
@@ -204,8 +263,14 @@ async function main() {
         jour: ligne.jour,
         joie: ligne.joie,
         note: ligne.note,
+        titre: ligne.titre,
+        energie: ligne.energie,
+        calme: ligne.calme,
         creeLe: ligne.creeLe,
         declencheurs: { create: ligne.declencheurs.map((declencheurId) => ({ declencheurId })) },
+        etiquettes: {
+          create: ligne.etiquettes.map((nom) => ({ etiquetteId: etiquettes.get(nom)! })),
+        },
       },
     });
   }
@@ -235,6 +300,31 @@ async function main() {
       },
     });
     posees += 1;
+  }
+
+  // Quelques notes vocales, rares — c'est un geste qu'on fait les soirs où on a
+  // vraiment quelque chose à dire, pas tous les jours. Sur les six dernières
+  // semaines seulement : la note vocale est récente dans la vie de la bande, et
+  // c'est là qu'on regarde.
+  const pourVocal = await prisma.entree.findMany({
+    where: { groupeId: groupe.id, jour: { gte: decaler(aujourdhui, -42) } },
+    select: { id: true, joie: true },
+    orderBy: { jour: "asc" },
+  });
+  let vocales = 0;
+  for (const entree of pourVocal) {
+    if (tirage() > 0.07) continue;
+    const son = sonFactice(6000 + Math.round(tirage() * 16_000), Math.round(tirage() * 1e9));
+    await prisma.audio.create({
+      data: {
+        entreeId: entree.id,
+        mime: son.mime,
+        octets: son.octets,
+        duree: son.duree,
+        niveaux: son.niveaux,
+      },
+    });
+    vocales += 1;
   }
 
   // Réactions et commentaires : seulement sur les trois dernières semaines. Une
@@ -300,7 +390,7 @@ async function main() {
   const nbReactions = await prisma.reaction.count({ where: { entree: { groupeId: groupe.id } } });
   const nbCommentaires = await prisma.commentaire.count({ where: { entree: { groupeId: groupe.id } } });
   console.log(`${lignes.length} journées sur ${JOURS} jours, ${PROFILS.length} membres, ${DECLENCHEURS.length} déclencheurs.`);
-  console.log(`${posees} photos, ${nbReactions} réactions, ${nbCommentaires} commentaires.`);
+  console.log(`${posees} photos, ${vocales} notes vocales, ${nbReactions} réactions, ${nbCommentaires} commentaires.`);
   // Les codes sont aussi écrits sur disque : sans ça, rejouer le peuplement
   // fait perdre les précédents, et on se retrouve à ne plus pouvoir se
   // connecter à sa propre bande de démonstration. Le fichier est ignoré par

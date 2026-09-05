@@ -205,9 +205,9 @@ const DEFINITIONS: Definition[] = [
   { cle: "bavard", nom: "Bavard", description: "Cinquante journées racontées", emoji: "📖",
     quand: (m) => nieme(m.chronologie.filter((e) => e.note), 50) },
   { cle: "photographe", nom: "Photographe", description: "Une image dans le fil", emoji: "📷",
-    quand: (m) => premierOu(m.chronologie, (e) => Boolean(e.photo)) },
+    quand: (m) => premierOu(m.chronologie, (e) => e.photos.length > 0) },
   { cle: "album", nom: "Album", description: "Dix images dans le fil", emoji: "🖼️",
-    quand: (m) => nieme(m.chronologie.filter((e) => e.photo), 10) },
+    quand: (m) => nieme(m.chronologie.filter((e) => e.photos.length > 0), 10) },
 
   { cle: "noctambule", nom: "Noctambule", description: "Un check-in entre minuit et 4 h", emoji: "🦉",
     quand: (m) => premierOu(m.chronologie, (e) => {

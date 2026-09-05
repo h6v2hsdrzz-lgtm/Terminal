@@ -47,3 +47,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 captures/
+
+# sorties de Playwright : traces et copies d'écran d'échec, jetables
+test-results/
+playwright-report/

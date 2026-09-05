@@ -1,6 +1,7 @@
 import { CarteEntree } from "@/composants/CarteEntree";
 import { Carte, TitreSection } from "@/composants/Carte";
 import { CapsuleTemporelle } from "@/composants/CapsuleTemporelle";
+import { MurDesFigures } from "@/composants/MurDesFigures";
 import { Retrospective } from "@/composants/Retrospective";
 import { listerCapsules } from "@/lib/depot";
 import { entreesDeLaBande, exigerContexte } from "@/lib/repaire";
@@ -43,6 +44,11 @@ export default async function Page({
           choisi={choisi}
         />
       )}
+
+      <section className="mt-7">
+        <TitreSection>Les dernières formes</TitreSection>
+        <MurDesFigures entrees={entrees} profils={contexte.profils} />
+      </section>
 
       <section className="mt-7">
         <TitreSection>Ce jour-là</TitreSection>
