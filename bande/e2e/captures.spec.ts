@@ -15,6 +15,7 @@ const ECRANS = [
   { nom: "fil", url: "/fil" },
   { nom: "stats", url: "/stats" },
   { nom: "souvenirs", url: "/souvenirs" },
+  { nom: "galerie", url: "/galerie" },
   { nom: "profil", url: "/profil" },
   { nom: "reglages", url: "/reglages" },
 ];

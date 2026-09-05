@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore, useTran
 import { Avatar } from "./Avatar";
 import { Carte, TitreSection } from "./Carte";
 import { CarteEntree } from "./CarteEntree";
-import { BoitePhoto } from "./BoitePhoto";
+import { BoiteMedias } from "./BoiteMedias";
 import { BoiteVocale } from "./BoiteVocale";
 import { ChampEtiquettes } from "./ChampEtiquettes";
 import { CurseurDiscret } from "./CurseurDiscret";
@@ -434,7 +434,7 @@ export function EcranAujourdhui({
                 </div>
               )}
 
-              <BoitePhoto photos={monEntree.photos} />
+              <BoiteMedias medias={monEntree.photos} />
               <BoiteVocale audio={monEntree.audio} couleur={couleurProfil(moi)} />
             </Carte>
           </motion.div>

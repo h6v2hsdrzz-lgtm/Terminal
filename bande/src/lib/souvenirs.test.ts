@@ -21,7 +21,10 @@ function entree(jour: string, profil = "a", joie = 6, extra: Partial<Entree> = {
 }
 
 /** Une photo de test : le mur ne regarde que « il y en a une », pas laquelle. */
-const UNE_PHOTO = [{ id: "p1", url: "/api/photo/p1", largeur: 800, hauteur: 600 }];
+const UNE_PHOTO = [{
+  id: "p1", genre: "photo" as const, url: "/api/photo/p1", vignette: "/api/vignette/p1",
+  largeur: 800, hauteur: 600, duree: null, legende: null,
+}];
 
 describe("ceJourLa", () => {
   it("retrouve la même date l'an dernier", () => {
@@ -211,5 +214,36 @@ describe("le mur ne répète pas le même motif", () => {
     const raisons = new Set(murDeSouvenirs([...dix, ...photos]).map((m) => m.raison));
     expect(raisons.has("une photo")).toBe(true);
     expect(raisons.has("une journée à 10")).toBe(true);
+  });
+});
+
+describe("le mur retient aussi les voix et les vidéos", () => {
+  const AUDIO = { url: "/api/audio/x", duree: 6000, niveaux: [10, 40, 20] };
+  const UNE_VIDEO = [{
+    id: "v1", genre: "video" as const, url: "/api/photo/v1", vignette: "/api/vignette/v1",
+    largeur: 720, hauteur: 720, duree: 6000, legende: null,
+  }];
+
+  it("retient une journée où quelqu'un a parlé", () => {
+    // C'est le jour où l'on a préféré parler qu'écrire : ça vaut au moins
+    // autant qu'une photo.
+    const mur = murDeSouvenirs([entree("2026-01-01", "a", 5, { audio: AUDIO })]);
+    expect(mur).toHaveLength(1);
+    expect(mur[0].raison).toBe("une voix");
+  });
+
+  it("place une vidéo devant une photo, toutes choses égales", () => {
+    // Il a fallu sortir le téléphone et filmer : ça ne se fait pas un mardi
+    // comme les autres.
+    const avecVideo = entree("2026-01-01", "a", 5, { photos: UNE_VIDEO });
+    const avecPhoto = entree("2026-01-02", "b", 5, { photos: UNE_PHOTO });
+    const mur = murDeSouvenirs([avecPhoto, avecVideo], 2);
+    expect(mur[0].entree.id).toBe(avecVideo.id);
+    expect(mur[0].raison).toBe("une vidéo");
+  });
+
+  it("ne compte pas deux fois une journée qui a photo et vidéo", () => {
+    const mixte = entree("2026-01-01", "a", 5, { photos: [...UNE_VIDEO, ...UNE_PHOTO] });
+    expect(murDeSouvenirs([mixte])[0].raison).toBe("une vidéo");
   });
 });

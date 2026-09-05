@@ -16,6 +16,40 @@ on coche éventuellement ce qui a marqué la journée, on écrit trois mots et d
 lignes si on veut. Dix secondes. Les journées des autres, cachées jusque-là, se
 dévoilent d'un coup.
 
+## Les photos et les vidéos
+
+Une journée porte jusqu'à six médias, photos et vidéos mêlées. Tout est réduit
+**dans le navigateur** avant l'envoi, et ce n'est pas une optimisation : c'est ce
+qui rend la vidéo possible sans rien payer.
+
+| | Envoyé tel quel | Après réduction |
+| --- | --- | --- |
+| Photo d'iPhone | ~4 Mo, 4032 px | ~250 ko, 1400 px |
+| Vidéo de 8 s | ~15 Mo, 1080 px | ~1 Mo, 720 px |
+
+Les médias vivent dans PostgreSQL avec les journées, et l'offre gratuite de Neon
+plafonne à un demi-giga-octet : trente vidéos brutes suffiraient à la remplir.
+Les réglages affichent la place occupée, pour que ça ne se découvre pas le jour
+où un envoi est refusé.
+
+**Le réencodage passe par WebCodecs** (`VideoEncoder`, H.264), pas par
+`MediaRecorder`. C'est la seule voie qui laisse choisir la résolution *et* le
+débit — `MediaRecorder` suit la cadence de lecture et ne garantit aucune taille.
+WebCodecs est arrivé avec Safari 16.4 ; en dessous, rien n'est inventé : le
+fichier part tel quel s'il tient sous le plafond, et sinon l'écran le dit.
+
+Les images sont prises **en déplaçant le curseur**, pas en laissant la vidéo
+jouer. Capturer pendant la lecture paraît plus naturel, et c'est ce qui a été
+écrit d'abord ; mais ça dépend du compositeur, et un élément `<video>` que
+personne ne peint ne rend aucune image — l'écran restait sur « Envoi… »
+indéfiniment. Le déplacement ne dépend que du décodeur, et il n'est pas tenu par
+le temps réel.
+
+Chaque média porte une **vignette** fabriquée au même moment. Le fil et la
+galerie ne servent que celle-là ; l'original n'est tiré qu'en plein écran. Dans
+le fil, une vidéo se lit muette, en boucle, et seulement quand on la regarde :
+le son n'arrive qu'en plein écran, qu'on a ouvert exprès.
+
 ## La figure du jour
 
 C'est l'objet autour duquel tout le reste s'organise, et il n'a de sens qu'à
@@ -92,10 +126,11 @@ qu'il faut y mettre.
 
 | Écran | Ce qu'on y fait |
 | --- | --- |
-| **Aujourd'hui** | La figure du jour. Poser sa journée : une note, un titre en trois mots, des étiquettes, jusqu'à quatre photos, une note vocale de trente secondes, et deux curseurs facultatifs. Voir celles des autres — cachées tant qu'on n'a pas posé la sienne. Réagir, commenter. |
+| **Aujourd'hui** | La figure du jour. Poser sa journée : une note, un titre en trois mots, des étiquettes, jusqu'à six photos ou vidéos, une note vocale de trente secondes, et deux curseurs facultatifs. Voir celles des autres — cachées tant qu'on n'a pas posé la sienne. Réagir, commenter. |
 | **Le fil** | Toutes les journées de la bande, groupées par jour, avec la moyenne du jour. |
 | **Les stats** | Courbe lissée sur trente jours, calendrier façon damier, effet des déclencheurs, écarts par jour de semaine, synchronicité entre deux personnes. |
-| **Les souvenirs** | Le mur des formes, rétrospective d'un mois avec image partageable, « ce jour-là », capsules temporelles, mur des moments. |
+| **Les souvenirs** | Le mur des formes, la galerie, rétrospective d'un mois avec image partageable, « ce jour-là », capsules temporelles, mur des moments. |
+| **La galerie** | Tout ce que la bande a posté, en mosaïque par mois, cent vingt à la fois. On y entre depuis les souvenirs. |
 | **Profil** | Séries, badges, classement d'assiduité de la semaine, calendrier personnel, réglages de la bande, export, départ. |
 
 ## Les décisions
@@ -236,7 +271,7 @@ dit plus haut.
 ## Tests
 
 ```bash
-npm test                       # 146 tests sur la logique pure
+npm test                       # 174 tests sur la logique pure (dont la géométrie et le dimensionnement)
 npx playwright test            # iPhone 15 (WebKit) + bureau 1440×900
 npx playwright test --project=iphone
 ADRESSE=https://journal-de-joie-v2.vercel.app \
@@ -262,6 +297,13 @@ production — elle doit refuser sans session.
 La bande est sur iPhone, et **Safari est le seul moteur autorisé sur iOS**. Une
 capture Chromium ne prouve donc rien. Le projet `iphone` tourne sur WebKit avec
 le gabarit iPhone 15 ; c'est lui qui décide si une chose marche.
+
+**Avec une limite qu'il faut connaître.** Le WebKit de Playwright est une
+compilation Linux de WebKit, pas Safari sur iPhone : il n'a même pas
+`MediaRecorder`. Ce qu'il partage avec la cible — WebCodecs, le décodage vidéo,
+la mise en page, les règles de cookies — couvre presque tout ; ce qu'il ne
+couvre pas, c'est l'enregistrement au micro et à la caméra, et le sélecteur de
+fichiers d'iOS. Ces trois-là restent dans la liste des vérifications à la main.
 
 Première installation :
 
@@ -351,6 +393,8 @@ Ce que la suite vérifie toute seule, à chaque exécution :
 | Session bien ouverte avant chaque capture | un test qui photographie la mauvaise page ne teste rien |
 | Le voile ne laisse pas fuir les notes des autres | on relit le HTML, pas l'écran |
 | La note vocale se sert avec son type, et pas sans session | Safari refuse un son mal typé sans rien dire |
+| Une vidéo traverse tout : réencodage, vignette, envoi, service, décodage | le test en fabrique une avec WebCodecs, il n'y a pas de binaire au dépôt |
+| La vidéo du fil est muette, en boucle, `playsInline`, en `preload="metadata"` | sans quoi iOS bascule en plein écran, ou six vidéos se téléchargent d'un coup |
 
 Ce qui ne se vérifie qu'à la main, sur un vrai téléphone :
 
@@ -367,6 +411,16 @@ Ce qui ne se vérifie qu'à la main, sur un vrai téléphone :
       doit s'arrêter. Deux sons qui se chevauchent, c'est un fil illisible.
 - [ ] Le carrousel de photos suit le doigt et **ne se bagarre pas avec le geste
       de retour** du système (le défilement est natif, pas réimplémenté).
+- [ ] **Envoyer une vidéo depuis la pellicule** : la barre d'avancement bouge,
+      la vignette apparaît, et le fichier reçu pèse autour du méga-octet. C'est
+      le point le plus important de cette liste — le réencodage est éprouvé dans
+      WebKit, mais pas dans le sélecteur de fichiers d'iOS.
+- [ ] La vidéo du fil se lit **muette et en boucle**, et ne bascule **pas** en
+      plein écran toute seule. Un basculement signalerait un `playsInline`
+      perdu.
+- [ ] En plein écran, la vidéo a le son et les commandes.
+- [ ] Sur un iPhone en iOS 16.3 ou plus ancien (sans WebCodecs), envoyer une
+      grosse vidéo affiche un message clair, pas un échec muet.
 - [ ] Toucher le champ « ce qui a fait la journée » : **la page ne doit pas
       zoomer**, et la barre d'onglets doit s'effacer pour laisser la place au
       clavier.

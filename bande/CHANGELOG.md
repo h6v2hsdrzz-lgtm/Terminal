@@ -3,6 +3,74 @@
 Les entrées vont de la plus récente à la plus ancienne. Chaque lot du chantier
 v3 y ajoute une section ; les jalons v2 sont regroupés en tête d'historique.
 
+## Lot 2 — La vidéo, et la partie photo devenue un vrai album
+
+### Ajouté
+- **La vidéo.** Jusqu'à huit secondes par média, réencodée **dans le
+  navigateur** avant l'envoi : 720 pixels de côté long, H.264, débit calculé
+  d'après le nombre de pixels. Une vidéo d'iPhone de huit secondes pèse une
+  quinzaine de méga-octets et retombe autour du méga-octet — l'ordre de grandeur
+  d'une photo. Ce n'est pas une optimisation : c'est ce qui rend la vidéo
+  possible sur une base gratuite d'un demi-giga-octet.
+- **Des vignettes** pour chaque média, fabriquées dans le navigateur. Le fil et
+  la galerie ne servent plus que celles-là. Avant, une case de cent soixante
+  pixels tirait une image de mille quatre cents — et pour une vidéo, le fichier
+  entier.
+- **La galerie** : tout ce que la bande a posté, en mosaïque, groupé par mois,
+  avec un liseré de la couleur de chacun et le plein écran qui défile d'un média
+  à l'autre. On y entre depuis les souvenirs — cinq onglets remplissent déjà la
+  largeur d'un iPhone.
+- **Des légendes** sous les photos et les vidéos, à poser et à corriger après
+  coup.
+- **Six médias par journée** au lieu de quatre, photos et vidéos mêlées.
+- Dans le fil, une vidéo se lit **muette, en boucle, et seulement quand on la
+  regarde** — le son n'arrive qu'en plein écran, qu'on a ouvert exprès.
+- **La place occupée**, dans les réglages, avec le plafond de l'hébergement
+  gratuit. Cette application ne coûte rien, et ce n'est pas gratuit par magie ;
+  le dire vaut mieux qu'un refus d'envoi le jour où la base est pleine.
+- Le mur des souvenirs retient désormais **les vidéos et les notes vocales**.
+  Une journée où quelqu'un a filmé ou parlé en est un.
+
+### Ce que la sonde du moteur a montré
+- **Le WebKit de Playwright n'a pas `MediaRecorder`** — pas même pour l'audio.
+  Ce n'est pas Safari sur iPhone, c'est une compilation Linux de WebKit. En
+  revanche il a **WebCodecs au complet** : H.264, AAC, Opus. Le réencodage passe
+  donc par `VideoEncoder`, qui est aussi la seule voie laissant choisir la
+  résolution *et* le débit — `MediaRecorder` suit la cadence de lecture et ne
+  garantit aucune taille.
+- Sonder avant d'écrire a évité de construire tout le lot sur une API absente
+  du seul moteur où l'on peut le vérifier.
+
+### Corrigé pendant le chantier
+- **Le transcodage ne se terminait jamais.** La première version capturait les
+  images en laissant la vidéo jouer, via `requestVideoFrameCallback`. Ça dépend
+  du compositeur : un élément `<video>` qui n'est pas dans le document n'est
+  peint par personne, aucune image n'arrive, et l'écran reste sur « Envoi… »
+  indéfiniment. Les images sont maintenant prises en déplaçant le curseur — ça
+  ne dépend que du décodeur, et ce n'est pas tenu par le temps réel : huit
+  secondes de vidéo ne prennent plus huit secondes.
+- **Chaque déplacement est borné dans le temps.** Un déplacement qui n'aboutit
+  pas n'émet jamais son événement ; sans délai, on réintroduisait le blocage
+  qu'on venait de corriger.
+- **La présence d'une note vocale à l'écran tenait au hasard.** Le mur ne les
+  comptait pas, et le peuplement n'en garantissait aucune : le test qui allait
+  la chercher passait une fois sur deux. Le mur les compte, et la base de
+  démonstration en garantit trois sur les dix derniers jours.
+
+### Deux défauts qui ne se voyaient pas encore
+- **L'aperçu des souvenirs chargeait tous les médias de la bande pour en
+  montrer huit.** Invisible la première année, c'est une page qui ne charge plus
+  la cinquième.
+- **La galerie n'avait aucune borne.** Elle en affiche cent vingt, et le reste
+  tient dans un lien — un vrai lien, qui marche sans JavaScript et se partage.
+
+### Le schéma
+La table des photos gagne quatre colonnes — `genre`, `vignette`, `duree`,
+`legende` — et **garde son nom**. Le modèle Prisma, lui, s'appelle désormais
+`Media`. Prisma ne sait pas reconnaître un renommage de table : il produirait un
+`DROP TABLE` suivi d'un `CREATE`, c'est-à-dire la perte de toutes les photos
+déjà en ligne. Un nom de table un peu daté coûte moins cher.
+
 ## Lot 1 — La figure du jour, et de quoi raconter une journée
 
 ### Le concept

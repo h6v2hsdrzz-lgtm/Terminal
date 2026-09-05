@@ -38,13 +38,24 @@ export type Commentaire = {
   quand: string;
 };
 
-/** Une photo de journée, telle que l'écran la reçoit. */
-export type Photo = {
+/**
+ * Une photo ou une vidéo de journée, telle que l'écran la reçoit.
+ *
+ * Jamais les octets : ils passent par des routes dédiées, et un fil de douze
+ * journées en ferait transiter des dizaines de méga-octets dans le HTML.
+ */
+export type Media = {
   id: string;
-  /** Adresse de la route qui la sert. */
+  genre: "photo" | "video";
+  /** L'original — pour le plein écran, et pour lire une vidéo. */
   url: string;
+  /** La version réduite — pour le fil et la galerie. */
+  vignette: string;
   largeur: number;
   hauteur: number;
+  /** En millisecondes, pour une vidéo. */
+  duree: number | null;
+  legende: string | null;
 };
 
 /** La note vocale, sans ses octets : ils passent par une route dédiée. */
@@ -75,7 +86,7 @@ export type Entree = {
   calme: number | null;
   declencheurs: string[];
   etiquettes: Etiquette[];
-  photos: Photo[];
+  photos: Media[];
   audio: Audio | null;
   reactions: Reaction[];
   commentaires: Commentaire[];

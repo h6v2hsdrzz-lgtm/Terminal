@@ -8,6 +8,7 @@ import { decaler } from "./dates";
 import { initialesDeLaBande } from "./initiales";
 import type { Declencheur, Entree, Profil } from "./types";
 import { MAX_ETIQUETTES, cleEtiquette, nettoyerEtiquette } from "./etiquettes";
+import { DUREE_MAX_VIDEO, LONGUEUR_LEGENDE, MAX_MEDIAS, POIDS_MAX_MEDIA } from "./media";
 // Réexporté pour que la route d'export n'ait pas à savoir qu'il a déménagé.
 export { versCsv } from "./csv";
 
@@ -134,7 +135,12 @@ const AVEC_TOUT = {
   // transformerait le fil en téléchargement de plusieurs méga-octets. Les
   // niveaux, eux, sont une soixantaine d'entiers — c'est la forme d'onde, et
   // elle doit être là dès le rendu.
-  photos: { select: { id: true, largeur: true, hauteur: true }, orderBy: { ordre: "asc" } },
+  // Jamais `octets` ni `vignette` : ils pèsent des méga-octets, et chaque
+  // écran du fil en chargerait des dizaines pour n'afficher que des adresses.
+  photos: {
+    select: { id: true, genre: true, largeur: true, hauteur: true, duree: true, legende: true },
+    orderBy: { ordre: "asc" },
+  },
   audio: { select: { duree: true, niveaux: true } },
   commentaires: {
     orderBy: { creeLe: "asc" },
@@ -167,9 +173,16 @@ function versEntree(ligne: LigneEntree): Entree {
     etiquettes: ligne.etiquettes.map((e) => e.etiquette),
     photos: ligne.photos.map((p) => ({
       id: p.id,
+      genre: p.genre === "video" ? ("video" as const) : ("photo" as const),
+      // Deux adresses : la vignette pour le fil, l'original pour le plein
+      // écran. Les servir depuis la même route obligerait à choisir l'une ou
+      // l'autre pour tout le monde.
       url: `/api/photo/${p.id}`,
+      vignette: `/api/vignette/${p.id}`,
       largeur: p.largeur,
       hauteur: p.hauteur,
+      duree: p.duree,
+      legende: p.legende,
     })),
     audio: ligne.audio
       ? { url: `/api/audio/${ligne.id}`, duree: ligne.audio.duree, niveaux: ligne.audio.niveaux }
@@ -491,13 +504,22 @@ export async function retirerDeclencheur(groupeId: string, declencheurId: string
   await prisma.declencheur.update({ where: { id: declencheurId }, data: { actif: false } });
 }
 
-// ── Photos ──────────────────────────────────────────────────────────────────
+// ── Photos et vidéos ────────────────────────────────────────────────────────
 
-/** Au-delà, c'est que le redimensionnement du navigateur n'a pas eu lieu. */
-export const POIDS_MAX_PHOTO = 2 * 1024 * 1024;
-/** Assez pour raconter une journée, pas assez pour en faire un album. */
-export const MAX_PHOTOS = 4;
+/**
+ * Ce que le serveur accepte.
+ *
+ * Le navigateur redimensionne les photos et réencode les vidéos avant
+ * d'envoyer ; ce plafond n'est donc pas la règle mais le garde-fou. Il compte
+ * quand même : les médias vivent dans PostgreSQL, et l'offre gratuite de Neon
+ * plafonne à un demi-giga-octet. Sans borne côté serveur, un navigateur où le
+ * réencodage a échoué remplirait la base d'un seul envoi.
+ */
+export { MAX_MEDIAS, POIDS_MAX_MEDIA } from "./media";
+
 const MIMES_PHOTO = ["image/jpeg", "image/webp", "image/png"];
+/** Ce que produit le réencodage, et ce que les téléphones savent relire. */
+const MIMES_VIDEO = ["video/mp4", "video/quicktime", "video/webm"];
 
 async function maJournee(membreId: string, jour: string) {
   const entree = await prisma.entree.findUnique({
@@ -509,57 +531,193 @@ async function maJournee(membreId: string, jour: string) {
   return entree;
 }
 
-export async function ajouterPhoto(
-  membreId: string,
-  jour: string,
-  fichier: { mime: string; octets: Uint8Array<ArrayBuffer>; largeur: number; hauteur: number },
-) {
-  if (!MIMES_PHOTO.includes(fichier.mime)) {
-    throw new ErreurMetier("Ce format d'image n'est pas accepté.");
+export type MediaEntrant = {
+  genre: "photo" | "video";
+  mime: string;
+  octets: Uint8Array<ArrayBuffer>;
+  largeur: number;
+  hauteur: number;
+  /** En millisecondes, pour une vidéo. */
+  duree?: number | null;
+  /** Toujours du JPEG : c'est le navigateur qui la fabrique. */
+  vignette?: Uint8Array<ArrayBuffer> | null;
+  legende?: string | null;
+};
+
+export async function ajouterMedia(membreId: string, jour: string, media: MediaEntrant) {
+  const type = media.mime.split(";")[0].trim();
+  const attendus = media.genre === "video" ? MIMES_VIDEO : MIMES_PHOTO;
+  if (!attendus.includes(type)) {
+    throw new ErreurMetier(
+      media.genre === "video"
+        ? "Ce format de vidéo n'est pas accepté."
+        : "Ce format d'image n'est pas accepté.",
+    );
   }
-  if (fichier.octets.byteLength > POIDS_MAX_PHOTO) {
-    throw new ErreurMetier("Cette image est trop lourde.");
+  if (media.octets.byteLength > POIDS_MAX_MEDIA) {
+    throw new ErreurMetier(
+      media.genre === "video"
+        ? "Cette vidéo est trop lourde, même réduite. Essaie un extrait plus court."
+        : "Cette image est trop lourde.",
+    );
+  }
+  if (media.genre === "video" && (media.duree ?? 0) > DUREE_MAX_VIDEO + 2000) {
+    throw new ErreurMetier("Huit secondes maximum.");
   }
 
   const entree = await maJournee(membreId, jour);
-  const deja = await prisma.photo.count({ where: { entreeId: entree.id } });
-  if (deja >= MAX_PHOTOS) {
-    throw new ErreurMetier(`${MAX_PHOTOS} photos par journée, c'est déjà un album.`);
+  const deja = await prisma.media.count({ where: { entreeId: entree.id } });
+  if (deja >= MAX_MEDIAS) {
+    throw new ErreurMetier(`${MAX_MEDIAS} par journée, c'est déjà un album.`);
   }
 
-  await prisma.photo.create({ data: { entreeId: entree.id, ordre: deja, ...fichier } });
+  await prisma.media.create({
+    data: {
+      entreeId: entree.id,
+      ordre: deja,
+      genre: media.genre,
+      mime: type,
+      octets: media.octets,
+      largeur: media.largeur,
+      hauteur: media.hauteur,
+      duree: media.genre === "video" ? Math.min(media.duree ?? 0, DUREE_MAX_VIDEO) : null,
+      vignette: media.vignette ?? null,
+      legende: nettoyerLegende(media.legende),
+    },
+  });
   return entree.groupeId;
 }
 
-/** On ne retire que ses propres photos. */
-export async function retirerPhoto(membreId: string, photoId: string) {
-  const photo = await prisma.photo.findUnique({
-    where: { id: photoId },
-    select: { entree: { select: { membreId: true, groupeId: true } } },
-  });
-  if (!photo) throw new ErreurMetier("Cette photo n'existe plus.");
-  if (photo.entree.membreId !== membreId) throw new ErreurMetier("Cette photo n'est pas la tienne.");
-
-  await prisma.photo.delete({ where: { id: photoId } });
-  return photo.entree.groupeId;
+function nettoyerLegende(brut: string | null | undefined): string | null {
+  const propre = brut?.trim();
+  return propre ? propre.slice(0, LONGUEUR_LEGENDE) : null;
 }
 
-/** Les octets, pour la route qui les sert. Contrôle d'appartenance compris. */
-export async function lirePhoto(membreId: string, photoId: string) {
-  const photo = await prisma.photo.findUnique({
-    where: { id: photoId },
-    select: { mime: true, octets: true, entree: { select: { groupeId: true } } },
+/** On ne modifie que ses propres médias. Rendu : le groupe, pour rafraîchir. */
+async function monMedia(membreId: string, mediaId: string) {
+  const media = await prisma.media.findUnique({
+    where: { id: mediaId },
+    select: { entree: { select: { membreId: true, groupeId: true } } },
   });
-  if (!photo) return null;
+  if (!media) throw new ErreurMetier("Ce média n'existe plus.");
+  if (media.entree.membreId !== membreId) throw new ErreurMetier("Ce média n'est pas le tien.");
+  return media.entree.groupeId;
+}
+
+export async function retirerMedia(membreId: string, mediaId: string) {
+  const groupeId = await monMedia(membreId, mediaId);
+  await prisma.media.delete({ where: { id: mediaId } });
+  return groupeId;
+}
+
+export async function legender(membreId: string, mediaId: string, legende: string) {
+  const groupeId = await monMedia(membreId, mediaId);
+  await prisma.media.update({
+    where: { id: mediaId },
+    data: { legende: nettoyerLegende(legende) },
+  });
+  return groupeId;
+}
+
+/**
+ * Les octets, pour la route qui les sert. Contrôle d'appartenance compris.
+ *
+ * `vignette` demande la version réduite : le fil et la galerie n'affichent
+ * jamais l'original, et pour une vidéo la vignette est la seule chose qu'on
+ * puisse mettre dans une mosaïque.
+ */
+export async function lireMedia(membreId: string, mediaId: string, vignette = false) {
+  const media = await prisma.media.findUnique({
+    where: { id: mediaId },
+    select: {
+      mime: true,
+      octets: vignette ? undefined : true,
+      vignette: vignette ? true : undefined,
+      entree: { select: { groupeId: true } },
+    },
+  });
+  if (!media) return null;
 
   const membre = await prisma.membre.findUnique({
     where: { id: membreId },
     select: { groupeId: true },
   });
-  // La photo d'une autre bande ne se sert pas, même avec le bon identifiant.
-  if (!membre || membre.groupeId !== photo.entree.groupeId) return null;
+  // Le média d'une autre bande ne se sert pas, même avec le bon identifiant.
+  if (!membre || membre.groupeId !== media.entree.groupeId) return null;
 
-  return { mime: photo.mime, octets: photo.octets };
+  if (vignette) {
+    // Une vignette manquante n'est pas une erreur : les photos posées avant
+    // l'arrivée des vignettes n'en ont pas. La route servira l'original.
+    return media.vignette ? { mime: "image/jpeg", octets: media.vignette } : null;
+  }
+  return media.octets ? { mime: media.mime, octets: media.octets } : null;
+}
+
+/**
+ * Les médias de la bande, du plus récent au plus ancien.
+ *
+ * Sans les octets : la galerie n'affiche que des vignettes, et charger les
+ * originaux pour construire une mosaïque ferait passer des dizaines de
+ * méga-octets par le serveur pour rien.
+ *
+ * Et avec une borne. L'aperçu des souvenirs n'en montre que huit ; aller
+ * chercher les mille de la bande pour en afficher huit, c'est un défaut qui ne
+ * se voit pas la première année et qui devient une page qui ne charge plus la
+ * cinquième.
+ */
+export async function mediasDeLaBande(groupeId: string, limite = 240) {
+  const lignes = await prisma.media.findMany({
+    where: { entree: { groupeId } },
+    take: limite,
+    select: {
+      id: true, genre: true, largeur: true, hauteur: true, duree: true, legende: true,
+      entree: { select: { jour: true, membreId: true } },
+    },
+    orderBy: [{ entree: { jour: "desc" } }, { ordre: "asc" }],
+  });
+  return lignes.map((m) => ({
+    id: m.id,
+    genre: m.genre === "video" ? ("video" as const) : ("photo" as const),
+    url: `/api/photo/${m.id}`,
+    vignette: `/api/vignette/${m.id}`,
+    largeur: m.largeur,
+    hauteur: m.hauteur,
+    duree: m.duree,
+    legende: m.legende,
+    jour: m.entree.jour,
+    profil: m.entree.membreId,
+  }));
+}
+
+/** Combien la bande en a en tout — pour dire s'il en reste au-delà de la borne. */
+export async function compterMedias(groupeId: string) {
+  return prisma.media.count({ where: { entree: { groupeId } } });
+}
+
+/**
+ * L'espace occupé par la bande, pour l'afficher dans les réglages.
+ *
+ * `pg_column_size` mesure la valeur stockée, compression TOAST comprise :
+ c'est ce que la base occupe vraiment, pas la taille du fichier d'origine.
+ */
+export async function espaceOccupe(groupeId: string) {
+  const [medias] = await prisma.$queryRaw<{ octets: bigint | null; nombre: bigint }[]>`
+    SELECT SUM(pg_column_size(p.octets) + COALESCE(pg_column_size(p.vignette), 0))::bigint AS octets,
+           COUNT(*)::bigint AS nombre
+    FROM bande_photos p
+    JOIN bande_entrees e ON e.id = p.entree_id
+    WHERE e.groupe_id = ${groupeId}
+  `;
+  const [audios] = await prisma.$queryRaw<{ octets: bigint | null; nombre: bigint }[]>`
+    SELECT SUM(pg_column_size(a.octets))::bigint AS octets, COUNT(*)::bigint AS nombre
+    FROM bande_audios a
+    JOIN bande_entrees e ON e.id = a.entree_id
+    WHERE e.groupe_id = ${groupeId}
+  `;
+  return {
+    medias: { octets: Number(medias?.octets ?? 0), nombre: Number(medias?.nombre ?? 0) },
+    audios: { octets: Number(audios?.octets ?? 0), nombre: Number(audios?.nombre ?? 0) },
+  };
 }
 
 // ── Note vocale ─────────────────────────────────────────────────────────────
@@ -676,7 +834,7 @@ export async function versionBande(groupeId: string): Promise<string> {
     prisma.commentaire.aggregate({ where: { entree: { groupeId } }, _count: true, _max: { creeLe: true } }),
     // Les photos comptent au même titre : ajouter une image ne touche à aucun
     // des autres agrégats, et elle resterait invisible chez les autres.
-    prisma.photo.aggregate({ where: { entree: { groupeId } }, _count: true, _max: { modifieLe: true } }),
+    prisma.media.aggregate({ where: { entree: { groupeId } }, _count: true, _max: { modifieLe: true } }),
     // Les notes vocales pour la même raison, et elle n'est pas théorique :
     // enregistrer un son ne modifie pas la ligne de la journée, donc sans cet
     // agrégat la note resterait muette sur les autres téléphones jusqu'à ce

@@ -1,9 +1,13 @@
+import Image from "next/image";
+
 import { CarteEntree } from "@/composants/CarteEntree";
 import { Carte, TitreSection } from "@/composants/Carte";
 import { CapsuleTemporelle } from "@/composants/CapsuleTemporelle";
 import { MurDesFigures } from "@/composants/MurDesFigures";
 import { Retrospective } from "@/composants/Retrospective";
-import { listerCapsules } from "@/lib/depot";
+import Link from "next/link";
+
+import { compterMedias, listerCapsules, mediasDeLaBande } from "@/lib/depot";
 import { entreesDeLaBande, exigerContexte } from "@/lib/repaire";
 import { ceJourLa, moisDisponibles, murDeSouvenirs, retrospective } from "@/lib/souvenirs";
 import { enTexteLong, jourDeLaBande } from "@/lib/dates";
@@ -25,6 +29,9 @@ export default async function Page({
   const anniversaires = ceJourLa(entrees, aujourdhui);
   const moments = murDeSouvenirs(entrees);
   const capsules = await listerCapsules(contexte.groupe.id, contexte.moi.id, aujourdhui);
+  // Huit cases d'aperçu : on en demande huit, pas les mille de la bande.
+  const medias = await mediasDeLaBande(contexte.groupe.id, 8);
+  const combienMedias = await compterMedias(contexte.groupe.id);
 
   return (
     <div className="px-4 pt-3">
@@ -43,6 +50,52 @@ export default async function Page({
           mois={mois}
           choisi={choisi}
         />
+      )}
+
+      {medias.length > 0 && (
+        <section className="mt-7">
+          <TitreSection
+            action={
+              <Link href="/galerie" className="text-[13px] text-encre-3 hover:text-encre-2">
+                tout voir →
+              </Link>
+            }
+          >
+            La galerie
+          </TitreSection>
+          <Link href="/galerie" className="block">
+            <Carte className="overflow-hidden p-2">
+              <ul className="grid grid-cols-4 gap-1.5">
+                {medias.map((media) => (
+                  <li key={media.id} className="relative overflow-hidden rounded-lg">
+                    {/* Des vignettes, jamais les originaux : c'est un aperçu de
+                        huit cases, pas une raison de tirer huit méga-octets. */}
+                    <Image
+                      src={media.vignette}
+                      alt=""
+                      width={400}
+                      height={400}
+                      unoptimized
+                      className="aspect-square w-full object-cover"
+                    />
+                    {media.genre === "video" && (
+                      <span
+                        aria-hidden
+                        className="absolute right-0.5 top-0.5 rounded-full px-1 text-[10px] text-white"
+                        style={{ background: "rgb(0 0 0 / 0.5)" }}
+                      >
+                        ▶
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <p className="px-1 pb-1 pt-2 text-[13px] text-encre-3">
+                {combienMedias} {combienMedias > 1 ? "médias" : "média"} depuis le début.
+              </p>
+            </Carte>
+          </Link>
+        </section>
       )}
 
       <section className="mt-7">

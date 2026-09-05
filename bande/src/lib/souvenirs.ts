@@ -69,7 +69,16 @@ export function murDeSouvenirs(entrees: Entree[], limite = 12): Moment[] {
 
     // Le seuil d'entrée est 4. Une photo suffit, une vraie histoire aussi ;
     // une note courte seule non — sinon le mur devient le fil.
-    if (entree.photos.length) { points += 4; raisons.push(entree.photos.length > 1 ? "des photos" : "une photo"); }
+    // Une vidéo compte plus qu'une photo : il a fallu sortir le téléphone et
+    // filmer, ce qui ne se fait pas pour un mardi comme les autres.
+    const videos = entree.photos.filter((m) => m.genre === "video").length;
+    if (videos) { points += 5; raisons.push(videos > 1 ? "des vidéos" : "une vidéo"); }
+    else if (entree.photos.length) { points += 4; raisons.push(entree.photos.length > 1 ? "des photos" : "une photo"); }
+
+    // Et une note vocale : c'est le jour où quelqu'un a préféré parler
+    // qu'écrire. Ne pas la compter, c'était laisser au hasard sa présence sur
+    // le mur — et c'est ce qui rendait l'écran différent d'une fois sur l'autre.
+    if (entree.audio) { points += 4; raisons.push("une voix"); }
     if (entree.note && entree.note.length > 60) { points += 4; raisons.push("une vraie histoire"); }
     else if (entree.note) { points += 1; }
 

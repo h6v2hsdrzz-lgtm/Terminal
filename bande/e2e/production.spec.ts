@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { imageFactice } from "../prisma/image-factice";
+
 /**
  * Le test de fumée : une bande neuve, tout le rituel, puis on efface.
  *
@@ -16,14 +18,18 @@ import { expect, test } from "@playwright/test";
  * vérifiée ici — elle doit refuser sans session.
  */
 
-/** Un PNG rouge de 2×2, écrit à la main : pas de fichier binaire au dépôt. */
-const PNG_2x2 = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8z4AATAxIYFSAaAIA" +
-    "W6gCFwtlHzYAAAAASUVORK5CYII=",
-  "base64",
-);
+/**
+ * Une vraie image, engendrée par l'encodeur PNG du dépôt.
+ *
+ * La première version portait un PNG de 2×2 écrit à la main en base64. WebKit
+ * l'acceptait, Chromium le refusait : « the source image could not be decoded ».
+ * Un fichier d'essai qui n'est pas un vrai fichier ne teste rien — autant se
+ * servir de l'encodeur qui peuple déjà la base de démonstration.
+ */
+const PNG = Buffer.from(imageFactice(64, 48, [210, 120, 90]));
 
 test("une bande neuve, de bout en bout, puis effacée", async ({ page, request }) => {
+  page.on("console", (m) => m.type() === "error" && console.log("CONSOLE", m.text()));
   // Un nom unique : deux exécutions simultanées ne doivent pas se gêner, et un
   // nom fixe finirait par laisser des bandes fantômes si le test s'interrompt.
   const nomBande = `Fumée ${Date.now().toString(36)}`;
@@ -64,21 +70,22 @@ test("une bande neuve, de bout en bout, puis effacée", async ({ page, request }
   await expect(page.getByText("Essai", { exact: true }).first()).toBeVisible();
 
   // ── Une photo ──────────────────────────────────────────────────────────
-  await page.setInputFiles('input[type="file"][accept="image/*"]', {
+  await page.setInputFiles('input[type="file"][accept="image/*,video/*"]', {
     name: "essai.png",
     mimeType: "image/png",
-    buffer: PNG_2x2,
+    buffer: PNG,
   });
-  const image = page.locator('img[src^="/api/photo/"]').first();
+  const image = page.locator('img[src^="/api/vignette/"]').first();
   await expect(image).toBeVisible({ timeout: 20_000 });
 
-  // Elle se sert vraiment, et pas à n'importe qui.
-  const adressePhoto = await image.getAttribute("src");
-  const servie = await page.request.get(adressePhoto!);
+  // Elle se sert vraiment, et pas à n'importe qui. On demande l'original :
+  // c'est lui qui compte pour le contrôle d'accès.
+  const adressePhoto = (await image.getAttribute("src"))!.replace("/api/vignette/", "/api/photo/");
+  const servie = await page.request.get(adressePhoto);
   expect(servie.status()).toBe(200);
   expect(servie.headers()["content-type"]).toMatch(/^image\//);
   // `request` est un contexte neuf, sans les cookies de la page.
-  expect((await request.get(new URL(adressePhoto!, page.url()).href)).status()).toBe(401);
+  expect((await request.get(new URL(adressePhoto, page.url()).href)).status()).toBe(401);
 
   // ── La route du vocal existe et se garde ───────────────────────────────
   expect((await request.get(new URL("/api/audio/inexistant", page.url()).href)).status()).toBe(401);

@@ -111,7 +111,7 @@ model Entree {
   etiquettes   EntreeEtiquette[]
   reactions    Reaction[]
   commentaires Commentaire[]
-  photos       Photo[]
+  photos       Media[]
   audio        Audio?
 
   @@unique([membreId, jour])
@@ -126,20 +126,39 @@ model Entree {
 /// 1200 pixels dans le navigateur avant l'envoi, donc autour de cent kilo-octets —
 /// une année complète pour sept personnes tient dans quelques centaines de
 /// méga-octets. Le jour où ça déborde, `depot.ts` est le seul fichier à rouvrir.
-model Photo {
+/// Une photo ou une vidéo. Le modèle a été renommé quand la vidéo est arrivée ;
+/// la TABLE, elle, garde son nom d'origine, et ce n'est pas de la paresse :
+/// Prisma ne sait pas reconnaître un renommage de table et produirait un
+/// `DROP TABLE` suivi d'un `CREATE`, c'est-à-dire la perte de toutes les
+/// photos déjà en ligne. Un nom de table un peu daté coûte moins cher.
+model Media {
   id       String   @id @default(cuid())
-  /// Plusieurs photos par journée : l'unicité d'origine est levée, et l'ordre
+  /// Plusieurs médias par journée : l'unicité d'origine est levée, et l'ordre
   /// décide de la place dans le carrousel.
   entreeId String   @map("entree_id")
   ordre    Int      @default(0)
+  /// « photo » ou « video ». Une chaîne plutôt qu'une énumération PostgreSQL :
+  /// ajouter une valeur à une énumération se fait hors transaction, ce qui rend
+  /// la migration plus délicate qu'elle n'en vaut la peine pour deux cas.
+  genre    String   @default("photo")
   mime     String
   octets   Bytes
   largeur  Int
   hauteur  Int
+  /// En millisecondes, pour les vidéos seulement.
+  duree    Int?
+  /// La vignette, toujours en JPEG parce que c'est nous qui la fabriquons.
+  ///
+  /// Le fil sert celle-ci, jamais l'original : afficher une image de 1200 px
+  /// dans une case de 160 fait payer à celui qui lit une résolution qu'il ne
+  /// verra pas, et pour une vidéo ce serait le fichier entier.
+  vignette Bytes?
+  /// Deux mots sous l'image. Facultatif, comme tout le reste.
+  legende  String?
   creeLe   DateTime @default(now()) @map("cree_le")
-  /// Remplacer une photo ne change ni le nombre de photos ni leur date de
-  /// création : sans cette colonne, le remplacement passerait inaperçu du
-  /// sondage, et les autres garderaient l'ancienne image à l'écran.
+  /// Remplacer un média ne change ni leur nombre ni leur date de création :
+  /// sans cette colonne, le remplacement passerait inaperçu du sondage, et les
+  /// autres garderaient l'ancienne image à l'écran.
   ///
   /// Le `@default(now())` n'est pas décoratif : une colonne obligatoire ajoutée
   /// sans valeur par défaut fait échouer la migration dès qu'il existe une

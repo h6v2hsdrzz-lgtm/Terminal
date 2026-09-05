@@ -6,10 +6,21 @@ import { ReglagesBande } from "@/composants/ReglagesBande";
 import { ZoneDepart } from "@/composants/ZoneDepart";
 import { Avatar } from "@/composants/Avatar";
 import { TAILLE_MAX_BANDE } from "@/lib/couleurs";
+import { espaceOccupe } from "@/lib/depot";
+import { enPoids } from "@/lib/media";
 import { exigerContexte } from "@/lib/repaire";
+
+/**
+ * Un demi-giga-octet : l'offre gratuite de Neon, où vivent photos, vidéos et
+ * notes vocales avec les journées.
+ */
+const PLAFOND = 512 * 1024 * 1024;
 
 export default async function Page() {
   const contexte = await exigerContexte();
+  const espace = await espaceOccupe(contexte.groupe.id);
+  const total = espace.medias.octets + espace.audios.octets;
+  const part = Math.min(1, total / PLAFOND);
 
   return (
     <div className="px-4 pt-3">
@@ -47,6 +58,36 @@ export default async function Page() {
               </li>
             ))}
           </ul>
+        </Carte>
+      </section>
+
+      <section className="mt-7">
+        <TitreSection action={<span className="chiffres text-[13px] text-encre-3">{enPoids(total)}</span>}>
+          La place occupée
+        </TitreSection>
+        <Carte className="p-4">
+          {/* Cette application ne coûte rien, et ce n'est pas gratuit par
+              magie : tout tient dans une base d'un demi-giga-octet. Le dire ici
+              vaut mieux qu'un refus d'envoi le jour où elle est pleine. */}
+          <div className="h-1.5 overflow-hidden rounded-full bg-surface-3">
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${Math.max(1, Math.round(part * 100))}%`,
+                background: part > 0.85 ? "var(--profil-4)" : "var(--encre-2)",
+              }}
+            />
+          </div>
+          <p className="mt-2.5 text-[13px] leading-snug text-encre-2">
+            {espace.medias.nombre} {espace.medias.nombre > 1 ? "photos et vidéos" : "photo ou vidéo"} et{" "}
+            {espace.audios.nombre} {espace.audios.nombre > 1 ? "notes vocales" : "note vocale"}, soit{" "}
+            {enPoids(total)} sur {enPoids(PLAFOND)}.
+          </p>
+          <p className="mt-1.5 text-[13px] leading-snug text-encre-3">
+            {part > 0.85
+              ? "C'est presque plein. Retirer quelques vidéos anciennes libère beaucoup d'un coup."
+              : "Les vidéos sont réduites sur ton téléphone avant d'être envoyées : c'est ce qui permet d'en poster sans rien payer."}
+          </p>
         </Carte>
       </section>
 

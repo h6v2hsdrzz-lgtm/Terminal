@@ -127,7 +127,7 @@ test("le voile ne laisse pas fuir les notes des autres", async ({ page }) => {
 
 test("la note vocale se sert, et seulement à la bande", async ({ page, request }) => {
   await entrer(page, "Momo");
-  await page.goto("/souvenirs", { waitUntil: "networkidle" });
+  await page.goto("/fil", { waitUntil: "networkidle" });
 
   // Le lecteur se trouve par son bouton : c'est aussi ce que lit un lecteur
   // d'écran, donc le trouver ici vérifie deux choses d'un coup.
@@ -152,7 +152,7 @@ test("la note vocale se sert, et seulement à la bande", async ({ page, request 
 
 test("la forme d'onde vient du son, pas d'un décor", async ({ page }) => {
   await entrer(page, "Momo");
-  await page.goto("/souvenirs", { waitUntil: "networkidle" });
+  await page.goto("/fil", { waitUntil: "networkidle" });
   await expect(page.getByRole("button", { name: /Écouter la note vocale/i }).first()).toBeVisible();
 
   // Des barres toutes identiques trahiraient une onde décorative. On vérifie

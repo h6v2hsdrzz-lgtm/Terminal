@@ -82,6 +82,16 @@ const NOTES = [
  * incohérente ne permet pas de juger un écran — on ne saurait pas si ce qu'on
  * voit est un défaut d'affichage ou un défaut de données.
  */
+/** Quelques légendes, pour que la galerie ne soit pas une grille muette. */
+const LEGENDES = [
+  "Le ciel de ce soir",
+  "Enfin sortis",
+  "Lui, encore",
+  "On y retourne l'an prochain",
+  "Sans commentaire",
+  "La table du dimanche",
+];
+
 const MOMENTS: { titre: string; etiquettes: string[] }[] = [
   { titre: "Grasse matinée méritée", etiquettes: ["repos"] },
   { titre: "Pluie toute la journée", etiquettes: ["maison", "repos"] },
@@ -290,13 +300,18 @@ async function main() {
     if (tirage() > chance) continue;
     const index = membres.findIndex((m) => m.id === entree.membreId);
     const octets = imageFactice(720, 540, TEINTES_PHOTO[index >= 0 ? index : 0]);
-    await prisma.photo.create({
+    // Pas de vignette pour les photos de démonstration : c'est exactement le
+    // cas des photos posées avant que les vignettes n'existent, et la route
+    // doit savoir servir l'original à leur place.
+    await prisma.media.create({
       data: {
         entreeId: entree.id,
+        genre: "photo",
         mime: "image/png",
         octets,
         largeur: 720,
         hauteur: 540,
+        legende: tirage() < 0.35 ? LEGENDES[Math.floor(tirage() * LEGENDES.length)] : null,
       },
     });
     posees += 1;
@@ -311,9 +326,21 @@ async function main() {
     select: { id: true, joie: true },
     orderBy: { jour: "asc" },
   });
+  // Trois notes vocales garanties sur les dix derniers jours, en plus des
+  // tirages : sans elles, leur présence à l'écran dépend du hasard, et un test
+  // qui va les chercher passe une fois sur deux. Une base de démonstration doit
+  // montrer chaque fonctionnalité à coup sûr.
+  const recentesPourVocal = await prisma.entree.findMany({
+    where: { groupeId: groupe.id, jour: { gte: decaler(aujourdhui, -10) } },
+    select: { id: true },
+    orderBy: { jour: "desc" },
+    take: 3,
+  });
+  const garanties = new Set(recentesPourVocal.map((e) => e.id));
+
   let vocales = 0;
   for (const entree of pourVocal) {
-    if (tirage() > 0.07) continue;
+    if (!garanties.has(entree.id) && tirage() > 0.07) continue;
     const son = sonFactice(6000 + Math.round(tirage() * 16_000), Math.round(tirage() * 1e9));
     await prisma.audio.create({
       data: {

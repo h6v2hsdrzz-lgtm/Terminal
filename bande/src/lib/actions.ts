@@ -15,13 +15,14 @@ import {
   rejoindreBande,
   renommerBande,
   ecrireCapsule,
-  ajouterPhoto,
+  ajouterMedia,
   enregistrerAudio,
   retirerAudio,
   quitterBande,
   reprendreCompte,
   retirerDeclencheur,
-  retirerPhoto,
+  retirerMedia,
+  legender,
   supprimerCapsule,
   supprimerCommentaire,
 } from "./depot";
@@ -224,19 +225,36 @@ export async function actionQuitter(): Promise<void> {
 export async function actionEnvoyerPhoto(_precedent: Etat, donnees: FormData): Promise<Etat> {
   return tenter(async () => {
     const { membreId } = await quiAgit();
-    const fichier = donnees.get("photo");
+    const fichier = donnees.get("media");
     if (!(fichier instanceof File) || fichier.size === 0) {
-      throw new ErreurMetier("Choisis une image.");
+      throw new ErreurMetier("Choisis une image ou une vidéo.");
     }
+    const vignette = donnees.get("vignette");
 
-    await ajouterPhoto(membreId, jourDeLaBande(), {
+    await ajouterMedia(membreId, jourDeLaBande(), {
+      genre: texte(donnees, "genre") === "video" ? "video" : "photo",
       mime: fichier.type,
       // `new Uint8Array(ArrayBuffer)` et pas le tableau du `Buffer` de Node :
       // Prisma veut un `Uint8Array<ArrayBuffer>` pour un champ `Bytes`.
       octets: new Uint8Array(await fichier.arrayBuffer()),
       largeur: Number(texte(donnees, "largeur")) || 0,
       hauteur: Number(texte(donnees, "hauteur")) || 0,
+      duree: nombreFacultatif(donnees, "duree"),
+      vignette:
+        vignette instanceof File && vignette.size > 0
+          ? new Uint8Array(await vignette.arrayBuffer())
+          : null,
+      legende: texte(donnees, "legende"),
     });
+    rafraichirTout();
+  });
+}
+
+/** Une légende s'ajoute et se corrige après coup, comme une note. */
+export async function actionLegender(mediaId: string, legende: string): Promise<Etat> {
+  return tenter(async () => {
+    const { membreId } = await quiAgit();
+    await legender(membreId, mediaId, legende);
     rafraichirTout();
   });
 }
@@ -331,11 +349,11 @@ export async function actionEcrireCapsuleSimple(donnees: FormData): Promise<void
   redirect("/souvenirs");
 }
 
-/** Une photo précise, maintenant qu'une journée peut en porter plusieurs. */
-export async function actionRetirerPhoto(photoId: string): Promise<Etat> {
+/** Un média précis, maintenant qu'une journée peut en porter plusieurs. */
+export async function actionRetirerPhoto(mediaId: string): Promise<Etat> {
   return tenter(async () => {
     const { membreId } = await quiAgit();
-    await retirerPhoto(membreId, photoId);
+    await retirerMedia(membreId, mediaId);
     rafraichirTout();
   });
 }

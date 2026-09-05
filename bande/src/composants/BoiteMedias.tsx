@@ -1,0 +1,276 @@
+"use client";
+
+import Image from "next/image";
+import { AnimatePresence, motion } from "motion/react";
+import { useRef, useState, useTransition } from "react";
+
+import { actionEnvoyerPhoto, actionLegender, actionRetirerPhoto } from "@/lib/actions";
+import { ETAT_INITIAL } from "@/lib/formulaire";
+import { RESSORT } from "@/lib/mouvement";
+import { LONGUEUR_LEGENDE, MAX_MEDIAS, enSecondes } from "@/lib/media";
+import { ErreurTranscodage, preparerMedia } from "@/lib/transcodage";
+import type { Media } from "@/lib/types";
+
+/**
+ * Les photos et les vidéos d'une journée.
+ *
+ * Tout est réduit dans le navigateur avant l'envoi. Une photo de téléphone pèse
+ * quatre méga-octets, une vidéo de huit secondes une quinzaine ; la carte les
+ * affiche sur trois cents pixels. Envoyer les originaux, ce serait faire payer à
+ * tout le monde — la connexion de celui qui envoie, la base qui stocke, la
+ * connexion de ceux qui lisent — une résolution que personne ne verra jamais.
+ *
+ * Le réencodage d'une vidéo prend le temps de la lire : on ne décode pas plus
+ * vite que le navigateur ne joue. D'où la barre d'avancement — sans elle,
+ * l'écran a l'air figé pendant huit secondes.
+ */
+export function BoiteMedias({ medias }: { medias: Media[] }) {
+  const [etat, setEtat] = useState(ETAT_INITIAL);
+  const [enCours, demarrer] = useTransition();
+  const [part, setPart] = useState<number | null>(null);
+  const [legende, setLegende] = useState<Media | null>(null);
+  const champ = useRef<HTMLInputElement>(null);
+  const complet = medias.length >= MAX_MEDIAS;
+
+  function choisir(fichiers: FileList | null) {
+    if (!fichiers || fichiers.length === 0) return;
+    // On garde ce qui tient sous le plafond plutôt que de refuser la sélection
+    // entière : quelqu'un qui en choisit dix en veut visiblement plusieurs.
+    const retenus = Array.from(fichiers).slice(0, MAX_MEDIAS - medias.length);
+
+    demarrer(async () => {
+      for (const fichier of retenus) {
+        let pret;
+        try {
+          setPart(fichier.type.startsWith("video/") ? 0 : null);
+          pret = await preparerMedia(fichier, setPart);
+        } catch (erreur) {
+          // La cause exacte va dans la console : le message affiché est écrit
+          // pour être lu par quelqu'un qui poste une photo, pas pour être
+          // débogué. Sans cette trace, un échec ne laisse aucune prise.
+          console.error("préparation du média", erreur);
+          // Les erreurs de transcodage sont écrites pour être lues ; les autres
+          // ne diraient rien à personne.
+          setEtat({
+            erreur:
+              erreur instanceof ErreurTranscodage
+                ? erreur.message
+                : fichier.type.startsWith("video/")
+                  ? "Cette vidéo n'a pas pu être lue."
+                  : "Cette image n'a pas pu être lue.",
+          });
+          continue;
+        } finally {
+          setPart(null);
+        }
+
+        const donnees = new FormData();
+        const extension = pret.genre === "video" ? "mp4" : "jpg";
+        donnees.set("media", new File([pret.blob], `journee.${extension}`, { type: pret.blob.type }));
+        donnees.set("genre", pret.genre);
+        donnees.set("largeur", String(pret.largeur));
+        donnees.set("hauteur", String(pret.hauteur));
+        if (pret.duree !== null) donnees.set("duree", String(pret.duree));
+        if (pret.vignette) {
+          donnees.set("vignette", new File([pret.vignette], "vignette.jpg", { type: "image/jpeg" }));
+        }
+
+        const reponse = await actionEnvoyerPhoto(ETAT_INITIAL, donnees);
+        // On s'arrête à la première erreur du serveur : les suivantes diraient
+        // la même chose, et empiler six fois le même message n'aide personne.
+        if (reponse.erreur) {
+          setEtat(reponse);
+          break;
+        }
+        setEtat(ETAT_INITIAL);
+      }
+      if (champ.current) champ.current.value = "";
+    });
+  }
+
+  return (
+    <div className="mt-3">
+      {medias.length > 0 && (
+        <ul className="mb-2 grid grid-cols-3 gap-2">
+          <AnimatePresence initial={false}>
+            {medias.map((media) => (
+              <motion.li
+                key={media.id}
+                layout
+                initial={{ opacity: 0, scale: 0.94 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.94 }}
+                transition={RESSORT.moyen}
+                className="relative overflow-hidden rounded-xl border border-trait"
+              >
+                {/* La vignette, pas l'original : dans une case de cent pixels,
+                    l'original ferait payer une résolution invisible — et pour
+                    une vidéo, le fichier entier. */}
+                <Image
+                  src={media.vignette}
+                  alt={media.legende ?? ""}
+                  width={400}
+                  height={400}
+                  unoptimized
+                  className="aspect-square w-full object-cover"
+                />
+
+                {media.genre === "video" && (
+                  <span
+                    className="pointer-events-none absolute bottom-1 left-1 rounded-full px-1.5 py-0.5 text-[11px] font-medium text-white"
+                    style={{ background: "rgb(0 0 0 / 0.5)" }}
+                  >
+                    ▶ {media.duree ? enSecondes(media.duree) : "vidéo"}
+                  </span>
+                )}
+
+                <div className="absolute right-1 top-1 flex gap-1">
+                  <button
+                    type="button"
+                    disabled={enCours}
+                    onClick={() => setLegende(media)}
+                    aria-label="Légender"
+                    className="cible-tactile grid h-7 w-7 place-items-center rounded-full text-[12px] text-white/90 backdrop-blur-sm transition active:scale-95"
+                    style={{ background: "rgb(0 0 0 / 0.45)" }}
+                  >
+                    {media.legende ? "✎" : "+"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={enCours}
+                    onClick={() => demarrer(async () => setEtat(await actionRetirerPhoto(media.id)))}
+                    aria-label="Retirer"
+                    className="cible-tactile grid h-7 w-7 place-items-center rounded-full text-[14px] leading-none text-white/90 backdrop-blur-sm transition active:scale-95"
+                    style={{ background: "rgb(0 0 0 / 0.45)" }}
+                  >
+                    ×
+                  </button>
+                </div>
+
+                {media.legende && (
+                  <p className="truncate px-1.5 py-1 text-[11px] text-encre-2">{media.legende}</p>
+                )}
+              </motion.li>
+            ))}
+          </AnimatePresence>
+        </ul>
+      )}
+
+      {part !== null && (
+        <div className="mb-2" role="status" aria-live="polite">
+          <div className="h-1 overflow-hidden rounded-full bg-surface-3">
+            <div
+              className="h-full rounded-full transition-[width]"
+              style={{ width: `${Math.round(part * 100)}%`, background: "var(--encre)" }}
+            />
+          </div>
+          <p className="mt-1 text-[12px] text-encre-3">
+            La vidéo est réduite sur ton téléphone — ça prend le temps de la lire.
+          </p>
+        </div>
+      )}
+
+      <label
+        className={`inline-block text-[13px] underline underline-offset-2 ${
+          complet ? "cursor-default text-encre-3" : "cursor-pointer text-encre-2 hover:text-encre"
+        }`}
+      >
+        <input
+          ref={champ}
+          type="file"
+          // Les deux d'un coup : sur iPhone, le sélecteur propose alors la
+          // pellicule entière plutôt que de forcer un choix en amont.
+          accept="image/*,video/*"
+          multiple
+          onChange={(e) => choisir(e.target.files)}
+          disabled={enCours || complet}
+          className="sr-only"
+        />
+        {enCours
+          ? "Envoi…"
+          : complet
+            ? `${MAX_MEDIAS} médias, c'est le maximum`
+            : medias.length > 0
+              ? "Ajouter autre chose"
+              : "Ajouter une photo ou une vidéo"}
+      </label>
+
+      {etat.erreur && (
+        <p role="alert" className="mt-1.5 text-[13px] text-encre-2">
+          {etat.erreur}
+        </p>
+      )}
+
+      {legende && (
+        <DialogueLegende
+          media={legende}
+          fermer={() => setLegende(null)}
+          enregistrer={(texte) =>
+            demarrer(async () => {
+              setEtat(await actionLegender(legende.id, texte));
+              setLegende(null);
+            })
+          }
+        />
+      )}
+    </div>
+  );
+}
+
+/** Deux mots sous l'image : ce qui fait qu'on la comprendra dans un an. */
+function DialogueLegende({
+  media,
+  fermer,
+  enregistrer,
+}: {
+  media: Media;
+  fermer: () => void;
+  enregistrer: (texte: string) => void;
+}) {
+  const [texte, setTexte] = useState(media.legende ?? "");
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Légender"
+      onClick={fermer}
+    >
+      <div
+        className="w-full max-w-md rounded-3xl bg-surface p-4 zone-sure-basse"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <label htmlFor="legende" className="mb-2 block text-[13px] text-encre-2">
+          Deux mots sous cette {media.genre === "video" ? "vidéo" : "photo"}
+        </label>
+        <input
+          id="legende"
+          value={texte}
+          onChange={(e) => setTexte(e.target.value)}
+          maxLength={LONGUEUR_LEGENDE}
+          autoFocus
+          placeholder="Facultatif"
+          className="champ-saisie w-full rounded-2xl border border-trait bg-surface-2 px-3.5 py-3 placeholder:text-encre-3 focus:border-trait-fort focus:outline-none"
+        />
+        <div className="mt-3 flex gap-2">
+          <button
+            type="button"
+            onClick={fermer}
+            className="flex-1 rounded-[var(--radius-pilule)] border border-trait py-2.5 text-[14px] text-encre-2"
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            onClick={() => enregistrer(texte)}
+            style={{ background: "var(--encre)", color: "var(--surface)" }}
+            className="flex-1 rounded-[var(--radius-pilule)] py-2.5 text-[14px] font-semibold"
+          >
+            Garder
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
