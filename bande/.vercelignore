@@ -1,0 +1,7 @@
+# Ce qui n'a rien à faire dans une archive de déploiement.
+node_modules
+.next
+.git
+*.tsbuildinfo
+.codes-demo.txt
+.env
