@@ -9,6 +9,7 @@ import {
   actionReagir,
   actionSupprimerCommentaire,
 } from "@/lib/actions";
+import { RESSORT } from "@/lib/mouvement";
 import { ETAT_INITIAL } from "@/lib/formulaire";
 import type { Annuaire, Commentaire, Reaction } from "@/lib/types";
 
@@ -73,7 +74,7 @@ export function PiedEntree({
               onClick={() => reagir(r.emoji)}
               aria-pressed={mienne}
               title={r.parQui.map(nom).join(", ")}
-              className={`inline-flex items-center gap-1 rounded-[var(--radius-pilule)] border px-2 py-1 text-[13px] transition ${
+              className={`cible-tactile inline-flex items-center gap-1 rounded-[var(--radius-pilule)] border px-2.5 py-1.5 text-[13px] transition ${
                 mienne ? "border-encre-3 bg-surface-3" : "border-trait bg-surface-2 hover:border-trait-fort"
               }`}
             >
@@ -88,7 +89,7 @@ export function PiedEntree({
           onClick={() => setChoixOuvert((o) => !o)}
           aria-expanded={choixOuvert}
           aria-label="Ajouter une réaction"
-          className="inline-grid h-[27px] w-[27px] place-items-center rounded-full border border-trait bg-surface-2 text-encre-3 transition hover:border-trait-fort hover:text-encre-2"
+          className="cible-tactile inline-grid h-[30px] w-[30px] place-items-center rounded-full border border-trait bg-surface-2 text-encre-3 transition hover:border-trait-fort hover:text-encre-2"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
             <path d="M12 5v14M5 12h14" />
@@ -99,7 +100,7 @@ export function PiedEntree({
           type="button"
           onClick={() => setOuvert((o) => !o)}
           aria-expanded={ouvert}
-          className="ml-auto text-[12px] text-encre-3 transition hover:text-encre-2"
+          className="cible-tactile ml-auto py-1.5 text-[12px] text-encre-3 transition hover:text-encre-2"
         >
           {commentaires.length === 0
             ? "Commenter"
@@ -113,7 +114,7 @@ export function PiedEntree({
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            transition={{ type: "spring", stiffness: 420, damping: 32 }}
+            transition={RESSORT.vif}
             className="mt-2 flex flex-wrap gap-1"
           >
             {EMOJIS.map((emoji) => (
@@ -121,7 +122,7 @@ export function PiedEntree({
                 key={emoji}
                 type="button"
                 onClick={() => reagir(emoji)}
-                className="rounded-xl px-2 py-1 text-[19px] transition hover:bg-surface-2"
+                className="grid h-11 w-11 place-items-center rounded-xl text-[22px] transition hover:bg-surface-2"
               >
                 {emoji}
               </button>
@@ -136,7 +137,7 @@ export function PiedEntree({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ type: "spring", stiffness: 380, damping: 34 }}
+            transition={RESSORT.moyen}
             className="overflow-hidden"
           >
             <FilCommentaires
@@ -206,7 +207,7 @@ function FilCommentaires({
                     <button
                       type="button"
                       onClick={() => demarrer(async () => { await actionSupprimerCommentaire(c.id); })}
-                      className="underline underline-offset-2 transition hover:text-encre-2"
+                      className="cible-tactile py-1 underline underline-offset-2 transition hover:text-encre-2"
                     >
                       supprimer
                     </button>
@@ -232,7 +233,7 @@ function FilCommentaires({
           rows={2}
           maxLength={LONGUEUR_MAX}
           placeholder="Répondre…"
-          className="w-full resize-none rounded-2xl border border-trait bg-surface-2 px-3 py-2 text-[14px] placeholder:text-encre-3 focus:border-trait-fort focus:outline-none"
+          className="champ-saisie w-full resize-none rounded-2xl border border-trait bg-surface-2 px-3 py-2 placeholder:text-encre-3 focus:border-trait-fort focus:outline-none"
         />
         <div className="mt-1.5 flex items-center gap-3">
           {/* Le compteur n'apparaît qu'à l'approche de la limite : affiché en

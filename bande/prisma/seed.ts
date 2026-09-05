@@ -18,6 +18,7 @@ import { join } from "node:path";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { ALPHABET, creerCodeReprise, normaliserCode } from "../src/lib/codes";
+import { imageFactice } from "./image-factice";
 import { decaler, jourDeLaBande } from "../src/lib/dates";
 
 // Un code fixe, pour que l'adresse de démonstration ne change pas d'une
@@ -27,18 +28,28 @@ import { decaler, jourDeLaBande } from "../src/lib/dates";
 const CODE_BANDE = "FR9M4G";
 const GRAINE = 20260904;
 /**
- * Quatre cents jours, pas quatre-vingt-dix.
+ * Quatre cents jours, pas cent vingt.
  *
- * Il en faut plus d'un an pour que « ce jour-là » ait quelque chose à montrer,
- * et pour que la rétrospective ait plusieurs mois à comparer. Une démonstration
- * qui ne peut pas exercer ses propres écrans ne démontre rien.
+ * Le brief en demande cent vingt ; on en garde quatre cents parce qu'il faut
+ * plus d'un an pour que « ce jour-là » ait quelque chose à montrer et que la
+ * rétrospective ait des mois à comparer. Une démonstration qui ne peut pas
+ * exercer ses propres écrans ne démontre rien.
  */
 const JOURS = 400;
 
+/**
+ * Quatre profils, quatre tempéraments.
+ *
+ * Ils ne diffèrent pas seulement par leur moyenne : l'amplitude fait qu'un
+ * profil oscille et qu'un autre reste plat, la présence crée des trous, et la
+ * sensibilité décide de qui réagit au biberon. Sans ces écarts, l'écran des
+ * stats n'a rien à trouver et toutes les courbes se superposent.
+ */
 const PROFILS = [
   { pseudo: "Momo", teinte: 1, base: 6.4, amplitude: 2.1, presence: 0.94, sensible: 1 },
   { pseudo: "Sam", teinte: 2, base: 7.2, amplitude: 1.4, presence: 0.88, sensible: 0.5 },
   { pseudo: "Samy", teinte: 3, base: 5.9, amplitude: 2.6, presence: 0.8, sensible: 0.5 },
+  { pseudo: "Lou", teinte: 4, base: 6.8, amplitude: 1.8, presence: 0.72, sensible: 0.2 },
 ];
 
 const DECLENCHEURS = [
@@ -61,7 +72,26 @@ const NOTES = [
   null, null, null,
 ];
 
-const REACTIONS = ["❤️", "😂", "🔥", "🫡"];
+const REACTIONS = ["❤️", "😂", "🔥", "🫂", "🙌", "👀"];
+
+/** Une teinte par profil, pour que deux photos ne se ressemblent pas. */
+const TEINTES_PHOTO: [number, number, number][] = [
+  [46, 92, 168],   // Momo, bleu
+  [22, 150, 160],  // Sam, turquoise
+  [178, 142, 20],  // Samy, moutarde
+  [150, 70, 130],  // Lou, prune
+];
+
+const COMMENTAIRES = [
+  "on se fait un truc ce week-end ?",
+  "ça fait plaisir de lire ça",
+  "j'ai exactement vécu la même chose",
+  "raconte",
+  "je propose qu'on efface ce jour des archives",
+  "bravo pour la remontée",
+  "t'étais où ?",
+  "c'est le meilleur truc que j'ai lu cette semaine",
+];
 
 /** Générateur congruentiel : court, sans dépendance, et reproductible. */
 function generateur(graine: number) {
@@ -141,8 +171,14 @@ async function main() {
       if (tirage() > profil.presence) continue;
 
       const bruit = (tirage() - 0.5) * profil.amplitude;
+      // Une traversée : trois semaines de creux vers le milieu de la période,
+      // puis une remontée. Sans ça, une courbe sur quatre cents jours est un
+      // trait horizontal bruité, et « la plus grosse remontada » ne veut rien
+      // dire.
+      const creux = recul > 150 && recul < 171 && i < 2 ? -1.8 : 0;
+      const remontee = recul > 130 && recul <= 150 && i < 2 ? 0.9 : 0;
       const joie = Math.max(1, Math.min(10, Math.round(
-        profil.base + effetJour + effetDeclencheurs * profil.sensible + bruit,
+        profil.base + effetJour + effetDeclencheurs * profil.sensible + creux + remontee + bruit,
       )));
 
       // Une heure de check-in plausible, pour que le fil ne soit pas rangé au
@@ -174,10 +210,37 @@ async function main() {
     });
   }
 
+  // Des photos, une journée sur douze environ, plus souvent sur les journées
+  // hautes — c'est là qu'on sort l'appareil. Elles servent au mur de souvenirs,
+  // au carrousel du fil et à la rétrospective : sans elles, trois écrans se
+  // jugent à vide.
+  const pourPhoto = await prisma.entree.findMany({
+    where: { groupeId: groupe.id },
+    select: { id: true, joie: true, membreId: true },
+    orderBy: { jour: "asc" },
+  });
+  let posees = 0;
+  for (const entree of pourPhoto) {
+    const chance = entree.joie >= 8 ? 0.22 : 0.05;
+    if (tirage() > chance) continue;
+    const index = membres.findIndex((m) => m.id === entree.membreId);
+    const octets = imageFactice(720, 540, TEINTES_PHOTO[index >= 0 ? index : 0]);
+    await prisma.photo.create({
+      data: {
+        entreeId: entree.id,
+        mime: "image/png",
+        octets,
+        largeur: 720,
+        hauteur: 540,
+      },
+    });
+    posees += 1;
+  }
+
   // Réactions et commentaires : seulement sur les trois dernières semaines. Une
   // bande ne remonte pas son fil pour réagir à un mardi d'il y a deux mois.
   const recentes = await prisma.entree.findMany({
-    where: { groupeId: groupe.id, jour: { gte: decaler(aujourdhui, -21) } },
+    where: { groupeId: groupe.id, jour: { gte: decaler(aujourdhui, -45) } },
     select: { id: true, membreId: true, joie: true },
   });
 
@@ -193,15 +256,28 @@ async function main() {
         },
       });
     }
-    if (tirage() < 0.18) {
+    // Un tiers des journées récentes reçoit un commentaire, et une sur six une
+    // vraie conversation à deux voix. Le mur de souvenirs cherche justement ce
+    // signal : sans quelques échanges, il ne retient que des photos.
+    if (tirage() < 0.34) {
       const auteur = autres[Math.floor(tirage() * autres.length)];
       await prisma.commentaire.create({
         data: {
           entreeId: entree.id,
           membreId: auteur.id,
-          texte: entree.joie >= 8 ? "ça fait plaisir de lire ça" : "on se fait un truc ce week-end ?",
+          texte: COMMENTAIRES[Math.floor(tirage() * COMMENTAIRES.length)],
         },
       });
+      if (tirage() < 0.5) {
+        const second = autres.find((m) => m.id !== auteur.id) ?? auteur;
+        await prisma.commentaire.create({
+          data: {
+            entreeId: entree.id,
+            membreId: second.id,
+            texte: COMMENTAIRES[Math.floor(tirage() * COMMENTAIRES.length)],
+          },
+        });
+      }
     }
   }
 
@@ -221,7 +297,10 @@ async function main() {
   });
 
   console.log(`Bande « ${groupe.nom} » — code ${CODE_BANDE}`);
+  const nbReactions = await prisma.reaction.count({ where: { entree: { groupeId: groupe.id } } });
+  const nbCommentaires = await prisma.commentaire.count({ where: { entree: { groupeId: groupe.id } } });
   console.log(`${lignes.length} journées sur ${JOURS} jours, ${PROFILS.length} membres, ${DECLENCHEURS.length} déclencheurs.`);
+  console.log(`${posees} photos, ${nbReactions} réactions, ${nbCommentaires} commentaires.`);
   // Les codes sont aussi écrits sur disque : sans ça, rejouer le peuplement
   // fait perdre les précédents, et on se retrouve à ne plus pouvoir se
   // connecter à sa propre bande de démonstration. Le fichier est ignoré par

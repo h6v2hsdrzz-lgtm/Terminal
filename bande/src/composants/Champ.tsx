@@ -29,7 +29,7 @@ export function Champ({
 }
 
 export const styleChamp =
-  "w-full rounded-2xl border border-trait-fort bg-surface px-4 py-3 text-[16px] " +
+  "champ-saisie w-full rounded-2xl border border-trait-fort bg-surface px-4 py-3 " +
   "placeholder:text-encre-3 focus:border-encre-3 focus:outline-none focus:ring-2 " +
   "focus:ring-[color-mix(in_oklab,var(--encre)_12%,transparent)]";
 

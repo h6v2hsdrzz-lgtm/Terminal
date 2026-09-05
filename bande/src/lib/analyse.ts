@@ -10,6 +10,18 @@ import type { Entree } from "./types";
 
 export const SEUIL_CONCLUANT = 5;
 
+/**
+ * En dessous de ce seuil, un écart ne vaut pas la peine d'être annoncé.
+ *
+ * Avec assez de journées, l'incertitude devient minuscule et *tout* devient
+ * statistiquement net : sur treize cents entrées, un écart de deux dixièmes
+ * passe le test. Mais deux dixièmes sur une échelle de un à dix, ce n'est pas
+ * un effet, c'est du bruit qu'on a mesuré très précisément. Les deux garde-fous
+ * répondent à deux questions différentes — « est-ce mesurable ? » et
+ * « est-ce que ça compte ? » — et il faut les deux.
+ */
+export const SEUIL_PARLANT = 0.3;
+
 export function moyenne(valeurs: number[]): number | null {
   if (valeurs.length === 0) return null;
   return valeurs.reduce((somme, v) => somme + v, 0) / valeurs.length;
@@ -33,8 +45,8 @@ export type EffetDeclencheur = {
   /** Faux tant qu'un des deux côtés n'a pas atteint le seuil. */
   concluant: boolean;
   /**
-   * Vrai quand l'écart dépasse deux fois son incertitude — l'ordre de grandeur
-   * d'un intervalle à 95 %.
+   * Vrai quand l'écart dépasse deux fois son incertitude ET vaut au moins
+   * `SEUIL_PARLANT`.
    *
    * Sans ce garde-fou, l'écran affiche « +0,2 » avec le même aplomb qu'un
    * « +1,3 », alors que le premier est le genre de chiffre que deux séries
@@ -66,7 +78,11 @@ export function effetDeclencheur(entrees: Entree[], declencheur: string): EffetD
     joursSans: sans.length,
     ecart,
     concluant: avec.length >= SEUIL_CONCLUANT && sans.length >= SEUIL_CONCLUANT,
-    net: ecart !== null && incertitude !== null && Math.abs(ecart) > 2 * incertitude,
+    net:
+      ecart !== null &&
+      incertitude !== null &&
+      Math.abs(ecart) > 2 * incertitude &&
+      Math.abs(ecart) >= SEUIL_PARLANT,
     incertitude,
   };
 }

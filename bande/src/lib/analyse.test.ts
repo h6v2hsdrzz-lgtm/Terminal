@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   SEUIL_CONCLUANT,
+  SEUIL_PARLANT,
   SEUIL_SYNCHRONICITE,
   ecartType,
   effetDeclencheur,
@@ -159,5 +160,34 @@ describe("synchronicite", () => {
     const j = jours(40);
     const entrees = j.flatMap((jour, i) => [entree(jour, "a", 7), entree(jour, "b", (i % 10) + 1)]);
     expect(synchronicite(entrees, "a", "b").coefficient).toBeNull();
+  });
+});
+
+describe("un écart mesurable n'est pas forcément un écart qui compte", () => {
+  const beaucoup = (n: number, joie: (i: number) => number, avec: boolean) =>
+    Array.from({ length: n }, (_, i) => entree(`2026-01-${String((i % 28) + 1).padStart(2, "0")}`,
+      `p${i}`, joie(i), avec ? ["x"] : []));
+
+  it("refuse d'annoncer deux dixièmes, même sur mille journées", () => {
+    // Des groupes très serrés : l'incertitude tombe à presque rien, et l'écart
+    // passerait le test purement statistique.
+    const entrees = [
+      ...beaucoup(600, (i) => (i % 2 === 0 ? 7 : 8), true),   // moyenne 7,5
+      ...beaucoup(600, (i) => (i % 10 < 3 ? 8 : 7), false),  // moyenne 7,3
+    ];
+    const effet = effetDeclencheur(entrees, "x");
+    expect(effet.concluant).toBe(true);
+    expect(Math.abs(effet.ecart!)).toBeLessThan(SEUIL_PARLANT);
+    expect(effet.net).toBe(false);
+  });
+
+  it("annonce un écart qui, lui, se voit", () => {
+    const entrees = [
+      ...beaucoup(300, () => 8, true),
+      ...beaucoup(300, () => 6, false),
+    ];
+    const effet = effetDeclencheur(entrees, "x");
+    expect(effet.net).toBe(true);
+    expect(effet.ecart).toBeCloseTo(2, 6);
   });
 });

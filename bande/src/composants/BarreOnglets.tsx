@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
 
+import { RESSORT } from "@/lib/mouvement";
+
 /**
  * La navigation principale, sous deux formes.
  *
@@ -33,7 +35,7 @@ export function BarreOnglets() {
       {/* Téléphone : la barre du bas. */}
       <nav
         aria-label="Navigation principale"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-trait bg-[var(--voile)] backdrop-blur-xl zone-sure-basse lg:hidden"
+        className="barre-onglets fixed inset-x-0 bottom-0 z-40 border-t border-trait bg-[var(--voile)] backdrop-blur-xl zone-sure-basse lg:hidden"
       >
         <ul className="mx-auto flex max-w-lg items-stretch">
           {ONGLETS.map((onglet) => {
@@ -44,12 +46,12 @@ export function BarreOnglets() {
                 <Link
                   href={onglet.href}
                   aria-current={actif ? "page" : undefined}
-                  className="relative flex flex-col items-center gap-1 px-2 pt-2.5 pb-2"
+                  className="cible-tactile relative flex min-h-[52px] flex-col items-center justify-center gap-1 px-2 pt-2.5 pb-2"
                 >
                   {actif && (
                     <motion.span
                       layoutId="onglet-actif-bas"
-                      transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                      transition={RESSORT.vif}
                       className="absolute inset-x-3 top-1 h-9 rounded-[var(--radius-pilule)] bg-surface-2"
                     />
                   )}
@@ -73,7 +75,7 @@ export function BarreOnglets() {
       {/* Grand écran : le rail de gauche. */}
       <nav
         aria-label="Navigation principale"
-        className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-trait bg-surface px-3 py-6 lg:flex"
+        className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-trait bg-surface px-3 py-6 zone-sure-haute zone-sure-basse lg:flex"
       >
         <p className="mb-6 px-3 text-[15px] font-semibold tracking-tight">Journal de joie</p>
         <ul className="space-y-1">
@@ -90,7 +92,7 @@ export function BarreOnglets() {
                   {actif && (
                     <motion.span
                       layoutId="onglet-actif-rail"
-                      transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                      transition={RESSORT.vif}
                       className="absolute inset-0 rounded-[var(--radius-pilule)] bg-surface-2"
                     />
                   )}

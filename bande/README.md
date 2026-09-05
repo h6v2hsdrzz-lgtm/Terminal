@@ -201,8 +201,32 @@ dit plus haut.
 ## Tests
 
 ```bash
-npm test                   # 108 tests sur la logique pure
+npm test                       # 110 tests sur la logique pure
+npx playwright test            # iPhone 15 (WebKit) + bureau 1440×900
+npx playwright test --project=iphone
+ADRESSE=https://journal-de-joie-v2.vercel.app npx playwright test  # contre la prod
 ```
+
+### Pourquoi WebKit et pas Chromium
+
+La bande est sur iPhone, et **Safari est le seul moteur autorisé sur iOS**. Une
+capture Chromium ne prouve donc rien. Le projet `iphone` tourne sur WebKit avec
+le gabarit iPhone 15 ; c'est lui qui décide si une chose marche.
+
+Première installation :
+
+```bash
+npx playwright install webkit chromium
+npx playwright install-deps webkit      # une trentaine de bibliothèques système
+```
+
+**En local, la suite vise `npm run dev`, pas la compilation de production** — et
+ce n'est pas un raccourci. Le cookie de session est marqué `Secure` en
+production ; Chromium fait une exception pour `localhost`, **WebKit ne la fait
+pas**. Une suite lancée contre `npm run start` en HTTP perd donc la session à
+chaque navigation, et les captures photographient l'écran d'accueil en passant
+au vert. C'est arrivé, et c'est pour ça que chaque test vérifie maintenant
+qu'il est bien connecté avant de regarder quoi que ce soit.
 
 Ils portent sur le calcul — dates, analyses, badges, souvenirs, codes,
 initiales — et pas sur la base, qui est éprouvée par des parcours au navigateur.
@@ -263,6 +287,32 @@ npm run verifier:palette   # revérifier les couleurs de profil
 `GET /api/sante` répond `{"base":"ok"}` quand l'application atteint son
 stockage — et rien d'autre : une sonde publique n'a aucune raison de renseigner
 un curieux sur ce que contient la base.
+
+## Checklist iPhone
+
+Ce que la suite vérifie toute seule, à chaque exécution :
+
+| Contrôle | Pourquoi |
+| --- | --- |
+| Aucun champ sous 16 px | Safari zoome à la mise au point et ne dézoome jamais seul |
+| Cibles tactiles ≥ 44 px | le doigt n'est pas une souris |
+| Aucun débordement horizontal | sinon la page glisse latéralement à chaque geste |
+| Zone sûre sur la barre d'onglets | sans quoi elle passe sous la barre d'accueil |
+| Session bien ouverte avant chaque capture | un test qui photographie la mauvaise page ne teste rien |
+
+Ce qui ne se vérifie qu'à la main, sur un vrai téléphone :
+
+- [ ] **Ajouter à l'écran d'accueil** (Partager → Sur l'écran d'accueil) et
+      rouvrir : pas de barre d'adresse, l'icône est la bonne.
+- [ ] En mode écran d'accueil, la barre du bas ne passe pas sous la barre
+      d'accueil de l'iPhone.
+- [ ] Toucher le champ « ce qui a fait la journée » : **la page ne doit pas
+      zoomer**, et la barre d'onglets doit s'effacer pour laisser la place au
+      clavier.
+- [ ] Mode avion : l'application s'ouvre quand même, on peut écrire sa journée,
+      et elle part toute seule au retour du réseau.
+- [ ] Faire glisser le curseur de joie au pouce, sur toute sa course.
+- [ ] Taper une pastille de réaction et le « + » du premier coup.
 
 ## Mettre en ligne
 

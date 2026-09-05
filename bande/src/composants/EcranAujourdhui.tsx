@@ -11,6 +11,7 @@ import { CurseurJoie } from "./CurseurJoie";
 import { MessageErreur } from "./Champ";
 import { VisageJoie } from "./VisageJoie";
 import { actionPoserJournee, actionPoserJourneeSimple } from "@/lib/actions";
+import { RESSORT, retard } from "@/lib/mouvement";
 import { ETAT_INITIAL } from "@/lib/formulaire";
 import { garderEnAttente, lireEnAttente, oublierAttente, sAbonnerAttente, yaUneAttente } from "@/lib/attente";
 import { enTexteLong } from "@/lib/dates";
@@ -226,7 +227,7 @@ export function EcranAujourdhui({
           <motion.div
             key="saisie"
             exit={{ opacity: 0, scale: 0.97, y: -8 }}
-            transition={{ type: "spring", stiffness: 340, damping: 30 }}
+            transition={RESSORT.moyen}
           >
             <Carte className="p-5">
               <form ref={formulaire} action={actionPoserJourneeSimple} onSubmit={intercepter}>
@@ -272,7 +273,7 @@ export function EcranAujourdhui({
                   rows={2}
                   maxLength={280}
                   placeholder="Ce qui a fait la journée… (facultatif)"
-                  className="mt-4 w-full resize-none rounded-2xl border border-trait bg-surface-2 px-3.5 py-3 text-[15px] placeholder:text-encre-3 focus:border-trait-fort focus:outline-none"
+                  className="champ-saisie mt-4 w-full resize-none rounded-2xl border border-trait bg-surface-2 px-3.5 py-3 placeholder:text-encre-3 focus:border-trait-fort focus:outline-none"
                 />
 
                 {etat.erreur && (
@@ -297,7 +298,7 @@ export function EcranAujourdhui({
             key="posee"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 320, damping: 28 }}
+            transition={RESSORT.moyen}
           >
             <Carte className="p-5">
               <div className="flex items-center gap-4">
@@ -390,7 +391,7 @@ export function EcranAujourdhui({
                 key={entree.id}
                 initial={false}
                 animate={{ opacity: 1 }}
-                transition={{ delay: voile ? 0 : index * 0.06, type: "spring", stiffness: 300, damping: 28 }}
+                transition={{ delay: voile ? 0 : retard(index), ...RESSORT.moyen }}
               >
                 {/* Ma propre journée n'est jamais floutée : le voile protège
                     le jugement des autres, pas le mien. */}

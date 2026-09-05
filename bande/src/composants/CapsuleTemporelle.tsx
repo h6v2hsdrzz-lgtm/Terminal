@@ -81,7 +81,7 @@ export function CapsuleTemporelle({
               maxLength={LONGUEUR_MAX}
               required
               placeholder="Ce qu'on vit en ce moment, et ce qu'on espère pour la suite…"
-              className="w-full resize-none rounded-2xl border border-trait bg-surface-2 px-3.5 py-3 text-[15px] placeholder:text-encre-3 focus:border-trait-fort focus:outline-none"
+              className="champ-saisie w-full resize-none rounded-2xl border border-trait bg-surface-2 px-3.5 py-3 placeholder:text-encre-3 focus:border-trait-fort focus:outline-none"
             />
 
             <label htmlFor="ouvrirLe" className="mt-3 mb-1.5 block text-[14px] font-medium">

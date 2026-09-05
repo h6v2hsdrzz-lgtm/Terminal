@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 
+import { Clavier } from "@/composants/Clavier";
 import { ServiceWorker } from "@/composants/ServiceWorker";
 import "./globals.css";
 
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr" suppressHydrationWarning>
       <body>
         {children}
+        <Clavier />
         <ServiceWorker />
       </body>
     </html>

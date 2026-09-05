@@ -35,6 +35,13 @@
   --encre-2: #5b6167;
   --encre-3: #8f959c;
 
+  /* Durées et courbes. Elles vivent ici pour la même raison que les couleurs :
+     une valeur écrite deux fois finit par diverger. */
+  --duree-courte: 160ms;
+  --duree-moyenne: 250ms;
+  --duree-longue: 400ms;
+  --courbe-douce: cubic-bezier(0.22, 0.61, 0.36, 1);
+
   /* Couleurs de profil — sept emplacements, validés toutes paires : bande de
      clarté, plancher de chroma, écart sous protanopie et deutéranopie, contraste
      sur le fond. Sept et pas huit : au-delà, la bande de clarté du thème sombre
@@ -242,6 +249,38 @@
 
 /* Zone sûre : la barre d'onglets doit dégager la barre d'accueil iOS. */
 .marge-basse { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+
+/* Safari sur iPhone zoome la page dès qu'un champ passe sous 16 px à la mise
+   au point, et ne dézoome jamais tout seul. Ce n'est pas une préférence de
+   goût : c'est la taille en dessous de laquelle l'application devient
+   désagréable sur le seul navigateur que la bande utilise. Toute saisie passe
+   donc par cette classe. */
+.champ-saisie {
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+/* Clavier ouvert : la barre d'onglets s'efface. Elle recouvrirait sinon le
+   champ qu'on remplit, et sur un téléphone il n'y a pas la place pour les
+   deux. Elle revient dès que le clavier se referme. */
+.clavier-ouvert .barre-onglets {
+  transform: translateY(120%);
+  pointer-events: none;
+}
+.barre-onglets { transition: transform var(--duree-moyenne, 200ms) var(--courbe-douce, ease); }
+
+/* Une cible tactile fait 44 px, quelle que soit la taille de ce qu'on y
+   dessine. La zone est étendue par un pseudo-élément pour ne pas gonfler la
+   mise en page autour. */
+.cible-tactile { position: relative; }
+.cible-tactile::after {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
 .zone-sure-basse { padding-bottom: env(safe-area-inset-bottom); }
 .zone-sure-haute { padding-top: env(safe-area-inset-top); }
 

@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { useState } from "react";
 
 import { VisageJoie } from "./VisageJoie";
+import { RESSORT } from "@/lib/mouvement";
 import { couleurJoie, motJoie } from "@/lib/couleurs";
 
 /**
@@ -29,9 +30,14 @@ export function CurseurJoie({
     if (nouvelle === valeur) return;
     setValeur(nouvelle);
     onChange?.(nouvelle);
-    // Un retour tactile bref à chaque cran : la valeur se sent autant
-    // qu'elle se lit. Absent sur bureau, sans conséquence.
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(8);
+    // Un retour tactile bref à chaque cran : la valeur se sent autant qu'elle
+    // se lit. `navigator.vibrate` n'existe pas sur iOS — et c'est justement là
+    // que tourne la bande. Le test de présence suffit : pas de repli à
+    // inventer, le curseur se manipule très bien sans vibration, et toute
+    // bidouille pour la simuler ferait plus de dégâts que de bien.
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      navigator.vibrate(8);
+    }
   }
 
   const part = (valeur - 1) / 9;
@@ -41,7 +47,7 @@ export function CurseurJoie({
       <div className="flex items-center gap-5">
         <motion.div
           animate={{ scale: 1 + part * 0.08 }}
-          transition={{ type: "spring", stiffness: 320, damping: 22 }}
+          transition={RESSORT.moyen}
         >
           <VisageJoie valeur={valeur} taille={84} />
         </motion.div>
@@ -52,7 +58,7 @@ export function CurseurJoie({
               key={valeur}
               initial={{ y: 6, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              transition={RESSORT.chiffre}
               className="chiffres text-[44px] leading-none"
               style={{ color: "var(--joie-encre)" }}
             >
@@ -70,7 +76,7 @@ export function CurseurJoie({
             className="h-full rounded-full"
             style={{ background: couleurJoie(valeur) }}
             animate={{ width: `${part * 100}%` }}
-            transition={{ type: "spring", stiffness: 380, damping: 32 }}
+            transition={RESSORT.moyen}
           />
         </div>
         <input
