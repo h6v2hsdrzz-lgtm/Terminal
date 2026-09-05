@@ -42,9 +42,13 @@ v3 y ajoute une section ; les jalons v2 sont regroupés en tête d'historique.
 - Aujourd'hui, la base de démonstration fait poster tout le monde **sauf** le
   premier profil : c'est l'état dans lequel on ouvre l'application le soir, et
   le seul où le voile, la figure et le formulaire se jugent ensemble.
-- Sept tests de bout en bout sur WebKit pour le lot, et trente-six tests
+- Sept tests de bout en bout sur WebKit pour le lot, et quarante-huit tests
   unitaires de plus (géométrie de la figure, normalisation des étiquettes,
-  export CSV).
+  mise à l'échelle de la forme d'onde, export CSV).
+- **Un test de fumée exécutable contre la production.** Il se crée sa propre
+  bande, y déroule tout le rituel, puis la quitte — et le dernier membre qui
+  part emporte le groupe avec lui. Il ne touche à aucune donnée existante, ce
+  qui est la seule façon d'éprouver une mise en ligne sans l'abîmer.
 
 ### Corrigé
 - **Une note vocale restait muette sur les autres téléphones.** Enregistrer un

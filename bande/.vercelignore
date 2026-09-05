@@ -5,3 +5,8 @@ node_modules
 *.tsbuildinfo
 .codes-demo.txt
 .env
+.env.local
+captures
+test-results
+playwright-report
+e2e

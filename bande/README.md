@@ -239,8 +239,23 @@ dit plus haut.
 npm test                       # 146 tests sur la logique pure
 npx playwright test            # iPhone 15 (WebKit) + bureau 1440×900
 npx playwright test --project=iphone
-ADRESSE=https://journal-de-joie-v2.vercel.app npx playwright test  # contre la prod
+ADRESSE=https://journal-de-joie-v2.vercel.app \
+  npx playwright test e2e/production      # test de fumée contre la production
 ```
+
+### Le test de fumée
+
+`e2e/production.spec.ts` se crée sa **propre bande**, y déroule tout le rituel —
+check-in avec titre, étiquettes et curseurs, envoi d'une photo, contrôle que la
+photo ne se sert pas sans session, passage sur les quatre autres écrans — puis
+la quitte. Le dernier membre qui part emporte le groupe avec lui : il ne reste
+rien, et il ne touche à aucune donnée existante. C'est ce qui le rend
+exécutable contre la production.
+
+Il ne couvre pas l'enregistrement vocal : il demande un vrai micro, et WebKit
+sans tête n'en simule pas. Le stockage et la lecture du son sont éprouvés par
+`e2e/lot1.spec.ts` sur la base locale ; la route qui le sert est vérifiée en
+production — elle doit refuser sans session.
 
 ### Pourquoi WebKit et pas Chromium
 
