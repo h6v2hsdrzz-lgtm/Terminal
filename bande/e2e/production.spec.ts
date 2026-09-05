@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { join } from "node:path";
+
 import { imageFactice } from "../prisma/image-factice";
 
 /**
@@ -12,10 +14,11 @@ import { imageFactice } from "../prisma/image-factice";
  *
  *   ADRESSE=https://journal-de-joie-v2.vercel.app npx playwright test e2e/production
  *
- * Ce qu'il ne couvre pas : l'enregistrement vocal. Il demande un vrai micro, et
- * WebKit sans tête n'en simule pas. Le stockage et la lecture du son sont
- * éprouvés par `lot1.spec.ts` sur la base locale, et la route qui le sert est
- * vérifiée ici — elle doit refuser sans session.
+ * Ce qu'il ne couvre pas : l'enregistrement au micro et à la caméra. Ils
+ * demandent du vrai matériel, et le WebKit de Playwright n'a même pas
+ * `MediaRecorder`. Le stockage et la lecture du son sont éprouvés par
+ * `lot1.spec.ts` sur la base locale, et la route qui le sert est vérifiée ici —
+ * elle doit refuser sans session.
  */
 
 /**
@@ -86,6 +89,73 @@ test("une bande neuve, de bout en bout, puis effacée", async ({ page, request }
   expect(servie.headers()["content-type"]).toMatch(/^image\//);
   // `request` est un contexte neuf, sans les cookies de la page.
   expect((await request.get(new URL(adressePhoto, page.url()).href)).status()).toBe(401);
+
+  // ── Une vidéo, réencodée sur place et envoyée ──────────────────────────
+  //
+  // C'est la vérification qui compte le plus de cette liste : le réencodage
+  // fait tout le travail dans le navigateur, et rien de ce qui se passe en
+  // local ne garantit qu'il traverse le réseau et la base de production.
+  await page.addScriptTag({
+    path: join(process.cwd(), "node_modules", "mp4-muxer", "build", "mp4-muxer.js"),
+  });
+  const clip = await page.evaluate(async () => {
+    const { Muxer, ArrayBufferTarget } = (window as unknown as {
+      Mp4Muxer: typeof import("mp4-muxer");
+    }).Mp4Muxer;
+    const cote = 240, ips = 24, total = 48;
+    const muxeur = new Muxer({
+      target: new ArrayBufferTarget(),
+      video: { codec: "avc", width: cote, height: cote },
+      fastStart: "in-memory",
+    });
+    const enc = new VideoEncoder({
+      output: (c, m) => muxeur.addVideoChunk(c, m),
+      error: (e) => { throw e; },
+    });
+    enc.configure({ codec: "avc1.42001f", width: cote, height: cote, bitrate: 400_000, framerate: ips });
+    const toile = document.createElement("canvas");
+    toile.width = cote; toile.height = cote;
+    const ctx = toile.getContext("2d")!;
+    for (let i = 0; i < total; i += 1) {
+      ctx.fillStyle = `hsl(${(i * 360) / total} 65% 50%)`;
+      ctx.fillRect(0, 0, cote, cote);
+      const image = new VideoFrame(toile, {
+        timestamp: Math.round((i * 1e6) / ips),
+        duration: Math.round(1e6 / ips),
+      });
+      enc.encode(image, { keyFrame: i === 0 });
+      image.close();
+    }
+    await enc.flush();
+    enc.close();
+    muxeur.finalize();
+    return [...new Uint8Array((muxeur.target as InstanceType<typeof ArrayBufferTarget>).buffer)];
+  });
+
+  await page.setInputFiles('input[type="file"][accept="image/*,video/*"]', {
+    name: "clip.mp4",
+    mimeType: "video/mp4",
+    buffer: Buffer.from(clip),
+  });
+
+  // La pastille de durée n'apparaît que pour le genre « video » : elle prouve
+  // que le serveur a rangé une vidéo, et pas une image.
+  await expect(page.getByText(/▶\s*\d+ s/).first()).toBeVisible({ timeout: 90_000 });
+
+  await page.reload();
+  // La tuile vidéo se reconnaît à sa pastille, pas à sa position : la journée
+  // est aussi affichée plus bas dans le fil, et compter les vignettes de la
+  // page entière donnerait un nombre qui dépend de la mise en page.
+  const tuileVideo = page.locator("li").filter({ hasText: /▶\s*\d+ s/ }).first();
+  await expect(tuileVideo).toBeVisible();
+
+  // Le fichier stocké est bien une vidéo, et bien réduite.
+  const adresseClip = (await tuileVideo.locator("img").first().getAttribute("src"))!
+    .replace("/api/vignette/", "/api/photo/");
+  const servieVideo = await page.request.get(adresseClip);
+  expect(servieVideo.status()).toBe(200);
+  expect(servieVideo.headers()["content-type"]).toMatch(/^video\//);
+  expect((await servieVideo.body()).byteLength).toBeLessThan(4 * 1024 * 1024);
 
   // ── La route du vocal existe et se garde ───────────────────────────────
   expect((await request.get(new URL("/api/audio/inexistant", page.url()).href)).status()).toBe(401);

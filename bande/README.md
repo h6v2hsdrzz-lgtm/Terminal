@@ -281,14 +281,14 @@ ADRESSE=https://journal-de-joie-v2.vercel.app \
 ### Le test de fumée
 
 `e2e/production.spec.ts` se crée sa **propre bande**, y déroule tout le rituel —
-check-in avec titre, étiquettes et curseurs, envoi d'une photo, contrôle que la
-photo ne se sert pas sans session, passage sur les quatre autres écrans — puis
-la quitte. Le dernier membre qui part emporte le groupe avec lui : il ne reste
+check-in avec titre, étiquettes et curseurs, envoi d'une photo **et d'une
+vidéo** qu'il fabrique lui-même avec WebCodecs, contrôle qu'aucun des deux ne se
+sert sans session, passage sur les quatre autres écrans — puis la quitte. Le dernier membre qui part emporte le groupe avec lui : il ne reste
 rien, et il ne touche à aucune donnée existante. C'est ce qui le rend
 exécutable contre la production.
 
-Il ne couvre pas l'enregistrement vocal : il demande un vrai micro, et WebKit
-sans tête n'en simule pas. Le stockage et la lecture du son sont éprouvés par
+Il ne couvre pas l'enregistrement au micro ni à la caméra : ils demandent du
+vrai matériel, et le WebKit de Playwright n'a même pas `MediaRecorder`. Le stockage et la lecture du son sont éprouvés par
 `e2e/lot1.spec.ts` sur la base locale ; la route qui le sert est vérifiée en
 production — elle doit refuser sans session.
 
