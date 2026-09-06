@@ -64,6 +64,12 @@ du plan. Correspondance à la fin de ce fichier.
 État : 190 tests unitaires, 66 de bout en bout (WebKit + grand écran), build
 sans avertissement, `tsc --noEmit` propre.
 En ligne : https://journal-de-joie-v2.vercel.app
+Lot A déployé le 6 septembre, migrations `avatar_membre` et `marie_jane`
+appliquées en production, test de fumée passé contre la production.
+
+Le jeton Vercel est gardé sur la machine pour la durée de la session
+(`~/.config/joie/vercel.token`, mode 600, hors du dépôt), pour pouvoir
+redéployer à chaque lot sans le redemander. **À révoquer à la fin.**
 
 ## Décisions prises, et pourquoi
 
