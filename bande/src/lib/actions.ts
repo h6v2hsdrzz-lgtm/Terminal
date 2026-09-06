@@ -15,6 +15,8 @@ import {
   rejoindreBande,
   renommerBande,
   renommerMembre,
+  enregistrerAvatar,
+  retirerAvatar,
   ecrireCapsule,
   ajouterMedia,
   enregistrerAudio,
@@ -195,6 +197,27 @@ export async function actionRenommerMembre(_precedent: Etat, donnees: FormData):
 export async function actionRenommerMembreSimple(donnees: FormData): Promise<void> {
   await actionRenommerMembre(ETAT_INITIAL, donnees);
   redirect("/profil");
+}
+
+/** Sa photo de profil. Le navigateur l'a déjà recadrée et compressée. */
+export async function actionEnvoyerAvatar(_precedent: Etat, donnees: FormData): Promise<Etat> {
+  return tenter(async () => {
+    const { membreId } = await quiAgit();
+    const fichier = donnees.get("avatar");
+    if (!(fichier instanceof File) || fichier.size === 0) {
+      throw new ErreurMetier("Choisis une image.");
+    }
+    await enregistrerAvatar(membreId, new Uint8Array(await fichier.arrayBuffer()));
+    rafraichirTout();
+  });
+}
+
+export async function actionRetirerAvatar(): Promise<Etat> {
+  return tenter(async () => {
+    const { membreId } = await quiAgit();
+    await retirerAvatar(membreId);
+    rafraichirTout();
+  });
 }
 
 // ── Réglages de la bande ─────────────────────────────────────────────────────

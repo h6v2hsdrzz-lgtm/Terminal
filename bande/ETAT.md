@@ -10,14 +10,15 @@ réponse : on avance sur ce qui n'en dépend pas.
 
 ## Prochaine action exacte
 
-**A3b — la photo de profil.** Le schéma n'a pas de colonne pour ça : ajouter
-`avatar Bytes?` et `avatarMime String?` sur `Membre` (migration additive, comme
-celle des médias). Réutiliser `preparerPhoto` de `src/lib/transcodage.ts` en
-recadrant au carré avant, servir par une route `/api/avatar/[membre]` calquée
-sur `/api/vignette/[media]`. Le recadrage au doigt est la seule vraie nouveauté :
-un carré déplaçable au-dessus de l'image, pas de bibliothèque.
+**A5 — l'album personnel.** Dans `src/app/(repaire)/profil/page.tsx`, sous
+l'en-tête : les dix derniers médias de la personne (`mediasDeLaBande` filtré sur
+`profil`, ou une requête dédiée si le filtre coûte trop), en grille de vignettes,
+ouvrables avec la `Visionneuse` exportée par `Carrousel.tsx`. En dessous, trois
+ou quatre stats discrètes — heure moyenne de check-in, lieu le plus fréquent,
+proportion de journées avec vocal, mot le plus utilisé. Petit texte, ton léger,
+surtout pas un tableau de bord : on vient d'en retirer un en A4.
 
-Ensuite **A5** (album personnel), qui ne dépend d'aucune question.
+Ensuite, lot A terminé : captures, CHANGELOG, mise en ligne.
 
 A1b (calme → rire) et A2 (fil en accueil) attendent les réponses 1 et 2.
 
@@ -38,6 +39,11 @@ du plan. Correspondance à la fin de ce fichier.
   → **Lieu** dans l'interface et l'export.
 - **A4** — les trois compteurs du profil (« jours d'affilée », « ton record »,
   « journées posées ») sont retirés.
+- **A3b** — photo de profil : choix, recadrage rond au doigt (glisser + zoom),
+  compression en carré de 256 px, service par `/api/avatar/[membre]` réservé à
+  la bande. Au passage, `Membre.modifieLe` entre dans l'empreinte de
+  synchronisation — sans quoi ni un changement de nom ni un changement de photo
+  n'arrivait chez les autres.
 - **A3a** — on change son pseudo depuis le profil. Unicité dans la bande à la
   casse près, et reprendre son propre nom en changeant la casse passe. Le
   pseudo n'étant recopié nulle part, le passé change avec.
@@ -81,6 +87,12 @@ En ligne : https://journal-de-joie-v2.vercel.app
   copiés en base à la création de la bande. Sans migration `UPDATE`, la
   production aurait gardé l'ancien nom. Et un `DELETE` + `INSERT` aurait emporté
   la table de liaison par cascade — des mois de données pour un mot.
+- **`include` tire toutes les colonnes.** `chargerContexte` chargeait les octets
+  de chaque avatar à chaque page avant qu'on sélectionne explicitement. Sur un
+  champ `Bytes`, un `include` distrait coûte des méga-octets par navigation.
+- **Une colonne qui change sans qu'aucune journée ne bouge est invisible aux
+  autres** tant qu'elle n'est pas dans `versionBande`. Vrai pour les photos,
+  les notes vocales, et maintenant le pseudo et l'avatar.
 - Next pose son propre `role="alert"` (l'annonceur de route) : un test qui
   cherche un message d'erreur par ce rôle doit prendre `.first()`.
 - `plusLongueSerie` et `serieEnCours` (`src/lib/badges.ts`) ne servent plus à
@@ -105,7 +117,7 @@ En ligne : https://journal-de-joie-v2.vercel.app
 | --- | --- |
 | A1 renommages | **A1a fait** · A1b (calme → rire) en attente de la Q1 |
 | A2 fil en accueil | à faire — dépend de la question 2 |
-| A3 profil : photo et nom | **A3a (nom) fait** · A3b (photo) à faire |
+| A3 profil : photo et nom | **fait** |
 | A4 retirer les 3 compteurs | **fait** |
 | A5 album personnel + stats discrètes | à faire |
 | B1 pipeline d'upload | **fait**, sauf HEIC (question 4) |

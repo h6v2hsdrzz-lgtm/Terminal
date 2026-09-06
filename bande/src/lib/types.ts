@@ -6,6 +6,8 @@ export type Profil = {
   /** 1 à 7 — index dans la palette validée, jamais un code couleur en dur. */
   teinte: number;
   initiales: string;
+  /** L'adresse de sa photo, ou null : l'avatar porte alors ses initiales. */
+  avatar: string | null;
 };
 
 export type Declencheur = {

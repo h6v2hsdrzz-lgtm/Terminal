@@ -217,7 +217,14 @@ export async function chargerContexte(membreId: string): Promise<Contexte | null
           // trier dessus donne un ordre stable, là où deux `creeLe` identiques
           // — le script de peuplement les crée d'un seul coup — laissent les
           // avatars changer de place d'un rendu à l'autre.
-          membres: { orderBy: { teinte: "asc" } },
+          // Sélection explicite, et ce n'est pas de la coquetterie : `include`
+          // tire toutes les colonnes, donc les octets de chaque avatar, à
+          // chaque chargement de chaque page. On ne veut savoir qu'une chose,
+          // « y en a-t-il un », et ça se demande à part.
+          membres: {
+            orderBy: { teinte: "asc" },
+            select: { id: true, pseudo: true, teinte: true },
+          },
           declencheurs: { where: { actif: true }, orderBy: { ordre: "asc" } },
         },
       },
@@ -225,12 +232,23 @@ export async function chargerContexte(membreId: string): Promise<Contexte | null
   });
   if (!membre) return null;
 
+  // Qui a une photo — sans en rapporter un seul octet.
+  const avecAvatar = new Set(
+    (
+      await prisma.membre.findMany({
+        where: { groupeId: membre.groupeId, avatar: { not: null } },
+        select: { id: true },
+      })
+    ).map((m) => m.id),
+  );
+
   const marques = initialesDeLaBande(membre.groupe.membres.map((m) => m.pseudo));
   const profils = membre.groupe.membres.map((m, index) => ({
     id: m.id,
     pseudo: m.pseudo,
     teinte: m.teinte,
     initiales: marques[index],
+    avatar: avecAvatar.has(m.id) ? `/api/avatar/${m.id}` : null,
   }));
 
   return {
@@ -470,6 +488,39 @@ export async function renommerMembre(membreId: string, pseudo: string) {
     where: { id: membreId },
     data: { pseudo: nom.slice(0, LONGUEUR_PSEUDO) },
   });
+}
+
+/** Le côté de l'avatar stocké. Il n'est jamais affiché plus grand que 64 px. */
+export const COTE_AVATAR = 256;
+/** Au-delà, c'est que le recadrage du navigateur n'a pas eu lieu. */
+const POIDS_MAX_AVATAR = 512 * 1024;
+
+/** Sa photo de profil. Carrée et en JPEG : le navigateur s'en charge avant. */
+export async function enregistrerAvatar(membreId: string, octets: Uint8Array<ArrayBuffer>) {
+  if (octets.byteLength > POIDS_MAX_AVATAR) {
+    throw new ErreurMetier("Cette image est trop lourde.");
+  }
+  await prisma.membre.update({ where: { id: membreId }, data: { avatar: octets } });
+}
+
+/** Revenir aux initiales. Elles ont toujours marché. */
+export async function retirerAvatar(membreId: string) {
+  await prisma.membre.update({ where: { id: membreId }, data: { avatar: null } });
+}
+
+/**
+ * Les octets d'un avatar, pour la route qui les sert.
+ *
+ * Même règle que pour les médias : il faut une session, et appartenir à la
+ * même bande. Une tête n'est pas plus publique qu'une photo de journée.
+ */
+export async function lireAvatar(demandeurId: string, membreId: string) {
+  const [demandeur, cible] = await Promise.all([
+    prisma.membre.findUnique({ where: { id: demandeurId }, select: { groupeId: true } }),
+    prisma.membre.findUnique({ where: { id: membreId }, select: { groupeId: true, avatar: true } }),
+  ]);
+  if (!demandeur || !cible || demandeur.groupeId !== cible.groupeId) return null;
+  return cible.avatar ?? null;
 }
 
 // ── Réglages de la bande ─────────────────────────────────────────────────────
@@ -875,9 +926,10 @@ export async function versionBande(groupeId: string): Promise<string> {
     // agrégat la note resterait muette sur les autres téléphones jusqu'à ce
     // qu'une réaction ou un commentaire vienne remuer l'empreinte.
     prisma.audio.aggregate({ where: { entree: { groupeId } }, _count: true, _max: { modifieLe: true } }),
-    // Et les membres : quelqu'un qui rejoint ou qui part change l'écran de tout
-    // le monde.
-    prisma.membre.aggregate({ where: { groupeId }, _count: true, _max: { creeLe: true } }),
+    // Et les membres : quelqu'un qui rejoint, qui part, qui change de nom ou de
+    // photo change l'écran de tout le monde. D'où `modifieLe` et non `creeLe` —
+    // un renommage ne crée personne.
+    prisma.membre.aggregate({ where: { groupeId }, _count: true, _max: { modifieLe: true } }),
   ]);
 
   // Les capsules aussi : en écrire une change l'écran des souvenirs de tout le
@@ -893,7 +945,7 @@ export async function versionBande(groupeId: string): Promise<string> {
     commentaires._count, commentaires._max.creeLe?.getTime() ?? 0,
     photos._count, photos._max.modifieLe?.getTime() ?? 0,
     audios._count, audios._max.modifieLe?.getTime() ?? 0,
-    membres._count, membres._max.creeLe?.getTime() ?? 0,
+    membres._count, membres._max.modifieLe?.getTime() ?? 0,
     capsules._count, capsules._max.creeLe?.getTime() ?? 0,
   ].join("-");
 }

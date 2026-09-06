@@ -52,8 +52,17 @@ model Membre {
   teinte      Int
   poigneeReprise String @unique @map("poignee_reprise")
   codeReprise String   @map("code_reprise")
+  /// La photo de profil, carrée, en JPEG — c'est nous qui la fabriquons, donc
+  /// pas besoin d'une colonne pour le type. Vide tant que personne n'en a mis :
+  /// l'avatar porte alors les initiales, ce qui marche très bien.
+  avatar      Bytes?
   creeLe      DateTime @default(now()) @map("cree_le")
   vuLe        DateTime @default(now()) @map("vu_le")
+  /// Changer de pseudo ou de photo ne touche à aucune journée. Sans cette
+  /// colonne dans l'empreinte de synchronisation, les autres garderaient
+  /// l'ancien nom et l'ancienne tête jusqu'à la prochaine écriture — c'est le
+  /// même défaut que les photos et les notes vocales avaient eu.
+  modifieLe   DateTime @default(now()) @updatedAt @map("modifie_le")
 
   groupe        Groupe        @relation(fields: [groupeId], references: [id], onDelete: Cascade)
   entrees       Entree[]

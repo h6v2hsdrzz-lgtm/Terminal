@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { Avatar } from "@/composants/Avatar";
+import { BoiteAvatar } from "@/composants/BoiteAvatar";
 import { Carte, TitreSection } from "@/composants/Carte";
 import { Calendrier } from "@/composants/Calendrier";
 import { ClassementAssiduite } from "@/composants/ClassementAssiduite";
@@ -24,9 +24,9 @@ export default async function Page() {
   const badges = badgesDe(miennes, entrees, contexte.moi.id);
   return (
     <div className="px-4 pt-3">
-      <header className="mb-6 flex items-center gap-4 zone-sure-haute">
-        <Avatar profil={contexte.moi} taille={64} anneau />
-        <div className="min-w-0">
+      <header className="mb-6 zone-sure-haute">
+        <BoiteAvatar profil={contexte.moi} />
+        <div className="mt-3 min-w-0">
           <NomDuProfil pseudo={contexte.moi.pseudo} />
           <p className="mt-0.5 flex items-center gap-1.5 text-[14px] text-encre-3">
             <span
