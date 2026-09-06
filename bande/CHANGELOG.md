@@ -3,6 +3,49 @@
 Les entrées vont de la plus récente à la plus ancienne. Chaque lot du chantier
 v3 y ajoute une section ; les jalons v2 sont regroupés en tête d'historique.
 
+## Lot G — Les jeux
+
+Dix jeux, à trois, sur un seul téléphone qu'on se passe.
+
+### Le moteur
+- Un onglet **Jeux**, quatre catégories, une fiche par jeu avec ses règles en
+  trois lignes — **lisibles avant de lancer**, jamais pendant.
+- Une partie à la fois par bande, reprise possible, abandon confirmé.
+- Barre de score discrète et permanente, podium animé, conversion en points
+  d'application. L'écran reste allumé pendant la partie ; un rappel d'eau
+  apparaît toutes les trente minutes.
+- Pas de barre d'onglets pendant une partie : « Fil » sous le pouce, et la
+  partie s'interrompt toutes les cinq minutes.
+
+### Le cadre, dans le moteur
+- L'unité est **la gorgée**, jamais le verre. Trois au maximum par manche.
+- **« Je passe » est toujours là et ne coûte rien** — ni gage de remplacement,
+  ni remarque.
+- Celui qui **conduit** est marqué sobre et reçoit un gage à la place.
+- L'application ne compte aucune consommation : un compteur transforme la
+  soirée en score, et le score en défi.
+
+### Les dix jeux
+Devine qui je suis (douze paquets, plus de cinq cents cartes, une roulette, et
+« Nos potes » que la bande écrit) · Je n'ai jamais · Tu préfères · Qui est le
+plus susceptible de · Le jugement · Menteur · Top 3 · Le plus rapide · Le quiz
+de la bande · Devine qui a écrit ça.
+
+Les deux derniers se nourrissent du journal : aucun autre groupe ne peut les
+avoir. Le quiz ne demande **jamais** qui va bien — une question posée devient
+un classement énoncé — et ne pose pas de question dont il n'a pas la réponse.
+
+### Écarts au plan, assumés
+- **Un seul mode**, « un seul téléphone ». « Chacun son téléphone » supposait
+  du temps réel ; ici la synchronisation est un sondage, avec une à trois
+  secondes de retard — invisible dans le fil, désastreux sur un vote simultané.
+- **Les jeux ont leur propre plafond quotidien** (120 points), que le plan
+  n'avait pas prévu : sans lui, une soirée valait sept journées parfaites.
+
+### Ajouté au passage
+- Une page **404** et un écran **d'erreur** en français. Sans eux, Next servait
+  les siens, en anglais, dans une application annoncée 100 % en français.
+
 ## Lot F — Le lieu
 
 ### Ajouté

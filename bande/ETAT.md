@@ -5,18 +5,30 @@
 
 ## Lot en cours
 
-**LOT F — terminé.** A à F sont faits. On enchaîne sans feu vert intermédiaire
-(« enchaine tout », 6 septembre).
+**LOT G — terminé.** A à G sont faits, et la bande a ses dix jeux.
 
 ## Prochaine action exacte
 
-**LOT G — les jeux, au moins dix** (réponse du 6 septembre). La liste retenue
-est dans « Décisions prises ». Commencer par **G1, « Devine qui je suis »**,
-qui est le seul à demander une table : les autres sont des tirages sans état,
-ou s'appuient sur ce que la bande a déjà écrit.
+**LOT H — les quatre audits**, dans l'ordre du plan :
 
-L'onglet libéré par le lot D (les stats ont rejoint les souvenirs) accueille
-les jeux.
+1. **Fonctionnel** — reprendre `PLAN.md` point par point, rendre un tableau
+   fait / partiel / pas fait, avec une ligne pour tout ce qui n'est pas « fait ».
+2. **Visuel** — capture WebKit iPhone de chaque écran ET de chaque état (vide,
+   en chargement, en erreur, avec beaucoup de données). Les regarder vraiment.
+3. **Technique** — build sans avertissement, `tsc` propre, cloisonnement entre
+   bandes prouvé par un test qui essaie vraiment, taille des paquets, requêtes
+   N+1, hors-ligne, quotas de stockage.
+4. **Parcours réel** — trois comptes, une journée complète, une partie de
+   chaque catégorie, une coupure réseau au milieu d'un envoi, une
+   réinstallation de la PWA.
+
+**Bloqué, à dire à la bande** : le déploiement en production ne peut pas se
+faire depuis cette session. La ligne de commande Vercel est refusée par le
+garde-fou de l'environnement, et le connecteur Vercel disponible ici est
+authentifié sur un autre compte (403). Le port PostgreSQL de Neon (5432) est
+également injoignable depuis cet environnement, mais ça ne bloque rien : les
+migrations tournent dans le `vercel-build`. **Tout est poussé sur la branche**,
+donc un `npx vercel deploy --prod` depuis une machine avec le jeton suffit.
 
 ### Ancienne note (lot B, fait)
 
@@ -130,6 +142,26 @@ redéployer à chaque lot sans le redemander. **À révoquer à la fin.**
   susceptible de », « Le jugement », « Menteur », « Le quiz de la bande »
   (questions tirées de vos propres données), « Devine qui a écrit ça », « Top
   3 », « Le plus rapide ». Dix, dont deux qui n'existent que chez vous.
+  **Fait au lot G**, exactement cette liste.
+- **Un seul mode de jeu : « un seul téléphone »** (écart au plan assumé). Le
+  plan voulait aussi « chacun son téléphone », synchronisé par Supabase
+  Realtime. Ici la synchronisation est un sondage de version, avec une à trois
+  secondes de retard : invisible dans le fil, désastreux sur un vote simultané
+  ou un duel de réflexe. Un mode qui donne l'impression que l'app rame vaut
+  moins que pas de mode du tout. La colonne `mode` existe en base pour que le
+  second n'impose pas de migration.
+- **Les jeux ont leur propre plafond quotidien** (120 points). Argumenté dans
+  `src/lib/jeux/recompense.ts` : le plan plafonnait tout « hors jeux » et
+  laissait les jeux libres, ce qui faisait d'une soirée l'équivalent de sept
+  journées parfaites.
+- **Personne ne monte sur le podium quand personne n'a gagné.** « Je n'ai
+  jamais » ne compte rien ; la première version donnait 40 points et une
+  première place à toute la bande.
+- **Les cartes de « Devine qui je suis » ne portent qu'un nom.** Faire deviner
+  quelqu'un n'est pas le viser ; écrire une vanne sur lui dans l'application,
+  si. L'humour noir demandé par le plan vit dans la partie, pas dans le fichier.
+  Le seul paquet que la bande écrit est « Nos potes », et n'importe qui peut en
+  retirer une carte sans se justifier.
 - **Pas de Leaflet, pas de tuiles OpenStreetMap** (lot F, écart au plan
   assumé). Chaque tuile est une requête du téléphone vers un serveur tiers, et
   la suite des tuiles demandées dit où sont les souvenirs de la bande et
@@ -236,5 +268,5 @@ redéployer à chaque lot sans le redemander. **À révoquer à la fin.**
 | D souvenirs / stats / rétro | **fait** |
 | E points et badges | **fait**, avec deux écarts assumés (voir plus haut) |
 | F lieu | **fait**, sauf la carte à tuiles : constellation SVG à la place (voir « Décisions ») |
-| G jeux | rien. Dix jeux décidés, c'est un projet en soi |
+| G jeux | **fait** : moteur + 10 jeux. Un seul mode (« un téléphone »), voir « Décisions » |
 | H audits | à la fin |

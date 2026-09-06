@@ -26,19 +26,30 @@ repo, et les termes du plan se traduisent ainsi :
 prisma/schema.prisma     10 modèles, tous préfixés bande_
 prisma/seed.ts           4 profils × 400 jours, images et sons engendrés
 src/app/(entree)/        bienvenue, créer, rejoindre, reprendre
-src/app/(repaire)/       page.tsx (Aujourd'hui), fil, stats, souvenirs, galerie, profil, reglages
-src/app/api/             photo/[media], vignette/[media], audio/[entree], export, sante, version
-src/composants/          un fichier par composant, noms français
-src/lib/                 depot.ts (tout PostgreSQL), actions.ts (actions serveur), et la logique pure
-e2e/                     Playwright : captures, lot1, video, production
+src/app/(repaire)/       page.tsx (le fil), aujourdhui, jeux, souvenirs, galerie, profil, reglages
+src/app/(jeu)/           l'écran d'une partie, sans barre d'onglets ni sondage
+src/app/api/             photo, vignette, audio, avatar, scelle, lieu, export, sante, version
+src/app/not-found.tsx    404 en français ; error.tsx pour ce qui casse
+src/composants/          un fichier par composant, noms français ; jeux/ pour les dix jeux
+src/lib/                 depot.ts + depot-jeux.ts (tout PostgreSQL), actions*.ts, logique pure
+src/lib/jeux/            catalogue, cadre, tirage, recompense, quiz, top3, vote, inclinaison
+e2e/                     Playwright : captures, lot1, lotA..lotC, lotF, lotG, video, production
 ```
 
-**La règle du dépôt :** rien d'autre que `src/lib/depot.ts` ne parle à Prisma.
-Il rend les types de `src/lib/types.ts`, jamais les lignes Prisma.
+**La règle du dépôt :** rien d'autre que `depot.ts` et `depot-jeux.ts` ne parle
+à Prisma. Ils rendent les types du domaine, jamais les lignes Prisma. Deux
+fichiers parce qu'un seul frôlait les mille lignes ; la règle est la même.
+
+**Attention aux types partagés avec le client.** Un composant client qui prend
+ne serait-ce qu'une CONSTANTE dans un fichier de dépôt entraîne Prisma et `pg`
+— donc `net`, `tls`, `fs`, `dns` — dans le paquet du navigateur, et la page ne
+compile plus. Le `import "server-only"` n'arrête pas ça. Les types et les
+constantes partagés vivent dans `src/lib/jeux/types.ts`, sans dépendance.
 
 **La règle des tests :** ce qui se calcule vit dans un module pur et se teste
 (`figure`, `media`, `onde`, `etiquettes`, `csv`, `analyse`, `souvenirs`,
-`badges`, `dates`). Le reste se vérifie dans Playwright, sur WebKit.
+`badges`, `dates`, `lieu`, et tout `jeux/`). Le reste se vérifie dans
+Playwright, sur WebKit.
 
 ## Le schéma, en une phrase chacun
 
@@ -46,7 +57,10 @@ Il rend les types de `src/lib/types.ts`, jamais les lignes Prisma.
 `Entree` une journée (joie, titre, note, énergie, **calme**, déclencheurs) ·
 `Media` photo **ou** vidéo (table `bande_photos`, voir ci-dessous) ·
 `Audio` la note vocale · `Etiquette` + `EntreeEtiquette` · `Declencheur` +
-`EntreeDeclencheur` · `Reaction` · `Commentaire` · `Capsule` (scellé, texte seul).
+`EntreeDeclencheur` · `Reaction` · `Commentaire` · `Capsule` (scellé) ·
+`Partie` + `ScorePartie` + `Manche` (les jeux) · `CarteBande` (ce que la bande
+écrit elle-même). La **manche 0** d'une partie n'est pas une manche : elle
+range le décompte final, pour que le podium survive à un rechargement.
 
 **Le modèle `Media` est mappé sur la table `bande_photos`.** Prisma ne sait pas
 reconnaître un renommage de table : il produirait un `DROP` suivi d'un `CREATE`,
@@ -76,3 +90,12 @@ npx prisma migrate dev --create-only   # écrire la migration, la RELIRE, puis l
   (`cible-tactile`), `100dvh` jamais `100vh`, zones sûres sur la barre du bas.
 - Le voile ne floute pas : le serveur **vide** les entrées (`masquerEntree`).
   Tout ce qui descend dans un composant client est lisible.
+- **Un fichier « use server » ne peut exporter que des fonctions asynchrones.**
+  Une constante exportée fait échouer tout le module d'actions, et l'erreur ne
+  montre pas la ligne fautive.
+- **Une pioche ne vit pas dans un `useMemo`.** React a le droit de le jeter ;
+  le paquet est alors remélangé au milieu d'une manche. Référence obligatoire.
+- **On n'écrit pas une référence pendant le rendu** (`ref.current = …` dans le
+  corps du composant) : la règle `react-hooks/refs` le refuse, et elle a raison.
+- **Un affichage optimiste doit utiliser l'identifiant rendu par le serveur.**
+  Un identifiant inventé sur place rend la suppression suivante inopérante.
