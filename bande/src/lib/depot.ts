@@ -750,10 +750,14 @@ export async function lireMedia(membreId: string, mediaId: string, vignette = fa
  * chercher les mille de la bande pour en afficher huit, c'est un défaut qui ne
  * se voit pas la première année et qui devient une page qui ne charge plus la
  * cinquième.
+ *
+ * `membreId` restreint à une personne — c'est l'album du profil. Le filtre se
+ * fait en base : ramener toute la bande pour en garder un quart, ce serait le
+ * même défaut sous une autre forme.
  */
-export async function mediasDeLaBande(groupeId: string, limite = 240) {
+export async function mediasDeLaBande(groupeId: string, limite = 240, membreId?: string) {
   const lignes = await prisma.media.findMany({
-    where: { entree: { groupeId } },
+    where: { entree: { groupeId, ...(membreId ? { membreId } : {}) } },
     take: limite,
     select: {
       id: true, genre: true, largeur: true, hauteur: true, duree: true, legende: true,

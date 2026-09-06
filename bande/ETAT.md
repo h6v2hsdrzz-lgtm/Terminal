@@ -10,15 +10,11 @@ réponse : on avance sur ce qui n'en dépend pas.
 
 ## Prochaine action exacte
 
-**A5 — l'album personnel.** Dans `src/app/(repaire)/profil/page.tsx`, sous
-l'en-tête : les dix derniers médias de la personne (`mediasDeLaBande` filtré sur
-`profil`, ou une requête dédiée si le filtre coûte trop), en grille de vignettes,
-ouvrables avec la `Visionneuse` exportée par `Carrousel.tsx`. En dessous, trois
-ou quatre stats discrètes — heure moyenne de check-in, lieu le plus fréquent,
-proportion de journées avec vocal, mot le plus utilisé. Petit texte, ton léger,
-surtout pas un tableau de bord : on vient d'en retirer un en A4.
+**Clore le lot A** : captures WebKit de tous les écrans, entrée de CHANGELOG,
+mise en ligne. Puis attendre le retour iPhone avant d'ouvrir le lot B.
 
-Ensuite, lot A terminé : captures, CHANGELOG, mise en ligne.
+**A1b** (calme → rire) et **A2** (fil en accueil) restent en attente des
+réponses 1 et 2 — ce sont les deux seules tâches du lot A non faites.
 
 A1b (calme → rire) et A2 (fil en accueil) attendent les réponses 1 et 2.
 
@@ -39,6 +35,10 @@ du plan. Correspondance à la fin de ce fichier.
   → **Lieu** dans l'interface et l'export.
 - **A4** — les trois compteurs du profil (« jours d'affilée », « ton record »,
   « journées posées ») sont retirés.
+- **A5** — le profil montre « toi, en petit » : les dix derniers médias de la
+  personne, et quatre traits tirés de ses journées (heure moyenne de check-in
+  calculée sur un cercle, lieu le plus fréquent, part de vocaux, mot qui
+  revient). Chaque trait se tait quand il n'y a pas de quoi le dire.
 - **A3b** — photo de profil : choix, recadrage rond au doigt (glisser + zoom),
   compression en carré de 256 px, service par `/api/avatar/[membre]` réservé à
   la bande. Au passage, `Membre.modifieLe` entre dans l'empreinte de
@@ -87,6 +87,8 @@ En ligne : https://journal-de-joie-v2.vercel.app
   copiés en base à la création de la bande. Sans migration `UPDATE`, la
   production aurait gardé l'ancien nom. Et un `DELETE` + `INSERT` aurait emporté
   la table de liaison par cascade — des mois de données pour un mot.
+- **Une moyenne d'heures se prend sur un cercle.** 23 h 50 et 00 h 10 donnent
+  minuit, pas midi — ce que donnerait la moyenne arithmétique.
 - **`include` tire toutes les colonnes.** `chargerContexte` chargeait les octets
   de chaque avatar à chaque page avant qu'on sélectionne explicitement. Sur un
   champ `Bytes`, un `include` distrait coûte des méga-octets par navigation.
@@ -119,7 +121,7 @@ En ligne : https://journal-de-joie-v2.vercel.app
 | A2 fil en accueil | à faire — dépend de la question 2 |
 | A3 profil : photo et nom | **fait** |
 | A4 retirer les 3 compteurs | **fait** |
-| A5 album personnel + stats discrètes | à faire |
+| A5 album personnel + stats discrètes | **fait** |
 | B1 pipeline d'upload | **fait**, sauf HEIC (question 4) |
 | B2 visionneuse plein écran | **à moitié** : plein écran, défilement, légendes, position. Manquent le zoom au pincement, le balayage vers le bas, le double-tap pour réagir, l'enregistrement dans la pellicule |
 | B3 prendre une photo depuis l'app | à faire (un attribut, 10 min) |

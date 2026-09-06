@@ -185,3 +185,30 @@ test("la photo d'une autre bande ne se sert pas", async ({ page }) => {
   await page.getByRole("button", { name: /revenir aux initiales/i }).click();
   await expect(page.locator('img[src^="/api/avatar/"]')).toHaveCount(0);
 });
+
+test("le profil montre l'album et quatre traits, pas un tableau de bord", async ({ page }) => {
+  await entrer(page, "Momo");
+  await page.goto("/profil", { waitUntil: "networkidle" });
+
+  const bloc = page.getByText("Toi, en petit").locator("xpath=ancestor::section[1]");
+  await expect(bloc).toBeVisible();
+
+  // Dix vignettes au plus : c'est un album, pas la galerie.
+  const cases = bloc.locator('img[src^="/api/vignette/"]');
+  const combien = await cases.count();
+  expect(combien).toBeGreaterThan(0);
+  expect(combien).toBeLessThanOrEqual(10);
+
+  // Ce sont bien les siennes : on ouvre la première et on vérifie que le
+  // plein écran répond, sans chercher à qui appartient chaque case — le filtre
+  // est fait en base et c'est là qu'il compte.
+  await cases.first().click();
+  const plein = page.getByRole("dialog", { name: /ton album/i });
+  await expect(plein).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(plein).toBeHidden();
+
+  // Un lieu, pas une activité : le champ s'appelle « Lieu » depuis A1a et la
+  // base de démonstration doit dire la même chose que l'interface.
+  await expect(bloc.getByText(/Le plus souvent/)).toBeVisible();
+});

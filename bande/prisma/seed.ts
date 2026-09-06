@@ -93,19 +93,19 @@ const LEGENDES = [
 ];
 
 const MOMENTS: { titre: string; etiquettes: string[] }[] = [
-  { titre: "Grasse matinée méritée", etiquettes: ["repos"] },
-  { titre: "Pluie toute la journée", etiquettes: ["maison", "repos"] },
-  { titre: "Réunion interminable", etiquettes: ["travail"] },
-  { titre: "Le bar de l'an dernier", etiquettes: ["sortie", "amis"] },
-  { titre: "Bonne nouvelle au bureau", etiquettes: ["travail"] },
+  { titre: "Grasse matinée méritée", etiquettes: ["Chez moi"] },
+  { titre: "Pluie toute la journée", etiquettes: ["Chez moi"] },
+  { titre: "Réunion interminable", etiquettes: ["Le bureau"] },
+  { titre: "Le bar de l'an dernier", etiquettes: ["Le Zinc"] },
+  { titre: "Bonne nouvelle au bureau", etiquettes: ["Le bureau"] },
   { titre: "Rien de spécial", etiquettes: [] },
-  { titre: "Le chat sur le clavier", etiquettes: ["maison"] },
-  { titre: "Enfin fini", etiquettes: ["travail"] },
-  { titre: "Trop de monde", etiquettes: ["fatigue"] },
-  { titre: "Soirée improvisée", etiquettes: ["sortie", "amis"] },
-  { titre: "Longue marche", etiquettes: ["sport", "dehors"] },
-  { titre: "Coup de barre", etiquettes: ["fatigue"] },
-  { titre: "Dimanche lent", etiquettes: ["repos", "maison"] },
+  { titre: "Le chat sur le clavier", etiquettes: ["Chez moi"] },
+  { titre: "Enfin fini", etiquettes: ["Le bureau"] },
+  { titre: "Trop de monde", etiquettes: ["Les Halles"] },
+  { titre: "Soirée improvisée", etiquettes: ["Chez Sam"] },
+  { titre: "Longue marche", etiquettes: ["Le canal"] },
+  { titre: "Coup de barre", etiquettes: ["Le bureau"] },
+  { titre: "Dimanche lent", etiquettes: ["Chez Mamie"] },
 ];
 
 const REACTIONS = ["❤️", "😂", "🔥", "🫂", "🙌", "👀"];
