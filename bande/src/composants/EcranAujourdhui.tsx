@@ -347,7 +347,7 @@ export function EcranAujourdhui({
                     >
                       <path d="M3 1.5 L7 5 L3 8.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
-                    Énergie et calme
+                    Énergie et rire
                   </summary>
                   <div className="mt-2 border-t border-trait pt-2">
                     <CurseurDiscret
@@ -359,9 +359,9 @@ export function EcranAujourdhui({
                     />
                     <CurseurDiscret
                       nom="calme"
-                      etiquette="Calme"
-                      bas="agité"
-                      haut="posé"
+                      etiquette="Rire"
+                      bas="pas trop"
+                      haut="plié en deux"
                       valeurInitiale={correction ? (monEntree?.calme ?? null) : null}
                     />
                     <p className="mt-1 text-[12px] leading-snug text-encre-3">

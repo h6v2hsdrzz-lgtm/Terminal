@@ -24,6 +24,7 @@ test.describe.configure({ mode: "serial" });
 
 test("les renommages sont partout, et la donnée a suivi", async ({ page }) => {
   await entrer(page, "Momo");
+  await page.goto("/aujourdhui", { waitUntil: "networkidle" });
 
   // Le déclencheur a été renommé EN BASE, pas seulement dans le code : sans la
   // migration, une bande déjà créée aurait gardé « Plante verte ».
@@ -62,7 +63,7 @@ test("on change son nom, et le passé change avec", async ({ page }) => {
 
   // Le pseudo n'est recopié nulle part : les journées d'il y a des mois
   // s'affichent sous le nouveau nom, sans rien avoir réécrit.
-  await page.goto("/fil", { waitUntil: "networkidle" });
+  await page.goto("/", { waitUntil: "networkidle" });
   await expect(page.getByText("Loulou").first()).toBeVisible();
   await expect(page.getByText("Lou", { exact: true })).toHaveCount(0);
 
@@ -136,7 +137,7 @@ test("on met une photo de profil, on la recadre, on la retire", async ({ page, r
   expect((await request.get(new URL(adresse, page.url()).href)).status()).toBe(401);
 
   // Elle remplace les initiales partout, pas seulement sur le profil.
-  await page.goto("/fil", { waitUntil: "networkidle" });
+  await page.goto("/", { waitUntil: "networkidle" });
   await expect(page.locator('img[src^="/api/avatar/"]').first()).toBeVisible();
 
   // On repose le décor.
@@ -211,4 +212,45 @@ test("le profil montre l'album et quatre traits, pas un tableau de bord", async 
   // Un lieu, pas une activité : le champ s'appelle « Lieu » depuis A1a et la
   // base de démonstration doit dire la même chose que l'interface.
   await expect(bloc.getByText(/Le plus souvent/)).toBeVisible();
+});
+
+test("le fil est la page d'ouverture, et il porte le voile", async ({ page }) => {
+  // Momo n'a rien posé aujourd'hui dans la base de démonstration ; les autres
+  // si. C'est l'état qui met le voile à l'épreuve.
+  await entrer(page, "Momo");
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("heading", { name: "Le fil" })).toBeVisible();
+
+  // La carte d'appel mène au check-in, qui a déménagé.
+  const appel = page.getByRole("link", { name: /Pose ta journée/ });
+  await expect(appel).toBeVisible();
+
+  // La journée EN COURS n'a pas de moyenne affichée : la calculer sur des
+  // entrées vidées donnerait « 0,0 », ce qui ne cache rien et laisse croire à
+  // une journée épouvantable. Les jours passés, eux, gardent la leur — le
+  // voile ne porte que sur aujourd'hui.
+  const sectionDuJour = page
+    .getByRole("heading", { name: /^aujourd'hui$/i })
+    .locator("xpath=ancestor::section[1]");
+  await expect(sectionDuJour).toBeVisible();
+  await expect(sectionDuJour.getByText(/de moyenne/)).toHaveCount(0);
+  // Et il y a bien des moyennes ailleurs : sinon le test passerait pour la
+  // mauvaise raison, par exemple si le fil était vide.
+  expect(await page.getByText(/de moyenne/).count()).toBeGreaterThan(0);
+
+  await appel.click();
+  await expect(page).toHaveURL(/\/aujourdhui$/);
+  await expect(page.getByRole("button", { name: /poser ma joie/i })).toBeVisible();
+
+  // L'ancienne adresse du fil redirige : elle est dans des raccourcis d'écran
+  // d'accueil et dans l'historique.
+  await page.goto("/fil");
+  await expect(page).toHaveURL(/\/$/);
+});
+
+test("une fois posée, le fil se dévoile", async ({ page }) => {
+  // Sam a posé aujourd'hui : pour lui, tout est lisible.
+  await entrer(page, "Sam");
+  await expect(page.getByText(/de moyenne/).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /C'est posé/ })).toBeVisible();
 });

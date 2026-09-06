@@ -323,7 +323,7 @@ export type Saisie = {
 /**
  * Les deux curseurs secondaires.
  *
- * Ils sont facultatifs, et le restent : une journée sans énergie ni calme est
+ * Ils sont facultatifs, et le restent : une journée sans énergie ni rire est
  * une journée complète. Une valeur hors bornes est ignorée plutôt que refusée —
  * un curseur mal câblé ne doit pas empêcher de poser sa journée.
  */

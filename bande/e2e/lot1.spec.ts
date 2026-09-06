@@ -32,6 +32,8 @@ async function entrer(page: import("@playwright/test").Page, pseudo: string) {
  * test qui ne passe qu'une fois n'est pas un test.
  */
 async function ouvrirFormulaire(page: import("@playwright/test").Page) {
+  // Le check-in a sa propre adresse depuis le lot A2 : la racine, c'est le fil.
+  await page.goto("/aujourdhui", { waitUntil: "networkidle" });
   const deja = page.getByRole("button", { name: /corriger ta journée/i });
   if (await deja.isVisible().catch(() => false)) await deja.click();
   await expect(page.locator("#titre")).toBeVisible();
@@ -68,7 +70,7 @@ test("on pose une journée avec titre, étiquettes et curseurs", async ({ page }
 
   // Les curseurs secondaires sont repliés : il faut ouvrir pour les atteindre.
   await expect(page.locator("#energie")).toBeHidden();
-  await page.getByText("Énergie et calme").click();
+  await page.getByText("Énergie et rire").click();
   await expect(page.locator("#energie")).toBeVisible();
   await page.locator("#energie").fill("8");
 
@@ -127,7 +129,7 @@ test("le voile ne laisse pas fuir les notes des autres", async ({ page }) => {
 
 test("la note vocale se sert, et seulement à la bande", async ({ page, request }) => {
   await entrer(page, "Momo");
-  await page.goto("/fil", { waitUntil: "networkidle" });
+  await page.goto("/", { waitUntil: "networkidle" });
 
   // Le lecteur se trouve par son bouton : c'est aussi ce que lit un lecteur
   // d'écran, donc le trouver ici vérifie deux choses d'un coup.
@@ -152,7 +154,7 @@ test("la note vocale se sert, et seulement à la bande", async ({ page, request 
 
 test("la forme d'onde vient du son, pas d'un décor", async ({ page }) => {
   await entrer(page, "Momo");
-  await page.goto("/fil", { waitUntil: "networkidle" });
+  await page.goto("/", { waitUntil: "networkidle" });
   await expect(page.getByRole("button", { name: /Écouter la note vocale/i }).first()).toBeVisible();
 
   // Des barres toutes identiques trahiraient une onde décorative. On vérifie

@@ -32,6 +32,8 @@ async function entrer(page: import("@playwright/test").Page, pseudo: string) {
 }
 
 async function ouvrirFormulaire(page: import("@playwright/test").Page) {
+  // Le check-in a sa propre adresse depuis le lot A2 : la racine, c'est le fil.
+  await page.goto("/aujourdhui", { waitUntil: "networkidle" });
   const deja = page.getByRole("button", { name: /corriger ta journée/i });
   if (await deja.isVisible().catch(() => false)) await deja.click();
   await expect(page.locator("#titre")).toBeVisible();
@@ -167,7 +169,7 @@ test("une vidéo traverse tout : réencodage, vignette, envoi, lecture", async (
 
 test("la vidéo est lisible dans le fil, muette et en boucle", async ({ page }) => {
   await entrer(page, "Samy");
-  await page.goto("/fil", { waitUntil: "networkidle" });
+  await page.goto("/", { waitUntil: "networkidle" });
 
   const video = page.locator('video[src^="/api/photo/"]').first();
   await expect(video).toBeVisible();

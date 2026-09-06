@@ -5,16 +5,21 @@
 
 ## Lot en cours
 
-**LOT A.** Feu vert donné. A1a fait. Les questions 1, 2, 4 et 5 restent sans
-réponse : on avance sur ce qui n'en dépend pas.
+**LOT A — terminé.** Les sept tâches sont faites.
 
 ## Prochaine action exacte
 
-**Clore le lot A** : captures WebKit de tous les écrans, entrée de CHANGELOG,
-mise en ligne. Puis attendre le retour iPhone avant d'ouvrir le lot B.
+**Lot B.** Il est déjà fait aux trois quarts (voir la correspondance en bas) :
+il reste **B2** — la visionneuse. Ce qui manque, dans l'ordre de ce qui se voit
+le plus : pincer pour zoomer, balayer vers le bas pour fermer, double-tap pour
+réagir, enregistrer dans la pellicule. Et **B3**, prendre une photo depuis
+l'app : c'est un attribut `capture` sur le champ de fichier, dix minutes.
 
-**A1b** (calme → rire) et **A2** (fil en accueil) restent en attente des
-réponses 1 et 2 — ce sont les deux seules tâches du lot A non faites.
+Attention : `<input capture>` ouvre l'appareil photo mais ferme la pellicule.
+Il faut donc DEUX entrées (« prendre une photo » / « choisir »), pas un
+attribut ajouté au champ existant.
+
+Le lot G (jeux) est décidé : **au moins dix**. Voir « Décisions prises ».
 
 A1b (calme → rire) et A2 (fil en accueil) attendent les réponses 1 et 2.
 
@@ -35,6 +40,13 @@ du plan. Correspondance à la fin de ce fichier.
   → **Lieu** dans l'interface et l'export.
 - **A4** — les trois compteurs du profil (« jours d'affilée », « ton record »,
   « journées posées ») sont retirés.
+- **A2** — le fil devient la page d'ouverture, et il PORTE LE VOILE : les
+  journées du jour sont muettes tant qu'on n'a pas posé la sienne, et la
+  moyenne du jour ne s'affiche pas. Le check-in déménage à `/aujourdhui`,
+  `/fil` redirige vers `/`. Une carte d'appel en tête, avec la figure du jour.
+- **A1b** — « calme » devient « rire » dans l'interface et dans l'export. La
+  colonne garde son nom : l'échelle est la même, et renommer une colonne pour
+  un mot d'écran serait une migration risquée sans rien de visible.
 - **Clôture du lot A** — CHANGELOG, README, suite complète au vert.
 - **A5** — le profil montre « toi, en petit » : les dix derniers médias de la
   personne, et quatre traits tirés de ses journées (heure moyenne de check-in
@@ -49,7 +61,7 @@ du plan. Correspondance à la fin de ce fichier.
   casse près, et reprendre son propre nom en changeant la casse passe. Le
   pseudo n'étant recopié nulle part, le passé change avec.
 
-État : 190 tests unitaires, 62 de bout en bout (WebKit + grand écran), build
+État : 190 tests unitaires, 66 de bout en bout (WebKit + grand écran), build
 sans avertissement, `tsc --noEmit` propre.
 En ligne : https://journal-de-joie-v2.vercel.app
 
@@ -66,9 +78,18 @@ En ligne : https://journal-de-joie-v2.vercel.app
   affichée dans les réglages.
 - **Le modèle `Media` est mappé sur la table `bande_photos`.** Renommer la
   table via Prisma produirait un `DROP` + `CREATE`, donc la perte des photos.
-- **La figure du jour** est l'objet signature. Toute refonte de l'accueil doit
-  lui garder une place — c'est la seule chose que ce journal a et que les
-  autres n'ont pas.
+- **La figure du jour** est l'objet signature. Elle vit maintenant dans la
+  carte d'appel en tête du fil — c'est la seule chose que ce journal a et que
+  les autres n'ont pas, elle ne doit pas quitter la première page.
+- **Les données d'avant la mise en service seront effacées** (réponse du
+  5 septembre). C'est ce qui a permis de renommer « calme » en « rire » d'un
+  bloc plutôt que de dater la bascule.
+- **Les jeux : au moins dix** (réponse du 5 septembre). À faire au lot G, après
+  B à F. Proposition à valider le moment venu : « Devine qui je suis » (G1, le
+  jeu phare), « Je n'ai jamais », « Tu préfères », « Qui est le plus
+  susceptible de », « Le jugement », « Menteur », « Le quiz de la bande »
+  (questions tirées de vos propres données), « Devine qui a écrit ça », « Top
+  3 », « Le plus rapide ». Dix, dont deux qui n'existent que chez vous.
 
 ## Pièges déjà payés (ne pas les redécouvrir)
 
@@ -96,6 +117,12 @@ En ligne : https://journal-de-joie-v2.vercel.app
 - **Une colonne qui change sans qu'aucune journée ne bouge est invisible aux
   autres** tant qu'elle n'est pas dans `versionBande`. Vrai pour les photos,
   les notes vocales, et maintenant le pseudo et l'avatar.
+- **Le fil n'avait aucun voile** avant A2 : il affichait tout en clair. En
+  faire la page d'ouverture sans y porter le voile aurait suffi à casser la
+  mécanique du produit.
+- **Une entrée vidée n'est pas une entrée cachée.** `masquerEntree` met la joie
+  à zéro ; sans passer `floute` à la carte, l'écran affichait un gros « 0 » et
+  « 0,0 de moyenne » — pire qu'une fuite, une information fausse.
 - **Renommer un libellé casse les tests qui le cherchent.** Le renommage A1a a
   cassé deux specs plus anciennes qui visaient « Ajouter une étiquette », et ça
   ne s'est vu qu'au passage de la suite COMPLÈTE — pas en lançant le seul
@@ -122,8 +149,8 @@ En ligne : https://journal-de-joie-v2.vercel.app
 
 | Plan | État |
 | --- | --- |
-| A1 renommages | **A1a fait** · A1b (calme → rire) en attente de la Q1 |
-| A2 fil en accueil | à faire — dépend de la question 2 |
+| A1 renommages | **fait** |
+| A2 fil en accueil | **fait**, voile compris |
 | A3 profil : photo et nom | **fait** |
 | A4 retirer les 3 compteurs | **fait** |
 | A5 album personnel + stats discrètes | **fait** |
@@ -136,5 +163,5 @@ En ligne : https://journal-de-joie-v2.vercel.app
 | D souvenirs / stats / rétro | ordre à revoir, stats à resserrer |
 | E points et badges | à faire — 23 badges aujourd'hui, le plan en veut 8 |
 | F lieu | à faire — les « étiquettes » existent et deviendront « Lieu » en A1 |
-| G jeux | rien. C'est un projet en soi |
+| G jeux | rien. Dix jeux décidés, c'est un projet en soi |
 | H audits | à la fin |

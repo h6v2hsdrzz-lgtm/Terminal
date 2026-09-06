@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 /**
- * Un curseur secondaire : l'énergie, le calme.
+ * Un curseur secondaire : l'énergie, le rire.
  *
  * Il est facultatif, et il le reste vraiment — tant qu'on n'y a pas touché,
  * rien n'est envoyé. C'est la différence entre « je n'ai pas répondu » et

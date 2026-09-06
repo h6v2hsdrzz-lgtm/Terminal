@@ -11,8 +11,8 @@ import { join } from "node:path";
  * vérifier qu'on ne casse rien sur grand écran.
  */
 const ECRANS = [
-  { nom: "aujourdhui", url: "/" },
-  { nom: "fil", url: "/fil" },
+  { nom: "fil", url: "/" },
+  { nom: "aujourdhui", url: "/aujourdhui" },
   { nom: "stats", url: "/stats" },
   { nom: "souvenirs", url: "/souvenirs" },
   { nom: "galerie", url: "/galerie" },
@@ -93,7 +93,7 @@ test("les cibles tactiles font au moins 44 px", async ({ page }, infos) => {
   // Le doigt est imprécis, la souris ne l'est pas : la règle des 44 px ne vaut
   // que sur le téléphone.
   test.skip(infos.project.name !== "iphone", "règle propre au tactile");
-  await page.goto("/fil", { waitUntil: "networkidle" });
+  await page.goto("/", { waitUntil: "networkidle" });
   const petites = await page.evaluate(() => {
     const zone = (e: Element) => {
       const r = e.getBoundingClientRect();

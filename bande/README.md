@@ -127,7 +127,7 @@ qu'il faut y mettre.
 | Écran | Ce qu'on y fait |
 | --- | --- |
 | **Aujourd'hui** | La figure du jour. Poser sa journée : une note, un titre en trois mots, des étiquettes, jusqu'à six photos ou vidéos, une note vocale de trente secondes, et deux curseurs facultatifs. Voir celles des autres — cachées tant qu'on n'a pas posé la sienne. Réagir, commenter. |
-| **Le fil** | Toutes les journées de la bande, groupées par jour, avec la moyenne du jour. |
+| **Le fil** | La page d'ouverture. Toutes les journées de la bande, groupées par jour — celles du jour restent muettes tant qu'on n'a pas posé la sienne. En tête, la figure du jour et le bouton du check-in. |
 | **Les stats** | Courbe lissée sur trente jours, calendrier façon damier, effet des déclencheurs, écarts par jour de semaine, synchronicité entre deux personnes. |
 | **Les souvenirs** | Le mur des formes, la galerie, rétrospective d'un mois avec image partageable, « ce jour-là », capsules temporelles, mur des moments. |
 | **La galerie** | Tout ce que la bande a posté, en mosaïque par mois, cent vingt à la fois. On y entre depuis les souvenirs. |

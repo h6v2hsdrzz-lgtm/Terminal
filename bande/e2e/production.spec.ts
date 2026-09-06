@@ -47,6 +47,9 @@ test("une bande neuve, de bout en bout, puis effacée", async ({ page, request }
   await page.getByRole("button", { name: /c'est noté/i }).click();
   await page.waitForURL("/");
 
+  // Le check-in a sa propre adresse : la racine, c'est le fil.
+  await page.goto("/aujourdhui", { waitUntil: "networkidle" });
+
   // ── La figure du jour, avant d'avoir rien posé ─────────────────────────
   await expect(
     page.getByRole("img", { name: /figure du jour|Personne n'a encore posé/i }).first(),
@@ -60,7 +63,7 @@ test("une bande neuve, de bout en bout, puis effacée", async ({ page, request }
   await lieux.fill("Essai");
   await lieux.press("Enter");
 
-  await page.getByText("Énergie et calme").click();
+  await page.getByText("Énergie et rire").click();
   await page.locator("#energie").fill("8");
   await page.locator("#calme").fill("3");
 
@@ -161,7 +164,7 @@ test("une bande neuve, de bout en bout, puis effacée", async ({ page, request }
   expect((await request.get(new URL("/api/audio/inexistant", page.url()).href)).status()).toBe(401);
 
   // ── Les autres écrans tiennent debout avec une seule journée ───────────
-  for (const chemin of ["/fil", "/stats", "/souvenirs", "/profil"]) {
+  for (const chemin of ["/", "/stats", "/souvenirs", "/profil"]) {
     await page.goto(chemin, { waitUntil: "networkidle" });
     await expect(page.getByRole("link", { name: "Souvenirs" }).first()).toBeVisible();
     const debordement = await page.evaluate(

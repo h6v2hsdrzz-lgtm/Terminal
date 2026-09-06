@@ -56,7 +56,7 @@ describe("versCsv", () => {
 
   it("annonce dans l'en-tête tout ce qu'il exporte", () => {
     const entete = versCsv(fichier([])).replace(/^\ufeff/, "").split("\r\n")[0];
-    for (const colonne of ["titre", "lieux", "vocal", "energie", "calme"]) {
+    for (const colonne of ["titre", "lieux", "vocal", "energie", "rire"]) {
       expect(entete).toContain(colonne);
     }
   });
@@ -79,7 +79,7 @@ describe("versCsv", () => {
     const noms = entete.split(",");
     const valeurs = ligne.split(",");
     expect(valeurs[noms.indexOf("energie")]).toBe("");
-    expect(valeurs[noms.indexOf("calme")]).toBe("");
+    expect(valeurs[noms.indexOf("rire")]).toBe("");
     // Un compteur, lui, a le droit de valoir zéro : c'est bien une réponse.
     expect(valeurs[noms.indexOf("photos")]).toBe("2");
   });

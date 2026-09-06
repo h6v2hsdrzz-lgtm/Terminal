@@ -27,7 +27,7 @@ export function versCsv(donnees: Export): string {
   const lignes = [
     [
       "jour", "qui", "joie", "titre", "note", "declencheurs", "lieux",
-      "photos", "vocal", "energie", "calme", "reactions", "commentaires",
+      "photos", "vocal", "energie", "rire", "reactions", "commentaires",
     ],
     ...donnees.journees.map((j) => [
       j.jour, j.qui, j.joie, j.titre ?? "", j.note ?? "",

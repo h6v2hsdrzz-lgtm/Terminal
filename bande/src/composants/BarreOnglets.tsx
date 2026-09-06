@@ -20,8 +20,9 @@ import { RESSORT } from "@/lib/mouvement";
  * pastille traverserait l'écran en diagonale au changement de taille.
  */
 const ONGLETS = [
-  { href: "/", nom: "Aujourd'hui", icone: SoleilIcone },
-  { href: "/fil", nom: "Fil", icone: FilIcone },
+  // Le fil d'abord : c'est ce qu'on ouvre le matin, et c'est la racine.
+  { href: "/", nom: "Fil", icone: FilIcone },
+  { href: "/aujourdhui", nom: "Aujourd'hui", icone: SoleilIcone },
   { href: "/stats", nom: "Stats", icone: StatsIcone },
   { href: "/souvenirs", nom: "Souvenirs", icone: SouvenirsIcone },
   { href: "/profil", nom: "Profil", icone: ProfilIcone },

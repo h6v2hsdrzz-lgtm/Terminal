@@ -110,6 +110,9 @@ model Entree {
   /// Facultatifs, repliés par défaut. Ils n'entrent dans aucun classement :
   /// ce sont deux axes de plus pour se relire, pas deux notes de plus.
   energie   Int?
+  /// Affiché « rire » dans l'interface depuis le lot A. La colonne garde son
+  /// nom : renommer une colonne pour un mot d'écran, ce serait une migration
+  /// risquée sans rien de visible, et l'échelle est la même.
   calme     Int?
   creeLe    DateTime @default(now()) @map("cree_le")
   modifieLe DateTime @updatedAt @map("modifie_le")

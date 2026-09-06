@@ -29,6 +29,19 @@ et `CLAUDE.md`.
   part de vocaux, le mot qui revient. Chacun se tait quand il n'y a pas de quoi
   le dire.
 
+### Déplacé
+- **Le fil est la première chose qu'on voit** en ouvrant l'application. Le
+  check-in a sa propre adresse, `/aujourdhui`, et une carte d'appel en tête du
+  fil y mène — avec la figure du jour dedans.
+- **Le fil porte le voile.** Il ne l'avait pas : il affichait tout en clair. En
+  faire la page d'ouverture sans y porter le voile aurait suffi à casser la
+  mécanique du produit — ouvrir l'application aurait donné à lire tout le
+  monde, et personne n'aurait plus écrit ce qu'il pense vraiment. Seule la
+  journée en cours est masquée ; le passé reste lisible.
+- « Calme » devient **« rire »**. La colonne garde son nom : l'échelle est la
+  même, et renommer une colonne pour un mot d'écran serait une migration
+  risquée sans rien de visible.
+
 ### Retiré
 - **Les trois compteurs du profil** — « jours d'affilée », « ton record »,
   « journées posées ». Un journal n'est pas un tableau de performance, et
@@ -44,6 +57,9 @@ et `CLAUDE.md`.
   Un `include` tire toutes les colonnes ; sur un champ `Bytes`, ça se compte en
   méga-octets par navigation. Sélection explicite, et la présence d'une photo
   se demande à part.
+- **Une entrée vidée n'est pas une entrée cachée.** Le voile met la joie à
+  zéro ; sans le dire à la carte, l'écran affichait un gros « 0 » et « 0,0 de
+  moyenne ». Ça ne cachait rien et laissait croire à une journée épouvantable.
 - La base de démonstration disait « le plus souvent repos ». Ce n'est pas un
   lieu, et le champ s'appelle « Lieu » : les données doivent dire la même chose
   que l'interface.

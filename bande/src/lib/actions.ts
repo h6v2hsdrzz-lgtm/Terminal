@@ -140,7 +140,7 @@ export async function actionPoserJournee(_precedent: Etat, donnees: FormData): P
  * pose une journée, mais ils deviennent faux à l'instant où la ligne existe.
  */
 function rafraichirTout() {
-  for (const chemin of ["/", "/fil", "/stats", "/profil", "/reglages", "/souvenirs"]) {
+  for (const chemin of ["/", "/aujourdhui", "/stats", "/profil", "/reglages", "/souvenirs", "/galerie"]) {
     revalidatePath(chemin);
   }
 }
@@ -355,6 +355,7 @@ export async function actionRetirerAudio(): Promise<Etat> {
  */
 export async function actionPoserJourneeSimple(donnees: FormData): Promise<void> {
   await actionPoserJournee(ETAT_INITIAL, donnees);
+  // Vers le fil : c'est là que la révélation se voit.
   redirect("/");
 }
 
@@ -379,7 +380,7 @@ export async function actionAjouterDeclencheurSimple(donnees: FormData): Promise
 
 export async function actionCommenterSimple(donnees: FormData): Promise<void> {
   await actionCommenter(ETAT_INITIAL, donnees);
-  redirect("/fil");
+  redirect("/");
 }
 
 export async function actionQuitterLaBandeSimple(donnees: FormData): Promise<void> {
