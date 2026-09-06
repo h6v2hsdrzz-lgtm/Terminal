@@ -35,6 +35,7 @@ du plan. Correspondance à la fin de ce fichier.
   → **Lieu** dans l'interface et l'export.
 - **A4** — les trois compteurs du profil (« jours d'affilée », « ton record »,
   « journées posées ») sont retirés.
+- **Clôture du lot A** — CHANGELOG, README, suite complète au vert.
 - **A5** — le profil montre « toi, en petit » : les dix derniers médias de la
   personne, et quatre traits tirés de ses journées (heure moyenne de check-in
   calculée sur un cercle, lieu le plus fréquent, part de vocaux, mot qui
@@ -48,7 +49,7 @@ du plan. Correspondance à la fin de ce fichier.
   casse près, et reprendre son propre nom en changeant la casse passe. Le
   pseudo n'étant recopié nulle part, le passé change avec.
 
-État : 174 tests unitaires, 43 de bout en bout (WebKit + grand écran), build
+État : 190 tests unitaires, 62 de bout en bout (WebKit + grand écran), build
 sans avertissement, `tsc --noEmit` propre.
 En ligne : https://journal-de-joie-v2.vercel.app
 
@@ -95,6 +96,10 @@ En ligne : https://journal-de-joie-v2.vercel.app
 - **Une colonne qui change sans qu'aucune journée ne bouge est invisible aux
   autres** tant qu'elle n'est pas dans `versionBande`. Vrai pour les photos,
   les notes vocales, et maintenant le pseudo et l'avatar.
+- **Renommer un libellé casse les tests qui le cherchent.** Le renommage A1a a
+  cassé deux specs plus anciennes qui visaient « Ajouter une étiquette », et ça
+  ne s'est vu qu'au passage de la suite COMPLÈTE — pas en lançant le seul
+  fichier de la tâche en cours. Lancer tout avant de clore un lot.
 - Next pose son propre `role="alert"` (l'annonceur de route) : un test qui
   cherche un message d'erreur par ce rôle doit prendre `.first()`.
 - `plusLongueSerie` et `serieEnCours` (`src/lib/badges.ts`) ne servent plus à

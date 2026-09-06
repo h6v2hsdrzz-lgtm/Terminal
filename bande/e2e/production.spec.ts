@@ -56,9 +56,9 @@ test("une bande neuve, de bout en bout, puis effacée", async ({ page, request }
   await page.fill("#titre", "Premier jour");
   await page.fill("#note", "On essaie tout.");
 
-  const etiquettes = page.getByLabel("Ajouter une étiquette");
-  await etiquettes.fill("Essai");
-  await etiquettes.press("Enter");
+  const lieux = page.getByLabel("Ajouter un lieu");
+  await lieux.fill("Essai");
+  await lieux.press("Enter");
 
   await page.getByText("Énergie et calme").click();
   await page.locator("#energie").fill("8");

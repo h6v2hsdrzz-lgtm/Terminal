@@ -54,8 +54,8 @@ test("on pose une journée avec titre, étiquettes et curseurs", async ({ page }
   await page.fill("#titre", "Test de bout en bout");
   await page.fill("#note", "Écrit par la suite de tests.");
 
-  // Les étiquettes : on tape, on valide avec Entrée, la pastille apparaît.
-  const champEtiquettes = page.getByLabel("Ajouter une étiquette");
+  // Les lieux : on tape, on valide avec Entrée, la pastille apparaît.
+  const champEtiquettes = page.getByLabel("Ajouter un lieu");
   await champEtiquettes.fill("Soirée");
   await champEtiquettes.press("Enter");
   await champEtiquettes.fill("test");
@@ -92,7 +92,7 @@ test("l'étiquette est proposée à la bande, sans doublon d'accent", async ({ p
   // La liste courte montre les étiquettes les plus utilisées de la bande ;
   // « Soirée » n'en a qu'un usage et n'y figure pas. On la retrouve en tapant,
   // sans son accent — c'est tout l'intérêt de normaliser la clé.
-  const champEtiquettes = page.getByLabel("Ajouter une étiquette");
+  const champEtiquettes = page.getByLabel("Ajouter un lieu");
   await champEtiquettes.fill("soir");
   const proposition = page.getByRole("button", { name: "Soirée", exact: true });
   await expect(proposition).toHaveCount(1);

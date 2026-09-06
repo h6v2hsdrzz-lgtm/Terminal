@@ -131,7 +131,7 @@ qu'il faut y mettre.
 | **Les stats** | Courbe lissée sur trente jours, calendrier façon damier, effet des déclencheurs, écarts par jour de semaine, synchronicité entre deux personnes. |
 | **Les souvenirs** | Le mur des formes, la galerie, rétrospective d'un mois avec image partageable, « ce jour-là », capsules temporelles, mur des moments. |
 | **La galerie** | Tout ce que la bande a posté, en mosaïque par mois, cent vingt à la fois. On y entre depuis les souvenirs. |
-| **Profil** | Séries, badges, classement d'assiduité de la semaine, calendrier personnel, réglages de la bande, export, départ. |
+| **Profil** | Sa photo et son nom, son album, quatre traits discrets, badges, classement d'assiduité de la semaine, calendrier personnel, réglages de la bande, export, départ. |
 
 ## Les décisions
 
@@ -271,7 +271,7 @@ dit plus haut.
 ## Tests
 
 ```bash
-npm test                       # 174 tests sur la logique pure (dont la géométrie et le dimensionnement)
+npm test                       # 190 tests sur la logique pure
 npx playwright test            # iPhone 15 (WebKit) + bureau 1440×900
 npx playwright test --project=iphone
 ADRESSE=https://journal-de-joie-v2.vercel.app \

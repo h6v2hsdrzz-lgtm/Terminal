@@ -3,6 +3,58 @@
 Les entrées vont de la plus récente à la plus ancienne. Chaque lot du chantier
 v3 y ajoute une section ; les jalons v2 sont regroupés en tête d'historique.
 
+## Lot A — Renommages et profil
+
+Premier lot du plan de travail (`PLAN.md`), qui entre au dépôt avec `ETAT.md`
+et `CLAUDE.md`.
+
+### Renommé
+- **« Plante verte » devient « Marie Jane ».** Une migration `UPDATE`, pas une
+  recréation : la ligne garde son identifiant, donc les 496 journées qui la
+  portaient restent cochées et les statistiques d'effet gardent leur
+  historique. Un `DELETE` suivi d'un `INSERT` aurait emporté la table de
+  liaison par cascade.
+- « Ce qui a fait la journée » devient **l'anecdote**.
+- « Étiquettes » devient **Lieu**, dans le champ et dans l'export.
+
+### Ajouté
+- **On change son nom** depuis le profil. Comme le pseudo n'est recopié dans
+  aucune journée, le passé change avec — on ne relit pas ses souvenirs sous un
+  nom qu'on n'a plus.
+- **Une photo de profil**, recadrée au doigt dans une fenêtre ronde. Ce qui
+  part au serveur est un carré de 256 pixels ; l'originale ferait stocker
+  quatre méga-octets pour un rond de quarante.
+- **« Toi, en petit »** : les dix derniers médias de la personne, et quatre
+  traits — l'heure à laquelle elle pose sa journée, le lieu qui revient, la
+  part de vocaux, le mot qui revient. Chacun se tait quand il n'y a pas de quoi
+  le dire.
+
+### Retiré
+- **Les trois compteurs du profil** — « jours d'affilée », « ton record »,
+  « journées posées ». Un journal n'est pas un tableau de performance, et
+  c'était la seule chose de l'écran qui donnait envie de poster pour le
+  compteur plutôt que pour la journée.
+
+### Corrigé
+- **Un changement de nom ou de photo n'arrivait jamais chez les autres.** Il ne
+  touche à aucune journée, donc l'empreinte de synchronisation ne bougeait pas.
+  `Membre.modifieLe` y entre — même défaut que les photos et les notes vocales
+  avaient eu, même correction.
+- **`chargerContexte` chargeait les octets de chaque avatar à chaque page.**
+  Un `include` tire toutes les colonnes ; sur un champ `Bytes`, ça se compte en
+  méga-octets par navigation. Sélection explicite, et la présence d'une photo
+  se demande à part.
+- La base de démonstration disait « le plus souvent repos ». Ce n'est pas un
+  lieu, et le champ s'appelle « Lieu » : les données doivent dire la même chose
+  que l'interface.
+
+### Une précision d'architecture
+`PLAN.md` a été écrit en supposant **Supabase**, qui n'est pas la pile de ce
+dépôt. Les garanties sont tenues autrement et la traduction terme à terme est
+dans `CLAUDE.md` : la RLS devient l'autorisation côté serveur, les buckets
+privés deviennent des routes qui exigent une session, Realtime devient le
+sondage d'une empreinte de version.
+
 ## Lot 2 — La vidéo, et la partie photo devenue un vrai album
 
 ### Ajouté
