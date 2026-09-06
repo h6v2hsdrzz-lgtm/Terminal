@@ -34,7 +34,59 @@ export function ChampEtiquettes({
 }) {
   const [choisies, setChoisies] = useState<string[]>(initiales);
   const [saisie, setSaisie] = useState("");
+  const [cherche, setCherche] = useState(false);
+  const [refus, setRefus] = useState<string | null>(null);
+  // « nom|latitude|longitude » du lieu venu de la géolocalisation, le cas échéant.
+  const [position, setPosition] = useState("");
   const complet = choisies.length >= MAX_ETIQUETTES;
+
+  /**
+   * « Utiliser ma position ».
+   *
+   * La position ne part jamais telle quelle vers un tiers : elle est arrondie
+   * à un kilomètre par le serveur, qui interroge OpenStreetMap à notre place.
+   * Le service ne voit donc ni l'adresse IP du téléphone, ni la position
+   * exacte. Et rien ne se déclenche sans ce bouton : la permission est
+   * demandée par le geste, jamais au chargement.
+   */
+  function localiser() {
+    if (!navigator.geolocation) {
+      setRefus("Ce navigateur ne sait pas donner ta position.");
+      return;
+    }
+    setRefus(null);
+    setCherche(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const reponse = await fetch(`/api/lieu?lat=${latitude}&lon=${longitude}`);
+          const { nom, position: arrondie } = (await reponse.json()) as {
+            nom: string | null;
+            position?: { latitude: number; longitude: number };
+          };
+          if (nom) {
+            ajouter(nom);
+            // La position stockée est celle que le serveur a arrondie, pas
+            // celle du GPS : on ne renvoie jamais la précision d'origine.
+            if (arrondie) setPosition(`${nom}|${arrondie.latitude}|${arrondie.longitude}`);
+          }
+          else setRefus("Aucun nom trouvé pour cet endroit. Écris-le à la main.");
+        } catch {
+          setRefus("La recherche a échoué. Écris-le à la main.");
+        } finally {
+          setCherche(false);
+        }
+      },
+      () => {
+        setCherche(false);
+        setRefus("Position refusée. Le champ reste libre.");
+      },
+      // Pas de haute précision : on arrondit de toute façon à un kilomètre, et
+      // le GPS fin vide la batterie pour un résultat qu'on jette.
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300_000 },
+    );
+  }
 
   function ajouter(nom: string) {
     const propre = nettoyerEtiquette(nom);
@@ -63,6 +115,7 @@ export function ChampEtiquettes({
   return (
     <div className="mt-4">
       <input type="hidden" name="etiquettes" value={choisies.join(",")} />
+      {position && <input type="hidden" name="lieuPosition" value={position} />}
 
       <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-trait bg-surface-2 px-2.5 py-2">
         <AnimatePresence initial={false}>
@@ -102,6 +155,20 @@ export function ChampEtiquettes({
           className="champ-saisie min-w-[7rem] flex-1 bg-transparent py-0.5 placeholder:text-encre-3 focus:outline-none"
         />
       </div>
+
+      {!complet && (
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={localiser}
+            disabled={cherche}
+            className="cible-tactile inline-flex items-center gap-1.5 text-[13px] text-encre-2 underline underline-offset-2 disabled:opacity-50"
+          >
+            <span aria-hidden>◎</span> {cherche ? "un instant…" : "utiliser ma position"}
+          </button>
+          {refus && <span className="text-[12px] text-encre-3">{refus}</span>}
+        </div>
+      )}
 
       {restantes.length > 0 && !complet && (
         <ul className="mt-2 flex flex-wrap gap-1.5">

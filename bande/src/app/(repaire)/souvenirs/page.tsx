@@ -8,7 +8,8 @@ import { Stats } from "@/composants/Stats";
 import { Retrospective } from "@/composants/Retrospective";
 import Link from "next/link";
 
-import { compterMedias, listerCapsules, mediasDeLaBande } from "@/lib/depot";
+import { CarteDesLieux } from "@/composants/CarteDesLieux";
+import { compterMedias, etiquettesDeLaBande, listerCapsules, mediasDeLaBande } from "@/lib/depot";
 import { entreesDeLaBande, exigerContexte } from "@/lib/repaire";
 import { ceJourLa, moisDisponibles, murDeSouvenirs, retrospective } from "@/lib/souvenirs";
 import { enTexteLong, jourDeLaBande } from "@/lib/dates";
@@ -33,6 +34,7 @@ export default async function Page({
   // Huit cases d'aperçu : on en demande huit, pas les mille de la bande.
   const medias = await mediasDeLaBande(contexte.groupe.id, 8);
   const combienMedias = await compterMedias(contexte.groupe.id);
+  const lieux = await etiquettesDeLaBande(contexte.groupe.id);
 
   return (
     <div className="px-4 pt-3">
@@ -97,6 +99,13 @@ export default async function Page({
           aujourdhui={aujourdhui}
         />
       </section>
+
+      {lieux.filter((l) => l.latitude !== null).length >= 2 && (
+        <section className="mt-7">
+          <TitreSection>Vos lieux</TitreSection>
+          <CarteDesLieux lieux={lieux} />
+        </section>
+      )}
 
       <section className="mt-7">
         <TitreSection>Les dernières formes</TitreSection>

@@ -3,6 +3,37 @@
 Les entrées vont de la plus récente à la plus ancienne. Chaque lot du chantier
 v3 y ajoute une section ; les jalons v2 sont regroupés en tête d'historique.
 
+## Lot F — Le lieu
+
+### Ajouté
+- **« Utiliser ma position »** dans le champ Lieu du check-in. La permission
+  est demandée par le geste, jamais au chargement, et le champ reste libre si
+  elle est refusée.
+- **Une constellation des lieux** dans les souvenirs, dès que deux lieux ont
+  une position.
+
+### Ce qui ne sort pas
+- **La position part du serveur, pas du téléphone.** Interroger OpenStreetMap
+  depuis le navigateur enverrait la position de quelqu'un, avec son adresse IP,
+  à un service tiers. Ici le tiers ne voit que notre serveur, avec un
+  `User-Agent` identifiable et un cache, comme sa politique d'usage le demande.
+- **La position est arrondie AVANT d'être envoyée et avant d'être stockée** :
+  deux décimales, environ un kilomètre. Assez pour reconnaître un quartier, pas
+  pour trouver une porte. Ce qui n'est pas envoyé ne peut pas fuir, et arrondir
+  à l'affichage aurait laissé la précision en base.
+- **Pas de fond de carte.** Le plan demandait Leaflet et des tuiles
+  OpenStreetMap ; chaque tuile est une requête vers un serveur tiers, et la
+  suite des tuiles demandées dit où sont vos souvenirs et lesquels vous
+  regardez. La constellation est un SVG : aucune dépendance, aucune requête, et
+  un test échoue si une requête sort vers un autre hôte.
+
+### Corrigé avant livraison
+- **La constellation était illisible.** En projection linéaire, un lieu à
+  Nantes fixe l'échelle et les cinq lieux parisiens s'écrasent en une tache
+  avec cinq étiquettes empilées — la capture l'a montré, aucun test unitaire ne
+  l'aurait vu. Le placement mélange maintenant le linéaire et le rang, et les
+  étiquettes se poussent les unes les autres au lieu de se superposer.
+
 ## Lot A — Renommages et profil
 
 Premier lot du plan de travail (`PLAN.md`), qui entre au dépôt avec `ETAT.md`

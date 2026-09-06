@@ -258,9 +258,25 @@ async function main() {
   // faut l'identifiant pour rattacher les journées.
   const nomsEtiquettes = [...new Set(lignes.flatMap((l) => l.etiquettes))];
   const etiquettes = new Map<string, string>();
+  // Quelques lieux situés, arrondis au kilomètre comme en production. Les
+  // autres restent sans position : c'est le cas d'un lieu tapé à la main.
+  const POSITIONS: Record<string, [number, number]> = {
+    "Chez moi": [48.87, 2.35],
+    "Le bureau": [48.89, 2.32],
+    "Le Zinc": [48.86, 2.38],
+    "Le canal": [48.88, 2.37],
+    "Chez Mamie": [47.24, -1.55],
+    "Les Halles": [48.86, 2.35],
+  };
+
   for (const nom of nomsEtiquettes) {
+    const position = POSITIONS[nom];
     const ligne = await prisma.etiquette.create({
-      data: { groupeId: groupe.id, nom, cle: cleEtiquette(nom) },
+      data: {
+        groupeId: groupe.id, nom, cle: cleEtiquette(nom),
+        latitude: position?.[0] ?? null,
+        longitude: position?.[1] ?? null,
+      },
     });
     etiquettes.set(nom, ligne.id);
   }

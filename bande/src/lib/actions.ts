@@ -59,6 +59,25 @@ function nombreFacultatif(donnees: FormData, cle: string): number | null {
   return Number.isFinite(valeur) ? valeur : null;
 }
 
+/**
+ * Le lieu géolocalisé, s'il y en a un.
+ *
+ * Il arrive en un seul champ caché — « nom|latitude|longitude » — parce que le
+ * formulaire marche sans JavaScript et qu'un champ de plus par lieu serait un
+ * champ de plus à tenir. Une valeur mal formée est ignorée : le lieu reste, il
+ * n'a simplement pas de point sur la carte.
+ */
+function positionDuLieu(donnees: FormData): { nom: string; latitude: number; longitude: number } | null {
+  const brut = texte(donnees, "lieuPosition");
+  if (!brut) return null;
+  const [nom, la, lo] = brut.split("|");
+  const latitude = Number(la);
+  const longitude = Number(lo);
+  if (!nom || !Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
+  return { nom, latitude, longitude };
+}
+
 /** Traduit ce que l'utilisateur peut corriger ; laisse remonter le reste. */
 async function tenter(travail: () => Promise<void>): Promise<Etat> {
   try {
@@ -127,6 +146,7 @@ export async function actionPoserJournee(_precedent: Etat, donnees: FormData): P
       etiquettes: texte(donnees, "etiquettes").split(",").map((e) => e.trim()).filter(Boolean),
       energie: nombreFacultatif(donnees, "energie"),
       calme: nombreFacultatif(donnees, "calme"),
+      position: positionDuLieu(donnees),
     });
 
     rafraichirTout();

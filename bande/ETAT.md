@@ -5,24 +5,18 @@
 
 ## Lot en cours
 
-**LOT E — terminé.** A à E sont faits. On enchaîne sans feu vert
-intermédiaire (« enchaine tout », 6 septembre).
+**LOT F — terminé.** A à F sont faits. On enchaîne sans feu vert intermédiaire
+(« enchaine tout », 6 septembre).
 
 ## Prochaine action exacte
 
-**LOT F — le lieu.** Le champ existe déjà (les anciennes « étiquettes »), avec
-autocomplétion sur ce que la bande a déjà posé. Il reste :
-1. un bouton « utiliser ma position » — `navigator.geolocation` sur demande
-   explicite, puis Nominatim (OpenStreetMap, gratuit) pour le nom du lieu ;
-2. **respecter leur politique d'usage** : un appel par saisie, un cache, et un
-   `User-Agent` identifiable. Passer par une route serveur, pas depuis le
-   navigateur — sinon on expose la position à un tiers depuis le téléphone ;
-3. stocker des coordonnées ARRONDIES, jamais la position exacte ;
-4. la carte des souvenirs (Leaflet + tuiles OSM).
+**LOT G — les jeux, au moins dix** (réponse du 6 septembre). La liste retenue
+est dans « Décisions prises ». Commencer par **G1, « Devine qui je suis »**,
+qui est le seul à demander une table : les autres sont des tirages sans état,
+ou s'appuient sur ce que la bande a déjà écrit.
 
-**À décider** : la carte ajoute une dépendance (Leaflet ~40 ko). La règle du
-plan est « une seule nouvelle dépendance par lot ». Elle passe si on ne prend
-rien d'autre au lot F.
+L'onglet libéré par le lot D (les stats ont rejoint les souvenirs) accueille
+les jeux.
 
 ### Ancienne note (lot B, fait)
 
@@ -136,6 +130,18 @@ redéployer à chaque lot sans le redemander. **À révoquer à la fin.**
   susceptible de », « Le jugement », « Menteur », « Le quiz de la bande »
   (questions tirées de vos propres données), « Devine qui a écrit ça », « Top
   3 », « Le plus rapide ». Dix, dont deux qui n'existent que chez vous.
+- **Pas de Leaflet, pas de tuiles OpenStreetMap** (lot F, écart au plan
+  assumé). Chaque tuile est une requête du téléphone vers un serveur tiers, et
+  la suite des tuiles demandées dit où sont les souvenirs de la bande et
+  lesquels on regarde. Pour une application dont la règle est que rien ne sort
+  de la bande, c'est cher payé pour un fond de plan. À la place : une
+  constellation SVG, zéro dépendance, zéro requête, et un test qui échoue si
+  une requête sort vers un autre hôte.
+- **La constellation ne projette pas linéairement.** Un lieu à trois cents
+  kilomètres écrase cinq lieux distants de trois kilomètres — la première
+  capture montrait une seule tache et cinq étiquettes empilées. Le placement
+  mélange le linéaire (45 %) et le rang (55 %) : l'échappée reste loin, la
+  grappe du quotidien s'ouvre. L'ordre des deux axes est conservé.
 
 ## Pièges déjà payés (ne pas les redécouvrir)
 
@@ -203,7 +209,7 @@ redéployer à chaque lot sans le redemander. **À révoquer à la fin.**
 2. Le fil en page d'accueil : où va la figure du jour ?
 3. A4 retire les compteurs de série, E1 donne des points par jour de série.
 4. HEIC : est-ce un vrai problème sur vos téléphones ?
-5. Les jeux : lesquels, vraiment ?
+5. Les jeux : lesquels, vraiment ? (liste proposée ci-dessus, en cours au lot G)
 
 ## Reste à faire, hors lots
 
@@ -229,6 +235,6 @@ redéployer à chaque lot sans le redemander. **À révoquer à la fin.**
 | C scellés | **fait** (sauf la notification d'ouverture — voir plus bas) |
 | D souvenirs / stats / rétro | **fait** |
 | E points et badges | **fait**, avec deux écarts assumés (voir plus haut) |
-| F lieu | à faire — les « étiquettes » existent et deviendront « Lieu » en A1 |
+| F lieu | **fait**, sauf la carte à tuiles : constellation SVG à la place (voir « Décisions ») |
 | G jeux | rien. Dix jeux décidés, c'est un projet en soi |
 | H audits | à la fin |

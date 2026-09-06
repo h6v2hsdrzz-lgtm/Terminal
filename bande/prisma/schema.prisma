@@ -214,6 +214,13 @@ model Audio {
 model Etiquette {
   id         String   @id @default(cuid())
   groupeId   String   @map("groupe_id")
+  /// La position, ARRONDIE à deux décimales — environ un kilomètre. Assez pour
+  /// poser un point sur une carte et reconnaître un quartier ; pas assez pour
+  /// retrouver une adresse. L'arrondi se fait avant le stockage : arrondir à
+  /// l'affichage laisserait la précision en base, où elle finirait par
+  /// ressortir. Vide pour un lieu tapé à la main.
+  latitude   Float?
+  longitude  Float?
   nom        String
   cle        String
   creeLe     DateTime @default(now()) @map("cree_le")

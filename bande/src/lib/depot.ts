@@ -318,7 +318,14 @@ export type Saisie = {
   etiquettes?: string[];
   energie?: number | null;
   calme?: number | null;
+  /** Le lieu venu de la géolocalisation, avec sa position déjà arrondie. */
+  position?: { nom: string; latitude: number; longitude: number } | null;
 };
+
+/** Deux décimales, comme partout : environ un kilomètre. */
+function arrondi(valeur: number): number {
+  return Math.round(valeur * 100) / 100;
+}
 
 /**
  * Les deux curseurs secondaires.
@@ -355,7 +362,7 @@ export async function poserJournee(
     where: { groupeId, id: { in: saisie.declencheurs } },
     select: { id: true },
   });
-  const etiquettes = await resoudreEtiquettes(groupeId, saisie.etiquettes ?? []);
+  const etiquettes = await resoudreEtiquettes(groupeId, saisie.etiquettes ?? [], saisie.position);
 
   const ligne = await prisma.entree.upsert({
     where: { membreId_jour: { membreId, jour } },
@@ -880,15 +887,30 @@ export async function lireAudio(membreId: string, entreeId: string) {
 export async function etiquettesDeLaBande(groupeId: string) {
   const lignes = await prisma.etiquette.findMany({
     where: { groupeId },
-    select: { id: true, nom: true, _count: { select: { entrees: true } } },
+    select: {
+      id: true, nom: true, latitude: true, longitude: true,
+      _count: { select: { entrees: true } },
+    },
   });
   return lignes
     .sort((a, b) => b._count.entrees - a._count.entrees || a.nom.localeCompare(b.nom))
-    .map((e) => ({ id: e.id, nom: e.nom, usages: e._count.entrees }));
+    .map((e) => ({
+      id: e.id, nom: e.nom, usages: e._count.entrees,
+      latitude: e.latitude, longitude: e.longitude,
+    }));
 }
 
 /** Trouve ou crée les étiquettes d'une journée, et rend leurs identifiants. */
-async function resoudreEtiquettes(groupeId: string, noms: string[]): Promise<string[]> {
+async function resoudreEtiquettes(
+  groupeId: string,
+  noms: string[],
+  /**
+   * La position d'un lieu venu du bouton « utiliser ma position ». Elle est
+   * déjà arrondie par la route qui l'a nommé — on ne la ré-arrondit pas ici,
+   * on refuse simplement de la stocker si elle ne l'est pas.
+   */
+  position?: { nom: string; latitude: number; longitude: number } | null,
+): Promise<string[]> {
   const propres = [...new Set(
     noms.map(nettoyerEtiquette).filter((n) => cleEtiquette(n).length > 0),
   )].slice(0, MAX_ETIQUETTES);
@@ -898,12 +920,24 @@ async function resoudreEtiquettes(groupeId: string, noms: string[]): Promise<str
     const cle = cleEtiquette(nom);
     // `upsert` plutôt que « chercher puis créer » : deux personnes qui posent la
     // même étiquette au même moment ne doivent pas se marcher dessus.
+    // La position ne se pose que sur le lieu qu'elle nomme, et une seule fois :
+    // le premier qui géolocalise « Le canal » le place, les suivants n'y
+    // touchent pas. Sans ce `update` conditionnel, chaque personne
+    // repositionnerait le lieu commun sur son propre kilomètre.
+    const situe =
+      position && cleEtiquette(position.nom) === cle
+        ? { latitude: arrondi(position.latitude), longitude: arrondi(position.longitude) }
+        : null;
+
     const etiquette = await prisma.etiquette.upsert({
       where: { groupeId_cle: { groupeId, cle } },
-      create: { groupeId, cle, nom },
+      create: { groupeId, cle, nom, ...(situe ?? {}) },
       update: {},
-      select: { id: true },
+      select: { id: true, latitude: true },
     });
+    if (situe && etiquette.latitude === null) {
+      await prisma.etiquette.update({ where: { id: etiquette.id }, data: situe });
+    }
     ids.push(etiquette.id);
   }
   return ids;
