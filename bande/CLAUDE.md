@@ -2,7 +2,8 @@
 
 # Journal de Joie — repères d'architecture
 
-`PLAN.md` est la source de vérité du projet. `ETAT.md` dit où on en est.
+`PLAN.md` (vague 2) est la source de vérité. `PLAN-vague-1.md` garde la vague 1,
+à laquelle `AUDIT.md` renvoie. `ETAT.md` dit où on en est.
 Ce fichier-ci évite de relire tout le repo à chaque session.
 
 ## La pile, et ce qu'elle n'est pas
