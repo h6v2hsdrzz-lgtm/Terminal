@@ -23,6 +23,7 @@
  * Ces deux écarts sont dans ETAT.md. Si la bande les veut quand même, tout est
  * ici, en un endroit.
  */
+import { PLAFOND_JEUX } from "./jeux/recompense";
 import type { Entree } from "./types";
 
 /** Le barème, en un seul endroit. */
@@ -75,6 +76,7 @@ export function ardoise(
   entrees: Entree[],
   membreId: string,
   scelles: { auteurId: string; creeLe: string }[] = [],
+  parties: { membreId: string; jour: string; points: number }[] = [],
 ): Ardoise {
   const parJour = new Map<string, number>();
   const detail = new Map<string, number>();
@@ -122,7 +124,26 @@ export function ardoise(
     if (scelle.auteurId === membreId) ajouter(scelle.creeLe, "scellés", BAREME.scelle);
   }
 
-  const total = [...parJour.values()].reduce((s, v) => s + Math.min(v, PLAFOND_QUOTIDIEN), 0);
+  let total = [...parJour.values()].reduce((s, v) => s + Math.min(v, PLAFOND_QUOTIDIEN), 0);
+
+  /**
+   * Les jeux passent à côté du plafond de cent — le plan dit « hors jeux » —
+   * mais pas à côté de tout plafond. Ils ont le leur, et pour la même raison :
+   * une soirée de jeux doit compter, une nuit blanche ne doit pas compter
+   * double. Voir `jeux/recompense.ts`, où le choix est argumenté.
+   */
+  const jeuxParJour = new Map<string, number>();
+  for (const partie of parties) {
+    if (partie.membreId !== membreId) continue;
+    jeuxParJour.set(partie.jour, (jeuxParJour.get(partie.jour) ?? 0) + partie.points);
+  }
+  let gagnesEnJouant = 0;
+  for (const points of jeuxParJour.values()) gagnesEnJouant += Math.min(points, PLAFOND_JEUX);
+  if (gagnesEnJouant > 0) {
+    detail.set("parties jouées", gagnesEnJouant);
+    total += gagnesEnJouant;
+  }
+
   return {
     total,
     detail: [...detail.entries()]

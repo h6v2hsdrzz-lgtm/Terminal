@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { BAREME, NIVEAUX, PLAFOND_QUOTIDIEN, ardoise, niveau, pointsJournee } from "./points";
+import { PLAFOND_JEUX } from "./jeux/recompense";
 import type { Entree } from "./types";
 
 function entree(surcharge: Partial<Entree> = {}): Entree {
@@ -133,5 +134,41 @@ describe("niveau", () => {
   it("remplit la barre au dernier palier", () => {
     // Sinon elle annonce une progression vers un palier qui n'existe pas.
     expect(niveau(NIVEAUX.at(-1)!.seuil).part).toBe(1);
+  });
+});
+
+describe("ardoise — les parties", () => {
+  it("ajoute les points de jeu par-dessus le plafond quotidien", () => {
+    // Une journée déjà pleine (plafond 100) plus une partie gagnée : la partie
+    // s'ajoute, sinon jouer le soir d'une grosse journée ne rapporterait rien.
+    const entrees = Array.from({ length: 12 }, (_, i) =>
+      entree({ jour: "2026-06-0" + ((i % 9) + 1), profil: "moi" }),
+    );
+    const sans = ardoise(entrees, "moi", []);
+    const avec = ardoise(entrees, "moi", [], [{ membreId: "moi", jour: "2026-06-01", points: 40 }]);
+    expect(avec.total).toBe(sans.total + 40);
+    expect(avec.detail.find((d) => d.quoi === "parties jouées")?.points).toBe(40);
+  });
+
+  it("plafonne les jeux à leur propre limite quotidienne", () => {
+    const parties = Array.from({ length: 6 }, () => ({
+      membreId: "moi",
+      jour: "2026-06-01",
+      points: 40,
+    }));
+    expect(ardoise([], "moi", [], parties).total).toBe(PLAFOND_JEUX);
+  });
+
+  it("compte le plafond par jour, pas sur toute l'histoire", () => {
+    const parties = [
+      { membreId: "moi", jour: "2026-06-01", points: 200 },
+      { membreId: "moi", jour: "2026-06-02", points: 200 },
+    ];
+    expect(ardoise([], "moi", [], parties).total).toBe(PLAFOND_JEUX * 2);
+  });
+
+  it("ne crédite personne d'autre que le joueur", () => {
+    const parties = [{ membreId: "toi", jour: "2026-06-01", points: 40 }];
+    expect(ardoise([], "moi", [], parties).total).toBe(0);
   });
 });

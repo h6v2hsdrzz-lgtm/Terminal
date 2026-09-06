@@ -23,6 +23,7 @@ const ONGLETS = [
   // Le fil d'abord : c'est ce qu'on ouvre le matin, et c'est la racine.
   { href: "/", nom: "Fil", icone: FilIcone },
   { href: "/aujourdhui", nom: "Aujourd'hui", icone: SoleilIcone },
+  { href: "/jeux", nom: "Jeux", icone: JeuxIcone },
   { href: "/souvenirs", nom: "Souvenirs", icone: SouvenirsIcone },
   { href: "/profil", nom: "Profil", icone: ProfilIcone },
 ];
@@ -116,9 +117,9 @@ export function BarreOnglets() {
   );
 }
 
-/* Icônes dessinées ici plutôt qu'importées d'une bibliothèque : quatre
-   tracés ne justifient pas une dépendance, et ils partagent ainsi exactement
-   la même graisse que la typographie. */
+/* Icônes dessinées ici plutôt qu'importées d'une bibliothèque : cinq tracés
+   ne justifient pas une dépendance, et ils partagent ainsi exactement la même
+   graisse que la typographie. */
 
 type PropsIcone = { actif: boolean };
 
@@ -159,6 +160,18 @@ function SouvenirsIcone({ actif }: PropsIcone) {
       <rect x="3.5" y="5" width="17" height="14" rx="2.4" />
       <circle cx="9" cy="10" r="1.6" />
       <path d="M4.5 17l4.2-4 3 2.6 3.4-3.6 4.4 4.4" />
+    </svg>
+  );
+}
+
+function JeuxIcone({ actif }: PropsIcone) {
+  // Un dé : le seul objet qui dit « jeu » sans dire quel jeu.
+  return (
+    <svg {...base(actif)} aria-hidden>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
+      <circle cx="8.6" cy="8.6" r="1.15" fill="currentColor" stroke="none" />
+      <circle cx="15.4" cy="15.4" r="1.15" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none" />
     </svg>
   );
 }

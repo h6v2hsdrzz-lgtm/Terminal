@@ -13,6 +13,7 @@ import { enHeure, heureMoyenne, lieuFavori, motFavori, partVocale } from "@/lib/
 import { Niveau } from "@/composants/Niveau";
 import { ardoise } from "@/lib/points";
 import { listerCapsules } from "@/lib/depot";
+import { gainsDeLaBande } from "@/lib/depot-jeux";
 import { couleurProfil } from "@/lib/couleurs";
 import { entreesDeLaBande, exigerContexte } from "@/lib/repaire";
 import { actionQuitter } from "@/lib/actions";
@@ -28,19 +29,31 @@ export default async function Page() {
     ? miennes.reduce((s, e) => s + e.joie, 0) / miennes.length
     : null;
   const capsules = await listerCapsules(contexte.groupe.id, contexte.moi.id, aujourdhui);
+  const gains = await gainsDeLaBande(contexte.groupe.id);
   const mesPoints = ardoise(
     entrees,
     contexte.moi.id,
     capsules.map((c) => ({ auteurId: c.auteurId, creeLe: c.creeLe })),
+    gains,
   );
   // Le premier scellé ouvert, pour le badge : les capsules arrivent triées par
   // date d'ouverture, la première ouverte est donc la plus ancienne.
   const scelleOuvertLe =
     capsules.find((c) => c.ouvrirLe <= aujourdhui && c.auteurId === contexte.moi.id)?.ouvrirLe ?? null;
 
+  // Le premier podium : la plus ancienne partie finie où l'on est dans les
+  // trois premiers. Les gains sont rendus des plus récents aux plus anciens,
+  // d'où le tri plutôt qu'un simple `find`.
+  const podiumLe =
+    gains
+      .filter((g) => g.membreId === contexte.moi.id && g.place <= 3)
+      .map((g) => g.jour)
+      .sort()[0] ?? null;
+
   const badges = badgesDe(miennes, entrees, contexte.moi.id, {
     points: mesPoints.total,
     scelleOuvertLe,
+    podiumLe,
   });
 
   // Dix vignettes, demandées comme telles : filtrer côté base plutôt que de

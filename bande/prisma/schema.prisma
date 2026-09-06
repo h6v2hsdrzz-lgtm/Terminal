@@ -18,19 +18,21 @@ datasource db {
 /// il est court pour être dicté au téléphone, mais tiré au hasard sur un
 /// alphabet sans caractères ambigus.
 model Groupe {
-  id              String   @id @default(cuid())
-  nom             String
-  codeInvitation  String   @unique @map("code_invitation")
+  id               String   @id @default(cuid())
+  nom              String
+  codeInvitation   String   @unique @map("code_invitation")
   /// Quand c'est vrai, on ne voit les journées des autres qu'après avoir posé
   /// la sienne. Réglable par le groupe.
-  revelerApresPost Boolean @default(true) @map("reveler_apres_post")
-  creeLe          DateTime @default(now()) @map("cree_le")
+  revelerApresPost Boolean  @default(true) @map("reveler_apres_post")
+  creeLe           DateTime @default(now()) @map("cree_le")
 
   membres      Membre[]
   declencheurs Declencheur[]
   entrees      Entree[]
   capsules     Capsule[]
   etiquettes   Etiquette[]
+  parties      Partie[]
+  cartes       CarteBande[]
 
   @@map("bande_groupes")
 }
@@ -44,31 +46,31 @@ model Groupe {
 /// tandis que le secret n'est gardé que sous forme d'empreinte. C'est un mot de
 /// passe, il en mérite le traitement.
 model Membre {
-  id          String   @id @default(cuid())
-  groupeId    String   @map("groupe_id")
-  pseudo      String
+  id             String   @id @default(cuid())
+  groupeId       String   @map("groupe_id")
+  pseudo         String
   /// 1 à 7 — index dans la palette validée. Le plafond de sept membres par
   /// bande vient de là : au-delà, deux teintes ne se distinguent plus.
-  teinte      Int
-  poigneeReprise String @unique @map("poignee_reprise")
-  codeReprise String   @map("code_reprise")
+  teinte         Int
+  poigneeReprise String   @unique @map("poignee_reprise")
+  codeReprise    String   @map("code_reprise")
   /// La photo de profil, carrée, en JPEG — c'est nous qui la fabriquons, donc
   /// pas besoin d'une colonne pour le type. Vide tant que personne n'en a mis :
   /// l'avatar porte alors les initiales, ce qui marche très bien.
-  avatar      Bytes?
-  creeLe      DateTime @default(now()) @map("cree_le")
-  vuLe        DateTime @default(now()) @map("vu_le")
+  avatar         Bytes?
+  creeLe         DateTime @default(now()) @map("cree_le")
+  vuLe           DateTime @default(now()) @map("vu_le")
   /// Changer de pseudo ou de photo ne touche à aucune journée. Sans cette
   /// colonne dans l'empreinte de synchronisation, les autres garderaient
   /// l'ancien nom et l'ancienne tête jusqu'à la prochaine écriture — c'est le
   /// même défaut que les photos et les notes vocales avaient eu.
-  modifieLe   DateTime @default(now()) @updatedAt @map("modifie_le")
+  modifieLe      DateTime @default(now()) @updatedAt @map("modifie_le")
 
-  groupe        Groupe        @relation(fields: [groupeId], references: [id], onDelete: Cascade)
-  entrees       Entree[]
-  reactions     Reaction[]
-  commentaires  Commentaire[]
-  capsules      Capsule[]
+  groupe       Groupe        @relation(fields: [groupeId], references: [id], onDelete: Cascade)
+  entrees      Entree[]
+  reactions    Reaction[]
+  commentaires Commentaire[]
+  capsules     Capsule[]
 
   @@unique([groupeId, pseudo])
   @@index([groupeId])
@@ -85,7 +87,7 @@ model Declencheur {
   ordre    Int     @default(0)
   actif    Boolean @default(true)
 
-  groupe  Groupe          @relation(fields: [groupeId], references: [id], onDelete: Cascade)
+  groupe  Groupe              @relation(fields: [groupeId], references: [id], onDelete: Cascade)
   entrees EntreeDeclencheur[]
 
   @@index([groupeId])
@@ -144,30 +146,30 @@ model Entree {
 /// `DROP TABLE` suivi d'un `CREATE`, c'est-à-dire la perte de toutes les
 /// photos déjà en ligne. Un nom de table un peu daté coûte moins cher.
 model Media {
-  id       String   @id @default(cuid())
+  id        String   @id @default(cuid())
   /// Plusieurs médias par journée : l'unicité d'origine est levée, et l'ordre
   /// décide de la place dans le carrousel.
-  entreeId String   @map("entree_id")
-  ordre    Int      @default(0)
+  entreeId  String   @map("entree_id")
+  ordre     Int      @default(0)
   /// « photo » ou « video ». Une chaîne plutôt qu'une énumération PostgreSQL :
   /// ajouter une valeur à une énumération se fait hors transaction, ce qui rend
   /// la migration plus délicate qu'elle n'en vaut la peine pour deux cas.
-  genre    String   @default("photo")
-  mime     String
-  octets   Bytes
-  largeur  Int
-  hauteur  Int
+  genre     String   @default("photo")
+  mime      String
+  octets    Bytes
+  largeur   Int
+  hauteur   Int
   /// En millisecondes, pour les vidéos seulement.
-  duree    Int?
+  duree     Int?
   /// La vignette, toujours en JPEG parce que c'est nous qui la fabriquons.
   ///
   /// Le fil sert celle-ci, jamais l'original : afficher une image de 1200 px
   /// dans une case de 160 fait payer à celui qui lit une résolution qu'il ne
   /// verra pas, et pour une vidéo ce serait le fichier entier.
-  vignette Bytes?
+  vignette  Bytes?
   /// Deux mots sous l'image. Facultatif, comme tout le reste.
-  legende  String?
-  creeLe   DateTime @default(now()) @map("cree_le")
+  legende   String?
+  creeLe    DateTime @default(now()) @map("cree_le")
   /// Remplacer un média ne change ni leur nombre ni leur date de création :
   /// sans cette colonne, le remplacement passerait inaperçu du sondage, et les
   /// autres garderaient l'ancienne image à l'écran.
@@ -190,14 +192,14 @@ model Media {
 /// vrai son, et non d'un motif décoratif qui serait le même pour tout le monde.
 /// Sans ça, il faudrait décoder l'audio à chaque affichage.
 model Audio {
-  id       String   @id @default(cuid())
-  entreeId String   @unique @map("entree_id")
-  mime     String
-  octets   Bytes
+  id        String   @id @default(cuid())
+  entreeId  String   @unique @map("entree_id")
+  mime      String
+  octets    Bytes
   /// En millisecondes.
-  duree    Int
-  niveaux  Int[]
-  creeLe   DateTime @default(now()) @map("cree_le")
+  duree     Int
+  niveaux   Int[]
+  creeLe    DateTime @default(now()) @map("cree_le")
   modifieLe DateTime @default(now()) @updatedAt @map("modifie_le")
 
   entree Entree @relation(fields: [entreeId], references: [id], onDelete: Cascade)
@@ -212,18 +214,18 @@ model Audio {
 /// possibles. Le nom normalisé sert de clé — « Soirée » et « soirée » sont la
 /// même étiquette.
 model Etiquette {
-  id         String   @id @default(cuid())
-  groupeId   String   @map("groupe_id")
+  id        String   @id @default(cuid())
+  groupeId  String   @map("groupe_id")
   /// La position, ARRONDIE à deux décimales — environ un kilomètre. Assez pour
   /// poser un point sur une carte et reconnaître un quartier ; pas assez pour
   /// retrouver une adresse. L'arrondi se fait avant le stockage : arrondir à
   /// l'affichage laisserait la précision en base, où elle finirait par
   /// ressortir. Vide pour un lieu tapé à la main.
-  latitude   Float?
-  longitude  Float?
-  nom        String
-  cle        String
-  creeLe     DateTime @default(now()) @map("cree_le")
+  latitude  Float?
+  longitude Float?
+  nom       String
+  cle       String
+  creeLe    DateTime @default(now()) @map("cree_le")
 
   groupe  Groupe            @relation(fields: [groupeId], references: [id], onDelete: Cascade)
   entrees EntreeEtiquette[]
@@ -264,25 +266,25 @@ model EntreeDeclencheur {
 /// plus tard. Il n'y avait que des mots ; il y a maintenant aussi des photos,
 /// des vidéos et des voix.
 model Capsule {
-  id        String   @id @default(cuid())
-  groupeId  String   @map("groupe_id")
-  membreId  String   @map("membre_id")
+  id       String   @id @default(cuid())
+  groupeId String   @map("groupe_id")
+  membreId String   @map("membre_id")
   /// « mot », « photo », « video » ou « audio ».
-  genre     String   @default("mot")
+  genre    String   @default("mot")
   /// Toujours renseigné : c'est le mot pour un scellé « mot », et la légende
   /// pour les autres. Un scellé sans un mot d'introduction ne dit rien de ce
   /// qu'on attendait en le fermant.
-  texte     String
+  texte    String
   /// Le contenu, pour les scellés qui en portent un.
-  octets    Bytes?
-  mime      String?
+  octets   Bytes?
+  mime     String?
   /// L'aperçu, déjà flouté à la fabrication — voir le commentaire de la route.
-  apercu    Bytes?
+  apercu   Bytes?
   /// En millisecondes, pour une vidéo ou une voix.
-  duree     Int?
+  duree    Int?
   /// Jour d'ouverture, ISO `AAAA-MM-JJ`, calé sur la journée de la bande.
-  ouvrirLe  String   @map("ouvrir_le")
-  creeLe    DateTime @default(now()) @map("cree_le")
+  ouvrirLe String   @map("ouvrir_le")
+  creeLe   DateTime @default(now()) @map("cree_le")
 
   groupe Groupe @relation(fields: [groupeId], references: [id], onDelete: Cascade)
   membre Membre @relation(fields: [membreId], references: [id], onDelete: Cascade)
@@ -318,4 +320,96 @@ model Commentaire {
 
   @@index([entreeId])
   @@map("bande_commentaires")
+}
+
+/// Une partie.
+///
+/// Une seule table pour les dix jeux, avec une clé `jeu` : ils partagent tous
+/// la même forme — des joueurs, des manches, des points — et une table par jeu
+/// aurait multiplié par dix le code de lecture pour la même chose.
+///
+/// `finieLe` distingue une partie en cours d'une partie terminée. Une partie
+/// abandonnée reste `null` : on ne l'efface pas, elle a eu lieu, mais elle ne
+/// compte pas au palmarès.
+model Partie {
+  id          String    @id @default(cuid())
+  groupeId    String    @map("groupe_id")
+  /// La clé du jeu — « devine-qui », « jamais », « top3 »… Voir `src/lib/jeux`.
+  jeu         String
+  /// « un-telephone » : on se passe l'appareil. Le seul mode pour l'instant,
+  /// et la colonne existe pour que le second n'impose pas de migration.
+  mode        String    @default("un-telephone")
+  commenceeLe DateTime  @default(now()) @map("commencee_le")
+  finieLe     DateTime? @map("finie_le")
+
+  groupe  Groupe        @relation(fields: [groupeId], references: [id], onDelete: Cascade)
+  scores  ScorePartie[]
+  manches Manche[]
+
+  @@index([groupeId, commenceeLe])
+  @@map("bande_parties")
+}
+
+/// Un joueur dans une partie, et ce qu'il y marque.
+///
+/// `sobre` n'est pas un détail : c'est celui qui conduit. Les jeux qui font
+/// boire lui donnent un gage à la place, et le plan est explicite là-dessus.
+model ScorePartie {
+  id       String  @id @default(cuid())
+  partieId String  @map("partie_id")
+  membreId String  @map("membre_id")
+  points   Int     @default(0)
+  sobre    Boolean @default(false)
+  /// L'ordre de passage, tiré au début et gardé toute la partie.
+  ordre    Int     @default(0)
+
+  partie Partie @relation(fields: [partieId], references: [id], onDelete: Cascade)
+
+  @@unique([partieId, membreId])
+  @@map("bande_scores_partie")
+}
+
+/// Une manche.
+///
+/// `donnees` est du JSON parce que chaque jeu y range autre chose : les cartes
+/// trouvées et passées pour « Devine qui je suis », les votes pour « Tu
+/// préfères », la question et les réponses pour le quiz. Rien n'est lu sans
+/// passer par le lecteur typé du jeu concerné — voir `src/lib/jeux/manche.ts`.
+model Manche {
+  id       String   @id @default(cuid())
+  partieId String   @map("partie_id")
+  numero   Int
+  /// Le joueur dont c'est le tour, quand le jeu en a un.
+  membreId String?  @map("membre_id")
+  donnees  Json     @default("{}")
+  creeeLe  DateTime @default(now()) @map("creee_le")
+
+  partie Partie @relation(fields: [partieId], references: [id], onDelete: Cascade)
+
+  @@index([partieId, numero])
+  @@map("bande_manches")
+}
+
+/// Une carte écrite par la bande.
+///
+/// Les paquets fournis sont dans le code : ce sont des constantes, elles ne
+/// changent pas d'une bande à l'autre, et les mettre en base aurait demandé de
+/// les recopier à chaque création de bande. Ici, il n'y a que ce que la bande
+/// a écrit elle-même — le paquet « Nos potes », ses propres « je n'ai
+/// jamais », ses propres dilemmes.
+model CarteBande {
+  id       String   @id @default(cuid())
+  groupeId String   @map("groupe_id")
+  /// À quel paquet elle appartient : « potes », « jamais », « prefere »…
+  paquet   String   @default("potes")
+  texte    String
+  /// Qui l'a ajoutée — pour le droit de retrait, et pour ne pas faire deviner
+  /// à quelqu'un une carte qu'il vient d'écrire.
+  membreId String   @map("membre_id")
+  creeeLe  DateTime @default(now()) @map("creee_le")
+
+  groupe Groupe @relation(fields: [groupeId], references: [id], onDelete: Cascade)
+
+  @@index([groupeId, paquet])
+  @@map("bande_cartes")
 }
