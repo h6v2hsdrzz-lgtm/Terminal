@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
 import { Avatar } from "@/composants/Avatar";
@@ -31,19 +31,25 @@ export function JeuJamais({ moteur }: { moteur: Moteur }) {
   const [aveux, setAveux] = useState<Record<string, string>>({});
   const [graine] = useState(() => Math.floor(Math.random() * 2 ** 31));
 
-  // La pioche est reconstruite quand le niveau change — c'est le seul moment
-  // où le paquet n'est plus le même, et repartir d'un paquet mélangé est
-  // exactement ce qu'on veut à cet instant.
-  const paquet = useMemo(
-    () => pioche(affirmations(niveaux), generateur(graine)),
-    [niveaux, graine],
-  );
+  /**
+   * La pioche vit dans une référence, pas dans un `useMemo` : elle a une
+   * mémoire — ne pas redonner la même affirmation avant la fin du paquet — et
+   * React a le droit de jeter un `useMemo` quand il veut. Elle est reconstruite
+   * quand le niveau change, seul moment où le paquet n'est plus le même.
+   */
+  const paquet = useRef<ReturnType<typeof pioche<string>> | null>(null);
+  const niveauxPris = useRef<string>("");
 
-  function tirer() {
-    setCarte(paquet.suivante());
+  const tirer = useCallback(() => {
+    const signature = niveaux.join(",");
+    if (!paquet.current || niveauxPris.current !== signature) {
+      paquet.current = pioche(affirmations(niveaux), generateur(graine));
+      niveauxPris.current = signature;
+    }
+    setCarte(paquet.current.suivante());
     setAveux({});
     setPhase("annonce");
-  }
+  }, [niveaux, graine]);
 
   function basculerNiveau(niveau: Niveau) {
     setNiveaux((avant) =>

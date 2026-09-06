@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { JeuEnCours } from "@/composants/jeux/JeuEnCours";
 import { Podium } from "@/composants/jeux/Podium";
-import { chargerPartie, recompensesDe } from "@/lib/depot-jeux";
+import { cartesDeLaBande, chargerPartie, recompensesDe } from "@/lib/depot-jeux";
 import { jeuParCle } from "@/lib/jeux/catalogue";
 import { exigerContexte } from "@/lib/repaire";
 
@@ -28,5 +28,11 @@ export default async function Page({ params }: { params: Promise<{ partieId: str
     );
   }
 
-  return <JeuEnCours partie={partie} jeu={jeu} />;
+  return (
+    <JeuEnCours
+      partie={partie}
+      jeu={jeu}
+      cartesMaison={await cartesDeLaBande(contexte.moi.id)}
+    />
+  );
 }

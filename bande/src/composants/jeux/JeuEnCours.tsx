@@ -1,8 +1,9 @@
 "use client";
 
 import { CoquilleJeu } from "./CoquilleJeu";
+import { JeuDevineQui } from "./JeuDevineQui";
 import { JeuJamais } from "./JeuJamais";
-import type { Partie } from "@/lib/depot-jeux";
+import type { CarteMaison, Partie } from "@/lib/jeux/types";
 import type { Jeu } from "@/lib/jeux/catalogue";
 
 /**
@@ -12,11 +13,21 @@ import type { Jeu } from "@/lib/jeux/catalogue";
  * d'un coup d'œil, et un import dynamique par jeu coûterait un aller-retour
  * réseau au lancement — précisément au moment où trois personnes attendent.
  */
-export function JeuEnCours({ partie, jeu }: { partie: Partie; jeu: Jeu }) {
+export function JeuEnCours({
+  partie,
+  jeu,
+  cartesMaison,
+}: {
+  partie: Partie;
+  jeu: Jeu;
+  cartesMaison: CarteMaison[];
+}) {
   return (
     <CoquilleJeu partie={partie} jeu={jeu}>
       {(moteur) => {
         switch (jeu.cle) {
+          case "devine-qui":
+            return <JeuDevineQui moteur={moteur} cartesMaison={cartesMaison} />;
           case "jamais":
             return <JeuJamais moteur={moteur} />;
           default:

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
 import {
@@ -10,7 +10,7 @@ import {
   actionMarquer,
   actionTerminerPartie,
 } from "@/lib/actions-jeux";
-import type { Joueur, Partie } from "@/lib/depot-jeux";
+import type { Joueur, Partie } from "@/lib/jeux/types";
 import type { Jeu } from "@/lib/jeux/catalogue";
 import { PALIER_EAU } from "@/lib/jeux/cadre";
 import { RESSORT } from "@/lib/mouvement";
@@ -39,6 +39,15 @@ export type Moteur = {
   manche: (donnees: Record<string, unknown>, membreId?: string | null) => void;
   /** Finir la partie et montrer le podium. */
   terminer: () => void;
+  /**
+   * Passer en plein écran, sans barre ni pied de page.
+   *
+   * Une manche de « Devine qui je suis » se joue téléphone sur le front,
+   * pendant que deux personnes tapent l'écran : « Terminer » et « Abandonner »
+   * à quelques millimètres du pouce, c'est une partie qui s'arrête au milieu
+   * d'une manche sans que personne ne l'ait voulu.
+   */
+  pleinEcran: (actif: boolean) => void;
 };
 
 export function CoquilleJeu({
@@ -55,6 +64,7 @@ export function CoquilleJeu({
   const [joueurs, setJoueurs] = useState<Joueur[]>(partie.joueurs);
   const [fin, setFin] = useState<{ membreId: string; place: number; points: number }[] | null>(null);
   const [confirmeAbandon, setConfirmeAbandon] = useState(false);
+  const [plein, setPlein] = useState(false);
   const [eau, setEau] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const router = useRouter();
@@ -109,6 +119,20 @@ export function CoquilleJeu({
     });
   }, [partie.id]);
 
+  const pleinEcran = useCallback((actif: boolean) => setPlein(actif), []);
+
+  /**
+   * Le moteur est mémorisé.
+   *
+   * Sans ça, il change d'identité à chaque rendu, et tout effet d'un jeu qui en
+   * dépend se rejoue à chaque rendu — y compris celui qui demande le plein
+   * écran, qui se remettrait à courir après lui-même.
+   */
+  const moteur = useMemo<Moteur>(
+    () => ({ joueurs, marquer, manche, terminer, pleinEcran }),
+    [joueurs, marquer, manche, terminer, pleinEcran],
+  );
+
   function abandonner() {
     void actionAbandonnerPartie(partie.id).then(() => router.push("/jeux"));
   }
@@ -117,9 +141,11 @@ export function CoquilleJeu({
 
   return (
     <div className="flex min-h-[100dvh] flex-col">
-      <div className="sticky top-0 z-30 zone-sure-haute">
-        <BarreScore joueurs={joueurs} tourDe={tourDe} />
-      </div>
+      {!plein && (
+        <div className="sticky top-0 z-30 zone-sure-haute">
+          <BarreScore joueurs={joueurs} tourDe={tourDe} />
+        </div>
+      )}
 
       <AnimatePresence>
         {eau && (
@@ -144,7 +170,7 @@ export function CoquilleJeu({
         )}
       </AnimatePresence>
 
-      <main className="flex-1">{children({ joueurs, marquer, manche, terminer })}</main>
+      <main className="flex-1">{children(moteur)}</main>
 
       {erreur && (
         <p role="alert" className="px-4 py-2 text-[14px] text-[var(--alerte)]">
@@ -152,6 +178,7 @@ export function CoquilleJeu({
         </p>
       )}
 
+      {!plein && (
       <footer className="border-t border-trait px-4 py-3 zone-sure-basse">
         {confirmeAbandon ? (
           <div className="flex items-center justify-between gap-3">
@@ -197,6 +224,7 @@ export function CoquilleJeu({
           </div>
         )}
       </footer>
+      )}
     </div>
   );
 }

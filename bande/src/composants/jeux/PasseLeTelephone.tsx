@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
 import { Avatar } from "@/composants/Avatar";
-import type { Joueur } from "@/lib/depot-jeux";
+import type { Joueur } from "@/lib/jeux/types";
 import { RESSORT } from "@/lib/mouvement";
 
 /**

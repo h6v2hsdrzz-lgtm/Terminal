@@ -5,11 +5,15 @@ import { revalidatePath } from "next/cache";
 import { ErreurMetier } from "./depot";
 import {
   abandonnerPartie,
+  ajouterCarte,
+  cartesDeLaBande,
   chargerPartie,
   enregistrerManche,
   lancerPartie,
   marquer,
+  retirerCarte,
   terminerPartie,
+  type CarteMaison,
   type FinDePartie,
   type Partie,
 } from "./depot-jeux";
@@ -101,4 +105,28 @@ export async function actionRelirePartie(
   partieId: string,
 ): Promise<{ erreur: string | null; valeur?: Partie | null }> {
   return tenter(async () => chargerPartie(await quiJoue(), partieId));
+}
+
+export async function actionAjouterCarte(
+  paquet: string,
+  texte: string,
+): Promise<{ erreur: string | null; valeur?: CarteMaison }> {
+  return tenter(async () => {
+    const carte = await ajouterCarte(await quiJoue(), paquet, texte);
+    revalidatePath("/jeux");
+    return carte;
+  });
+}
+
+export async function actionRetirerCarte(carteId: string): Promise<EtatJeu> {
+  return tenter(async () => {
+    await retirerCarte(await quiJoue(), carteId);
+    revalidatePath("/jeux");
+  });
+}
+
+export async function actionCartesDeLaBande(
+  paquet: string,
+): Promise<{ erreur: string | null; valeur?: CarteMaison[] }> {
+  return tenter(async () => cartesDeLaBande(await quiJoue(), paquet));
 }

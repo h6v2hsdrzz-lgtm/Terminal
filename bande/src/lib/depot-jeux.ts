@@ -4,6 +4,7 @@ import { prisma } from "./db";
 import { jourDeLaBande } from "./dates";
 import { jeuParCle } from "./jeux/catalogue";
 import { classement, crediter } from "./jeux/recompense";
+import { LONGUEUR_CARTE, MAX_CARTES, type CarteMaison, type FinDePartie, type Partie } from "./jeux/types";
 import { ErreurMetier } from "./depot";
 import { initialesDeLaBande } from "./initiales";
 
@@ -20,25 +21,8 @@ import { initialesDeLaBande } from "./initiales";
  * bien à la bande de celui qui écrit. C'est ce qui remplace la RLS du plan.
  */
 
-export type Joueur = {
-  membreId: string;
-  pseudo: string;
-  teinte: number;
-  initiales: string;
-  avatar: string | null;
-  points: number;
-  sobre: boolean;
-  ordre: number;
-};
-
-export type Partie = {
-  id: string;
-  jeu: string;
-  mode: string;
-  commenceeLe: string;
-  finie: boolean;
-  joueurs: Joueur[];
-};
+export type { CarteMaison, FinDePartie, Joueur, Partie } from "./jeux/types";
+export { LONGUEUR_CARTE, MAX_CARTES } from "./jeux/types";
 
 async function bandeDe(membreId: string): Promise<string | null> {
   const membre = await prisma.membre.findUnique({
@@ -200,8 +184,6 @@ export async function enregistrerManche(
   });
 }
 
-export type FinDePartie = { membreId: string; place: number; points: number }[];
-
 /**
  * Finir une partie, et convertir ses points en points d'application.
  *
@@ -362,4 +344,87 @@ export async function historiqueParties(membreId: string, limite = 5) {
     finieLe: p.finieLe!.toISOString(),
     gagnant: p.scores[0] ? (parId.get(p.scores[0].membreId) ?? null) : null,
   }));
+}
+
+// ── Les cartes que la bande écrit ───────────────────────────────────────────
+
+/**
+ * Le paquet « Nos potes », et les affirmations maison.
+ *
+ * C'est le seul contenu de jeu qui vit en base : il n'appartient qu'à cette
+ * bande, et il change en jouant. Tout le reste est une constante du code.
+ *
+ * **Le droit de retrait s'applique ici comme ailleurs** : n'importe qui de la
+ * bande peut retirer une carte, sans se justifier. Le plan est explicite —
+ * « si un contenu gêne celui qu'il vise, il part, point » — et une carte qui
+ * fait deviner un pote est exactement le genre de contenu visé.
+ */
+export async function cartesDeLaBande(membreId: string, paquet = "potes"): Promise<CarteMaison[]> {
+  const groupeId = await bandeDe(membreId);
+  if (!groupeId) return [];
+  const lignes = await prisma.carteBande.findMany({
+    where: { groupeId, paquet },
+    orderBy: { creeeLe: "desc" },
+  });
+  return lignes.map((l) => ({
+    id: l.id,
+    texte: l.texte,
+    parQui: l.membreId,
+    creeeLe: l.creeeLe.toISOString(),
+  }));
+}
+
+/**
+ * Ajouter une carte, et **rendre la ligne créée**.
+ *
+ * Rendre `void` obligeait l'écran à inventer un identifiant local pour
+ * l'affichage optimiste ; retirer cette carte-là juste après envoyait au
+ * serveur un identifiant qui n'existait pas, la suppression ne faisait rien, et
+ * la carte revenait au rechargement. C'est le défaut qu'un test a attrapé.
+ */
+export async function ajouterCarte(
+  membreId: string,
+  paquet: string,
+  texte: string,
+): Promise<CarteMaison> {
+  const propre = texte.trim().replace(/\s+/g, " ");
+  if (propre.length < 2) throw new ErreurMetier("Il faut écrire quelque chose.");
+  if (propre.length > LONGUEUR_CARTE) {
+    // Une carte trop longue ne tient pas sur un écran posé sur un front.
+    throw new ErreurMetier(`${LONGUEUR_CARTE} caractères au maximum.`);
+  }
+  const groupeId = await bandeDe(membreId);
+  if (!groupeId) throw new ErreurMetier("Session inconnue.");
+
+  const combien = await prisma.carteBande.count({ where: { groupeId, paquet } });
+  if (combien >= MAX_CARTES) throw new ErreurMetier("Le paquet est plein.");
+
+  // Deux fois la même carte n'ajoute rien au paquet et se remarque en jouant.
+  const deja = await prisma.carteBande.findFirst({
+    where: { groupeId, paquet, texte: { equals: propre, mode: "insensitive" } },
+    select: { id: true },
+  });
+  if (deja) throw new ErreurMetier("Elle y est déjà.");
+
+  const ligne = await prisma.carteBande.create({
+    data: { groupeId, paquet, texte: propre, membreId },
+  });
+  return {
+    id: ligne.id,
+    texte: ligne.texte,
+    parQui: ligne.membreId,
+    creeeLe: ligne.creeeLe.toISOString(),
+  };
+}
+
+/** Le droit de retrait : n'importe qui de la bande, sans justification. */
+export async function retirerCarte(membreId: string, carteId: string): Promise<void> {
+  const groupeId = await bandeDe(membreId);
+  if (!groupeId) throw new ErreurMetier("Session inconnue.");
+  const carte = await prisma.carteBande.findFirst({
+    where: { id: carteId, groupeId },
+    select: { id: true },
+  });
+  if (!carte) throw new ErreurMetier("Cette carte n'existe pas.");
+  await prisma.carteBande.delete({ where: { id: carte.id } });
 }

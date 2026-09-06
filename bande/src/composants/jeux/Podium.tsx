@@ -5,7 +5,7 @@ import { motion } from "motion/react";
 
 import { Avatar } from "@/composants/Avatar";
 import { RESSORT } from "@/lib/mouvement";
-import type { Joueur } from "@/lib/depot-jeux";
+import type { Joueur } from "@/lib/jeux/types";
 
 /**
  * La fin de partie.

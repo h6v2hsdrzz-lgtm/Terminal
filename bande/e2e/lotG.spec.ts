@@ -151,3 +151,55 @@ test("une partie d'une autre bande est introuvable, pas refusée", async ({ page
     await expect(page.getByText(/could not be found/i)).toHaveCount(0);
   }
 });
+
+test("« Devine qui je suis » se joue au doigt quand le capteur n'est pas là", async ({ page }) => {
+  await entrer(page, "Momo");
+  await tableRase(page);
+
+  await page.getByRole("button", { name: /Devine qui je suis/ }).first().click();
+  await page.getByRole("button", { name: /^Lancer Devine qui je suis$/ }).click();
+  await page.waitForURL(/\/jeux\/.+/);
+
+  // Le choix du paquet, roulette comprise.
+  await expect(page.getByRole("button", { name: /Roulette/ })).toBeVisible();
+  await page.getByRole("button", { name: /Rap FR/ }).click();
+  await page.getByRole("button", { name: "Choisir ce paquet" }).click();
+
+  // La consigne dit les deux commandes : l'inclinaison ET le doigt.
+  await expect(page.getByText(/Pose le téléphone sur ton front/)).toBeVisible();
+  await expect(page.getByText(/à droite trouvé, à gauche passer/)).toBeVisible();
+
+  await page.getByRole("button", { name: /Prêt — 60 secondes/ }).click();
+
+  // Les zones tactiles marchent sans capteur : c'est ce qui garantit que le
+  // jeu démarre le soir venu, quoi qu'il arrive.
+  await page.getByRole("button", { name: "Carte trouvée" }).click();
+  await page.getByRole("button", { name: "Carte trouvée" }).click();
+  await page.getByRole("button", { name: "Passer cette carte" }).click();
+
+  // Le récap arrive à la fin du chrono ; on n'attend pas soixante secondes,
+  // donc on vérifie que le compte est tenu dans la barre après la manche.
+  await expect(page.getByLabel("Carte trouvée")).toBeVisible();
+});
+
+test("le paquet « Nos potes » s'écrit et se défait sur place", async ({ page }) => {
+  await entrer(page, "Momo");
+  await tableRase(page);
+  await page.getByRole("button", { name: /Devine qui je suis/ }).first().click();
+  await page.getByRole("button", { name: /^Lancer Devine qui je suis$/ }).click();
+  await page.waitForURL(/\/jeux\/.+/);
+
+  const champ = page.getByLabel("Ajouter une carte au paquet Nos potes");
+  const nom = `Le voisin du ${Date.now()}`.slice(0, 40);
+  await champ.fill(nom);
+  await page.getByRole("button", { name: "Ajouter", exact: true }).click();
+  await expect(page.getByRole("button", { name: new RegExp(nom) })).toBeVisible();
+
+  // Le droit de retrait : un tap, sans justification, sans confirmation.
+  await page.getByRole("button", { name: new RegExp(nom) }).click();
+  await expect(page.getByRole("button", { name: new RegExp(nom) })).toHaveCount(0);
+
+  // Et il tient au rechargement : la carte est bien partie de la base.
+  await page.reload({ waitUntil: "networkidle" });
+  await expect(page.getByRole("button", { name: new RegExp(nom) })).toHaveCount(0);
+});
