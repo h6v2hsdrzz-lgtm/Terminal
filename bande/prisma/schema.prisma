@@ -33,6 +33,7 @@ model Groupe {
   etiquettes   Etiquette[]
   parties      Partie[]
   cartes       CarteBande[]
+  pouls        Pouls[]
 
   @@map("bande_groupes")
 }
@@ -71,6 +72,7 @@ model Membre {
   reactions    Reaction[]
   commentaires Commentaire[]
   capsules     Capsule[]
+  pouls        Pouls[]
 
   @@unique([groupeId, pseudo])
   @@index([groupeId])
@@ -412,4 +414,33 @@ model CarteBande {
 
   @@index([groupeId, paquet])
   @@map("bande_cartes")
+}
+
+/// Un pouls : un relevé express, plusieurs fois par jour.
+///
+/// Le check-in complet reste **une fois par jour** — c'est le rituel, et le
+/// diluer le tuerait. Le pouls est autre chose : deux curseurs, deux taps,
+/// aucun texte, autant de fois qu'on veut. Il existe parce qu'un graphique de
+/// la journée en cours n'a rien à tracer quand chacun ne pose qu'un point.
+///
+/// **Il ne rapporte aucun point.** Sinon la façon la plus rapide de monter de
+/// niveau serait d'en poser quarante en attendant le bus.
+///
+/// La colonne s'appelle `rire` et non `calme` : la table est neuve, elle n'a
+/// pas à porter le vocabulaire d'avant le lot A.
+model Pouls {
+  id       String   @id @default(cuid())
+  groupeId String   @map("groupe_id")
+  membreId String   @map("membre_id")
+  /// Jour de la bande, ISO `AAAA-MM-JJ` — la soirée du 4 englobe 1 h du matin.
+  jour     String
+  rire     Int
+  energie  Int
+  poseA    DateTime @default(now()) @map("pose_a")
+
+  groupe Groupe @relation(fields: [groupeId], references: [id], onDelete: Cascade)
+  membre Membre @relation(fields: [membreId], references: [id], onDelete: Cascade)
+
+  @@index([groupeId, jour])
+  @@map("bande_pouls")
 }

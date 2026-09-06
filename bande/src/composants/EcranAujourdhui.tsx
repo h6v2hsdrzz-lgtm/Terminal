@@ -3,21 +3,21 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 
-import { Avatar } from "./Avatar";
 import { Carte, TitreSection } from "./Carte";
 import { CarteEntree } from "./CarteEntree";
 import { BoiteMedias } from "./BoiteMedias";
 import { BoiteVocale } from "./BoiteVocale";
 import { ChampEtiquettes } from "./ChampEtiquettes";
 import { CurseurDiscret } from "./CurseurDiscret";
-import { FigureDuJour } from "./FigureDuJour";
+import { BoitePouls } from "./BoitePouls";
 import { BoutonSceller } from "./BoutonSceller";
+import { GraphiquePouls } from "./GraphiquePouls";
+import type { Cadre, Pouls } from "@/lib/pouls";
 import { CurseurJoie } from "./CurseurJoie";
 import { MessageErreur } from "./Champ";
 import { VisageJoie } from "./VisageJoie";
 import { actionPoserJournee, actionPoserJourneeSimple } from "@/lib/actions";
 import { RESSORT, retard } from "@/lib/mouvement";
-import { figure, lireFigure } from "@/lib/figure";
 import { ETAT_INITIAL } from "@/lib/formulaire";
 import { garderEnAttente, lireEnAttente, oublierAttente, sAbonnerAttente, yaUneAttente } from "@/lib/attente";
 import { enTexteLong } from "@/lib/dates";
@@ -42,23 +42,6 @@ import type { Annuaire, Entree, Etiquette, Profil } from "@/lib/types";
  * propre verbe, et le tour est différent selon qu'il reste une personne ou
  * plusieurs.
  */
-function phraseManquants(manquants: Profil[], moi: string): string {
-  const moiDedans = manquants.some((p) => p.id === moi);
-  const autres = manquants.filter((p) => p.id !== moi).map((p) => p.pseudo);
-
-  // « Toi et Sam et Samy » : une énumération prend des virgules, et « et »
-  // seulement devant le dernier.
-  const enumerer = (noms: string[]) =>
-    noms.length <= 1 ? (noms[0] ?? "") : `${noms.slice(0, -1).join(", ")} et ${noms.at(-1)}`;
-
-  if (moiDedans && autres.length === 0) return "Il ne manque plus que toi.";
-  // « Toi » entre dans l'énumération plutôt que d'être collé devant : à deux,
-  // c'est « Toi et Sam » ; à trois, « Toi, Sam et Samy ».
-  if (moiDedans) return `${enumerer(["Toi", ...autres])} n'avez pas encore posé votre journée.`;
-  return autres.length === 1
-    ? `${autres[0]} n'a pas encore posé sa journée.`
-    : `${enumerer(autres)} n'ont pas encore posé leur journée.`;
-}
 
 export function EcranAujourdhui({
   jour,
@@ -70,6 +53,10 @@ export function EcranAujourdhui({
   serieCollective,
   revelerApresPost,
   etiquettesConnues,
+  pouls,
+  dernierPouls,
+  joursSemaine,
+  cadrePouls,
 }: {
   jour: string;
   nomBande: string;
@@ -82,6 +69,13 @@ export function EcranAujourdhui({
   revelerApresPost: boolean;
   /** Celles que la bande a déjà posées, pour les proposer plutôt que les faire retaper. */
   etiquettesConnues: Etiquette[];
+  /** Les pouls de la bande sur les sept derniers jours. */
+  pouls: Pouls[];
+  /** Le dernier pouls de la personne, pour préremplir les curseurs. */
+  dernierPouls: { rire: number; energie: number } | null;
+  /** Les sept derniers jours, du plus ancien au plus récent. */
+  joursSemaine: string[];
+  cadrePouls: Cadre;
 }) {
   const [etat, setEtat] = useState(ETAT_INITIAL);
   const [enCours, demarrer] = useTransition();
@@ -166,32 +160,6 @@ export function EcranAujourdhui({
   // formulaire : corriger sa journée ne doit pas re-flouter celles des autres,
   // qui sont déjà arrivées en clair.
   const voile = revelerApresPost && monEntree === null;
-
-  // Sous le voile, les notes des autres valent zéro — elles ont été vidées par
-  // le serveur. Il n'y a donc pas de moyenne à calculer, et l'écran n'en
-  // affiche pas non plus.
-  const moyenne = voile || entreesDuJour.length === 0
-    ? null
-    : entreesDuJour.reduce((s, e) => s + e.joie, 0) / entreesDuJour.length;
-
-  const manquants = annuaire.profils.filter(
-    (p) => !entreesDuJour.some((e) => e.profil === p.id),
-  );
-
-  /**
-   * La figure du jour.
-   *
-   * Sous le voile, les entrées reçues ont été vidées par le serveur : les
-   * valeurs de cette table ne veulent rien dire, et `masquee` les fait ignorer.
-   * Ce n'est donc pas un flou par-dessus des notes envoyées, c'est un dessin
-   * fait sans elles.
-   */
-  const notes = new Map<string, number | null>(
-    annuaire.profils.map((p) => [p.id, entreesDuJour.find((e) => e.profil === p.id)?.joie ?? null]),
-  );
-  const lectureFigure = voile
-    ? null
-    : lireFigure(figure([...notes].map(([profil, joie]) => ({ profil, joie })), 100));
 
   /**
    * Le renvoi de la journée gardée hors ligne.
@@ -443,70 +411,33 @@ export function EcranAujourdhui({
         )}
       </AnimatePresence>
 
-      {/* ── La bande ────────────────────────────────────────────────── */}
+      {/**
+        * ── Le pouls de la bande ─────────────────────────────────────────
+        *
+        * À la place de la bulle « La bande », qui redisait ce que la figure du
+        * jour montre déjà — et la figure, elle, est en tête du FIL, qui est la
+        * première page. La répéter ici occupait un demi-écran pour rien.
+        *
+        * À la place : deux curseurs pour poser un pouls, et la courbe qu'ils
+        * remplissent. C'est la seule chose de cet écran qui change plusieurs
+        * fois dans la journée.
+        */}
       <section className="mt-7">
-        <TitreSection>La bande</TitreSection>
-        <Carte className="p-4">
-          <div className="flex items-center gap-4">
-            {/* La figure du jour. Sous le voile elle n'est pas floutée : elle est
-                dessinée sans les notes, qui ne descendent donc pas dans la page. */}
-            <FigureDuJour
-              profils={annuaire.profils}
-              notes={notes}
-              taille={158}
-              masquee={voile}
-              presents={entreesDuJour.map((e) => e.profil)}
-            />
-
-            <div className="min-w-0 flex-1">
-              {!voile && moyenne !== null ? (
-                <>
-                  <div className="flex items-baseline gap-1">
-                    <span className="chiffres text-[32px]" style={{ color: "var(--joie-encre)" }}>
-                      {moyenne.toFixed(1).replace(".", ",")}
-                    </span>
-                    <span className="text-[12px] text-encre-3">/ 10</span>
-                  </div>
-                  <p className="text-[12px] text-encre-3">humeur du jour</p>
-                  {lectureFigure && (
-                    <p className="mt-2 text-[13px] leading-snug text-encre-2">{lectureFigure}</p>
-                  )}
-                </>
-              ) : (
-                <p className="text-[13px] leading-snug text-encre-3">
-                  {voile
-                    ? entreesDuJour.length > 0
-                      ? "Les sommets vides sont ceux qui ont posé. Ils se remplissent quand tu poses la tienne."
-                      : "La figure du jour se dessine quand tu as posé la tienne."
-                    : "Personne n'a encore posé sa journée."}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="mt-3 flex items-center gap-3 border-t border-trait pt-3">
-            {annuaire.profils.map((profil) => {
-              const aPoste = entreesDuJour.some((e) => e.profil === profil.id);
-              // Avant d'avoir posé, savoir qui a déjà posté est une information
-              // neutre : ça ne dit rien de leur journée, seulement qu'ils sont
-              // passés. C'est le chiffre qu'on cache, pas la présence.
-              return (
-                <div key={profil.id} className="flex flex-col items-center gap-1.5">
-                  <Avatar profil={profil} taille={40} anneau={aPoste} attenue={!aPoste} />
-                  <span className={`text-[12px] ${aPoste ? "text-encre-2" : "text-encre-3"}`}>
-                    {profil.id === moi.id ? "toi" : profil.pseudo}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {manquants.length > 0 && (
-            <p className="mt-3 text-[13px] text-encre-3">
-              {phraseManquants(manquants, moi.id)}
-            </p>
-          )}
+        <TitreSection>Le pouls</TitreSection>
+        <Carte className="mb-2.5 p-4">
+          <p className="mb-3 text-[13px] leading-snug text-encre-3">
+            Deux curseurs, deux taps, autant de fois que tu veux dans la journée.
+            Ça ne remplace pas ta journée et ça ne rapporte aucun point.
+          </p>
+          <BoitePouls dernier={dernierPouls} />
         </Carte>
+        <GraphiquePouls
+          pouls={pouls}
+          profils={annuaire.profils}
+          aujourdhui={jour}
+          jours={joursSemaine}
+          cadreInitial={cadrePouls}
+        />
       </section>
 
       {/* ── Le fil du jour ──────────────────────────────────────────── */}

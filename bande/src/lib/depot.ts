@@ -1213,3 +1213,63 @@ export async function supprimerCapsule(membreId: string, capsuleId: string) {
   if (capsule.membreId !== membreId) throw new ErreurMetier("Cette capsule n'est pas la tienne.");
   await prisma.capsule.delete({ where: { id: capsuleId } });
 }
+
+// ── Le pouls ────────────────────────────────────────────────────────────────
+
+export { REPOS as REPOS_POULS } from "./pouls";
+
+/**
+ * Poser un pouls.
+ *
+ * **Un anti-rebond de cinq minutes**, et ce n'est pas de la prudence : les
+ * deux curseurs sont à portée de pouce sur l'écran d'accueil, et sans ça une
+ * poche fait quarante relevés identiques qui écrasent la courbe de la journée.
+ * Un pouls reposté dans les cinq minutes REMPLACE le précédent — c'est ce
+ * qu'on veut quand on corrige un curseur qu'on a mal lâché.
+ */
+export async function poserPouls(
+  membreId: string,
+  groupeId: string,
+  jour: string,
+  valeurs: { rire: number; energie: number },
+) {
+  const { borner, REPOS } = await import("./pouls");
+  const dernier = await prisma.pouls.findFirst({
+    where: { groupeId, membreId, jour },
+    orderBy: { poseA: "desc" },
+  });
+
+  const data = {
+    rire: borner(valeurs.rire),
+    energie: borner(valeurs.energie),
+    poseA: new Date(),
+  };
+
+  if (dernier && Date.now() - dernier.poseA.getTime() < REPOS) {
+    await prisma.pouls.update({ where: { id: dernier.id }, data });
+    return;
+  }
+  await prisma.pouls.create({ data: { ...data, groupeId, membreId, jour } });
+}
+
+/**
+ * Les pouls de la bande, sur une fenêtre.
+ *
+ * Bornée par `depuis` : le graphique ne montre jamais plus de sept jours, et
+ * tout charger pour n'en dessiner sept serait la même erreur que celle notée
+ * dans l'audit technique.
+ */
+export async function poulsDeLaBande(groupeId: string, depuis: string) {
+  const lignes = await prisma.pouls.findMany({
+    where: { groupeId, jour: { gte: depuis } },
+    orderBy: { poseA: "asc" },
+    select: { membreId: true, jour: true, rire: true, energie: true, poseA: true },
+  });
+  return lignes.map((l) => ({
+    membreId: l.membreId,
+    jour: l.jour,
+    rire: l.rire,
+    energie: l.energie,
+    poseA: l.poseA.toISOString(),
+  }));
+}

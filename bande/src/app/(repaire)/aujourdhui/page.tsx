@@ -1,5 +1,6 @@
 import { EcranAujourdhui } from "@/composants/EcranAujourdhui";
-import { etiquettesDeLaBande, masquerEntree } from "@/lib/depot";
+import { etiquettesDeLaBande, masquerEntree, poulsDeLaBande } from "@/lib/depot";
+import { cadreAutomatique } from "@/lib/pouls";
 import { entreesDeLaBande, exigerContexte } from "@/lib/repaire";
 import { decaler, jourDeLaBande } from "@/lib/dates";
 
@@ -35,6 +36,17 @@ export default async function Page() {
     ? duJour.map((e) => (e.profil === contexte.moi.id ? e : masquerEntree(e)))
     : duJour;
 
+  /**
+   * Les pouls, sur sept jours seulement.
+   *
+   * Le graphique n'en montre jamais plus, et tout charger pour n'en dessiner
+   * sept serait exactement le défaut relevé dans l'audit technique.
+   */
+  const joursSemaine = Array.from({ length: 7 }, (_, i) => decaler(jour, i - 6));
+  const pouls = await poulsDeLaBande(contexte.groupe.id, joursSemaine[0]);
+  const miens = pouls.filter((p) => p.membreId === contexte.moi.id);
+  const dernierPouls = miens.length > 0 ? miens[miens.length - 1] : null;
+
   return (
     <EcranAujourdhui
       jour={jour}
@@ -46,6 +58,10 @@ export default async function Page() {
       serieCollective={serieCollective(new Set(entrees.map((e) => e.jour)), jour)}
       revelerApresPost={contexte.groupe.revelerApresPost}
       etiquettesConnues={etiquettesConnues}
+      pouls={pouls}
+      dernierPouls={dernierPouls ? { rire: dernierPouls.rire, energie: dernierPouls.energie } : null}
+      joursSemaine={joursSemaine}
+      cadrePouls={cadreAutomatique(pouls, jour)}
     />
   );
 }

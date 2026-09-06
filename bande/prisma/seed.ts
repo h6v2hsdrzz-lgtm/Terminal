@@ -457,7 +457,48 @@ async function main() {
   console.log(`Bande « ${groupe.nom} » — code ${CODE_BANDE}`);
   const nbReactions = await prisma.reaction.count({ where: { entree: { groupeId: groupe.id } } });
   const nbCommentaires = await prisma.commentaire.count({ where: { entree: { groupeId: groupe.id } } });
-  console.log(`${lignes.length} journées sur ${JOURS} jours, ${PROFILS.length} membres, ${DECLENCHEURS.length} déclencheurs.`);
+  /**
+   * Les pouls des trois derniers jours.
+   *
+   * Seulement trois : le graphique n'en montre jamais plus de sept, et une
+   * année de relevés express n'aiderait qu'à ralentir le seed. Trois à six par
+   * personne et par jour, aux heures où l'on sort son téléphone — et une pente
+   * dans la journée, sinon la courbe est une ligne droite qui ne prouve rien.
+   */
+  const poulsAEcrire: {
+    groupeId: string;
+    membreId: string;
+    jour: string;
+    rire: number;
+    energie: number;
+    poseA: Date;
+  }[] = [];
+  for (let recul = 2; recul >= 0; recul--) {
+    const jourPouls = decaler(aujourdhui, -recul);
+    for (const membre of membres) {
+      const combien = 3 + Math.floor(tirage() * 4);
+      const base = 4 + Math.floor(tirage() * 4);
+      for (let i = 0; i < combien; i++) {
+        const heure = 8 + Math.round((i / Math.max(1, combien - 1)) * 13);
+        const quand = new Date(`${jourPouls}T${String(heure).padStart(2, "0")}:${
+          String(Math.floor(tirage() * 60)).padStart(2, "0")
+        }:00`);
+        poulsAEcrire.push({
+          groupeId: groupe.id,
+          membreId: membre.id,
+          jour: jourPouls,
+          // Le rire monte dans la journée, l'énergie descend. C'est faux pour
+          // tout le monde, mais ça donne deux courbes qui ne se superposent pas.
+          rire: Math.min(10, Math.max(1, base + i)),
+          energie: Math.min(10, Math.max(1, base + 3 - i)),
+          poseA: quand,
+        });
+      }
+    }
+  }
+  await prisma.pouls.createMany({ data: poulsAEcrire });
+
+  console.log(`${lignes.length} journées sur ${JOURS} jours, ${PROFILS.length} membres, ${DECLENCHEURS.length} déclencheurs, ${poulsAEcrire.length} pouls.`);
   console.log(`${posees} photos, ${vocales} notes vocales, ${nbReactions} réactions, ${nbCommentaires} commentaires.`);
   // Les codes sont aussi écrits sur disque : sans ça, rejouer le peuplement
   // fait perdre les précédents, et on se retrouve à ne plus pouvoir se

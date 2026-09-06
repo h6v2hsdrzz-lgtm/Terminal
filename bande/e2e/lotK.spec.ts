@@ -31,6 +31,13 @@ async function bandeNeuve(page: Page, nom: string) {
   await page.waitForURL("/");
 }
 
+async function entrer(page: Page, pseudo: string) {
+  await page.goto("/reprendre");
+  await page.fill("#reprise", codeDe(pseudo));
+  await page.getByRole("button", { name: /reconnecter/i }).click();
+  await page.waitForURL("/");
+}
+
 async function quitter(page: Page, nom: string) {
   await page.goto("/reglages", { waitUntil: "domcontentloaded" }).catch(() => {});
   await page.getByText("Quitter la bande", { exact: true }).click().catch(() => {});
@@ -138,6 +145,57 @@ test("« Sceller quelque chose » est un vrai bouton, et sa feuille s'ouvre sur 
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.getByRole("button", { name: "Fermer" }).click({ position: { x: 10, y: 10 } });
     await expect(page.getByRole("dialog")).toHaveCount(0);
+  } finally {
+    await quitter(page, nom);
+  }
+});
+
+test("le pouls : deux curseurs, une courbe, et aucun point d'app", async ({ page }) => {
+  await entrer(page, "Momo");
+  await page.goto("/aujourdhui", { waitUntil: "networkidle" });
+
+  // La bulle « La bande » a laissé la place au pouls.
+  await expect(page.getByText("Le pouls")).toBeVisible();
+  await expect(page.getByText(/ne rapporte aucun point/)).toBeVisible();
+
+  // Deux curseurs, et le bouton dit ce qu'il fait.
+  await expect(page.locator("#pouls-rire")).toBeVisible();
+  await expect(page.locator("#pouls-énergie")).toBeVisible();
+
+  // Le graphique : deux onglets, pas six courbes empilées.
+  const onglets = page.getByRole("tab");
+  await expect(onglets).toHaveCount(2);
+  await expect(page.getByRole("img", { name: /Évolution du rire/ })).toBeVisible();
+  await page.getByRole("tab", { name: "Énergie" }).click();
+  await expect(page.getByRole("img", { name: /Évolution de l'énergie/ })).toBeVisible();
+
+  // La valeur au tap, jamais au survol : on est sur un téléphone.
+  await expect(page.getByText("Touche un point pour lire sa valeur.")).toBeVisible();
+  // Le premier cercle du GRAPHIQUE, pas le premier de la page : l'icône de
+  // l'appareil photo en contient un aussi.
+  await page
+    .getByRole("img", { name: /Évolution/ })
+    .locator("circle")
+    .first()
+    .click({ force: true });
+  await expect(page.getByText(/·.*·/)).toBeVisible();
+
+  // Et poser un pouls marche.
+  await page.locator("#pouls-rire").fill("9");
+  await page.getByRole("button", { name: "Poser un pouls" }).click();
+  await expect(page.getByRole("button", { name: "Posé ✓" })).toBeVisible();
+});
+
+test("sans aucun pouls du jour, le graphique bascule sur sept jours", async ({ page }) => {
+  test.slow();
+  const nom = `Vide ${Date.now().toString(36)}`;
+  try {
+    await bandeNeuve(page, nom);
+    await page.goto("/aujourdhui", { waitUntil: "networkidle" });
+    // Jamais d'écran vide : c'est le cas normal des premières semaines.
+    await expect(page.getByRole("button", { name: "aujourd'hui" })).toBeVisible();
+    await expect(page.getByText(/Pas encore de pouls cette semaine/)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ça a cassé" })).toHaveCount(0);
   } finally {
     await quitter(page, nom);
   }

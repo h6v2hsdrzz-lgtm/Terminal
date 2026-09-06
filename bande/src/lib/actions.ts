@@ -11,6 +11,7 @@ import {
   commenter,
   creerBande,
   poserJournee,
+  poserPouls,
   reglerDevoilement,
   rejoindreBande,
   renommerBande,
@@ -494,4 +495,19 @@ export async function actionQuitterLaBande(_precedent: Etat, donnees: FormData):
 
   if (etat.erreur) return etat;
   redirect("/bienvenue");
+}
+
+/**
+ * Poser un pouls : deux curseurs, deux taps, aucun texte.
+ *
+ * Il ne rafraîchit que l'accueil et le check-in — un pouls ne change ni les
+ * souvenirs, ni le profil, et il ne rapporte aucun point (voir le schéma).
+ */
+export async function actionPoserPouls(rire: number, energie: number): Promise<Etat> {
+  return tenter(async () => {
+    const { membreId, contexte } = await quiAgit();
+    await poserPouls(membreId, contexte.groupe.id, jourDeLaBande(), { rire, energie });
+    revalidatePath("/aujourdhui");
+    revalidatePath("/");
+  });
 }
