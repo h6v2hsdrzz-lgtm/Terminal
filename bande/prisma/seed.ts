@@ -410,6 +410,31 @@ async function main() {
         texte: "Pour dans un an : est-ce qu'on va toujours au même bar ?",
         ouvrirLe: decaler(aujourdhui, 300),
       },
+      // Quatre scellés en attente, pour que l'empilement du fil se voie : au
+      // delà de deux, la pile se replie en une seule bulle.
+      {
+        groupeId: groupe.id, membreId: membres[2].id,
+        texte: "Une photo de ce soir, à rouvrir quand on aura oublié.",
+        genre: "photo",
+        octets: imageFactice(720, 540, TEINTES_PHOTO[2]),
+        mime: "image/png",
+        apercu: imageFactice(32, 32, TEINTES_PHOTO[2]),
+        ouvrirLe: decaler(aujourdhui, 45),
+      },
+      {
+        groupeId: groupe.id, membreId: membres[0].id,
+        texte: "Ce que j'avais à dire ce jour-là.",
+        genre: "audio",
+        octets: sonFactice(9000, 4242).octets,
+        mime: "audio/wav",
+        duree: 9000,
+        ouvrirLe: decaler(aujourdhui, 120),
+      },
+      {
+        groupeId: groupe.id, membreId: membres[3].id,
+        texte: "Rendez-vous dans deux ans.",
+        ouvrirLe: decaler(aujourdhui, 730),
+      },
     ],
   });
 

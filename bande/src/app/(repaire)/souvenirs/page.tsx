@@ -2,7 +2,7 @@ import Image from "next/image";
 
 import { CarteEntree } from "@/composants/CarteEntree";
 import { Carte, TitreSection } from "@/composants/Carte";
-import { CapsuleTemporelle } from "@/composants/CapsuleTemporelle";
+import { Scelles } from "@/composants/Scelles";
 import { MurDesFigures } from "@/composants/MurDesFigures";
 import { Retrospective } from "@/composants/Retrospective";
 import Link from "next/link";
@@ -130,7 +130,7 @@ export default async function Page({
         )}
       </section>
 
-      <CapsuleTemporelle capsules={capsules} aujourdhui={aujourdhui} moi={contexte.moi.id} />
+      <Scelles capsules={capsules} aujourdhui={aujourdhui} moi={contexte.moi.id} />
 
       <section className="mt-7">
         <TitreSection action={<span className="text-[13px] text-encre-3">{moments.length}</span>}>

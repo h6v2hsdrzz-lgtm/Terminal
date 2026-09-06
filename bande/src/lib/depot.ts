@@ -1038,12 +1038,21 @@ export type Capsule = {
   id: string;
   auteur: string;
   auteurId: string;
+  genre: "mot" | "photo" | "video" | "audio";
   ouvrirLe: string;
   creeLe: string;
   /** Absent tant que la date n'est pas venue : le serveur ne l'envoie pas. */
   texte: string | null;
+  /** L'adresse du contenu, uniquement une fois ouvert. */
+  url: string | null;
+  /** L'aperçu flouté, lui, se montre avant : c'est tout l'intérêt du sablier. */
+  apercu: string | null;
+  duree: number | null;
   mienne: boolean;
 };
+
+const GENRES_SCELLE = ["mot", "photo", "video", "audio"] as const;
+export type GenreScelle = (typeof GENRES_SCELLE)[number];
 
 export async function ecrireCapsule(
   membreId: string,
@@ -1051,6 +1060,19 @@ export async function ecrireCapsule(
   texte: string,
   ouvrirLe: string,
   aujourdhui: string,
+  contenu?: {
+    genre: GenreScelle;
+    octets: Uint8Array<ArrayBuffer>;
+    mime: string;
+    /**
+     * L'aperçu est flouté À LA FABRICATION, dans le navigateur, avant l'envoi.
+     * Envoyer l'image nette et la flouter en CSS reviendrait à la donner et à
+     * demander poliment de ne pas regarder — c'est exactement l'erreur que le
+     * voile du fil a déjà coûtée une fois.
+     */
+    apercu: Uint8Array<ArrayBuffer>;
+    duree: number | null;
+  },
 ) {
   const propre = texte.trim();
   if (!propre) throw new ErreurMetier("Écris quelque chose à ouvrir plus tard.");
@@ -1064,7 +1086,15 @@ export async function ecrireCapsule(
   }
 
   await prisma.capsule.create({
-    data: { groupeId, membreId, texte: propre.slice(0, LONGUEUR_CAPSULE), ouvrirLe },
+    data: {
+      groupeId, membreId, ouvrirLe,
+      genre: contenu?.genre ?? "mot",
+      texte: propre.slice(0, LONGUEUR_CAPSULE),
+      octets: contenu?.octets ?? null,
+      mime: contenu?.mime ?? null,
+      apercu: contenu?.apercu ?? null,
+      duree: contenu?.duree ?? null,
+    },
   });
 }
 
@@ -1076,23 +1106,68 @@ export async function listerCapsules(
   const lignes = await prisma.capsule.findMany({
     where: { groupeId },
     orderBy: { ouvrirLe: "asc" },
+    // Jamais `octets` : ils passent par une route, et un scellé vidéo dans une
+    // liste ferait transiter des méga-octets pour afficher un sablier.
     select: {
-      id: true, ouvrirLe: true, creeLe: true, texte: true, membreId: true,
+      id: true, genre: true, ouvrirLe: true, creeLe: true, texte: true,
+      duree: true, membreId: true,
       membre: { select: { pseudo: true } },
     },
   });
 
-  return lignes.map((c) => ({
-    id: c.id,
-    auteur: c.membre.pseudo,
-    auteurId: c.membreId,
-    ouvrirLe: c.ouvrirLe,
-    creeLe: c.creeLe.toISOString().slice(0, 10),
-    // Scellée : le texte ne quitte pas le serveur. Le cacher côté client
-    // reviendrait à l'envoyer et à demander poliment de ne pas regarder.
-    texte: c.ouvrirLe <= aujourdhui ? c.texte : null,
-    mienne: c.membreId === membreId,
-  }));
+  return lignes.map((c) => {
+    const ouvert = c.ouvrirLe <= aujourdhui;
+    return {
+      id: c.id,
+      auteur: c.membre.pseudo,
+      auteurId: c.membreId,
+      genre: (GENRES_SCELLE as readonly string[]).includes(c.genre)
+        ? (c.genre as GenreScelle)
+        : "mot",
+      ouvrirLe: c.ouvrirLe,
+      creeLe: c.creeLe.toISOString().slice(0, 10),
+      // Scellé : le texte ne quitte pas le serveur. Le cacher côté client
+      // reviendrait à l'envoyer et à demander poliment de ne pas regarder.
+      texte: ouvert ? c.texte : null,
+      url: ouvert && c.genre !== "mot" ? `/api/scelle/${c.id}` : null,
+      apercu: c.genre !== "mot" ? `/api/scelle/${c.id}/apercu` : null,
+      duree: c.duree,
+      mienne: c.membreId === membreId,
+    };
+  });
+}
+
+/**
+ * Les octets d'un scellé, pour les routes qui les servent.
+ *
+ * `apercu` est servi avant l'ouverture — il est déjà flouté dans les octets.
+ * Le contenu, lui, exige que la date soit venue : le contrôle est ici, pas
+ * dans l'écran, parce qu'une adresse se tape à la main.
+ */
+export async function lireScelle(membreId: string, capsuleId: string, aujourdhui: string, apercu = false) {
+  const capsule = await prisma.capsule.findUnique({
+    where: { id: capsuleId },
+    select: {
+      groupeId: true, ouvrirLe: true, mime: true,
+      octets: apercu ? undefined : true,
+      apercu: apercu ? true : undefined,
+    },
+  });
+  if (!capsule) return null;
+
+  const membre = await prisma.membre.findUnique({
+    where: { id: membreId },
+    select: { groupeId: true },
+  });
+  if (!membre || membre.groupeId !== capsule.groupeId) return null;
+
+  if (apercu) {
+    return capsule.apercu ? { mime: "image/jpeg", octets: capsule.apercu } : null;
+  }
+  // Pas encore l'heure : rien, même pour celui qui l'a scellé. Un scellé qu'on
+  // peut rouvrir soi-même n'est pas un scellé.
+  if (capsule.ouvrirLe > aujourdhui) return null;
+  return capsule.octets && capsule.mime ? { mime: capsule.mime, octets: capsule.octets } : null;
 }
 
 export async function supprimerCapsule(membreId: string, capsuleId: string) {

@@ -3,7 +3,8 @@ import Link from "next/link";
 import { CarteEntree } from "@/composants/CarteEntree";
 import { Carte, TitreSection } from "@/composants/Carte";
 import { FigureDuJour } from "@/composants/FigureDuJour";
-import { masquerEntree } from "@/lib/depot";
+import { PileScelles } from "@/composants/PileScelles";
+import { listerCapsules, masquerEntree } from "@/lib/depot";
 import { entreesDeLaBande, exigerContexte } from "@/lib/repaire";
 import { enTexteRelatif, jourDeLaBande } from "@/lib/dates";
 import type { Entree } from "@/lib/types";
@@ -44,6 +45,7 @@ export default async function Page() {
   // il y a une semaine.
   const visibles = entrees.map((e) => (masques.has(e.id) ? masquerEntree(e) : e));
 
+  const capsules = await listerCapsules(contexte.groupe.id, contexte.moi.id, aujourdhui);
   const duJour = entrees.filter((e) => e.jour === aujourdhui);
   const notes = new Map<string, number | null>(
     contexte.profils.map((p) => [p.id, duJour.find((e) => e.profil === p.id)?.joie ?? null]),
@@ -104,6 +106,8 @@ export default async function Page() {
           <span aria-hidden className="shrink-0 text-encre-3">→</span>
         </Carte>
       </Link>
+
+      <PileScelles capsules={capsules} aujourdhui={aujourdhui} />
 
       {jours.length === 0 ? (
         <Carte className="p-5">

@@ -253,11 +253,26 @@ model EntreeDeclencheur {
 /// Le texte est en clair en base : ce n'est pas un secret cryptographique, et
 /// prétendre le contraire serait mentir. C'est une convention entre amis — le
 /// serveur ne le rend simplement pas avant la date. Le README le dit aussi.
+/// Un scellé : quelque chose qu'on s'envoie à soi-même, ou à la bande, pour
+/// plus tard. Il n'y avait que des mots ; il y a maintenant aussi des photos,
+/// des vidéos et des voix.
 model Capsule {
   id        String   @id @default(cuid())
   groupeId  String   @map("groupe_id")
   membreId  String   @map("membre_id")
+  /// « mot », « photo », « video » ou « audio ».
+  genre     String   @default("mot")
+  /// Toujours renseigné : c'est le mot pour un scellé « mot », et la légende
+  /// pour les autres. Un scellé sans un mot d'introduction ne dit rien de ce
+  /// qu'on attendait en le fermant.
   texte     String
+  /// Le contenu, pour les scellés qui en portent un.
+  octets    Bytes?
+  mime      String?
+  /// L'aperçu, déjà flouté à la fabrication — voir le commentaire de la route.
+  apercu    Bytes?
+  /// En millisecondes, pour une vidéo ou une voix.
+  duree     Int?
   /// Jour d'ouverture, ISO `AAAA-MM-JJ`, calé sur la journée de la bande.
   ouvrirLe  String   @map("ouvrir_le")
   creeLe    DateTime @default(now()) @map("cree_le")

@@ -409,12 +409,37 @@ export async function actionRetirerPhoto(mediaId: string): Promise<Etat> {
 export async function actionEcrireCapsule(_precedent: Etat, donnees: FormData): Promise<Etat> {
   return tenter(async () => {
     const { membreId, contexte } = await quiAgit();
+
+    // Le contenu est facultatif : un scellé « mot » n'en a pas. Quand il y en
+    // a un, l'aperçu est déjà flouté — le navigateur l'a réduit à trente-deux
+    // pixels avant l'envoi.
+    const fichier = donnees.get("contenu");
+    const apercu = donnees.get("apercu");
+    const genre = texte(donnees, "genre");
+    const contenu =
+      fichier instanceof File && fichier.size > 0 && genre !== "mot"
+        ? {
+            genre: (genre === "video" || genre === "audio" ? genre : "photo") as
+              | "photo"
+              | "video"
+              | "audio",
+            octets: new Uint8Array(await fichier.arrayBuffer()),
+            mime: fichier.type,
+            apercu:
+              apercu instanceof File && apercu.size > 0
+                ? new Uint8Array(await apercu.arrayBuffer())
+                : new Uint8Array(0),
+            duree: nombreFacultatif(donnees, "duree"),
+          }
+        : undefined;
+
     await ecrireCapsule(
       membreId,
       contexte.groupe.id,
       texte(donnees, "texte"),
       texte(donnees, "ouvrirLe"),
       jourDeLaBande(),
+      contenu,
     );
     rafraichirTout();
   });

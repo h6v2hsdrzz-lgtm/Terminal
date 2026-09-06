@@ -5,20 +5,22 @@
 
 ## Lot en cours
 
-**LOT B — terminé.** A et B sont faits. On enchaîne sans feu vert
+**LOT C — terminé.** A, B et C sont faits. On enchaîne sans feu vert
 intermédiaire (« enchaine tout », 6 septembre).
 
 ## Prochaine action exacte
 
-**LOT C — les scellés.** Aujourd'hui `Capsule` ne porte qu'un texte. Il faut :
-`genre` (mot/photo/video/audio), `octets Bytes?`, `mime`, `vignette Bytes?`,
-`duree` — migration additive, comme celle des médias. Puis le sablier avec
-aperçu flouté et décompte dans le fil, l'empilement au-delà de trois, et
-l'ouverture comme un événement.
+**LOT D — souvenirs, stats, rétrospective.** Trois choses :
+1. réordonner la page Souvenirs : la galerie d'abord, les stats ensuite, la
+   rétrospective en pied de page ;
+2. la rétrospective devient trois lignes repliées, pas un module qui prend
+   l'écran ;
+3. resserrer les stats : garder la courbe, l'effet des déclencheurs, la
+   synchronicité, le calendrier. Couper le reste.
 
-**Attention** : le voile du fil vide déjà les entrées ; un scellé non ouvert
-doit être vidé DE LA MÊME FAÇON côté serveur. Ne jamais envoyer le contenu
-puis le flouter en CSS.
+Les stats vivent aujourd'hui dans `src/app/(repaire)/stats/page.tsx` et ont
+leur onglet. Le plan veut les déplacer dans Souvenirs : ça libère un onglet —
+à voir si on en profite pour donner le sien aux Jeux (lot G).
 
 ### Ancienne note (lot B, fait)
 
@@ -53,6 +55,11 @@ du plan. Correspondance à la fin de ce fichier.
   → **Lieu** dans l'interface et l'export.
 - **A4** — les trois compteurs du profil (« jours d'affilée », « ton record »,
   « journées posées ») sont retirés.
+- **C** — les scellés : quatre genres (mot, photo, vidéo, voix), l'aperçu
+  flouté DANS SES OCTETS (32 px, fabriqué dans le navigateur), le décompte, le
+  sablier d'une ligne, l'empilement du fil au-delà de deux, et une entrée
+  depuis le check-in. Le contenu ne se sert pas avant la date, même à son
+  auteur.
 - **B2** — la visionneuse : pincer pour zoomer, glisser pour se déplacer,
   glisser vers le bas pour fermer, glisser sur le côté pour changer d'image,
   toucher deux fois pour poser un cœur, toucher une fois pour masquer
@@ -143,6 +150,10 @@ redéployer à chaque lot sans le redemander. **À révoquer à la fin.**
 - **Une colonne qui change sans qu'aucune journée ne bouge est invisible aux
   autres** tant qu'elle n'est pas dans `versionBande`. Vrai pour les photos,
   les notes vocales, et maintenant le pseudo et l'avatar.
+- **Écrire `.value` sur un champ contrôlé ne prévient pas React.** Un test qui
+  faisait ça croyait éprouver un refus de date : le formulaire partait avec la
+  date d'origine et le test passait à côté. `fill()` passe par les événements
+  natifs, que React écoute vraiment.
 - **Le plein écran ne peut pas garder `scroll-snap`.** Le pincement exige
   `touch-action: none`, qui tue le défilement natif. C'est le seul endroit où
   réimplémenter le geste est justifié : il n'y a plus de page derrière, donc
@@ -177,6 +188,13 @@ redéployer à chaque lot sans le redemander. **À révoquer à la fin.**
 4. HEIC : est-ce un vrai problème sur vos téléphones ?
 5. Les jeux : lesquels, vraiment ?
 
+## Reste à faire, hors lots
+
+- **C5, la notification d'ouverture.** L'ouverture est un événement à l'écran
+  (le scellé rejoint les souvenirs le jour dit), mais il n'y a pas de
+  notification poussée : elle demande des clés VAPID, un abonnement par
+  appareil et un service d'envoi. À rouvrir si la bande la réclame.
+
 ## Correspondance avec les lots de `PLAN.md`
 
 | Plan | État |
@@ -191,7 +209,7 @@ redéployer à chaque lot sans le redemander. **À révoquer à la fin.**
 | B3 prendre une photo depuis l'app | **fait** |
 | B4 stockage | **fait autrement** : PostgreSQL, place occupée affichée. Pas d'abstraction R2 |
 | B5 vidéos courtes | **fait** (8 s, pas 15 — voir question sur le poids) |
-| C scellés | **à moitié** : capsules texte seul, pas de sablier ni d'empilement |
+| C scellés | **fait** (sauf la notification d'ouverture — voir plus bas) |
 | D souvenirs / stats / rétro | ordre à revoir, stats à resserrer |
 | E points et badges | à faire — 23 badges aujourd'hui, le plan en veut 8 |
 | F lieu | à faire — les « étiquettes » existent et deviendront « Lieu » en A1 |

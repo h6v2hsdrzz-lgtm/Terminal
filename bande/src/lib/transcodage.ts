@@ -39,6 +39,7 @@
  */
 import { ArrayBufferTarget, Muxer } from "mp4-muxer";
 
+import { COTE_APERCU } from "./scelle";
 import {
   COTE_MAX_PHOTO,
   COTE_MAX_VIDEO,
@@ -305,4 +306,56 @@ export async function preparerMedia(
   return fichier.type.startsWith("video/")
     ? preparerVideo(fichier, avancement)
     : preparerPhoto(fichier);
+}
+
+
+// ── Scellés ──────────────────────────────────────────────────────────────────
+
+/**
+ * L'aperçu d'un scellé : l'image réduite à trente-deux pixels de côté.
+ *
+ * Le flou est DANS LES OCTETS, pas dans une règle CSS. Envoyer l'image nette et
+ * la flouter à l'affichage reviendrait à la donner et à demander poliment de
+ * ne pas regarder — trois clics dans les outils du navigateur suffiraient. À
+ * cette taille, il ne reste que des masses de couleur : on voit qu'il y a
+ * quelque chose, on ne voit pas quoi, et c'est exactement ce qu'un sablier
+ * doit montrer.
+ *
+ * Pour une vidéo, on prend une image du début ; pour un son, il n'y a rien à
+ * montrer et l'appelant s'en passe.
+ */
+export async function apercuScelle(source: CanvasImageSource): Promise<Blob> {
+  return versJpeg(source, COTE_APERCU, COTE_APERCU, 0.6);
+}
+
+/** Ce qu'un scellé emporte : le contenu réduit, et son aperçu illisible. */
+export type ScellePret = {
+  genre: "photo" | "video" | "audio";
+  blob: Blob;
+  apercu: Blob | null;
+  duree: number | null;
+};
+
+export async function preparerScelle(
+  fichier: File,
+  avancement?: (part: number) => void,
+): Promise<ScellePret> {
+  if (fichier.type.startsWith("audio/")) {
+    // Un son ne se réduit pas ici : il vient de l'enregistreur, qui a déjà
+    // choisi son format et sa durée.
+    return { genre: "audio", blob: fichier, apercu: null, duree: null };
+  }
+
+  const pret = await preparerMedia(fichier, avancement);
+  const image = await createImageBitmap(pret.vignette ?? pret.blob);
+  try {
+    return {
+      genre: pret.genre === "video" ? "video" : "photo",
+      blob: pret.blob,
+      apercu: await apercuScelle(image),
+      duree: pret.duree,
+    };
+  } finally {
+    image.close();
+  }
 }
