@@ -5,7 +5,11 @@
 
 ## Lot en cours
 
-**Vague 2 : lots J et K terminés.** `PLAN.md` porte maintenant la vague 2
+**Vague 2 : lots J, K et O2 terminés.** O2 (le registre) est passé avant le
+lot L parce que c'est le reproche explicite de la bande sur la livraison
+précédente — « c'est vraiment x100, vas-y super fort ». Les chiffres du plan
+sont tenus et verrouillés par un test :
+`src/lib/jeux/contenu/contenu.test.ts`. `PLAN.md` porte maintenant la vague 2
 (lots J à R) ; `PLAN-vague-1.md` garde la première, à laquelle `AUDIT.md`
 renvoie.
 
@@ -21,22 +25,33 @@ Le fil rend aujourd'hui `JOURS_AFFICHES` journées d'un coup et charge tout
 l'historique côté serveur : L2 est donc aussi la réponse au défaut noté dans
 l'audit technique. À faire ensemble.
 
-### Les cinq questions, tranchées sans réponse (« enchaine tout », 6 septembre)
+### Les cinq réponses (6 septembre, confirmées par la bande)
 
 1. **Temps réel du lot N → SSE depuis une route Next.** Pas de Supabase
    Realtime ici, et le sondage actuel (1 à 3 s) est mou sur un vote simultané
    et inutilisable sur un duel de réflexe. SSE : gratuit, aucun compte, ~200 ms.
-2. **Stockage → on reste sur Neon.** R2 demande un compte Cloudflare, or le
-   brief initial dit « zéro nouveau compte ». On n'a pas saturé les 0,5 Go. À
-   rouvrir quand la jauge des réglages le dira.
-3. **Notifications poussées → oui.** Gratuit, aucun compte, clés VAPID à
-   engendrer. N2 (rejoindre une partie) et le jeu 38 (ton audio le lendemain)
-   en dépendent.
-4. **Multi-téléphones → six jeux, pas dix.** Ceux où ça change quelque chose :
-   Devine qui je suis, Le plus rapide, les trois à vote secret, le quiz. Les
-   quatre autres restent en un-téléphone, qui reste disponible partout.
-5. **Le classement de points revient (P1).** Le plan le redemande
-   explicitement après que je l'ai retiré au lot E. C'est sa décision.
+2. **Stockage → Cloudflare R2, décidé.** 10 Go contre 0,5 chez Neon, soit
+   vingt fois, et aucun frais de sortie. La bande accepte le compte Cloudflare,
+   qui est le seul coût. Lot M.
+3. **Notifications poussées → oui, et large** : rejoindre une partie, mais
+   aussi quelqu'un qui pose sa journée, un commentaire, une réaction,
+   l'ouverture d'un scellé. Clés VAPID, un abonnement par appareil, réglables
+   par type (Q1).
+4. **Multi-téléphones → LES DIX jeux**, pas six. La bande a tranché.
+5. **Le classement de points revient (P1).** Confirmé.
+
+### Le registre : x100, et ce que ça veut dire ici
+
+La bande demande explicitement du très cru, de l'humour noir, « aucune
+limite ». Les deux seules limites gardées sont **celles que le plan écrit
+lui-même** : rien qui vise un groupe pour ce qu'il est, rien de sexuel
+impliquant des mineurs, et rien qui vise une personne réelle extérieure à la
+bande. Tout le reste est ouvert — vocabulaire d'argot, confessions sexuelles
+frontales, hontes intégrales, humour noir sur la mort, les ex, les ratages.
+
+Les cartes sont des AMORCES d'aveu, pas des récits : « je n'ai jamais fait X »
+se dit en une ligne, et c'est la table qui raconte. C'est aussi ce qui marche
+le mieux en jeu.
 
 ### Les décisions du lot K, prises sans demander
 
@@ -294,3 +309,6 @@ puisqu'il ne concerne que cette machine.
 | F lieu | **fait**, sauf la carte à tuiles : constellation SVG à la place (voir « Décisions ») |
 | G jeux | **fait** : moteur + 10 jeux. Un seul mode (« un téléphone »), voir « Décisions » |
 | H audits | **fait** — voir `AUDIT.md` |
+| J le geste (vague 2) | **fait** |
+| K la journée (vague 2) | **fait** |
+| O2 le registre | **fait** : 423 cartes « Je n'ai jamais », 204 dilemmes, 38 gages, 80 susceptibles, 50 jugements, 47 thèmes |

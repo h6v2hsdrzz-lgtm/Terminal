@@ -31,8 +31,13 @@ export function gorgees(nombre: number): string {
 /**
  * Les gages, pour celui qui conduit.
  *
- * Ils sont faits pour être drôles à faire, pas humiliants : le sobre est celui
- * qui rend la soirée possible, ce n'est pas lui qu'on punit.
+ * Ils demandent la même chose que le reste des jeux : lâcher quelque chose.
+ * Le sobre ne joue pas une version édulcorée de la soirée, il la joue
+ * autrement — il raconte au lieu de boire, et c'est souvent pire.
+ *
+ * Ce qu'ils ne sont pas : une punition. Le sobre est celui qui rend la soirée
+ * possible. Aucun gage ne l'humilie, aucun ne le met en danger, aucun ne le
+ * fait boire, et « je passe » reste ouvert ici comme partout.
  */
 export const GAGES = [
   "Raconte ton pire souvenir de collège, en trente secondes.",
@@ -47,6 +52,32 @@ export const GAGES = [
   "Dis la chose la plus gentille que tu penses de la personne à ta droite.",
   "Refais le dernier truc débile que tu as fait, en mieux.",
   "Trouve un surnom à chacun, là, maintenant.",
+  "Lis à voix haute le dernier message que tu as envoyé.",
+  "Appelle quelqu'un de ton répertoire et dis-lui qu'il te manque.",
+  "Raconte ta pire cuite, avec les détails que tu évites d'habitude.",
+  "Donne le vrai motif de ta dernière annulation de plan.",
+  "Montre ton historique de recherche des dernières vingt-quatre heures.",
+  "Dis à voix haute le prénom de ton dernier fantasme.",
+  "Raconte le truc le plus illégal que tu aies fait. Sans les noms.",
+  "Fais deviner ton mot de passe sans jamais le dire.",
+  "Balance ton avis le plus dur sur l'un des deux, puis dédis-toi.",
+  "Lis les trois derniers messages que ton ex t'a envoyés.",
+  "Raconte comment tu as vraiment perdu le truc que tu avais emprunté.",
+  "Dis ce que tu penses de la dernière relation d'un des deux.",
+  "Rejoue ton pire rencard, les deux rôles compris.",
+  "Raconte la dernière fois que tu as chialé, et devant quoi.",
+  "Commente ton pire moment de la semaine comme un match de foot.",
+  "Avoue un truc que la bande ignore encore. Un vrai.",
+  "Dis à chacun ce que tu lui as emprunté et ne rendras jamais.",
+  "Deux minutes de plaidoirie pour défendre ton pire choix de vie.",
+  "Raconte ton plus gros mensonge professionnel.",
+  "Imite la personne la plus insupportable que tu connaisses.",
+  "Dis le montant sur ton compte, à cent euros près.",
+  "Explique pourquoi ton dernier ex t'a quitté. Version honnête.",
+  "Raconte le message que tu regrettes le plus d'avoir envoyé.",
+  "Chante en entier le refrain le plus honteux de ta bibliothèque.",
+  "Lis ta dernière note de téléphone à voix haute.",
+  "Décris la soirée dont tu as envie et que tu n'oses pas proposer.",
 ] as const;
 
 /**
