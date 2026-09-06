@@ -20,6 +20,7 @@ import { actionPoserJournee, actionPoserJourneeSimple } from "@/lib/actions";
 import { RESSORT, retard } from "@/lib/mouvement";
 import { ETAT_INITIAL } from "@/lib/formulaire";
 import { garderEnAttente, lireEnAttente, oublierAttente, sAbonnerAttente, yaUneAttente } from "@/lib/attente";
+import { garderBrouillon, lireBrouillon, oublierBrouillon } from "@/lib/brouillon";
 import { enTexteLong } from "@/lib/dates";
 import { couleurProfil } from "@/lib/couleurs";
 import type { Annuaire, Entree, Etiquette, Profil } from "@/lib/types";
@@ -84,6 +85,9 @@ export function EcranAujourdhui({
   // Une journée se corrige : on s'est trompé d'un cran, on a oublié la note.
   // Le formulaire réapparaît prérempli, et l'envoi remplace la ligne du jour.
   const [correction, setCorrection] = useState(false);
+  // Vrai le temps de l'onde de validation, et seulement après un envoi réussi :
+  // rouvrir l'écran demain ne doit pas rejouer la confirmation d'aujourd'hui.
+  const [vientDePoser, setVientDePoser] = useState(false);
 
   /**
    * L'attente se lit dans le stockage local, elle n'est pas recopiée dans un
@@ -117,8 +121,12 @@ export function EcranAujourdhui({
         setEtat(resultat);
         if (!resultat.erreur) {
           oublierAttente();
+          oublierBrouillon();
           setCorrection(false);
           formulaire.current?.reset();
+          setVientDePoser(true);
+          setTimeout(() => setVientDePoser(false), 900);
+          if ("vibrate" in navigator) navigator.vibrate(18);
         }
         return !resultat.erreur;
       } catch {
@@ -160,6 +168,58 @@ export function EcranAujourdhui({
   // formulaire : corriger sa journée ne doit pas re-flouter celles des autres,
   // qui sont déjà arrivées en clair.
   const voile = revelerApresPost && monEntree === null;
+
+  /**
+   * Le brouillon, en continu.
+   *
+   * Les champs ne sont pas contrôlés, et on ne les rend pas contrôlés pour
+   * autant : réécrire un formulaire qui marche pour ajouter une sauvegarde
+   * serait exactement le refactor que le plan interdit. On écoute la saisie sur
+   * le FORMULAIRE — un seul écouteur, qui voit tout ce qui bouge dedans — et on
+   * range ce que `FormData` en dit.
+   *
+   * La relecture se fait dans un effet, pas au premier rendu : `localStorage`
+   * n'existe pas sur le serveur, et le lire pendant le rendu produirait
+   * exactement le désaccord d'hydratation qu'on vient de corriger ailleurs.
+   */
+  useEffect(() => {
+    if (correction || monEntree) return;
+    const garde = lireBrouillon(jour);
+    if (!garde) return;
+    const form = formulaire.current;
+    if (!form) return;
+    const poser = (nom: string, valeur: string) => {
+      const champ = form.elements.namedItem(nom);
+      if (champ instanceof HTMLInputElement || champ instanceof HTMLTextAreaElement) {
+        // On n'écrase jamais ce qui est déjà tapé : le brouillon comble, il ne
+        // remplace pas.
+        if (champ.value === "") champ.value = valeur;
+      }
+    };
+    poser("titre", garde.titre);
+    poser("note", garde.note);
+    // Le curseur de joie n'est PAS restauré, et c'est volontaire : c'est le
+    // seul champ qui a toujours une valeur, il se règle d'un geste, et ce
+    // n'est pas lui qu'on perd en quittant l'écran. Le brouillon rattrape les
+    // mots — c'est ce qu'on ne réécrit pas.
+  }, [correction, monEntree, jour]);
+
+  function noterBrouillon() {
+    const form = formulaire.current;
+    if (!form || correction) return;
+    const donnees = new FormData(form);
+    const texte = (cle: string) => String(donnees.get(cle) ?? "");
+    garderBrouillon({
+      jour,
+      joie: Number(donnees.get("joie") ?? maJoie),
+      titre: texte("titre"),
+      note: texte("note"),
+      lieu: texte("etiquettes"),
+      energie: donnees.get("energie") ? Number(donnees.get("energie")) : null,
+      rire: donnees.get("calme") ? Number(donnees.get("calme")) : null,
+      declencheurs: donnees.getAll("declencheurs").map(String),
+    });
+  }
 
   /**
    * Le renvoi de la journée gardée hors ligne.
@@ -235,7 +295,15 @@ export function EcranAujourdhui({
             transition={RESSORT.moyen}
           >
             <Carte className="p-5">
-              <form ref={formulaire} action={actionPoserJourneeSimple} onSubmit={intercepter}>
+              <form
+                ref={formulaire}
+                action={actionPoserJourneeSimple}
+                onSubmit={intercepter}
+                // Un seul écouteur pour tout le formulaire : il voit le titre,
+                // l'anecdote, les curseurs, les déclencheurs et le lieu.
+                onInput={noterBrouillon}
+                onChange={noterBrouillon}
+              >
                 <div className="mb-4 flex items-baseline justify-between gap-3">
                   <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-encre-3">
                     {correction ? "Corriger ta journée" : "Ta journée"}
@@ -364,7 +432,30 @@ export function EcranAujourdhui({
             animate={{ opacity: 1, y: 0 }}
             transition={RESSORT.moyen}
           >
-            <Carte className="p-5">
+            <Carte className="relative overflow-hidden p-5">
+              {/**
+                * Le retour de validation.
+                *
+                * Jusqu'ici, poser sa journée ne faisait que changer un texte —
+                * et un texte qui change dans une carte qu'on vient de remplir
+                * ne se remarque pas : on cherche si ça a marché. Une onde qui
+                * traverse la carte une fois se voit sans rien lire, et elle ne
+                * revient pas quand on rouvre l'écran plus tard.
+                */}
+              {vientDePoser && (
+                <motion.span
+                  aria-hidden
+                  initial={{ x: "-110%" }}
+                  animate={{ x: "110%" }}
+                  transition={{ duration: 0.85, ease: "easeOut" }}
+                  className="pointer-events-none absolute inset-y-0 w-1/2"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, transparent, var(--joie-haut), transparent)",
+                    opacity: 0.5,
+                  }}
+                />
+              )}
               <div className="flex items-center gap-4">
                 <VisageJoie valeur={monEntree.joie} taille={64} />
                 <div className="min-w-0 flex-1">

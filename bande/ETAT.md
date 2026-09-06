@@ -5,26 +5,50 @@
 
 ## Lot en cours
 
-**LOT H — terminé.** Les quatre audits sont dans `AUDIT.md`. A à H sont faits.
+**Vague 2 : lots J et K terminés.** `PLAN.md` porte maintenant la vague 2
+(lots J à R) ; `PLAN-vague-1.md` garde la première, à laquelle `AUDIT.md`
+renvoie.
 
 ## Prochaine action exacte
 
-Il n'y a plus de lot. **Les lots F, G et H sont en ligne** depuis le
-6 septembre — déploiement `dpl_H7Uy9qcyPHuQ17vzHhpvsRNBwVm3`, migrations
-`jeux`, `cartes_paquet` et `lieu_position` appliquées par le `vercel-build`,
-test de fumée et test des dix jeux passés contre la production.
+**LOT L — le fil**, dans l'ordre du plan : en-tête de date collant (L1),
+pagination infinie et bouton « revenir en haut » (L2), appui long = menu
+rapide (L3), partage d'une journée en image 9:16 générée en canvas (L4),
+repère « nouveau depuis ta dernière visite » (L5), filtres rapides (L6),
+tirer pour rafraîchir sans faire sauter le défilement (L7).
 
-Il reste quatre choses, listées à la fin d'`AUDIT.md` :
+Le fil rend aujourd'hui `JOURS_AFFICHES` journées d'un coup et charge tout
+l'historique côté serveur : L2 est donc aussi la réponse au défaut noté dans
+l'audit technique. À faire ensemble.
 
-1. **Révoquer le jeton Vercel** gardé pour la durée de la session dans
-   `~/.config/joie/vercel.token`.
-2. **Effacer les données de démonstration** avant la mise en service.
-3. **Vérifier à la main sur un vrai iPhone** ce qui ne s'automatise pas : HEIC,
-   micro, caméra, inclinaison de « Devine qui je suis », coupure réseau en
-   plein envoi, réinstallation de la PWA.
-4. Un jour, sans urgence : borner le chargement de l'historique (521 Ko de
-   JSON par écran aujourd'hui, quatre fois plus dans cinq ans), la file
-   d'attente hors-ligne des envois, la notification d'ouverture des scellés.
+### Les cinq questions, tranchées sans réponse (« enchaine tout », 6 septembre)
+
+1. **Temps réel du lot N → SSE depuis une route Next.** Pas de Supabase
+   Realtime ici, et le sondage actuel (1 à 3 s) est mou sur un vote simultané
+   et inutilisable sur un duel de réflexe. SSE : gratuit, aucun compte, ~200 ms.
+2. **Stockage → on reste sur Neon.** R2 demande un compte Cloudflare, or le
+   brief initial dit « zéro nouveau compte ». On n'a pas saturé les 0,5 Go. À
+   rouvrir quand la jauge des réglages le dira.
+3. **Notifications poussées → oui.** Gratuit, aucun compte, clés VAPID à
+   engendrer. N2 (rejoindre une partie) et le jeu 38 (ton audio le lendemain)
+   en dépendent.
+4. **Multi-téléphones → six jeux, pas dix.** Ceux où ça change quelque chose :
+   Devine qui je suis, Le plus rapide, les trois à vote secret, le quiz. Les
+   quatre autres restent en un-téléphone, qui reste disponible partout.
+5. **Le classement de points revient (P1).** Le plan le redemande
+   explicitement après que je l'ai retiré au lot E. C'est sa décision.
+
+### Les décisions du lot K, prises sans demander
+
+- **Le pouls ne rapporte aucun point**, et un anti-rebond de cinq minutes
+  remplace le dernier au lieu d'en créer un.
+- **Le brouillon ne restaure pas le curseur de joie** : c'est le seul champ qui
+  a toujours une valeur et se règle d'un geste. Il rattrape les mots.
+- **La bulle « La bande » est partie** de l'écran Aujourd'hui : elle redisait
+  la figure du jour, qui est en tête du fil, la première page.
+- Le graphique dessine **une ligne par membre**. Le plan dit « trois maximum » ;
+  la bande de démonstration en a quatre, la vraie en aura trois. Masquer
+  quelqu'un serait pire que dépasser d'une ligne.
 
 ### Ancienne note (lot B, fait)
 

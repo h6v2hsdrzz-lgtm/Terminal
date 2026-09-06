@@ -200,3 +200,30 @@ test("sans aucun pouls du jour, le graphique bascule sur sept jours", async ({ p
     await quitter(page, nom);
   }
 });
+
+test("le brouillon survit à un aller-retour, et meurt à l'envoi", async ({ page }) => {
+  test.slow();
+  const nom = `Brouillon ${Date.now().toString(36)}`;
+  try {
+    await bandeNeuve(page, nom);
+    await page.goto("/aujourdhui", { waitUntil: "networkidle" });
+
+    // Sur un téléphone, quitter au milieu d'un formulaire est le cas NORMAL.
+    await page.fill("#titre", "Trois mots gardés");
+    await page.fill("#note", "Une anecdote qu'on ne réécrira pas.");
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.goto("/aujourdhui", { waitUntil: "networkidle" });
+
+    await expect(page.locator("#titre")).toHaveValue("Trois mots gardés");
+    await expect(page.locator("#note")).toHaveValue("Une anecdote qu'on ne réécrira pas.");
+
+    // Et il meurt à l'envoi : le lendemain, l'écran repart vide.
+    await page.getByRole("button", { name: /poser ma joie/i }).click();
+    await expect(page.getByText("C'est posé pour aujourd'hui.")).toBeVisible();
+    await page.getByRole("button", { name: /corriger ta journée/i }).click();
+    await page.getByRole("button", { name: /laisser comme ça/i }).click();
+    await expect(page.getByText("C'est posé pour aujourd'hui.")).toBeVisible();
+  } finally {
+    await quitter(page, nom);
+  }
+});
