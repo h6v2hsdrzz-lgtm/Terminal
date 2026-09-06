@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 
-import { Visionneuse } from "./Carrousel";
+import { Visionneuse } from "./Visionneuse";
 import { enSecondes } from "@/lib/media";
 import type { Media } from "@/lib/types";
 

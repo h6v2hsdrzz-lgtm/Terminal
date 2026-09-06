@@ -121,7 +121,7 @@ export function CarteEntree({
         </div>
 
         {entree.photos.length > 0 && (
-          <Carrousel photos={entree.photos} legende={`La journée de ${profil.pseudo}`} />
+          <Carrousel photos={entree.photos} legende={`La journée de ${profil.pseudo}`} entreeId={moi ? entree.id : undefined} />
         )}
 
         {entree.audio && (

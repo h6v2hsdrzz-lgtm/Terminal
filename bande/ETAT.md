@@ -5,9 +5,22 @@
 
 ## Lot en cours
 
-**LOT A — terminé.** Les sept tâches sont faites.
+**LOT B — terminé.** A et B sont faits. On enchaîne sans feu vert
+intermédiaire (« enchaine tout », 6 septembre).
 
 ## Prochaine action exacte
+
+**LOT C — les scellés.** Aujourd'hui `Capsule` ne porte qu'un texte. Il faut :
+`genre` (mot/photo/video/audio), `octets Bytes?`, `mime`, `vignette Bytes?`,
+`duree` — migration additive, comme celle des médias. Puis le sablier avec
+aperçu flouté et décompte dans le fil, l'empilement au-delà de trois, et
+l'ouverture comme un événement.
+
+**Attention** : le voile du fil vide déjà les entrées ; un scellé non ouvert
+doit être vidé DE LA MÊME FAÇON côté serveur. Ne jamais envoyer le contenu
+puis le flouter en CSS.
+
+### Ancienne note (lot B, fait)
 
 **Lot B.** Il est déjà fait aux trois quarts (voir la correspondance en bas) :
 il reste **B2** — la visionneuse. Ce qui manque, dans l'ordre de ce qui se voit
@@ -40,6 +53,13 @@ du plan. Correspondance à la fin de ce fichier.
   → **Lieu** dans l'interface et l'export.
 - **A4** — les trois compteurs du profil (« jours d'affilée », « ton record »,
   « journées posées ») sont retirés.
+- **B2** — la visionneuse : pincer pour zoomer, glisser pour se déplacer,
+  glisser vers le bas pour fermer, glisser sur le côté pour changer d'image,
+  toucher deux fois pour poser un cœur, toucher une fois pour masquer
+  l'habillage, préchargement des voisines, enregistrer/partager par la feuille
+  du système. Elle quitte `Carrousel.tsx` pour son propre fichier.
+- **B3** — prendre une photo depuis l'app, en DEUXIÈME entrée : sur iPhone,
+  `capture` ouvre l'appareil et ferme la pellicule.
 - **A2** — le fil devient la page d'ouverture, et il PORTE LE VOILE : les
   journées du jour sont muettes tant qu'on n'a pas posé la sienne, et la
   moyenne du jour ne s'affiche pas. Le check-in déménage à `/aujourdhui`,
@@ -123,6 +143,12 @@ redéployer à chaque lot sans le redemander. **À révoquer à la fin.**
 - **Une colonne qui change sans qu'aucune journée ne bouge est invisible aux
   autres** tant qu'elle n'est pas dans `versionBande`. Vrai pour les photos,
   les notes vocales, et maintenant le pseudo et l'avatar.
+- **Le plein écran ne peut pas garder `scroll-snap`.** Le pincement exige
+  `touch-action: none`, qui tue le défilement natif. C'est le seul endroit où
+  réimplémenter le geste est justifié : il n'y a plus de page derrière, donc
+  plus de geste système à préserver. Le carrousel du fil, lui, garde le natif.
+- **Le double-tap ne peut pas être à la fois « zoomer » et « aimer ».** Le plan
+  demandait les deux. Le pincement zoome déjà ; le double-tap aime.
 - **Le fil n'avait aucun voile** avant A2 : il affichait tout en clair. En
   faire la page d'ouverture sans y porter le voile aurait suffi à casser la
   mécanique du produit.
@@ -161,8 +187,8 @@ redéployer à chaque lot sans le redemander. **À révoquer à la fin.**
 | A4 retirer les 3 compteurs | **fait** |
 | A5 album personnel + stats discrètes | **fait** |
 | B1 pipeline d'upload | **fait**, sauf HEIC (question 4) |
-| B2 visionneuse plein écran | **à moitié** : plein écran, défilement, légendes, position. Manquent le zoom au pincement, le balayage vers le bas, le double-tap pour réagir, l'enregistrement dans la pellicule |
-| B3 prendre une photo depuis l'app | à faire (un attribut, 10 min) |
+| B2 visionneuse plein écran | **fait** |
+| B3 prendre une photo depuis l'app | **fait** |
 | B4 stockage | **fait autrement** : PostgreSQL, place occupée affichée. Pas d'abstraction R2 |
 | B5 vidéos courtes | **fait** (8 s, pas 15 — voir question sur le poids) |
 | C scellés | **à moitié** : capsules texte seul, pas de sablier ni d'empilement |

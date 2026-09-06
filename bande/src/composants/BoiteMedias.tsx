@@ -30,6 +30,7 @@ export function BoiteMedias({ medias }: { medias: Media[] }) {
   const [part, setPart] = useState<number | null>(null);
   const [legende, setLegende] = useState<Media | null>(null);
   const champ = useRef<HTMLInputElement>(null);
+  const appareil = useRef<HTMLInputElement>(null);
   const complet = medias.length >= MAX_MEDIAS;
 
   function choisir(fichiers: FileList | null) {
@@ -84,7 +85,10 @@ export function BoiteMedias({ medias }: { medias: Media[] }) {
         }
         setEtat(ETAT_INITIAL);
       }
+      // Les deux champs se vident : sinon, reprendre la même photo deux fois
+      // de suite ne déclenche aucun changement et n'envoie rien.
       if (champ.current) champ.current.value = "";
+      if (appareil.current) appareil.current.value = "";
     });
   }
 
@@ -170,30 +174,54 @@ export function BoiteMedias({ medias }: { medias: Media[] }) {
         </div>
       )}
 
-      <label
-        className={`inline-block text-[13px] underline underline-offset-2 ${
-          complet ? "cursor-default text-encre-3" : "cursor-pointer text-encre-2 hover:text-encre"
-        }`}
-      >
-        <input
-          ref={champ}
-          type="file"
-          // Les deux d'un coup : sur iPhone, le sélecteur propose alors la
-          // pellicule entière plutôt que de forcer un choix en amont.
-          accept="image/*,video/*"
-          multiple
-          onChange={(e) => choisir(e.target.files)}
-          disabled={enCours || complet}
-          className="sr-only"
-        />
-        {enCours
-          ? "Envoi…"
-          : complet
-            ? `${MAX_MEDIAS} médias, c'est le maximum`
-            : medias.length > 0
-              ? "Ajouter autre chose"
-              : "Ajouter une photo ou une vidéo"}
-      </label>
+      {/* Deux entrées, et pas un attribut ajouté à l'existante : sur iPhone,
+          `capture` ouvre l'appareil photo ET FERME la pellicule. Une seule
+          commande obligerait donc à choisir entre les deux pour tout le monde,
+          alors que ce sont deux gestes différents — prendre maintenant, ou
+          retrouver ce qu'on a pris tout à l'heure. */}
+      <div className="flex flex-wrap items-center gap-4">
+        <label
+          className={`inline-block text-[13px] underline underline-offset-2 ${
+            complet ? "cursor-default text-encre-3" : "cursor-pointer text-encre-2 hover:text-encre"
+          }`}
+        >
+          <input
+            ref={champ}
+            type="file"
+            // Les deux formats d'un coup : le sélecteur propose alors la
+            // pellicule entière plutôt que de forcer un choix en amont.
+            accept="image/*,video/*"
+            multiple
+            onChange={(e) => choisir(e.target.files)}
+            disabled={enCours || complet}
+            className="sr-only"
+          />
+          {enCours
+            ? "Envoi…"
+            : complet
+              ? `${MAX_MEDIAS} médias, c'est le maximum`
+              : medias.length > 0
+                ? "Ajouter autre chose"
+                : "Choisir une photo ou une vidéo"}
+        </label>
+
+        {!complet && !enCours && (
+          <label className="cursor-pointer text-[13px] text-encre-2 underline underline-offset-2 hover:text-encre">
+            <input
+              ref={appareil}
+              type="file"
+              accept="image/*,video/*"
+              // `environment` : l'appareil arrière. Sans valeur, iOS choisit
+              // parfois la caméra avant, ce qui n'est jamais ce qu'on veut
+              // pour illustrer sa journée.
+              capture="environment"
+              onChange={(e) => choisir(e.target.files)}
+              className="sr-only"
+            />
+            Prendre une photo
+          </label>
+        )}
+      </div>
 
       {etat.erreur && (
         <p role="alert" className="mt-1.5 text-[13px] text-encre-2">

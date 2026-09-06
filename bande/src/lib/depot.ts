@@ -761,7 +761,7 @@ export async function mediasDeLaBande(groupeId: string, limite = 240, membreId?:
     take: limite,
     select: {
       id: true, genre: true, largeur: true, hauteur: true, duree: true, legende: true,
-      entree: { select: { jour: true, membreId: true } },
+      entree: { select: { id: true, jour: true, membreId: true } },
     },
     orderBy: [{ entree: { jour: "desc" } }, { ordre: "asc" }],
   });
@@ -776,6 +776,7 @@ export async function mediasDeLaBande(groupeId: string, limite = 240, membreId?:
     legende: m.legende,
     jour: m.entree.jour,
     profil: m.entree.membreId,
+    entreeId: m.entree.id,
   }));
 }
 

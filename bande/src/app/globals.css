@@ -291,3 +291,23 @@
     transition-duration: .01ms !important;
   }
 }
+
+/**
+ * Le cœur du double-tap : il grossit, il monte, il s'en va.
+ *
+ * Une animation courte et sans retour : c'est un accusé de réception, pas un
+ * effet. Elle respecte `prefers-reduced-motion` comme le reste.
+ */
+@keyframes coeur {
+  0%   { opacity: 0; transform: scale(0.4); }
+  25%  { opacity: 1; transform: scale(1.1); }
+  60%  { opacity: 1; transform: scale(1) translateY(-8px); }
+  100% { opacity: 0; transform: scale(0.95) translateY(-56px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes coeur {
+    0%, 100% { opacity: 0; }
+    30%, 70% { opacity: 1; }
+  }
+}

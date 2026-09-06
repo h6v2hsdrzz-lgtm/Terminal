@@ -3,13 +3,13 @@
 import Image from "next/image";
 import { useState } from "react";
 
-import { Visionneuse } from "./Carrousel";
+import { Visionneuse } from "./Visionneuse";
 import { enSecondes } from "@/lib/media";
 import { enTexteLong } from "@/lib/dates";
 import { couleurProfil } from "@/lib/couleurs";
 import type { Media, Profil } from "@/lib/types";
 
-export type MediaDate = Media & { jour: string; profil: string };
+export type MediaDate = Media & { jour: string; profil: string; entreeId: string };
 
 /**
  * Tout ce que la bande a posté, en mosaïque, groupé par mois.
@@ -112,6 +112,9 @@ export function Galerie({
           depart={ouverte}
           legende="La galerie de la bande"
           fermer={() => setOuverte(null)}
+          moi={{
+            entreeDe: (media) => medias.find((m) => m.id === media.id)?.entreeId ?? null,
+          }}
           pied={(media) => {
             const avec = medias.find((m) => m.id === media.id);
             return avec ? `${pseudo(avec.profil)} — ${enTexteLong(avec.jour)}` : null;
