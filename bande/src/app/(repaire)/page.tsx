@@ -94,11 +94,11 @@ export default async function Page() {
             ) : (
               <>
                 <p className="text-[16px] font-semibold leading-tight">C&apos;est posé.</p>
+                {/* Plus de décompte « vous y êtes tous » : il disait la même
+                    chose tous les soirs, et la figure du jour juste au-dessus
+                    le montre déjà, en mieux. */}
                 <p className="mt-1 text-[13px] leading-snug text-encre-3">
-                  {duJour.length === contexte.profils.length
-                    ? "Vous y êtes tous."
-                    : `${duJour.length} sur ${contexte.profils.length} pour l'instant.`}
-                  {" "}Touche pour corriger, ajouter une photo ou un vocal.
+                  Touche pour corriger, ajouter une photo ou un vocal.
                 </p>
               </>
             )}

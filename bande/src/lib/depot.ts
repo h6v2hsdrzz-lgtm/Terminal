@@ -22,7 +22,7 @@ export { versCsv } from "./csv";
 
 export const DECLENCHEURS_PAR_DEFAUT = [
   { nom: "Biberon", emoji: "🍼" },
-  { nom: "Marie Jane", emoji: "🌿" },
+  { nom: "Marie Janne", emoji: "🌿" },
   { nom: "Sport", emoji: "🏃" },
 ];
 

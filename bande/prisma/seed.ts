@@ -56,7 +56,7 @@ const PROFILS = [
 
 const DECLENCHEURS = [
   { nom: "Biberon", emoji: "🍼", frequence: 0.4, effet: 1.3 },
-  { nom: "Marie Jane", emoji: "🌿", frequence: 0.35, effet: 0.2 },
+  { nom: "Marie Janne", emoji: "🌿", frequence: 0.35, effet: 0.2 },
   { nom: "Sport", emoji: "🏃", frequence: 0.3, effet: 0.5 },
 ];
 

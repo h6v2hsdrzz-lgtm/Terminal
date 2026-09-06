@@ -57,6 +57,15 @@ async function voterChacunSonTour(
   throw new Error("Le tour de vote ne s'est jamais terminé.");
 }
 
+test("plus de décompte « vous y êtes tous » sur le fil", async ({ page }) => {
+  await entrer(page, "Momo");
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  // Elle disait la même chose tous les soirs, et la figure du jour juste
+  // au-dessus le montre déjà, en mieux.
+  await expect(page.getByText("Vous y êtes tous")).toHaveCount(0);
+  await expect(page.getByText(/sur \d+ pour l'instant/)).toHaveCount(0);
+});
+
 test("les jeux ont leur onglet, et leurs règles se lisent avant de lancer", async ({ page }) => {
   await entrer(page, "Momo");
   await page.goto("/jeux", { waitUntil: "networkidle" });

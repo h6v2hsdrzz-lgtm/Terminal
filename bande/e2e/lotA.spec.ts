@@ -28,7 +28,7 @@ test("les renommages sont partout, et la donnée a suivi", async ({ page }) => {
 
   // Le déclencheur a été renommé EN BASE, pas seulement dans le code : sans la
   // migration, une bande déjà créée aurait gardé « Plante verte ».
-  await expect(page.getByText("Marie Jane").first()).toBeVisible();
+  await expect(page.getByText("Marie Janne").first()).toBeVisible();
   await expect(page.getByText("Plante verte")).toHaveCount(0);
 
   await expect(page.getByPlaceholder(/anecdote/i)).toBeVisible();
@@ -37,7 +37,7 @@ test("les renommages sont partout, et la donnée a suivi", async ({ page }) => {
   // Et le lien avec les journées a survécu au renommage : le déclencheur a un
   // effet mesuré, donc il porte bien son historique.
   await page.goto("/stats", { waitUntil: "networkidle" });
-  await expect(page.getByText("Marie Jane").first()).toBeVisible();
+  await expect(page.getByText("Marie Janne").first()).toBeVisible();
 });
 
 test("le profil n'affiche plus de compteurs", async ({ page }) => {
