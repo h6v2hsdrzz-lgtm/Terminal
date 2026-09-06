@@ -9,20 +9,20 @@
 
 ## Prochaine action exacte
 
-Il n'y a plus de lot. Il reste cinq choses, listées à la fin d'`AUDIT.md` :
+Il n'y a plus de lot. **Les lots F, G et H sont en ligne** depuis le
+6 septembre — déploiement `dpl_H7Uy9qcyPHuQ17vzHhpvsRNBwVm3`, migrations
+`jeux`, `cartes_paquet` et `lieu_position` appliquées par le `vercel-build`,
+test de fumée et test des dix jeux passés contre la production.
 
-1. **Déployer.** Impossible depuis cette session : la ligne de commande Vercel
-   y est refusée par le garde-fou de l'environnement, et le connecteur Vercel
-   disponible est authentifié sur un autre compte (403). Tout est poussé sur la
-   branche ; `npx vercel deploy --prod --token …` depuis une machine avec le
-   jeton suffit, et les migrations partent avec le `vercel-build`.
-2. **Révoquer le jeton Vercel** gardé pour la durée de la session dans
+Il reste quatre choses, listées à la fin d'`AUDIT.md` :
+
+1. **Révoquer le jeton Vercel** gardé pour la durée de la session dans
    `~/.config/joie/vercel.token`.
-3. **Effacer les données de démonstration** avant la mise en service.
-4. **Vérifier à la main sur un vrai iPhone** ce qui ne s'automatise pas : HEIC,
+2. **Effacer les données de démonstration** avant la mise en service.
+3. **Vérifier à la main sur un vrai iPhone** ce qui ne s'automatise pas : HEIC,
    micro, caméra, inclinaison de « Devine qui je suis », coupure réseau en
    plein envoi, réinstallation de la PWA.
-5. Un jour, sans urgence : borner le chargement de l'historique (521 Ko de
+4. Un jour, sans urgence : borner le chargement de l'historique (521 Ko de
    JSON par écran aujourd'hui, quatre fois plus dans cinq ans), la file
    d'attente hors-ligne des envois, la notification d'ouverture des scellés.
 
@@ -112,6 +112,10 @@ appliquées en production, test de fumée passé contre la production.
 Le jeton Vercel est gardé sur la machine pour la durée de la session
 (`~/.config/joie/vercel.token`, mode 600, hors du dépôt), pour pouvoir
 redéployer à chaque lot sans le redemander. **À révoquer à la fin.**
+
+La ligne de commande Vercel est autorisée par une règle de permission dans
+`.claude/settings.local.json` à la racine du dépôt — fichier ignoré par git,
+puisqu'il ne concerne que cette machine.
 
 ## Décisions prises, et pourquoi
 

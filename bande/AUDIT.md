@@ -216,15 +216,17 @@ redemande.
 
 ## Ce qui reste, en une liste
 
-1. **Déployer.** Impossible depuis la session qui a écrit ce document : la
-   ligne de commande Vercel y est refusée par le garde-fou de l'environnement,
-   et le connecteur Vercel disponible est authentifié sur un autre compte. Tout
-   est poussé ; `npx vercel deploy --prod` depuis une machine avec le jeton
-   suffit, et les migrations partent avec le `vercel-build`.
-2. **Révoquer le jeton Vercel** gardé pour la durée de la session.
-3. **Effacer les données de démonstration** avant la mise en service, comme
+**Déployé le 6 septembre** — `dpl_H7Uy9qcyPHuQ17vzHhpvsRNBwVm3`, en
+production sur https://journal-de-joie-v2.vercel.app. Les migrations `jeux`,
+`cartes_paquet` et `lieu_position` sont parties avec le `vercel-build`.
+Vérifié contre la production : le test de fumée de bout en bout, et la
+présence des dix jeux, de l'encart « il manque du monde » et de la page 404
+en français.
+
+1. **Révoquer le jeton Vercel** gardé pour la durée de la session.
+2. **Effacer les données de démonstration** avant la mise en service, comme
    décidé le 5 septembre.
-4. Vérifier à la main sur iPhone : HEIC, micro, caméra, inclinaison, coupure
+3. Vérifier à la main sur iPhone : HEIC, micro, caméra, inclinaison, coupure
    réseau, réinstallation de la PWA.
-5. Un jour : borner le chargement de l'historique, la file d'attente
+4. Un jour : borner le chargement de l'historique, la file d'attente
    hors-ligne, la notification d'ouverture des scellés.
