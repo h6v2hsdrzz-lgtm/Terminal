@@ -5,24 +5,24 @@
 
 ## Lot en cours
 
-**LOT D — terminé.** A, B, C et D sont faits. On enchaîne sans feu vert
+**LOT E — terminé.** A à E sont faits. On enchaîne sans feu vert
 intermédiaire (« enchaine tout », 6 septembre).
 
 ## Prochaine action exacte
 
-**LOT E — les points, les niveaux, moins de badges.**
-1. Un module pur `src/lib/points.ts` avec le barème du plan, testé — c'est
-   exactement le genre de calcul qui doit l'être.
-2. **Deux écarts assumés au plan**, à confirmer : pas de points pour la série
-   (on vient de retirer les compteurs de série en A4, les remettre en points
-   serait se contredire), et pas de classement hebdomadaire (à trois, un
-   classement de présence reste un classement de présence).
-3. Cinq niveaux aux noms drôles, discrets dans le profil et à côté du nom.
-4. Ramener les badges de 23 à 8. Les badges retirés ne doivent pas casser
-   l'écran de ceux qui les avaient — `badgesDe` les recalcule à chaque fois,
-   donc rien n'est stocké : il suffit de retirer les définitions.
+**LOT F — le lieu.** Le champ existe déjà (les anciennes « étiquettes »), avec
+autocomplétion sur ce que la bande a déjà posé. Il reste :
+1. un bouton « utiliser ma position » — `navigator.geolocation` sur demande
+   explicite, puis Nominatim (OpenStreetMap, gratuit) pour le nom du lieu ;
+2. **respecter leur politique d'usage** : un appel par saisie, un cache, et un
+   `User-Agent` identifiable. Passer par une route serveur, pas depuis le
+   navigateur — sinon on expose la position à un tiers depuis le téléphone ;
+3. stocker des coordonnées ARRONDIES, jamais la position exacte ;
+4. la carte des souvenirs (Leaflet + tuiles OSM).
 
-Un onglet est libre depuis D. Il ira aux Jeux (lot G).
+**À décider** : la carte ajoute une dépendance (Leaflet ~40 ko). La règle du
+plan est « une seule nouvelle dépendance par lot ». Elle passe si on ne prend
+rien d'autre au lot F.
 
 ### Ancienne note (lot B, fait)
 
@@ -57,6 +57,13 @@ du plan. Correspondance à la fin de ce fichier.
   → **Lieu** dans l'interface et l'export.
 - **A4** — les trois compteurs du profil (« jours d'affilée », « ton record »,
   « journées posées ») sont retirés.
+- **E** — les points : un module pur et testé, cinq niveaux, huit badges au
+  lieu de vingt-trois (dont un secret qui ne dit ni son nom ni sa règle avant
+  d'être gagné). **Deux écarts assumés au plan** : pas de points pour la série
+  (A4 venait de retirer les compteurs de série — les remettre en points serait
+  se contredire d'un lot à l'autre), et pas de classement hebdomadaire (à
+  trois, un classement de points reste un classement de présence). Tout est
+  dans `src/lib/points.ts` si la bande les veut quand même.
 - **D** — la page Souvenirs dans le nouvel ordre : la galerie, les stats, les
   formes, ce jour-là, les scellés, le mur, la rétrospective en pied de page et
   repliée en une phrase. Les stats quittent leur onglet pour les souvenirs
@@ -156,6 +163,10 @@ redéployer à chaque lot sans le redemander. **À révoquer à la fin.**
 - **Une colonne qui change sans qu'aucune journée ne bouge est invisible aux
   autres** tant qu'elle n'est pas dans `versionBande`. Vrai pour les photos,
   les notes vocales, et maintenant le pseudo et l'avatar.
+- **Un plafond « par jour » doit se calculer par jour, pas par ligne lue.** La
+  première version d'`ardoise` plafonnait à dix réactions sur chaque entrée
+  prise séparément : réagir à vingt-cinq journées le même soir rapportait
+  vingt-cinq points, alors que c'est le geste que le plafond doit décourager.
 - **Écrire `.value` sur un champ contrôlé ne prévient pas React.** Un test qui
   faisait ça croyait éprouver un refus de date : le formulaire partait avec la
   date d'origine et le test passait à côté. `fill()` passe par les événements
@@ -217,7 +228,7 @@ redéployer à chaque lot sans le redemander. **À révoquer à la fin.**
 | B5 vidéos courtes | **fait** (8 s, pas 15 — voir question sur le poids) |
 | C scellés | **fait** (sauf la notification d'ouverture — voir plus bas) |
 | D souvenirs / stats / rétro | **fait** |
-| E points et badges | à faire — 23 badges aujourd'hui, le plan en veut 8 |
+| E points et badges | **fait**, avec deux écarts assumés (voir plus haut) |
 | F lieu | à faire — les « étiquettes » existent et deviendront « Lieu » en A1 |
 | G jeux | rien. Dix jeux décidés, c'est un projet en soi |
 | H audits | à la fin |

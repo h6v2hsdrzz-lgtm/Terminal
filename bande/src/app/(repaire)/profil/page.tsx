@@ -10,6 +10,9 @@ import { AlbumPersonnel } from "@/composants/AlbumPersonnel";
 import { badgesDe, classementAssiduite } from "@/lib/badges";
 import { mediasDeLaBande } from "@/lib/depot";
 import { enHeure, heureMoyenne, lieuFavori, motFavori, partVocale } from "@/lib/portrait";
+import { Niveau } from "@/composants/Niveau";
+import { ardoise } from "@/lib/points";
+import { listerCapsules } from "@/lib/depot";
 import { couleurProfil } from "@/lib/couleurs";
 import { entreesDeLaBande, exigerContexte } from "@/lib/repaire";
 import { actionQuitter } from "@/lib/actions";
@@ -24,7 +27,21 @@ export default async function Page() {
   const moyenne = miennes.length
     ? miennes.reduce((s, e) => s + e.joie, 0) / miennes.length
     : null;
-  const badges = badgesDe(miennes, entrees, contexte.moi.id);
+  const capsules = await listerCapsules(contexte.groupe.id, contexte.moi.id, aujourdhui);
+  const mesPoints = ardoise(
+    entrees,
+    contexte.moi.id,
+    capsules.map((c) => ({ auteurId: c.auteurId, creeLe: c.creeLe })),
+  );
+  // Le premier scellé ouvert, pour le badge : les capsules arrivent triées par
+  // date d'ouverture, la première ouverte est donc la plus ancienne.
+  const scelleOuvertLe =
+    capsules.find((c) => c.ouvrirLe <= aujourdhui && c.auteurId === contexte.moi.id)?.ouvrirLe ?? null;
+
+  const badges = badgesDe(miennes, entrees, contexte.moi.id, {
+    points: mesPoints.total,
+    scelleOuvertLe,
+  });
 
   // Dix vignettes, demandées comme telles : filtrer côté base plutôt que de
   // ramener toute la bande pour en garder un quart.
@@ -61,6 +78,11 @@ export default async function Page() {
           </p>
         </div>
       </header>
+
+      <section className="mt-7">
+        <TitreSection>Tes points</TitreSection>
+        <Niveau ardoise={mesPoints} />
+      </section>
 
       <ClassementAssiduite
         classement={classementAssiduite(entrees, contexte.profils.map((p) => p.id), aujourdhui)}

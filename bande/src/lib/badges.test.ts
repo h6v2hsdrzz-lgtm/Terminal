@@ -66,12 +66,6 @@ describe("badgesDe", () => {
     expect(badges.find((b) => b.cle === "premiere")!.obtenuLe).toBe("2026-01-01");
   });
 
-  it("date « sept d'affilée » au septième jour de la série", () => {
-    const badges = badgesDe(suite("2026-01-01", 10).map((j) => entree(j)));
-    expect(badges.find((b) => b.cle === "semaine")!.obtenuLe).toBe("2026-01-07");
-    expect(badges.find((b) => b.cle === "trentaine")!.obtenuLe).toBeNull();
-  });
-
   it("accorde « trente jours » à trente, et pas à vingt-neuf", () => {
     expect(badgesDe(suite("2026-01-01", 29).map((j) => entree(j)))
       .find((b) => b.cle === "trentaine")!.obtenuLe).toBeNull();
@@ -84,56 +78,56 @@ describe("badgesDe", () => {
     expect(badgesDe([entree("2026-01-01", 10)]).find((b) => b.cle === "plein-pot")!.obtenuLe).toBe("2026-01-01");
   });
 
-  it("mesure la remontada entre deux journées POSÉES, trou compris", () => {
-    // 3 le 1er, puis 8 le 10 : neuf jours d'écart, mais ce sont bien deux
-    // journées consécutives dans le journal.
-    const badges = badgesDe([entree("2026-01-01", 3), entree("2026-01-10", 8)]);
-    expect(badges.find((b) => b.cle === "remontada")!.obtenuLe).toBe("2026-01-10");
-  });
-
-  it("ne donne pas la remontada pour +3", () => {
-    const badges = badgesDe([entree("2026-01-01", 3), entree("2026-01-02", 6)]);
-    expect(badges.find((b) => b.cle === "remontada")!.obtenuLe).toBeNull();
-  });
-
-  it("demande une note non vide pour « raconteur »", () => {
-    expect(badgesDe([entree("2026-01-01", 6, null)]).find((b) => b.cle === "raconteur")!.obtenuLe).toBeNull();
-    expect(badgesDe([entree("2026-01-01", 6, "voilà")]).find((b) => b.cle === "raconteur")!.obtenuLe).toBe("2026-01-01");
-  });
 });
 
-describe("moisComplet, via le badge « mois plein »", () => {
-  const moisPlein = (entrees: Entree[]) =>
-    badgesDe(entrees).find((b) => b.cle === "mois-plein")!.obtenuLe;
-
-  it("demande le mois entier, pas trente jours à cheval", () => {
-    // Trente jours du 15 janvier au 13 février : aucun mois n'est complet.
-    expect(moisPlein(suite("2026-01-15", 30).map((j) => entree(j)))).toBeNull();
+describe("les huit badges", () => {
+  it("en compte huit, pas un de plus", () => {
+    // Un mur de vingt-trois cases dont douze grises rappelle surtout tout ce
+    // qu'on n'a pas fait.
+    expect(badgesDe([])).toHaveLength(8);
   });
 
-  it("reconnaît un février de 28 jours", () => {
-    expect(moisPlein(suite("2026-02-01", 28).map((j) => entree(j)))).toBe("2026-02-28");
+  it("garde le badge secret muet tant qu'il n'est pas gagné", () => {
+    const cache = badgesDe([entree("2026-01-01", 5)]).find((b) => b.cle === "grand-ecart")!;
+    expect(cache.nom).toBe("Badge secret");
+    expect(cache.description).not.toMatch(/1 et un 10/);
+
+    // Un 1 et un 10 dans la même semaine : il se découvre en le gagnant.
+    const gagne = badgesDe([entree("2026-01-01", 1), entree("2026-01-04", 10)])
+      .find((b) => b.cle === "grand-ecart")!;
+    expect(gagne.obtenuLe).toBe("2026-01-04");
+    expect(gagne.nom).toBe("Le grand écart");
   });
 
-  it("reconnaît un février bissextile de 29 jours", () => {
-    expect(moisPlein(suite("2028-02-01", 28).map((j) => entree(j)))).toBeNull();
-    expect(moisPlein(suite("2028-02-01", 29).map((j) => entree(j)))).toBe("2028-02-29");
+  it("demande la MÊME semaine pour le grand écart", () => {
+    // Huit jours d'écart : ce n'est plus la même semaine.
+    expect(
+      badgesDe([entree("2026-01-01", 1), entree("2026-01-09", 10)])
+        .find((b) => b.cle === "grand-ecart")!.obtenuLe,
+    ).toBeNull();
   });
-});
 
-describe("« toute la gamme »", () => {
-  it("attend les dix notes, et date le jour où la dixième tombe", () => {
-    const neuf = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((j, i) => entree(decaler("2026-01-01", i), j));
-    expect(badgesDe(neuf).find((b) => b.cle === "eventail")!.obtenuLe).toBeNull();
-    const dix = [...neuf, entree("2026-01-10", 10)];
-    expect(badgesDe(dix).find((b) => b.cle === "eventail")!.obtenuLe).toBe("2026-01-10");
+  it("laisse à gagner ce qui ne se déduit pas des journées", () => {
+    // Sans scellé ouvert, sans podium et sans points, ces trois-là restent
+    // simplement à gagner — et rien ne casse.
+    const sans = badgesDe([entree("2026-01-01")]);
+    for (const cle of ["capsule", "podium", "mille"]) {
+      expect(sans.find((b) => b.cle === cle)!.obtenuLe).toBeNull();
+    }
+
+    const avec = badgesDe([entree("2026-01-01")], [entree("2026-01-01")], "moi", {
+      points: 1200,
+      scelleOuvertLe: "2026-02-02",
+      podiumLe: "2026-03-03",
+    });
+    expect(avec.find((b) => b.cle === "capsule")!.obtenuLe).toBe("2026-02-02");
+    expect(avec.find((b) => b.cle === "podium")!.obtenuLe).toBe("2026-03-03");
+    expect(avec.find((b) => b.cle === "mille")!.obtenuLe).toBe("2026-01-01");
   });
-});
 
-describe("« même les jours creux »", () => {
-  it("se gagne en posant un 1, pas en l'évitant", () => {
-    expect(badgesDe([entree("2026-01-01", 2)]).find((b) => b.cle === "jours-creux")!.obtenuLe).toBeNull();
-    expect(badgesDe([entree("2026-01-01", 1)]).find((b) => b.cle === "jours-creux")!.obtenuLe).toBe("2026-01-01");
+  it("n'accorde les mille points qu'à mille", () => {
+    const presque = badgesDe([entree("2026-01-01")], [entree("2026-01-01")], "moi", { points: 999 });
+    expect(presque.find((b) => b.cle === "mille")!.obtenuLe).toBeNull();
   });
 });
 

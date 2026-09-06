@@ -153,3 +153,32 @@ test("les stats ont rejoint les souvenirs, la rétrospective est en pied de page
   await resume.click();
   await expect(page.getByText("Une image carrée, à envoyer à qui vous voulez.")).toBeVisible();
 });
+
+test("les points s'affichent, s'expliquent, et ne classent personne", async ({ page }) => {
+  await entrer(page, "Momo");
+  await page.goto("/profil", { waitUntil: "networkidle" });
+
+  const bloc = page.getByText("Tes points").locator("xpath=ancestor::section[1]");
+  await expect(bloc).toBeVisible();
+  await expect(bloc.getByText(/\d+ pts/)).toBeVisible();
+
+  // Le détail : un score sans provenance est un chiffre à croire sur parole.
+  await expect(bloc.getByText("journées posées")).toBeVisible();
+
+  // La règle qui tient tout le reste, écrite à l'écran.
+  await expect(bloc.getByText(/jamais la note/)).toBeVisible();
+
+  // Aucun classement de points : à trois, c'est un classement de présence.
+  expect(await page.getByText(/classement des points/i).count()).toBe(0);
+});
+
+test("le mur ne porte plus que huit badges, dont un secret", async ({ page }) => {
+  await entrer(page, "Momo");
+  await page.goto("/profil", { waitUntil: "networkidle" });
+
+  // Vingt-trois cases dont douze grises rappelaient surtout ce qu'on n'a pas
+  // fait.
+  const cases = page.getByText(/Première journée|Trente jours|Cent journées|Plein pot|Le jour dit|Sur le podium|Mille points|Badge secret|Le grand écart/);
+  expect(await cases.count()).toBeGreaterThanOrEqual(8);
+  expect(await page.getByText("Sept d'affilée").count()).toBe(0);
+});

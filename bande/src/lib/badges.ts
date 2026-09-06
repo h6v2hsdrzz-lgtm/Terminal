@@ -50,35 +50,6 @@ export function serieEnCours(jours: Set<string>, aujourdhui: string): number {
   return compte;
 }
 
-/** Le jour où une série atteint la longueur voulue, la première fois. */
-function jourDeSerie(jours: Set<string>, longueur: number): string | null {
-  for (const depart of [...jours].sort()) {
-    if (jours.has(decaler(depart, -1))) continue;
-    let curseur = depart;
-    for (let n = 1; jours.has(curseur); n += 1) {
-      if (n === longueur) return curseur;
-      curseur = decaler(curseur, 1);
-    }
-  }
-  return null;
-}
-
-/** Un mois civil entier sans en rater un seul. */
-function moisComplet(jours: Set<string>): string | null {
-  const parMois = new Map<string, Set<string>>();
-  for (const jour of jours) {
-    const mois = jour.slice(0, 7);
-    if (!parMois.has(mois)) parMois.set(mois, new Set());
-    parMois.get(mois)!.add(jour);
-  }
-  for (const mois of [...parMois.keys()].sort()) {
-    const [a, m] = mois.split("-").map(Number);
-    const nbJours = new Date(a, m, 0).getDate();
-    if (parMois.get(mois)!.size === nbJours) return `${mois}-${String(nbJours).padStart(2, "0")}`;
-  }
-  return null;
-}
-
 // ── Classement d'assiduité ───────────────────────────────────────────────────
 
 export type RangAssiduite = {
@@ -142,6 +113,8 @@ type Definition = {
   nom: string;
   description: string;
   emoji: string;
+  /** Un badge secret ne dit ni son nom ni sa règle tant qu'il n'est pas gagné. */
+  secret?: boolean;
   /** La date d'obtention, ou null. */
   quand: (m: Mesures) => string | null;
 };
@@ -151,6 +124,12 @@ type Mesures = {
   jours: Set<string>;
   reactionsLaissees: { jour: string }[];
   commentairesLaisses: { jour: string }[];
+  /** Les points, pour le badge des mille. */
+  points: number;
+  /** Le jour de la dernière journée posée : la date à laquelle dater un seuil. */
+  dernierJour: string | null;
+  premierScelleOuvert: string | null;
+  premierPodium: string | null;
 };
 
 /** Le n-ième élément d'une liste chronologique, ou null. */
@@ -160,70 +139,47 @@ const nieme = <T extends { jour: string }>(liste: T[], n: number) =>
 const premierOu = (liste: Entree[], test: (e: Entree) => boolean) =>
   liste.find(test)?.jour ?? null;
 
+/**
+ * Huit badges, et pas un de plus.
+ *
+ * Il y en avait vingt-trois. Un mur de vingt-trois cases dont on en a douze
+ * grises ne récompense rien : il rappelle surtout tout ce qu'on n'a pas fait.
+ * Huit qui veulent dire quelque chose valent mieux.
+ *
+ * Rien n'est stocké, donc retirer une définition ne casse l'écran de personne :
+ * les badges se recalculent à chaque affichage.
+ */
 const DEFINITIONS: Definition[] = [
   { cle: "premiere", nom: "Première journée", description: "Le début de tout", emoji: "🌱",
     quand: (m) => nieme(m.chronologie, 1) },
-  { cle: "dix", nom: "Dix journées", description: "Dix journées posées", emoji: "🔟",
-    quand: (m) => nieme(m.chronologie, 10) },
-  { cle: "cinquante", nom: "Cinquante", description: "Cinquante journées posées", emoji: "🧱",
-    quand: (m) => nieme(m.chronologie, 50) },
+  { cle: "trentaine", nom: "Trente jours", description: "Trente journées posées", emoji: "🏔️",
+    quand: (m) => nieme(m.chronologie, 30) },
   { cle: "cent", nom: "Cent journées", description: "Cent journées posées", emoji: "💯",
     quand: (m) => nieme(m.chronologie, 100) },
-
-  { cle: "semaine", nom: "Sept d'affilée", description: "Une semaine sans en rater un", emoji: "📅",
-    quand: (m) => jourDeSerie(m.jours, 7) },
-  { cle: "quinzaine", nom: "Quinze d'affilée", description: "Deux semaines de suite", emoji: "🗓️",
-    quand: (m) => jourDeSerie(m.jours, 15) },
-  { cle: "trentaine", nom: "Trente d'affilée", description: "Un mois de suite", emoji: "🏔️",
-    quand: (m) => jourDeSerie(m.jours, 30) },
-  { cle: "centaine", nom: "Cent d'affilée", description: "Cent jours sans en rater un", emoji: "🗿",
-    quand: (m) => jourDeSerie(m.jours, 100) },
-  { cle: "mois-plein", nom: "Mois plein", description: "Un mois civil entier, sans trou", emoji: "💎",
-    quand: (m) => moisComplet(m.jours) },
-
   { cle: "plein-pot", nom: "Plein pot", description: "Une journée notée 10", emoji: "🌟",
     quand: (m) => premierOu(m.chronologie, (e) => e.joie === 10) },
-  // Poser un 1 demande plus de cran que poser un 10. Le badge le dit.
-  { cle: "jours-creux", nom: "Même les jours creux", description: "Posé une journée à 1", emoji: "🕯️",
-    quand: (m) => premierOu(m.chronologie, (e) => e.joie === 1) },
-  { cle: "eventail", nom: "Toute la gamme", description: "Posé au moins une fois chaque note de 1 à 10", emoji: "🎚️",
-    quand: (m) => {
-      const vues = new Set<number>();
-      for (const e of m.chronologie) {
-        vues.add(e.joie);
-        if (vues.size === 10) return e.jour;
-      }
-      return null;
-    } },
-  { cle: "remontada", nom: "Remontada", description: "+4 d'une journée posée à la suivante", emoji: "📈",
-    quand: (m) => ecart(m.chronologie, (d) => d >= 4) },
-  { cle: "contrecoup", nom: "Le contrecoup", description: "−4 d'une journée posée à la suivante", emoji: "📉",
-    quand: (m) => ecart(m.chronologie, (d) => d <= -4) },
+  { cle: "capsule", nom: "Le jour dit", description: "Un scellé s'est ouvert", emoji: "⏳",
+    quand: (m) => m.premierScelleOuvert },
+  { cle: "podium", nom: "Sur le podium", description: "Une fin de partie dans les trois premiers", emoji: "🏆",
+    quand: (m) => m.premierPodium },
+  { cle: "mille", nom: "Mille points", description: "Mille points, à force d'être là", emoji: "🧮",
+    quand: (m) => (m.points >= 1000 ? m.dernierJour : null) },
 
-  { cle: "raconteur", nom: "Raconteur", description: "Une journée commentée", emoji: "✍️",
-    quand: (m) => premierOu(m.chronologie, (e) => Boolean(e.note)) },
-  { cle: "bavard", nom: "Bavard", description: "Cinquante journées racontées", emoji: "📖",
-    quand: (m) => nieme(m.chronologie.filter((e) => e.note), 50) },
-  { cle: "photographe", nom: "Photographe", description: "Une image dans le fil", emoji: "📷",
-    quand: (m) => premierOu(m.chronologie, (e) => e.photos.length > 0) },
-  { cle: "album", nom: "Album", description: "Dix images dans le fil", emoji: "🖼️",
-    quand: (m) => nieme(m.chronologie.filter((e) => e.photos.length > 0), 10) },
-
-  { cle: "noctambule", nom: "Noctambule", description: "Un check-in entre minuit et 4 h", emoji: "🦉",
-    quand: (m) => premierOu(m.chronologie, (e) => {
-      const heure = Number(e.posteA.slice(0, 2));
-      return heure >= 0 && heure < 4;
-    }) },
-
-  { cle: "supporter", nom: "Supporter", description: "Cinquante réactions laissées", emoji: "🙌",
-    quand: (m) => nieme(m.reactionsLaissees, 50) },
-  { cle: "compagnon", nom: "Compagnon", description: "Vingt-cinq commentaires laissés", emoji: "🫂",
-    quand: (m) => nieme(m.commentairesLaisses, 25) },
+  // Le secret : sa description ne s'affiche qu'une fois gagné. Poser un 1 et
+  // un 10 dans la même semaine, c'est une semaine qu'on n'oublie pas — et
+  // c'est le contraire d'un badge qui récompense d'aller bien.
+  { cle: "grand-ecart", nom: "Le grand écart", description: "Un 1 et un 10 dans la même semaine", emoji: "🎭",
+    secret: true, quand: (m) => grandEcart(m.chronologie) },
 ];
 
-function ecart(chronologie: Entree[], test: (delta: number) => boolean): string | null {
-  for (let i = 1; i < chronologie.length; i += 1) {
-    if (test(chronologie[i].joie - chronologie[i - 1].joie)) return chronologie[i].jour;
+/** Le premier jour où une semaine glissante contient un 1 et un 10. */
+function grandEcart(chronologie: Entree[]): string | null {
+  for (let i = 0; i < chronologie.length; i += 1) {
+    const debut = decaler(chronologie[i].jour, -6);
+    const fenetre = chronologie.slice(0, i + 1).filter((e) => e.jour >= debut);
+    if (fenetre.some((e) => e.joie === 1) && fenetre.some((e) => e.joie === 10)) {
+      return chronologie[i].jour;
+    }
   }
   return null;
 }
@@ -235,7 +191,16 @@ export const NOMBRE_BADGES = DEFINITIONS.length;
  * @param toutes   celles de la bande, pour compter ce que j'ai laissé chez les autres
  * @param moi      mon identifiant
  */
-export function badgesDe(miennes: Entree[], toutes: Entree[] = miennes, moi = ""): Badge[] {
+export function badgesDe(
+  miennes: Entree[],
+  toutes: Entree[] = miennes,
+  moi = "",
+  /**
+   * Ce qui ne se déduit pas des seules journées. Facultatif : sans ça, les
+   * trois badges concernés restent simplement à gagner, et rien ne casse.
+   */
+  extra: { points?: number; scelleOuvertLe?: string | null; podiumLe?: string | null } = {},
+): Badge[] {
   // Les entrées arrivent du plus récent au plus ancien ; pour dater un premier
   // fait, il faut l'ordre chronologique.
   const chronologie = [...miennes].sort((a, b) => a.jour.localeCompare(b.jour));
@@ -250,10 +215,22 @@ export function badgesDe(miennes: Entree[], toutes: Entree[] = miennes, moi = ""
     commentairesLaisses: parJour.flatMap((e) =>
       e.commentaires.filter((c) => c.auteurId === moi).map(() => ({ jour: e.jour })),
     ),
+    points: extra.points ?? 0,
+    dernierJour: chronologie.at(-1)?.jour ?? null,
+    premierScelleOuvert: extra.scelleOuvertLe ?? null,
+    premierPodium: extra.podiumLe ?? null,
   };
 
-  return DEFINITIONS.map((d) => ({
-    cle: d.cle, nom: d.nom, description: d.description, emoji: d.emoji,
-    obtenuLe: d.quand(mesures),
-  }));
+  return DEFINITIONS.map((d) => {
+    const obtenuLe = d.quand(mesures);
+    return {
+      cle: d.cle,
+      nom: obtenuLe || !d.secret ? d.nom : "Badge secret",
+      // Un secret non gagné ne dit pas ce qu'il faut faire : sinon ce n'est
+      // plus un secret, c'est une consigne.
+      description: obtenuLe || !d.secret ? d.description : "Il se découvre en le gagnant",
+      emoji: obtenuLe || !d.secret ? d.emoji : "❔",
+      obtenuLe,
+    };
+  });
 }
