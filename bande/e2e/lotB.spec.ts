@@ -77,25 +77,46 @@ test("un glissement horizontal change d'image", async ({ page }) => {
 });
 
 test("on peut prendre une photo depuis l'app, sans perdre la pellicule", async ({ page }) => {
-  // Lou, et pas Samy : les autres specs remplissent la journée de Samy, et la
-  // commande « prendre une photo » disparaît quand la journée est pleine —
-  // c'est voulu, mais ça rend le test dépendant de l'ordre d'exécution.
-  await entrer(page, "Lou");
-  await page.goto("/aujourdhui", { waitUntil: "networkidle" });
-  const deja = page.getByRole("button", { name: /corriger ta journée/i });
-  if (await deja.isVisible().catch(() => false)) await deja.click();
-  else {
+  /**
+   * Une bande à soi, et pas un membre de la démonstration.
+   *
+   * La première version se connectait à un compte existant. Elle passait seule
+   * et tombait dans la suite complète : les autres specs remplissent les
+   * journées, et les deux commandes d'ajout disparaissent quand la journée a
+   * atteint son quota de médias. Un test dont le résultat dépend de l'ordre
+   * d'exécution ne teste plus ce qu'il croit tester.
+   */
+  const nom = `Pellicule ${Date.now().toString(36)}`;
+  try {
+    await page.goto("/bienvenue/creer");
+    await page.fill("#bande", nom);
+    await page.fill("#pseudo", "Photographe");
+    await page.getByRole("button", { name: /créer/i }).click();
+    await page.waitForURL(/\/bienvenue\/code/);
+    await page.getByRole("button", { name: /c'est noté/i }).click();
+    await page.waitForURL("/");
+
+    await page.goto("/aujourdhui", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: /poser ma joie/i }).click();
+    await expect(page.getByText("C'est posé pour aujourd'hui.")).toBeVisible();
+
+    // Deux entrées distinctes, et c'est le point : sur iPhone, `capture` ouvre
+    // l'appareil ET FERME la pellicule. Une seule commande obligerait à choisir
+    // entre les deux pour tout le monde.
+    const appareil = page.locator('input[type="file"][capture]');
+    await expect(appareil).toHaveCount(1);
+    await expect(appareil).toHaveAttribute("capture", "environment");
+
+    const pellicule = page.locator('input[type="file"][multiple]:not([capture])');
+    await expect(pellicule).toHaveCount(1);
+  } finally {
+    // La bande repart : le dernier membre qui quitte emporte le groupe.
+    await page.goto("/reglages", { waitUntil: "domcontentloaded" }).catch(() => {});
+    await page.getByText("Quitter la bande", { exact: true }).click().catch(() => {});
+    await page.locator("#confirmation").fill(nom).catch(() => {});
+    await page
+      .getByRole("button", { name: /partir pour de bon/i })
+      .click()
+      .catch(() => {});
   }
-  await expect(page.getByText("C'est posé pour aujourd'hui.")).toBeVisible();
-
-  // Deux entrées distinctes, et c'est le point : sur iPhone, `capture` ouvre
-  // l'appareil ET FERME la pellicule. Une seule commande obligerait à choisir
-  // entre les deux pour tout le monde.
-  const appareil = page.locator('input[type="file"][capture]');
-  await expect(appareil).toHaveCount(1);
-  await expect(appareil).toHaveAttribute("capture", "environment");
-
-  const pellicule = page.locator('input[type="file"][multiple]:not([capture])');
-  await expect(pellicule).toHaveCount(1);
 });

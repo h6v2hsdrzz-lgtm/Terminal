@@ -23,7 +23,7 @@ repo, et les termes du plan se traduisent ainsi :
 ## Où sont les choses
 
 ```
-prisma/schema.prisma     10 modèles, tous préfixés bande_
+prisma/schema.prisma     14 modèles, tous préfixés bande_
 prisma/seed.ts           4 profils × 400 jours, images et sons engendrés
 src/app/(entree)/        bienvenue, créer, rejoindre, reprendre
 src/app/(repaire)/       page.tsx (le fil), aujourdhui, jeux, souvenirs, galerie, profil, reglages

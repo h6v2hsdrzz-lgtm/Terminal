@@ -107,10 +107,15 @@ export default async function Page({
         </section>
       )}
 
-      <section className="mt-7">
-        <TitreSection>Les dernières formes</TitreSection>
-        <MurDesFigures entrees={entrees} profils={contexte.profils} />
-      </section>
+      {/* Le mur des figures ne dessine rien tant qu'aucune journée n'a été
+          posée, et un titre de section seul au-dessus du vide est un défaut
+          que seule une capture d'écran vide fait voir. */}
+      {entrees.length > 0 && (
+        <section className="mt-7">
+          <TitreSection>Les dernières formes</TitreSection>
+          <MurDesFigures entrees={entrees} profils={contexte.profils} />
+        </section>
+      )}
 
       <section className="mt-7">
         <TitreSection>Ce jour-là</TitreSection>

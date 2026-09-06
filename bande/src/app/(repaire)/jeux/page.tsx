@@ -32,6 +32,22 @@ export default async function Page() {
         </p>
       </header>
 
+      {contexte.profils.length < 2 && (
+        <Carte className="mb-6 p-4">
+          <p className="text-[15px] font-semibold tracking-tight">Il manque du monde</p>
+          <p className="mt-1.5 text-[14px] leading-snug text-encre-2">
+            Les dix jeux se jouent à partir de deux. Invite la bande depuis les
+            réglages, et reviens.
+          </p>
+          <Link
+            href="/reglages"
+            className="cible-tactile mt-3 inline-flex items-center justify-center rounded-[var(--radius-pilule)] bg-surface-3 px-4 py-2.5 text-[15px] font-semibold"
+          >
+            Le code d&apos;invitation
+          </Link>
+        </Carte>
+      )}
+
       {encours && (
         <Carte className="mb-6 p-4">
           <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-encre-3">

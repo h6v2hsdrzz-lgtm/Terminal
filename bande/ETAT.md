@@ -5,30 +5,26 @@
 
 ## Lot en cours
 
-**LOT G — terminé.** A à G sont faits, et la bande a ses dix jeux.
+**LOT H — terminé.** Les quatre audits sont dans `AUDIT.md`. A à H sont faits.
 
 ## Prochaine action exacte
 
-**LOT H — les quatre audits**, dans l'ordre du plan :
+Il n'y a plus de lot. Il reste cinq choses, listées à la fin d'`AUDIT.md` :
 
-1. **Fonctionnel** — reprendre `PLAN.md` point par point, rendre un tableau
-   fait / partiel / pas fait, avec une ligne pour tout ce qui n'est pas « fait ».
-2. **Visuel** — capture WebKit iPhone de chaque écran ET de chaque état (vide,
-   en chargement, en erreur, avec beaucoup de données). Les regarder vraiment.
-3. **Technique** — build sans avertissement, `tsc` propre, cloisonnement entre
-   bandes prouvé par un test qui essaie vraiment, taille des paquets, requêtes
-   N+1, hors-ligne, quotas de stockage.
-4. **Parcours réel** — trois comptes, une journée complète, une partie de
-   chaque catégorie, une coupure réseau au milieu d'un envoi, une
-   réinstallation de la PWA.
-
-**Bloqué, à dire à la bande** : le déploiement en production ne peut pas se
-faire depuis cette session. La ligne de commande Vercel est refusée par le
-garde-fou de l'environnement, et le connecteur Vercel disponible ici est
-authentifié sur un autre compte (403). Le port PostgreSQL de Neon (5432) est
-également injoignable depuis cet environnement, mais ça ne bloque rien : les
-migrations tournent dans le `vercel-build`. **Tout est poussé sur la branche**,
-donc un `npx vercel deploy --prod` depuis une machine avec le jeton suffit.
+1. **Déployer.** Impossible depuis cette session : la ligne de commande Vercel
+   y est refusée par le garde-fou de l'environnement, et le connecteur Vercel
+   disponible est authentifié sur un autre compte (403). Tout est poussé sur la
+   branche ; `npx vercel deploy --prod --token …` depuis une machine avec le
+   jeton suffit, et les migrations partent avec le `vercel-build`.
+2. **Révoquer le jeton Vercel** gardé pour la durée de la session dans
+   `~/.config/joie/vercel.token`.
+3. **Effacer les données de démonstration** avant la mise en service.
+4. **Vérifier à la main sur un vrai iPhone** ce qui ne s'automatise pas : HEIC,
+   micro, caméra, inclinaison de « Devine qui je suis », coupure réseau en
+   plein envoi, réinstallation de la PWA.
+5. Un jour, sans urgence : borner le chargement de l'historique (521 Ko de
+   JSON par écran aujourd'hui, quatre fois plus dans cinq ans), la file
+   d'attente hors-ligne des envois, la notification d'ouverture des scellés.
 
 ### Ancienne note (lot B, fait)
 
@@ -269,4 +265,4 @@ redéployer à chaque lot sans le redemander. **À révoquer à la fin.**
 | E points et badges | **fait**, avec deux écarts assumés (voir plus haut) |
 | F lieu | **fait**, sauf la carte à tuiles : constellation SVG à la place (voir « Décisions ») |
 | G jeux | **fait** : moteur + 10 jeux. Un seul mode (« un téléphone »), voir « Décisions » |
-| H audits | à la fin |
+| H audits | **fait** — voir `AUDIT.md` |
