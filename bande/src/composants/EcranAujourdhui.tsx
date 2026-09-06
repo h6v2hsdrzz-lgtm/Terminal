@@ -11,7 +11,7 @@ import { BoiteVocale } from "./BoiteVocale";
 import { ChampEtiquettes } from "./ChampEtiquettes";
 import { CurseurDiscret } from "./CurseurDiscret";
 import { FigureDuJour } from "./FigureDuJour";
-import { LienSceller } from "./PileScelles";
+import { BoutonSceller } from "./BoutonSceller";
 import { CurseurJoie } from "./CurseurJoie";
 import { MessageErreur } from "./Champ";
 import { VisageJoie } from "./VisageJoie";
@@ -437,7 +437,7 @@ export function EcranAujourdhui({
 
               <BoiteMedias medias={monEntree.photos} />
               <BoiteVocale audio={monEntree.audio} couleur={couleurProfil(moi)} />
-              <LienSceller />
+              <BoutonSceller aujourdhui={jour} />
             </Carte>
           </motion.div>
         )}

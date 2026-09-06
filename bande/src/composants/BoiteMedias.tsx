@@ -35,6 +35,11 @@ export function BoiteMedias({ medias }: { medias: Media[] }) {
 
   function choisir(fichiers: FileList | null) {
     if (!fichiers || fichiers.length === 0) return;
+    // Le retour haptique arrive à la SÉLECTION, pas au toucher du bouton :
+    // vibrer sous un doigt qui a seulement ouvert un sélecteur dit que quelque
+    // chose est arrivé alors que rien n'est arrivé. Absent sur iOS, d'où le
+    // test — c'est un bonus sur Android, jamais une promesse.
+    if ("vibrate" in navigator) navigator.vibrate(12);
     // On garde ce qui tient sous le plafond plutôt que de refuser la sélection
     // entière : quelqu'un qui en choisit dix en veut visiblement plusieurs.
     const retenus = Array.from(fichiers).slice(0, MAX_MEDIAS - medias.length);
@@ -174,39 +179,63 @@ export function BoiteMedias({ medias }: { medias: Media[] }) {
         </div>
       )}
 
-      {/* Deux entrées, et pas un attribut ajouté à l'existante : sur iPhone,
-          `capture` ouvre l'appareil photo ET FERME la pellicule. Une seule
-          commande obligerait donc à choisir entre les deux pour tout le monde,
-          alors que ce sont deux gestes différents — prendre maintenant, ou
-          retrouver ce qu'on a pris tout à l'heure. */}
-      <div className="flex flex-wrap items-center gap-4">
-        <label
-          className={`inline-block text-[13px] underline underline-offset-2 ${
-            complet ? "cursor-default text-encre-3" : "cursor-pointer text-encre-2 hover:text-encre"
-          }`}
-        >
-          <input
-            ref={champ}
-            type="file"
-            // Les deux formats d'un coup : le sélecteur propose alors la
-            // pellicule entière plutôt que de forcer un choix en amont.
-            accept="image/*,video/*"
-            multiple
-            onChange={(e) => choisir(e.target.files)}
-            disabled={enCours || complet}
-            className="sr-only"
-          />
-          {enCours
-            ? "Envoi…"
-            : complet
-              ? `${MAX_MEDIAS} médias, c'est le maximum`
-              : medias.length > 0
-                ? "Ajouter autre chose"
-                : "Choisir une photo ou une vidéo"}
-        </label>
-
-        {!complet && !enCours && (
-          <label className="cursor-pointer text-[13px] text-encre-2 underline underline-offset-2 hover:text-encre">
+      {/**
+        * Deux boutons, la caméra d'abord.
+        *
+        * Deux entrées distinctes, et pas un attribut ajouté à l'existante : sur
+        * iPhone, `capture` ouvre l'appareil photo ET FERME la pellicule. Une
+        * seule commande obligerait à choisir entre les deux pour tout le monde,
+        * alors que ce sont deux gestes différents — prendre maintenant, ou
+        * retrouver ce qu'on a pris tout à l'heure.
+        *
+        * La caméra est à GAUCHE, donc lue en premier : dans une application de
+        * journal, on photographie sa journée bien plus souvent qu'on ne
+        * retrouve une image d'hier.
+        *
+        * Une fois un média posé, les deux pavés se rétractent en une seule
+        * ligne discrète : la bande de vignettes juste au-dessus devient le
+        * sujet de l'écran, et deux grands boutons au-dessous la concurrenceraient.
+        */}
+      {complet ? (
+        <p className="text-[13px] text-encre-3">
+          {MAX_MEDIAS} médias, c&apos;est le maximum.
+        </p>
+      ) : medias.length > 0 ? (
+        <div className="flex items-center gap-4">
+          <label className="cible-tactile inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-encre-2 underline underline-offset-2">
+            <input
+              ref={appareil}
+              type="file"
+              accept="image/*,video/*"
+              capture="environment"
+              onChange={(e) => choisir(e.target.files)}
+              disabled={enCours}
+              className="sr-only"
+            />
+            <IconeAppareil />
+            {enCours ? "Envoi…" : "Photo"}
+          </label>
+          <label className="cible-tactile inline-flex cursor-pointer items-center gap-1.5 text-[13px] text-encre-2 underline underline-offset-2">
+            <input
+              ref={champ}
+              type="file"
+              accept="image/*,video/*"
+              multiple
+              onChange={(e) => choisir(e.target.files)}
+              disabled={enCours}
+              className="sr-only"
+            />
+            <IconeGalerie />
+            Galerie
+          </label>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2.5">
+          <PaveMedia
+            libelle={enCours ? "Envoi…" : "Photo"}
+            icone={<IconeAppareil />}
+            desactive={enCours}
+          >
             <input
               ref={appareil}
               type="file"
@@ -216,12 +245,25 @@ export function BoiteMedias({ medias }: { medias: Media[] }) {
               // pour illustrer sa journée.
               capture="environment"
               onChange={(e) => choisir(e.target.files)}
+              disabled={enCours}
               className="sr-only"
             />
-            Prendre une photo
-          </label>
-        )}
-      </div>
+          </PaveMedia>
+          <PaveMedia libelle="Galerie" icone={<IconeGalerie />} desactive={enCours}>
+            <input
+              ref={champ}
+              type="file"
+              // Les deux formats d'un coup : le sélecteur propose alors la
+              // pellicule entière plutôt que de forcer un choix en amont.
+              accept="image/*,video/*"
+              multiple
+              onChange={(e) => choisir(e.target.files)}
+              disabled={enCours}
+              className="sr-only"
+            />
+          </PaveMedia>
+        </div>
+      )}
 
       {etat.erreur && (
         <p role="alert" className="mt-1.5 text-[13px] text-encre-2">
@@ -300,5 +342,64 @@ function DialogueLegende({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Un pavé média : 52 px de haut, moitié de la largeur, icône et libellé court.
+ *
+ * C'est un `<label>` et pas un `<button>`, parce que le champ de fichier vit
+ * dedans : un bouton devrait le déclencher au clavier ET à la souris, et la
+ * plupart des façons de le faire cassent l'ouverture du sélecteur sur iOS.
+ * Le `label` la donne gratuitement.
+ *
+ * `active:scale-[0.97]` plutôt qu'un changement de couleur : sur un écran
+ * tactile il n'y a pas de survol, et l'état pressé est le seul retour visuel
+ * qu'on ait avant que le sélecteur ne s'ouvre. Le retour haptique, lui, est
+ * déclenché à la sélection d'un fichier — vibrer au toucher d'un bouton qui
+ * n'a encore rien fait dit quelque chose de faux.
+ */
+function PaveMedia({
+  libelle,
+  icone,
+  desactive,
+  children,
+}: {
+  libelle: string;
+  icone: React.ReactNode;
+  desactive: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <label
+      className={`flex h-[52px] items-center justify-center gap-2 rounded-[var(--radius-carte)] border border-trait bg-surface-2 text-[15px] font-semibold transition active:scale-[0.97] ${
+        desactive ? "cursor-default opacity-50" : "cursor-pointer"
+      }`}
+    >
+      {children}
+      <span aria-hidden className="text-encre-2">{icone}</span>
+      <span>{libelle}</span>
+    </label>
+  );
+}
+
+/* Deux tracés, comme les icônes de la barre d'onglets : une bibliothèque pour
+   ça pèserait plus que le reste de l'écran. */
+function IconeAppareil() {
+  return (
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 8.5h3l1.4-2h7.2L17 8.5h3a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 20 19.5H4A1.5 1.5 0 0 1 2.5 18v-8A1.5 1.5 0 0 1 4 8.5Z" />
+      <circle cx="12" cy="13.5" r="3.4" />
+    </svg>
+  );
+}
+
+function IconeGalerie() {
+  return (
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3" y="5" width="18" height="14" rx="2.4" />
+      <circle cx="8.6" cy="10" r="1.5" />
+      <path d="M3.8 17.2 8.4 12.8l3 2.7 3.6-3.9 4.2 4.6" />
+    </svg>
   );
 }

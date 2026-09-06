@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 
 import { Carte } from "./Carte";
@@ -86,17 +85,5 @@ export function PileScelles({
         <span aria-hidden className="shrink-0 text-encre-3">↓</span>
       </Carte>
     </button>
-  );
-}
-
-/** L'entrée discrète du check-in : sceller quelque chose depuis Aujourd'hui. */
-export function LienSceller() {
-  return (
-    <Link
-      href="/souvenirs#scelles"
-      className="mt-3 inline-flex items-center gap-1.5 text-[13px] text-encre-3 underline underline-offset-2 hover:text-encre-2"
-    >
-      <span aria-hidden>⏳</span> sceller quelque chose pour plus tard
-    </Link>
   );
 }

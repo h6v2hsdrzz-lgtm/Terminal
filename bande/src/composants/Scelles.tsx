@@ -29,7 +29,7 @@ import type { Capsule, GenreScelle } from "@/lib/depot";
 const DELAI_MIN = 7;
 const LONGUEUR_MAX = 1000;
 
-const GENRES: { cle: GenreScelle; nom: string; aide: string }[] = [
+export const GENRES: { cle: GenreScelle; nom: string; aide: string }[] = [
   { cle: "mot", nom: "Un mot", aide: "Ce que tu veux relire plus tard." },
   { cle: "photo", nom: "Une photo", aide: "Elle restera floue jusqu'au jour dit." },
   { cle: "video", nom: "Une vidéo", aide: "Huit secondes, comme partout ailleurs." },
@@ -190,8 +190,17 @@ function ScelleOuvert({ capsule, moi }: { capsule: Capsule; moi: string }) {
 }
 
 /** Sceller quelque chose : le genre, le contenu, le mot, la date. */
-function FormulaireScelle({ aujourdhui, fermer }: { aujourdhui: string; fermer: () => void }) {
-  const [genre, setGenre] = useState<GenreScelle>("mot");
+export function FormulaireScelle({
+  aujourdhui,
+  fermer,
+  genreInitial = "mot",
+}: {
+  aujourdhui: string;
+  fermer: () => void;
+  /** Le genre choisi dans la feuille, pour ne pas le redemander. */
+  genreInitial?: GenreScelle;
+}) {
+  const [genre, setGenre] = useState<GenreScelle>(genreInitial);
   const [texte, setTexte] = useState("");
   const [quand, setQuand] = useState(decaler(aujourdhui, 365));
   const [etat, setEtat] = useState(ETAT_INITIAL);
