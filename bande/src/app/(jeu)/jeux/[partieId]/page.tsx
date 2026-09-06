@@ -4,7 +4,7 @@ import { JeuEnCours } from "@/composants/jeux/JeuEnCours";
 import { Podium } from "@/composants/jeux/Podium";
 import { cartesDeLaBande, chargerPartie, recompensesDe } from "@/lib/depot-jeux";
 import { jeuParCle } from "@/lib/jeux/catalogue";
-import { exigerContexte } from "@/lib/repaire";
+import { entreesDeLaBande, exigerContexte } from "@/lib/repaire";
 
 export default async function Page({ params }: { params: Promise<{ partieId: string }> }) {
   const contexte = await exigerContexte();
@@ -28,11 +28,21 @@ export default async function Page({ params }: { params: Promise<{ partieId: str
     );
   }
 
+  /**
+   * Deux jeux se nourrissent du journal. Les journées sont chargées ici, une
+   * fois, plutôt que par chaque jeu : le chargement d'une partie ne doit pas
+   * dépendre du jeu choisi, et deux allers-retours de plus au lancement se
+   * voient quand trois personnes attendent autour d'une table.
+   */
+  const seNourritDuJournal = jeu.cle === "quiz-bande" || jeu.cle === "qui-a-ecrit";
+
   return (
     <JeuEnCours
       partie={partie}
       jeu={jeu}
-      cartesMaison={await cartesDeLaBande(contexte.moi.id)}
+      cartesMaison={jeu.cle === "devine-qui" ? await cartesDeLaBande(contexte.moi.id) : []}
+      entrees={seNourritDuJournal ? await entreesDeLaBande(contexte.groupe.id) : []}
+      profils={contexte.profils}
     />
   );
 }

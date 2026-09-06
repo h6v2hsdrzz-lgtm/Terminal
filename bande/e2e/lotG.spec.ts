@@ -203,3 +203,62 @@ test("le paquet « Nos potes » s'écrit et se défait sur place", async ({ page
   await page.reload({ waitUntil: "networkidle" });
   await expect(page.getByRole("button", { name: new RegExp(nom) })).toHaveCount(0);
 });
+
+/**
+ * Les dix jeux, lancés et joués au moins une manche.
+ *
+ * Un test par jeu coûterait dix connexions ; celui-ci fait le tour et n'a
+ * qu'un but : qu'aucun jeu ne s'ouvre sur un écran cassé. C'est le contrôle qui
+ * manquait quand seuls deux jeux étaient branchés.
+ */
+const PREMIER_ECRAN: Record<string, RegExp> = {
+  "Devine qui je suis": /Quel paquet/,
+  "Je n'ai jamais": /Jusqu'où on va/,
+  "Tu préfères": /Chacun vote en secret/,
+  "Qui est le plus susceptible de": /Chacun désigne en secret/,
+  "Le jugement": /juge/,
+  Menteur: /deux vraies, une fausse/,
+  "Top 3": /Tirer le thème/,
+  "Le plus rapide": /Un doigt chacun/,
+  "Le quiz de la bande": /Chacun répond en secret|Pas encore assez d'histoire/,
+  "Devine qui a écrit ça": /Les autres devinent|Rien d'assez vieux/,
+};
+
+for (const [nom, attendu] of Object.entries(PREMIER_ECRAN)) {
+  test(`« ${nom} » s'ouvre sur quelque chose de jouable`, async ({ page }) => {
+    await entrer(page, "Momo");
+    await tableRase(page);
+
+    await page.getByRole("button", { name: new RegExp(nom.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) })
+      .first()
+      .click();
+    await page.getByRole("button", { name: new RegExp(`^Lancer ${nom.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) }).click();
+    await page.waitForURL(/\/jeux\/.+/);
+
+    await expect(page.getByText(attendu).first()).toBeVisible();
+    // Aucun écran d'erreur : c'est ce que le test vérifie vraiment.
+    await expect(page.getByRole("heading", { name: "Ça a cassé" })).toHaveCount(0);
+  });
+}
+
+test("un vote unanime à « Tu préfères » ne fait marquer personne", async ({ page }) => {
+  await entrer(page, "Momo");
+  await tableRase(page);
+  await page.getByRole("button", { name: /Tu préfères/ }).first().click();
+  await page.getByRole("button", { name: /^Lancer Tu préfères$/ }).click();
+  await page.waitForURL(/\/jeux\/.+/);
+
+  // Le libellé du premier choix, pour voter pareil à chaque tour.
+  const premier = (await page.locator("main p").nth(1).innerText()).trim();
+  await page.getByRole("button", { name: "Chacun vote en secret" }).click();
+  for (let i = 0; i < 8; i++) {
+    if (await page.getByRole("button", { name: "Dilemme suivant" }).isVisible().catch(() => false)) break;
+    await page.getByRole("button", { name: "C'est moi" }).click();
+    await page.getByRole("button", { name: premier, exact: true }).click();
+  }
+
+  await expect(page.getByText(/Tout le monde pareil/)).toBeVisible();
+  // Le défaut vu en capture : le camp vide passait pour la minorité, et tout
+  // le monde ramassait un point.
+  await expect(page.getByText("1", { exact: true })).toHaveCount(0);
+});
