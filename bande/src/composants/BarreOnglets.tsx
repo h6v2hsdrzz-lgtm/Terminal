@@ -23,7 +23,6 @@ const ONGLETS = [
   // Le fil d'abord : c'est ce qu'on ouvre le matin, et c'est la racine.
   { href: "/", nom: "Fil", icone: FilIcone },
   { href: "/aujourdhui", nom: "Aujourd'hui", icone: SoleilIcone },
-  { href: "/stats", nom: "Stats", icone: StatsIcone },
   { href: "/souvenirs", nom: "Souvenirs", icone: SouvenirsIcone },
   { href: "/profil", nom: "Profil", icone: ProfilIcone },
 ];
@@ -150,15 +149,6 @@ function FilIcone({ actif }: PropsIcone) {
     <svg {...base(actif)} aria-hidden>
       <rect x="3.5" y="4.5" width="17" height="6" rx="2.2" />
       <rect x="3.5" y="13.5" width="17" height="6" rx="2.2" />
-    </svg>
-  );
-}
-
-function StatsIcone({ actif }: PropsIcone) {
-  return (
-    <svg {...base(actif)} aria-hidden>
-      <path d="M4 15.5l4.5-5 3.5 3 4-6.5 4 4.5" />
-      <path d="M3.5 20h17" />
     </svg>
   );
 }

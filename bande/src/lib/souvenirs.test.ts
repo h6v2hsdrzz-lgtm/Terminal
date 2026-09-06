@@ -7,6 +7,7 @@ import {
   libelleMois,
   moisDisponibles,
   murDeSouvenirs,
+  resumeRetro,
   retrospective,
 } from "./souvenirs";
 import type { Entree } from "./types";
@@ -245,5 +246,34 @@ describe("le mur retient aussi les voix et les vidéos", () => {
   it("ne compte pas deux fois une journée qui a photo et vidéo", () => {
     const mixte = entree("2026-01-01", "a", 5, { photos: [...UNE_VIDEO, ...UNE_PHOTO] });
     expect(murDeSouvenirs([mixte])[0].raison).toBe("une vidéo");
+  });
+});
+
+describe("resumeRetro", () => {
+  const vide = {
+    periode: "septembre 2026", jours: 0, journeesPosees: 0, moyenne: null,
+    meilleurJour: null, plusDure: null, joursComplets: 0, parProfil: [],
+    meilleurJourSemaine: null, declencheurs: [], photos: 0,
+  } as unknown as Parameters<typeof resumeRetro>[0];
+
+  it("le dit franchement quand il n'y a rien", () => {
+    expect(resumeRetro(vide)).toBe("Rien de posé ce mois-ci.");
+  });
+
+  it("accorde le singulier", () => {
+    // « 1 jours vécu » suffit à faire passer un résumé pour une sortie de
+    // gabarit.
+    const un = { ...vide, journeesPosees: 1, jours: 1, moyenne: 7, joursComplets: 1 };
+    expect(resumeRetro(un)).toBe("1 jour vécu, 7,0 de moyenne, 1 jour au complet.");
+  });
+
+  it("passe sous silence ce qui vaut zéro plutôt que de l'annoncer", () => {
+    const sansComplet = { ...vide, journeesPosees: 9, jours: 6, moyenne: 6.25, joursComplets: 0 };
+    expect(resumeRetro(sansComplet)).toBe("6 jours vécus, 6,3 de moyenne.");
+  });
+
+  it("écrit la moyenne à la française", () => {
+    const m = { ...vide, journeesPosees: 4, jours: 4, moyenne: 8.14, joursComplets: 2 };
+    expect(resumeRetro(m)).toContain("8,1 de moyenne");
   });
 });

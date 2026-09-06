@@ -124,3 +124,32 @@ test("on scelle une photo, et l'aperçu ne la montre pas", async ({ page }) => {
   const octets = (await (await page.request.get((await apercu.getAttribute("src"))!)).body()).byteLength;
   expect(octets).toBeLessThan(4000);
 });
+
+test("les stats ont rejoint les souvenirs, la rétrospective est en pied de page", async ({ page }) => {
+  await entrer(page, "Momo");
+
+  // L'onglet a disparu : quatre onglets, et la place d'un cinquième pour les
+  // jeux. L'ancienne adresse redirige, elle est dans des raccourcis.
+  await expect(page.getByRole("link", { name: "Stats" })).toHaveCount(0);
+  await page.goto("/stats");
+  await expect(page).toHaveURL(/\/souvenirs/);
+
+  const souvenirs = await page.content();
+  // L'ordre du plan : la galerie, puis les stats, puis la rétrospective.
+  const iGalerie = souvenirs.indexOf("La galerie");
+  const iStats = souvenirs.indexOf("Les stats");
+  const iRetro = souvenirs.indexOf("Rétrospective");
+  expect(iGalerie).toBeGreaterThan(-1);
+  expect(iStats).toBeGreaterThan(iGalerie);
+  expect(iRetro).toBeGreaterThan(iStats);
+
+  // La rétrospective tient en une phrase, repliée. Le détail est là pour qui
+  // déroule, pas avant.
+  // Le `summary` lui-même, pas le texte à l'intérieur : c'est lui qui reçoit
+  // le toucher, et Playwright refuse de cliquer un élément recouvert.
+  const resume = page.locator("summary").filter({ hasText: /jours? vécus?,/ }).first();
+  await expect(resume).toBeVisible();
+  await expect(page.getByText("Une image carrée, à envoyer à qui vous voulez.")).toBeHidden();
+  await resume.click();
+  await expect(page.getByText("Une image carrée, à envoyer à qui vous voulez.")).toBeVisible();
+});

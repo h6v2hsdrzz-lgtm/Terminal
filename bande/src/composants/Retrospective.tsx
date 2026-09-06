@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import { Carte, TitreSection } from "./Carte";
 import { libelleMois } from "@/lib/souvenirs";
 import { enTexteLong } from "@/lib/dates";
+import { resumeRetro } from "@/lib/souvenirs";
 import type { Retrospective as Donnees } from "@/lib/souvenirs";
 import type { Profil } from "@/lib/types";
 
@@ -81,7 +82,25 @@ export function Retrospective({
         Rétrospective
       </TitreSection>
 
-      <Carte className="overflow-hidden">
+      {/* Repliée par défaut : trois lignes en pied de page, et le détail pour
+          qui veut. Le mois entier tenait l'écran, ce qui en faisait une
+          destination alors que c'est une conclusion. */}
+      <details className="group">
+        <summary className="cible-tactile flex cursor-pointer list-none items-center gap-2 rounded-[var(--radius-carte)] border border-trait bg-surface px-4 py-3 text-[14px] leading-snug text-encre-2 marker:hidden">
+          <svg
+            width="10" height="10" viewBox="0 0 10 10" aria-hidden
+            className="shrink-0 transition-transform duration-[var(--duree-courte)] group-open:rotate-90"
+          >
+            <path d="M3 1.5 L7 5 L3 8.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className="min-w-0 flex-1">
+            <span className="font-medium text-encre first-letter:uppercase">{donnees.periode}</span>
+            {" — "}
+            {resumeRetro(donnees)}
+          </span>
+        </summary>
+
+      <Carte className="mt-2 overflow-hidden">
         <div ref={ancre} className="p-5">
           <p className="text-[13px] uppercase tracking-[0.12em] text-encre-3">{nomBande}</p>
           <h2 className="mt-0.5 text-[26px] font-semibold tracking-[-0.02em] first-letter:uppercase">
@@ -171,6 +190,7 @@ export function Retrospective({
           </div>
         )}
       </Carte>
+      </details>
     </section>
   );
 }

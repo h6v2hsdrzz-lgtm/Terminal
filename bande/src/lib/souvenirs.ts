@@ -236,3 +236,32 @@ export function ecartEnJours(depuis: string, jusqua: string): number {
   }
   return compte;
 }
+
+
+/**
+ * La rétrospective en une phrase.
+ *
+ * Elle est passée en pied de page et repliée : c'est une conclusion, pas un
+ * module. Ce qui reste visible doit donc tenir en trois lignes et donner envie
+ * de dérouler — ou suffire à qui ne déroulera pas.
+ *
+ * Les accords sont la moitié du travail. « 1 jours vécu », « 0 au complet »
+ * suffisent à faire passer un résumé pour une sortie de gabarit.
+ */
+export function resumeRetro(donnees: Retrospective): string {
+  if (donnees.journeesPosees === 0) return "Rien de posé ce mois-ci.";
+
+  const morceaux = [
+    donnees.jours === 1 ? "1 jour vécu" : `${donnees.jours} jours vécus`,
+    donnees.moyenne === null
+      ? null
+      : `${donnees.moyenne.toFixed(1).replace(".", ",")} de moyenne`,
+    donnees.joursComplets === 0
+      ? null
+      : donnees.joursComplets === 1
+        ? "1 jour au complet"
+        : `${donnees.joursComplets} jours au complet`,
+  ].filter((m): m is string => m !== null);
+
+  return `${morceaux.join(", ")}.`;
+}

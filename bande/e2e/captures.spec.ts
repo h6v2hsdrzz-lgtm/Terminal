@@ -13,7 +13,6 @@ import { join } from "node:path";
 const ECRANS = [
   { nom: "fil", url: "/" },
   { nom: "aujourdhui", url: "/aujourdhui" },
-  { nom: "stats", url: "/stats" },
   { nom: "souvenirs", url: "/souvenirs" },
   { nom: "galerie", url: "/galerie" },
   { nom: "profil", url: "/profil" },

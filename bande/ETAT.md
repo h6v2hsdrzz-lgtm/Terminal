@@ -5,22 +5,24 @@
 
 ## Lot en cours
 
-**LOT C — terminé.** A, B et C sont faits. On enchaîne sans feu vert
+**LOT D — terminé.** A, B, C et D sont faits. On enchaîne sans feu vert
 intermédiaire (« enchaine tout », 6 septembre).
 
 ## Prochaine action exacte
 
-**LOT D — souvenirs, stats, rétrospective.** Trois choses :
-1. réordonner la page Souvenirs : la galerie d'abord, les stats ensuite, la
-   rétrospective en pied de page ;
-2. la rétrospective devient trois lignes repliées, pas un module qui prend
-   l'écran ;
-3. resserrer les stats : garder la courbe, l'effet des déclencheurs, la
-   synchronicité, le calendrier. Couper le reste.
+**LOT E — les points, les niveaux, moins de badges.**
+1. Un module pur `src/lib/points.ts` avec le barème du plan, testé — c'est
+   exactement le genre de calcul qui doit l'être.
+2. **Deux écarts assumés au plan**, à confirmer : pas de points pour la série
+   (on vient de retirer les compteurs de série en A4, les remettre en points
+   serait se contredire), et pas de classement hebdomadaire (à trois, un
+   classement de présence reste un classement de présence).
+3. Cinq niveaux aux noms drôles, discrets dans le profil et à côté du nom.
+4. Ramener les badges de 23 à 8. Les badges retirés ne doivent pas casser
+   l'écran de ceux qui les avaient — `badgesDe` les recalcule à chaque fois,
+   donc rien n'est stocké : il suffit de retirer les définitions.
 
-Les stats vivent aujourd'hui dans `src/app/(repaire)/stats/page.tsx` et ont
-leur onglet. Le plan veut les déplacer dans Souvenirs : ça libère un onglet —
-à voir si on en profite pour donner le sien aux Jeux (lot G).
+Un onglet est libre depuis D. Il ira aux Jeux (lot G).
 
 ### Ancienne note (lot B, fait)
 
@@ -55,6 +57,10 @@ du plan. Correspondance à la fin de ce fichier.
   → **Lieu** dans l'interface et l'export.
 - **A4** — les trois compteurs du profil (« jours d'affilée », « ton record »,
   « journées posées ») sont retirés.
+- **D** — la page Souvenirs dans le nouvel ordre : la galerie, les stats, les
+  formes, ce jour-là, les scellés, le mur, la rétrospective en pied de page et
+  repliée en une phrase. Les stats quittent leur onglet pour les souvenirs
+  (`/stats` redirige), et le graphique des jours de la semaine est retiré.
 - **C** — les scellés : quatre genres (mot, photo, vidéo, voix), l'aperçu
   flouté DANS SES OCTETS (32 px, fabriqué dans le navigateur), le décompte, le
   sablier d'une ligne, l'empilement du fil au-delà de deux, et une entrée
@@ -210,7 +216,7 @@ redéployer à chaque lot sans le redemander. **À révoquer à la fin.**
 | B4 stockage | **fait autrement** : PostgreSQL, place occupée affichée. Pas d'abstraction R2 |
 | B5 vidéos courtes | **fait** (8 s, pas 15 — voir question sur le poids) |
 | C scellés | **fait** (sauf la notification d'ouverture — voir plus bas) |
-| D souvenirs / stats / rétro | ordre à revoir, stats à resserrer |
+| D souvenirs / stats / rétro | **fait** |
 | E points et badges | à faire — 23 badges aujourd'hui, le plan en veut 8 |
 | F lieu | à faire — les « étiquettes » existent et deviendront « Lieu » en A1 |
 | G jeux | rien. Dix jeux décidés, c'est un projet en soi |

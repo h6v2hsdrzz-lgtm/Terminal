@@ -4,6 +4,7 @@ import { CarteEntree } from "@/composants/CarteEntree";
 import { Carte, TitreSection } from "@/composants/Carte";
 import { Scelles } from "@/composants/Scelles";
 import { MurDesFigures } from "@/composants/MurDesFigures";
+import { Stats } from "@/composants/Stats";
 import { Retrospective } from "@/composants/Retrospective";
 import Link from "next/link";
 
@@ -41,16 +42,6 @@ export default async function Page({
           Ce que la bande garde, et ce qu&apos;elle s&apos;envoie à elle-même.
         </p>
       </header>
-
-      {choisi && (
-        <Retrospective
-          donnees={retrospective(entrees, choisi, contexte.profils.map((p) => p.id))}
-          profils={contexte.profils}
-          nomBande={contexte.groupe.nom}
-          mois={mois}
-          choisi={choisi}
-        />
-      )}
 
       {medias.length > 0 && (
         <section className="mt-7">
@@ -97,6 +88,15 @@ export default async function Page({
           </Link>
         </section>
       )}
+
+      <section className="mt-7">
+        <Stats
+          entrees={entrees}
+          profils={contexte.profils}
+          declencheurs={contexte.declencheurs}
+          aujourdhui={aujourdhui}
+        />
+      </section>
 
       <section className="mt-7">
         <TitreSection>Les dernières formes</TitreSection>
@@ -157,6 +157,18 @@ export default async function Page({
           </div>
         )}
       </section>
+      {/* En pied de page, et repliée : c'est une conclusion, pas un
+          module qui prend l'écran. */}
+      {choisi && (
+        <Retrospective
+          donnees={retrospective(entrees, choisi, contexte.profils.map((p) => p.id))}
+          profils={contexte.profils}
+          nomBande={contexte.groupe.nom}
+          mois={mois}
+          choisi={choisi}
+        />
+      )}
+
     </div>
   );
 }
