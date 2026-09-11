@@ -377,18 +377,71 @@ model Partie {
   groupeId    String    @map("groupe_id")
   /// La clé du jeu — « devine-qui », « jamais », « top3 »… Voir `src/lib/jeux`.
   jeu         String
-  /// « un-telephone » : on se passe l'appareil. Le seul mode pour l'instant,
-  /// et la colonne existe pour que le second n'impose pas de migration.
-  mode        String    @default("un-telephone")
+  /// « multi » : chacun sur son téléphone, et c'est le mode par défaut depuis
+  /// le lot N. « un-telephone » reste là pour dépanner — un téléphone à plat,
+  /// quelqu'un sans l'application installée.
+  mode        String    @default("multi")
   commenceeLe DateTime  @default(now()) @map("commencee_le")
   finieLe     DateTime? @map("finie_le")
+
+  /// L'hôte : celui qui a ouvert le salon, et qui lance. Transférable — une
+  /// partie ne doit jamais rester bloquée parce que quelqu'un est parti.
+  hoteId      String?   @map("hote_id")
+  /// Le code à quatre chiffres, en secours quand la notification n'arrive pas.
+  /// Nul une fois la partie finie : un code ne doit pas rester valable.
+  code        String?
+  /// « salon » → « encours » → « finie ».
+  etat        String    @default("salon")
+  /// Où en est la manche, du point de vue du serveur. Chaque jeu y met ses
+  /// propres noms de phase ; la coquille ne connaît que l'idée d'une phase qui
+  /// change, et d'une échéance au-delà de laquelle on avance quand même.
+  phase       String?
+  donneesPhase Json     @default("{}") @map("donnees_phase")
+  echeance    DateTime?
+  /// Incrémenté à CHAQUE changement d'état. C'est ce nombre que le flux
+  /// surveille : comparer une version coûte une colonne, comparer un état
+  /// entier coûte la partie à chaque battement.
+  version     Int       @default(0)
 
   groupe  Groupe        @relation(fields: [groupeId], references: [id], onDelete: Cascade)
   scores  ScorePartie[]
   manches Manche[]
+  actions ActionJoueur[]
 
   @@index([groupeId, commenceeLe])
+  @@index([groupeId, etat])
   @@map("bande_parties")
+}
+
+/// Ce qu'un joueur a fait dans une manche.
+///
+/// C'est la pièce qui rend le multi possible : l'état ne vit plus dans le
+/// téléphone de celui qui anime, il se reconstitue à partir de ces lignes.
+/// Quelqu'un qui perd le réseau au milieu d'un vote retrouve la partie exacte
+/// en revenant, et personne n'a besoin de lui redemander ce qu'il avait choisi.
+model ActionJoueur {
+  id       String   @id @default(cuid())
+  partieId String   @map("partie_id")
+  membreId String   @map("membre_id")
+  /// Le numéro de manche, recopié plutôt que référencé : une action arrive
+  /// parfois avant que la manche ne soit rangée, et une clé étrangère
+  /// obligerait à créer la manche d'abord, donc à attendre.
+  manche   Int
+  /// La phase visée. Deux votes dans deux phases différentes ne se confondent
+  /// pas, et une action en retard d'une phase se reconnaît et s'ignore.
+  phase    String
+  /// Ce que le joueur a répondu. Le jeu concerné sait le relire.
+  donnees  Json     @default("{}")
+  creeeLe  DateTime @default(now()) @map("creee_le")
+
+  partie Partie @relation(fields: [partieId], references: [id], onDelete: Cascade)
+
+  /// Un joueur n'a qu'une réponse par phase : la deuxième remplace la première,
+  /// ce qui rend l'envoi rejouable sans créer de doublon quand le réseau
+  /// hésite.
+  @@unique([partieId, manche, phase, membreId])
+  @@index([partieId, manche])
+  @@map("bande_actions_joueurs")
 }
 
 /// Un joueur dans une partie, et ce qu'il y marque.
@@ -403,6 +456,10 @@ model ScorePartie {
   sobre    Boolean @default(false)
   /// L'ordre de passage, tiré au début et gardé toute la partie.
   ordre    Int     @default(0)
+  /// Le dernier signe de vie. Un téléphone verrouillé cesse d'en donner : au
+  /// bout d'un moment, l'écran des autres le montre absent, et la partie peut
+  /// avancer sans lui plutôt que de l'attendre indéfiniment.
+  vuLe     DateTime @default(now()) @map("vu_le")
 
   partie Partie @relation(fields: [partieId], references: [id], onDelete: Cascade)
 

@@ -1,9 +1,10 @@
 import Link from "next/link";
 
 import { Carte, TitreSection } from "@/composants/Carte";
+import { BoiteRejoindre } from "@/composants/jeux/BoiteRejoindre";
 import { FicheJeu } from "@/composants/jeux/FicheJeu";
 import { CATEGORIES, jeuParCle, jeuxDeCategorie } from "@/lib/jeux/catalogue";
-import { historiqueParties, partieEnCours } from "@/lib/depot-jeux";
+import { historiqueParties, partieEnCours, salonOuvert } from "@/lib/depot-jeux";
 import { exigerContexte } from "@/lib/repaire";
 
 /**
@@ -17,20 +18,34 @@ import { exigerContexte } from "@/lib/repaire";
  * Une seule partie à la fois pour la bande. À trois autour d'une table, deux
  * parties en parallèle ne veulent rien dire — et ça évite qu'un
  * rafraîchissement de page en ouvre une seconde par accident.
+ *
+ * Depuis le lot N, chacun joue sur son téléphone. Le mode « on se le passe »
+ * reste dans chaque fiche, en dessous : il dépanne une batterie à plat ou un
+ * invité sans l'application.
  */
 export default async function Page() {
   const contexte = await exigerContexte();
   const encours = await partieEnCours(contexte.moi.id);
   const historique = await historiqueParties(contexte.moi.id);
+  const salon = await salonOuvert(contexte.moi.id);
 
   return (
     <div className="px-4 pt-3">
       <header className="mb-5 zone-sure-haute">
         <h1 className="text-[26px] font-semibold tracking-tight">Les jeux</h1>
         <p className="mt-1 text-[14px] text-encre-2">
-          À trois, sur un seul téléphone qu&apos;on se passe.
+          Chacun sur son téléphone. L&apos;hôte lance, les autres rejoignent.
         </p>
       </header>
+
+      {/* La boîte à code est TOUJOURS là, et elle remonte quand une partie
+          attend : à ce moment-là, on ne vient pas choisir un jeu, on vient en
+          rejoindre un. La cacher le reste du temps serait une fausse bonne
+          idée — c'est précisément quand l'application n'a pas vu le salon que
+          le code sert, et elle ne sait pas qu'elle ne l'a pas vu. */}
+      <div className={salon && !salon.jySuis ? "mb-6" : "mb-6 opacity-80"}>
+        <BoiteRejoindre />
+      </div>
 
       {contexte.profils.length < 2 && (
         <Carte className="mb-6 p-4">

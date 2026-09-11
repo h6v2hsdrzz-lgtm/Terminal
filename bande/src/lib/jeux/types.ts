@@ -37,3 +37,49 @@ export type CarteMaison = { id: string; texte: string; parQui: string; creeeLe: 
 /** Une carte plus longue que ça ne tient pas sur un écran posé sur un front. */
 export const LONGUEUR_CARTE = 46;
 export const MAX_CARTES = 200;
+
+// ── Le multi-téléphones (lot N) ─────────────────────────────────────────────
+
+export type EtatSalon = "salon" | "encours" | "finie";
+
+/** Ce qu'un joueur a répondu dans une phase. */
+export type ActionDeJoueur = {
+  membreId: string;
+  manche: number;
+  phase: string;
+  donnees: Record<string, unknown>;
+  /** Horodaté par le SERVEUR : c'est ce qui départage un duel de réflexe. */
+  quand: string;
+};
+
+/**
+ * L'état complet d'une partie multi, tel que le serveur le voit.
+ *
+ * C'est la seule vérité. Un téléphone ne fait que l'afficher et proposer des
+ * actions ; il ne décide rien, sinon deux écrans finiraient par raconter deux
+ * parties différentes.
+ */
+export type EtatPartie = {
+  partie: Partie;
+  etat: EtatSalon;
+  hoteId: string | null;
+  code: string | null;
+  /** Le numéro de la manche en cours. Zéro tant que rien n'a commencé. */
+  manche: number;
+  phase: string | null;
+  donneesPhase: Record<string, unknown>;
+  /** Instant ISO au-delà duquel on avance sans attendre les retardataires. */
+  echeance: string | null;
+  version: number;
+  /** Qui a donné signe de vie il y a moins de vingt secondes. */
+  presents: string[];
+  /** Les réponses de la manche en cours, toutes phases confondues. */
+  actions: ActionDeJoueur[];
+  /**
+   * L'heure du serveur au moment de la lecture.
+   *
+   * Sert à caler les horloges : sans elle, un duel de réflexe récompenserait
+   * le téléphone qui avance.
+   */
+  maintenant: string;
+};

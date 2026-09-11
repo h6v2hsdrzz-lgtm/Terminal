@@ -5,15 +5,23 @@ import { revalidatePath } from "next/cache";
 import { ErreurMetier } from "./depot";
 import {
   abandonnerPartie,
+  agir,
   ajouterCarte,
   cartesDeLaBande,
   chargerPartie,
+  demarrerPartie,
   enregistrerManche,
   lancerPartie,
+  lireEtatPartie,
   marquer,
+  ouvrirSalon,
+  publierPhase,
+  quitterSalon,
+  rejoindreSalon,
   retirerCarte,
   terminerPartie,
   type CarteMaison,
+  type EtatPartie,
   type FinDePartie,
   type Partie,
 } from "./depot-jeux";
@@ -129,4 +137,76 @@ export async function actionCartesDeLaBande(
   paquet: string,
 ): Promise<{ erreur: string | null; valeur?: CarteMaison[] }> {
   return tenter(async () => cartesDeLaBande(await quiJoue(), paquet));
+}
+
+// ── Le salon et la partie à plusieurs téléphones ────────────────────────────
+
+export async function actionOuvrirSalon(
+  jeu: string,
+): Promise<{ erreur: string | null; valeur?: string }> {
+  return tenter(async () => {
+    const id = await ouvrirSalon(await quiJoue(), jeu);
+    // L'accueil porte le bandeau « rejoindre » : sans cette invalidation, les
+    // deux autres ne verraient le salon qu'au prochain rafraîchissement.
+    revalidatePath("/");
+    return id;
+  });
+}
+
+export async function actionRejoindreSalon(
+  reference: { partieId?: string; code?: string },
+): Promise<{ erreur: string | null; valeur?: string }> {
+  return tenter(async () => {
+    const id = await rejoindreSalon(await quiJoue(), reference);
+    revalidatePath("/");
+    return id;
+  });
+}
+
+export async function actionQuitterSalon(partieId: string): Promise<EtatJeu> {
+  return tenter(async () => {
+    await quitterSalon(await quiJoue(), partieId);
+    revalidatePath("/");
+  });
+}
+
+export async function actionDemarrerPartie(partieId: string): Promise<EtatJeu> {
+  return tenter(async () => {
+    await demarrerPartie(await quiJoue(), partieId);
+    revalidatePath("/");
+  });
+}
+
+/**
+ * Publier une phase. Réservé à l'hôte — le dépôt le vérifie, pas l'écran.
+ *
+ * Aucune revalidation : c'est le flux qui prévient les écrans, et invalider un
+ * chemin en plus ferait recharger la page sous les doigts au milieu d'une
+ * manche.
+ */
+export async function actionPublierPhase(
+  partieId: string,
+  phase: { nom: string; manche?: number; donnees?: Record<string, unknown>; delai?: number | null },
+): Promise<EtatJeu> {
+  return tenter(async () => {
+    await publierPhase(await quiJoue(), partieId, phase);
+  });
+}
+
+export async function actionAgir(
+  partieId: string,
+  manche: number,
+  phase: string,
+  donnees: Record<string, unknown>,
+): Promise<EtatJeu> {
+  return tenter(async () => {
+    await agir(await quiJoue(), partieId, manche, phase, donnees);
+  });
+}
+
+/** L'état complet, pour le premier rendu. Ensuite, c'est le flux qui parle. */
+export async function actionEtatPartie(
+  partieId: string,
+): Promise<{ erreur: string | null; valeur?: EtatPartie | null }> {
+  return tenter(async () => lireEtatPartie(await quiJoue(), partieId));
 }

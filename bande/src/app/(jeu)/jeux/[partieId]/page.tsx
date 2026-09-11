@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 
 import { JeuEnCours } from "@/composants/jeux/JeuEnCours";
 import { Podium } from "@/composants/jeux/Podium";
-import { cartesDeLaBande, chargerPartie, recompensesDe } from "@/lib/depot-jeux";
+import { Salon } from "@/composants/jeux/Salon";
+import { cartesDeLaBande, chargerPartie, lireEtatPartie, recompensesDe } from "@/lib/depot-jeux";
 import { jeuParCle } from "@/lib/jeux/catalogue";
 import { entreesDeLaBande, exigerContexte } from "@/lib/repaire";
 
@@ -26,6 +27,18 @@ export default async function Page({ params }: { params: Promise<{ partieId: str
     return (
       <Podium joueurs={partie.joueurs} recompenses={(await recompensesDe(contexte.moi.id, partieId)) ?? []} />
     );
+  }
+
+  // Une partie à plusieurs téléphones commence par un salon : on y attend que
+  // tout le monde soit là. Le mode « un seul téléphone » n'en a pas — il n'y a
+  // personne à attendre, l'appareil est déjà dans la main.
+  if (partie.mode === "multi") {
+    const etat = await lireEtatPartie(contexte.moi.id, partieId);
+    if (etat?.etat === "salon") {
+      return (
+        <Salon initial={etat} jeu={jeu} moi={contexte.moi.id} profils={contexte.profils} />
+      );
+    }
   }
 
   /**

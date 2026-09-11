@@ -1,10 +1,21 @@
 import "server-only";
 
+import { Prisma } from "@/generated/prisma/client";
+
 import { prisma } from "./db";
 import { jourDeLaBande } from "./dates";
 import { jeuParCle } from "./jeux/catalogue";
 import { classement, crediter } from "./jeux/recompense";
-import { LONGUEUR_CARTE, MAX_CARTES, type CarteMaison, type FinDePartie, type Partie } from "./jeux/types";
+import { codeValide, estPresent, prochainHote, tirerCode } from "./jeux/salon";
+import {
+  LONGUEUR_CARTE,
+  MAX_CARTES,
+  type CarteMaison,
+  type EtatPartie,
+  type EtatSalon,
+  type FinDePartie,
+  type Partie,
+} from "./jeux/types";
 import { ErreurMetier } from "./depot";
 import { initialesDeLaBande } from "./initiales";
 
@@ -21,7 +32,15 @@ import { initialesDeLaBande } from "./initiales";
  * bien à la bande de celui qui écrit. C'est ce qui remplace la RLS du plan.
  */
 
-export type { CarteMaison, FinDePartie, Joueur, Partie } from "./jeux/types";
+export type {
+  ActionDeJoueur,
+  CarteMaison,
+  EtatPartie,
+  EtatSalon,
+  FinDePartie,
+  Joueur,
+  Partie,
+} from "./jeux/types";
 export { LONGUEUR_CARTE, MAX_CARTES } from "./jeux/types";
 
 async function bandeDe(membreId: string): Promise<string | null> {
@@ -299,7 +318,11 @@ export async function partieEnCours(membreId: string): Promise<Partie | null> {
   });
   if (!moi) return null;
   const partie = await prisma.partie.findFirst({
-    where: { groupeId: moi.groupeId, finieLe: null },
+    // Un SALON ouvert n'est pas une partie en cours : celui qui l'a ouvert doit
+    // pouvoir changer d'avis de jeu sans avoir à l'abandonner d'abord, et
+    // `ouvrirSalon` ferme le précédent tout seul. Seule une partie vraiment
+    // lancée empêche d'en commencer une autre.
+    where: { groupeId: moi.groupeId, finieLe: null, etat: { not: "salon" } },
     orderBy: { commenceeLe: "desc" },
     select: { id: true },
   });
@@ -427,4 +450,360 @@ export async function retirerCarte(membreId: string, carteId: string): Promise<v
   });
   if (!carte) throw new ErreurMetier("Cette carte n'existe pas.");
   await prisma.carteBande.delete({ where: { id: carte.id } });
+}
+
+// ── Le multi-téléphones ─────────────────────────────────────────────────────
+
+/**
+ * Ouvrir un salon.
+ *
+ * L'hôte est seul dedans au départ ; les autres rejoignent par la notification,
+ * par le bandeau de l'accueil, ou en dictant le code. Un seul salon ouvert à la
+ * fois par bande : deux salons pour trois personnes, c'est une personne qui
+ * attend dans le mauvais.
+ */
+export async function ouvrirSalon(membreId: string, jeu: string): Promise<string> {
+  if (!jeuParCle(jeu)) throw new ErreurMetier("Ce jeu n'existe pas.");
+  const moi = await prisma.membre.findUnique({
+    where: { id: membreId },
+    select: { groupeId: true },
+  });
+  if (!moi) throw new ErreurMetier("Session inconnue.");
+
+  // Un salon qui traîne depuis la veille n'intéresse personne : on le ferme
+  // plutôt que de refuser d'en ouvrir un nouveau.
+  await prisma.partie.updateMany({
+    where: { groupeId: moi.groupeId, etat: "salon" },
+    data: { etat: "finie", finieLe: new Date(), code: null },
+  });
+
+  // Le code doit être libre parmi les parties VIVANTES de la bande. Réessayer
+  // quelques fois suffit : neuf mille codes pour au plus une poignée de
+  // parties, la collision est théorique.
+  let code = tirerCode();
+  for (let essai = 0; essai < 8; essai += 1) {
+    const pris = await prisma.partie.findFirst({
+      where: { groupeId: moi.groupeId, code, etat: { not: "finie" } },
+      select: { id: true },
+    });
+    if (!pris) break;
+    code = tirerCode();
+  }
+
+  const partie = await prisma.partie.create({
+    data: {
+      groupeId: moi.groupeId,
+      jeu,
+      mode: "multi",
+      etat: "salon",
+      hoteId: membreId,
+      code,
+      scores: { create: [{ membreId, ordre: 0 }] },
+    },
+    select: { id: true },
+  });
+  return partie.id;
+}
+
+/** Le salon ouvert de la bande, s'il y en a un. Sert au bandeau de l'accueil. */
+export async function salonOuvert(membreId: string) {
+  const moi = await prisma.membre.findUnique({
+    where: { id: membreId },
+    select: { groupeId: true },
+  });
+  if (!moi) return null;
+
+  const partie = await prisma.partie.findFirst({
+    where: { groupeId: moi.groupeId, etat: "salon" },
+    orderBy: { commenceeLe: "desc" },
+    select: {
+      id: true,
+      jeu: true,
+      code: true,
+      hoteId: true,
+      scores: { select: { membreId: true } },
+    },
+  });
+  if (!partie) return null;
+
+  return {
+    id: partie.id,
+    jeu: partie.jeu,
+    code: partie.code,
+    hoteId: partie.hoteId,
+    jySuis: partie.scores.some((s) => s.membreId === membreId),
+    combien: partie.scores.length,
+  };
+}
+
+/**
+ * Rejoindre un salon, par son identifiant ou par son code.
+ *
+ * Rend l'identifiant de la partie. Rejoindre deux fois ne fait rien de plus :
+ * on revient souvent sur cet écran, et une deuxième ligne de score doublerait
+ * la personne dans la liste.
+ */
+export async function rejoindreSalon(
+  membreId: string,
+  reference: { partieId?: string; code?: string },
+): Promise<string> {
+  const moi = await prisma.membre.findUnique({
+    where: { id: membreId },
+    select: { groupeId: true },
+  });
+  if (!moi) throw new ErreurMetier("Session inconnue.");
+
+  const code = reference.code?.trim();
+  if (code && !codeValide(code)) throw new ErreurMetier("Un code, c'est quatre chiffres.");
+
+  const partie = await prisma.partie.findFirst({
+    where: {
+      groupeId: moi.groupeId,
+      ...(reference.partieId ? { id: reference.partieId } : {}),
+      ...(code ? { code } : {}),
+      etat: { not: "finie" },
+    },
+    select: { id: true, etat: true, scores: { select: { membreId: true, ordre: true } } },
+  });
+  if (!partie) throw new ErreurMetier("Aucune partie ne répond à ça. Le code est peut-être expiré.");
+  if (partie.scores.some((s) => s.membreId === membreId)) return partie.id;
+  if (partie.etat !== "salon") {
+    throw new ErreurMetier("Cette partie a déjà commencé sans toi.");
+  }
+
+  const ordre = Math.max(-1, ...partie.scores.map((s) => s.ordre)) + 1;
+  await prisma.scorePartie.create({ data: { partieId: partie.id, membreId, ordre } });
+  await toucherVersion(partie.id);
+  return partie.id;
+}
+
+/** Sortir d'un salon. L'hôte qui s'en va passe la main plutôt que de tout fermer. */
+export async function quitterSalon(membreId: string, partieId: string): Promise<void> {
+  const partie = await maPartie(membreId, partieId);
+  await prisma.scorePartie.deleteMany({ where: { partieId, membreId } });
+
+  if (partie.hoteId === membreId) {
+    const restants = await prisma.scorePartie.findMany({
+      where: { partieId },
+      select: { membreId: true, ordre: true, vuLe: true },
+      orderBy: { ordre: "asc" },
+    });
+    const suivant = prochainHote(
+      restants.map((r) => ({ membreId: r.membreId, ordre: r.ordre, present: estPresent(r.vuLe) })),
+      membreId,
+    );
+    await prisma.partie.update({
+      where: { id: partieId },
+      data: suivant
+        ? { hoteId: suivant, version: { increment: 1 } }
+        : // Plus personne : la partie se ferme au lieu de rester ouverte sans
+          // hôte, ce qui bloquerait l'ouverture de la suivante.
+          { hoteId: null, etat: "finie", finieLe: new Date(), code: null, version: { increment: 1 } },
+    });
+    return;
+  }
+  await toucherVersion(partieId);
+}
+
+/**
+ * Lancer la partie. L'hôte seul, et seulement à deux au minimum.
+ *
+ * L'ordre de passage est tiré ici : jusque-là, il suivait l'ordre d'arrivée
+ * dans le salon, ce qui ferait toujours commencer celui qui a ouvert.
+ */
+export async function demarrerPartie(membreId: string, partieId: string): Promise<void> {
+  const partie = await maPartie(membreId, partieId);
+  if (partie.hoteId !== membreId) throw new ErreurMetier("C'est à l'hôte de lancer.");
+  if (partie.etat !== "salon") throw new ErreurMetier("Cette partie est déjà lancée.");
+
+  const joueurs = await prisma.scorePartie.findMany({
+    where: { partieId },
+    select: { id: true },
+  });
+  if (joueurs.length < 2) throw new ErreurMetier("Il faut être au moins deux.");
+
+  const melange = [...joueurs].sort(() => Math.random() - 0.5);
+  await prisma.$transaction([
+    ...melange.map((j, ordre) =>
+      prisma.scorePartie.update({ where: { id: j.id }, data: { ordre } }),
+    ),
+    prisma.partie.update({
+      where: { id: partieId },
+      data: { etat: "encours", code: null, version: { increment: 1 } },
+    }),
+  ]);
+}
+
+/**
+ * Le battement de présence.
+ *
+ * Écrit sans incrémenter la version : un signe de vie toutes les cinq secondes
+ * par joueur réveillerait tous les écrans en permanence pour ne rien dire. Les
+ * absences se constatent à la lecture, en comparant les dates.
+ */
+export async function battreLeCoeur(membreId: string, partieId: string): Promise<void> {
+  await prisma.scorePartie.updateMany({
+    where: { partieId, membreId },
+    data: { vuLe: new Date() },
+  });
+}
+
+/**
+ * Publier une phase : c'est le seul geste qui fait avancer une partie.
+ *
+ * Réservé à l'hôte. Le reste du monde envoie des ACTIONS, et c'est l'hôte qui
+ * décide quand la manche passe à la suite. Un serveur qui arbitrerait tout seul
+ * demanderait d'y écrire les règles des dix jeux ; là, les règles restent dans
+ * le jeu, et le serveur ne garantit qu'une chose — que tout le monde lise la
+ * même phase au même moment.
+ */
+export async function publierPhase(
+  membreId: string,
+  partieId: string,
+  phase: {
+    nom: string;
+    manche?: number;
+    donnees?: Record<string, unknown>;
+    /** En millisecondes à partir de maintenant. */
+    delai?: number | null;
+  },
+): Promise<void> {
+  const partie = await maPartie(membreId, partieId);
+  if (partie.hoteId !== membreId) throw new ErreurMetier("C'est à l'hôte de mener la manche.");
+  if (partie.etat === "finie") throw new ErreurMetier("Cette partie est finie.");
+
+  const manche = phase.manche ?? partie.mancheCourante;
+  await prisma.partie.update({
+    where: { id: partieId },
+    data: {
+      phase: phase.nom,
+      donneesPhase: { ...(phase.donnees ?? {}), manche } as Prisma.InputJsonValue,
+      echeance: phase.delai ? new Date(Date.now() + phase.delai) : null,
+      version: { increment: 1 },
+    },
+  });
+}
+
+/**
+ * Ce qu'un joueur répond.
+ *
+ * `upsert` sur (partie, manche, phase, joueur) : renvoyer deux fois la même
+ * réponse parce que le réseau a hésité ne doit pas créer deux votes. Et
+ * l'horodatage vient du serveur — c'est lui qui départage un duel de réflexe,
+ * pas l'horloge du téléphone le plus optimiste.
+ */
+export async function agir(
+  membreId: string,
+  partieId: string,
+  manche: number,
+  phase: string,
+  donnees: Record<string, unknown>,
+): Promise<void> {
+  await maPartie(membreId, partieId);
+  const valeur = donnees as Prisma.InputJsonValue;
+  await prisma.actionJoueur.upsert({
+    where: { partieId_manche_phase_membreId: { partieId, manche, phase, membreId } },
+    create: { partieId, membreId, manche, phase, donnees: valeur },
+    update: { donnees: valeur, creeeLe: new Date() },
+  });
+  await toucherVersion(partieId);
+}
+
+/** La version seule : c'est tout ce que le flux relit entre deux battements. */
+export async function versionPartie(partieId: string): Promise<number | null> {
+  const partie = await prisma.partie.findUnique({
+    where: { id: partieId },
+    select: { version: true },
+  });
+  return partie?.version ?? null;
+}
+
+/** L'état complet, tel que le serveur le voit. La seule vérité. */
+export async function lireEtatPartie(
+  membreId: string,
+  partieId: string,
+): Promise<EtatPartie | null> {
+  const base = await chargerPartie(membreId, partieId);
+  if (!base) return null;
+
+  const ligne = await prisma.partie.findUnique({
+    where: { id: partieId },
+    select: {
+      etat: true,
+      hoteId: true,
+      code: true,
+      phase: true,
+      donneesPhase: true,
+      echeance: true,
+      version: true,
+      scores: { select: { membreId: true, vuLe: true, ordre: true } },
+      manches: { orderBy: { numero: "desc" }, take: 1, select: { numero: true } },
+    },
+  });
+  if (!ligne) return null;
+
+  const maintenant = new Date();
+  const donneesPhase = (ligne.donneesPhase ?? {}) as Record<string, unknown>;
+  const manche = Number(donneesPhase.manche ?? ligne.manches[0]?.numero ?? 0);
+
+  // Seules les actions de la manche en cours descendent : les précédentes ne
+  // servent qu'à l'historique, et les envoyer ferait grossir chaque battement.
+  const actions = await prisma.actionJoueur.findMany({
+    where: { partieId, manche },
+    orderBy: { creeeLe: "asc" },
+    select: { membreId: true, manche: true, phase: true, donnees: true, creeeLe: true },
+  });
+
+  return {
+    partie: base,
+    etat: ligne.etat as EtatSalon,
+    hoteId: ligne.hoteId,
+    code: ligne.code,
+    manche,
+    phase: ligne.phase,
+    donneesPhase,
+    echeance: ligne.echeance?.toISOString() ?? null,
+    version: ligne.version,
+    presents: ligne.scores
+      .filter((s) => estPresent(s.vuLe, maintenant))
+      .map((s) => s.membreId),
+    actions: actions.map((a) => ({
+      membreId: a.membreId,
+      manche: a.manche,
+      phase: a.phase,
+      donnees: (a.donnees ?? {}) as Record<string, unknown>,
+      quand: a.creeeLe.toISOString(),
+    })),
+    maintenant: maintenant.toISOString(),
+  };
+}
+
+/**
+ * La partie, si elle est bien de ma bande. Le contrôle d'appartenance, une fois.
+ *
+ * `mancheCourante` est calculé ici plutôt que stocké : il se déduit des données
+ * de phase, et une colonne de plus serait une colonne de plus à tenir d'accord
+ * avec elles.
+ */
+async function maPartie(membreId: string, partieId: string) {
+  const moi = await prisma.membre.findUnique({
+    where: { id: membreId },
+    select: { groupeId: true },
+  });
+  if (!moi) throw new ErreurMetier("Session inconnue.");
+  const partie = await prisma.partie.findFirst({
+    where: { id: partieId, groupeId: moi.groupeId },
+    select: { id: true, hoteId: true, etat: true, donneesPhase: true },
+  });
+  if (!partie) throw new ErreurMetier("Cette partie n'existe pas.");
+  const donnees = (partie.donneesPhase ?? {}) as Record<string, unknown>;
+  return { ...partie, mancheCourante: Number(donnees.manche ?? 0) };
+}
+
+/** Réveiller les écrans sans rien changer d'autre. */
+async function toucherVersion(partieId: string): Promise<void> {
+  await prisma.partie.update({
+    where: { id: partieId },
+    data: { version: { increment: 1 } },
+  });
 }

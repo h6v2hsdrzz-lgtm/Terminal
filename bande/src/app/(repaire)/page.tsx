@@ -4,6 +4,7 @@ import { CarteEntree } from "@/composants/CarteEntree";
 import { Carte, TitreSection } from "@/composants/Carte";
 import { FigureDuJour } from "@/composants/FigureDuJour";
 import { PileScelles } from "@/composants/PileScelles";
+import { BandeauSalon } from "@/composants/jeux/BandeauSalon";
 import { Fil } from "@/composants/fil/Fil";
 import { TirerPourRafraichir } from "@/composants/fil/TirerPourRafraichir";
 import {
@@ -14,6 +15,8 @@ import {
   masquerEntree,
   toucherVisiteDuFil,
 } from "@/lib/depot";
+import { salonOuvert } from "@/lib/depot-jeux";
+import { jeuParCle } from "@/lib/jeux/catalogue";
 import { exigerContexte } from "@/lib/repaire";
 import { jourDeLaBande } from "@/lib/dates";
 
@@ -38,13 +41,14 @@ export default async function Page() {
   const aujourdhui = jourDeLaBande();
   const annuaire = { profils: contexte.profils, declencheurs: contexte.declencheurs };
 
-  const [page, epinglees, jaiPose, depuisVisite] = await Promise.all([
+  const [page, epinglees, jaiPose, depuisVisite, salon] = await Promise.all([
     listerPageDuFil(contexte.groupe.id),
     listerEpinglees(contexte.groupe.id),
     aDejaPose(contexte.groupe.id, contexte.moi.id, aujourdhui),
     // Lit la visite précédente ET marque celle-ci : le repère « nouveau »
     // n'a de sens qu'une fois, et il doit disparaître au rechargement suivant.
     toucherVisiteDuFil(contexte.moi.id),
+    salonOuvert(contexte.moi.id),
   ]);
 
   const voile = contexte.groupe.revelerApresPost && !jaiPose;
@@ -78,6 +82,20 @@ export default async function Page() {
   return (
     <div className="px-4 pt-3">
       <TirerPourRafraichir />
+
+      {/* Une partie qui attend passe avant le fil : une invitation qu'il faut
+          aller chercher dans un onglet n'est pas une invitation. */}
+      {salon && !salon.jySuis && (
+        <BandeauSalon
+          partieId={salon.id}
+          jeu={jeuParCle(salon.jeu)?.nom ?? "une partie"}
+          emoji={jeuParCle(salon.jeu)?.emoji ?? "🎲"}
+          hote={
+            contexte.profils.find((p) => p.id === salon.hoteId)?.pseudo ?? "Quelqu'un"
+          }
+          combien={salon.combien}
+        />
+      )}
 
       <header className="mb-5 zone-sure-haute">
         <h1 className="text-[26px] font-semibold tracking-[-0.02em]">Le fil</h1>

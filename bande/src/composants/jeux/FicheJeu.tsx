@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 
 import { Carte } from "@/composants/Carte";
 import { Avatar } from "@/composants/Avatar";
-import { actionLancerPartie } from "@/lib/actions-jeux";
+import { actionLancerPartie, actionOuvrirSalon } from "@/lib/actions-jeux";
 import type { Jeu } from "@/lib/jeux/catalogue";
 import { RESSORT } from "@/lib/mouvement";
 import type { Profil } from "@/lib/types";
@@ -44,13 +44,28 @@ export function FicheJeu({
     return liste.includes(id) ? liste.filter((x) => x !== id) : [...liste, id];
   }
 
-  function lancer() {
+  /**
+   * Deux façons de lancer, et la première est celle par défaut.
+   *
+   * **Chacun son téléphone** ouvre un salon : les autres reçoivent un bandeau
+   * sur leur accueil, ou tapent le code. C'est le mode normal depuis le lot N —
+   * on est trois avec l'application installée, se passer l'appareil n'a plus
+   * de raison d'être.
+   *
+   * **Un seul téléphone** reste là pour dépanner : une batterie à plat, un
+   * invité sans l'application. Il démarre directement, sans salon : il n'y a
+   * personne à attendre, l'appareil est déjà dans la main.
+   */
+  function lancer(mode: "multi" | "un-telephone") {
     setErreur(null);
     demarrer(async () => {
-      const reponse = await actionLancerPartie(
-        jeu.cle,
-        joueurs.map((membreId) => ({ membreId, sobre: sobres.includes(membreId) })),
-      );
+      const reponse =
+        mode === "multi"
+          ? await actionOuvrirSalon(jeu.cle)
+          : await actionLancerPartie(
+              jeu.cle,
+              joueurs.map((membreId) => ({ membreId, sobre: sobres.includes(membreId) })),
+            );
       if (reponse.erreur || !reponse.valeur) {
         setErreur(reponse.erreur ?? "La partie n'a pas démarré.");
         return;
@@ -178,15 +193,29 @@ export function FicheJeu({
 
               <button
                 type="button"
-                onClick={lancer}
-                disabled={bloque || enCours || joueurs.length < 2}
+                onClick={() => lancer("multi")}
+                disabled={bloque || enCours}
                 className="cible-tactile mt-4 w-full rounded-[var(--radius-pilule)] bg-encre px-4 py-3 text-[16px] font-semibold text-surface disabled:opacity-40"
               >
-                {enCours ? "Un instant…" : `Lancer ${jeu.nom}`}
+                {enCours ? "Un instant…" : "Chacun son téléphone"}
+              </button>
+              <p className="mt-2 text-center text-[13px] text-encre-3">
+                Les autres reçoivent un bandeau sur leur accueil, ou tapent le code.
+              </p>
+
+              {/* Le mode de secours, en dessous et en plus petit : il dépanne,
+                  il n'est plus la façon normale de jouer. */}
+              <button
+                type="button"
+                onClick={() => lancer("un-telephone")}
+                disabled={bloque || enCours || joueurs.length < 2}
+                className="cible-tactile mt-3 w-full py-2.5 text-center text-[14px] text-encre-3 underline underline-offset-2 transition hover:text-encre-2 disabled:opacity-40"
+              >
+                Un seul téléphone, on se le passe
               </button>
               {joueurs.length < 2 && (
-                <p className="mt-2 text-center text-[13px] text-encre-3">
-                  Il faut être au moins deux.
+                <p className="mt-1 text-center text-[13px] text-encre-3">
+                  Ce mode-là demande d&apos;être au moins deux.
                 </p>
               )}
             </div>
