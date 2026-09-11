@@ -67,17 +67,48 @@ export type Ardoise = {
 };
 
 /**
- * L'ardoise d'une personne, sur tout son historique.
+ * Ce que chaque JOUR a rapporté, plafonds appliqués.
  *
- * Le plafond est **quotidien**, pas global : c'est ce qui empêche de gonfler
- * son score en une soirée sans punir quelqu'un qui tient depuis un an.
+ * `ardoise` en faisait déjà le calcul pour n'en garder que la somme. L'extraire
+ * sert au graphique d'évolution du lot P : un total ne se dessine pas, une
+ * suite de journées si — et refaire le barème une deuxième fois à côté aurait
+ * garanti que les deux finissent par ne plus dire la même chose.
  */
-export function ardoise(
+export function pointsParJour(
   entrees: Entree[],
   membreId: string,
   scelles: { auteurId: string; creeLe: string }[] = [],
   parties: { membreId: string; jour: string; points: number }[] = [],
-): Ardoise {
+): { jour: string; points: number }[] {
+  const detaille = calculer(entrees, membreId, scelles, parties);
+  const total = new Map<string, number>();
+
+  for (const [jour, points] of detaille.parJour) {
+    total.set(jour, Math.min(points, PLAFOND_QUOTIDIEN));
+  }
+  for (const [jour, points] of detaille.jeuxParJour) {
+    // Le plafond des jeux est SÉPARÉ de celui du reste : une soirée de jeux
+    // compte, une nuit blanche ne compte pas double, et les deux n'entrent pas
+    // en concurrence. C'est la règle de `ardoise`, reprise ici à l'identique.
+    total.set(jour, (total.get(jour) ?? 0) + Math.min(points, PLAFOND_JEUX));
+  }
+
+  return [...total.entries()]
+    .map(([jour, points]) => ({ jour, points }))
+    .sort((a, b) => a.jour.localeCompare(b.jour));
+}
+
+/** Le calcul commun à l'ardoise et au graphique. */
+function calculer(
+  entrees: Entree[],
+  membreId: string,
+  scelles: { auteurId: string; creeLe: string }[],
+  parties: { membreId: string; jour: string; points: number }[],
+): {
+  parJour: Map<string, number>;
+  detail: Map<string, number>;
+  jeuxParJour: Map<string, number>;
+} {
   const parJour = new Map<string, number>();
   const detail = new Map<string, number>();
 
@@ -124,8 +155,6 @@ export function ardoise(
     if (scelle.auteurId === membreId) ajouter(scelle.creeLe, "scellés", BAREME.scelle);
   }
 
-  let total = [...parJour.values()].reduce((s, v) => s + Math.min(v, PLAFOND_QUOTIDIEN), 0);
-
   /**
    * Les jeux passent à côté du plafond de cent — le plan dit « hors jeux » —
    * mais pas à côté de tout plafond. Ils ont le leur, et pour la même raison :
@@ -137,6 +166,25 @@ export function ardoise(
     if (partie.membreId !== membreId) continue;
     jeuxParJour.set(partie.jour, (jeuxParJour.get(partie.jour) ?? 0) + partie.points);
   }
+
+  return { parJour, detail, jeuxParJour };
+}
+
+/**
+ * L'ardoise d'une personne, sur tout son historique.
+ *
+ * Le plafond est **quotidien**, pas global : c'est ce qui empêche de gonfler
+ * son score en une soirée sans punir quelqu'un qui tient depuis un an.
+ */
+export function ardoise(
+  entrees: Entree[],
+  membreId: string,
+  scelles: { auteurId: string; creeLe: string }[] = [],
+  parties: { membreId: string; jour: string; points: number }[] = [],
+): Ardoise {
+  const { parJour, detail, jeuxParJour } = calculer(entrees, membreId, scelles, parties);
+
+  let total = [...parJour.values()].reduce((s, v) => s + Math.min(v, PLAFOND_QUOTIDIEN), 0);
   let gagnesEnJouant = 0;
   for (const points of jeuxParJour.values()) gagnesEnJouant += Math.min(points, PLAFOND_JEUX);
   if (gagnesEnJouant > 0) {

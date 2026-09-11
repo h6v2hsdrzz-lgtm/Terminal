@@ -3,11 +3,12 @@ import Link from "next/link";
 import { BoiteAvatar } from "@/composants/BoiteAvatar";
 import { Carte, TitreSection } from "@/composants/Carte";
 import { Calendrier } from "@/composants/Calendrier";
-import { ClassementAssiduite } from "@/composants/ClassementAssiduite";
+import { CourbeDeclencheurs } from "@/composants/CourbeDeclencheurs";
+import { CourbePoints } from "@/composants/CourbePoints";
 import { MurBadges } from "@/composants/MurBadges";
 import { NomDuProfil } from "@/composants/NomDuProfil";
 import { AlbumPersonnel } from "@/composants/AlbumPersonnel";
-import { badgesDe, classementAssiduite } from "@/lib/badges";
+import { badgesDe } from "@/lib/badges";
 import { mediasDeLaBande } from "@/lib/depot";
 import { enHeure, heureMoyenne, lieuFavori, motFavori, partVocale } from "@/lib/portrait";
 import { Niveau } from "@/composants/Niveau";
@@ -97,12 +98,25 @@ export default async function Page() {
         <Niveau ardoise={mesPoints} />
       </section>
 
-      <ClassementAssiduite
-        classement={classementAssiduite(entrees, contexte.profils.map((p) => p.id), aujourdhui)}
-        profils={contexte.profils}
+      {/* Sous « Tes points », le classement général et son évolution — c'est
+          la place que le plan lui donne, et c'est la bonne : on regarde son
+          niveau, puis on regarde où ça en est. */}
+      <CourbePoints
         entrees={entrees}
+        profils={contexte.profils}
         aujourdhui={aujourdhui}
-        moi={contexte.moi.id}
+        scelles={capsules.map((c) => ({ auteurId: c.auteurId, creeLe: c.creeLe }))}
+        parties={gains}
+      />
+
+      {/* À la place de « la semaine » : les déclencheurs dans le temps. Le
+          classement d'assiduité disait la même chose que le calendrier plus
+          bas, en plus comparatif — et comparer l'assiduité de trois amis n'a
+          jamais fait poser une journée de plus. */}
+      <CourbeDeclencheurs
+        entrees={entrees}
+        declencheurs={contexte.declencheurs}
+        aujourdhui={aujourdhui}
       />
 
       {(album.length > 0 || traits.length > 0) && (

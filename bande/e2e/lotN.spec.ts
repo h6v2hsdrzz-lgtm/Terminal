@@ -84,11 +84,12 @@ test("l'hôte lance, et les deux écrans basculent ensemble", async ({ browser }
 test("un code inconnu est refusé sans rien casser", async ({ page }) => {
   await entrer(page, "Samy");
   await aller(page, "/jeux");
-  const champ = page.locator("#code-partie");
-  await expect(champ).toBeVisible();
-  await champ.fill("1111");
-  await expect(champ).toHaveValue("1111");
-  await page.getByRole("button", { name: /entrer/i }).click();
+  // Par `taper` comme partout ailleurs : remplir le champ à la main marchait
+  // une fois sur dix, et échouait le reste du temps sur un bouton resté
+  // désactivé — React n'avait pas vu la saisie, arrivée avant l'hydratation.
+  const bouton = page.getByRole("button", { name: /entrer/i });
+  await taper(page.locator("#code-partie"), bouton, "1111");
+  await bouton.click();
   await expect(page.getByRole("alert").first()).toContainText(/aucune partie|expiré/i);
   await expect(page).toHaveURL(/\/jeux$/);
 });

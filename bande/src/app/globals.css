@@ -56,6 +56,17 @@
   --profil-6: #2d6101;
   --profil-7: #8a1a6f;
 
+  /* Les trois séries des déclencheurs (lot P).
+     Volontairement HORS de la palette de profils : les deux graphiques sont sur
+     la même page, et une série qui reprend la couleur de quelqu'un fait lire la
+     seconde comme la première. Trois teintes désaturées, éloignées les unes des
+     autres en clarté autant qu'en teinte — elles restent lisibles côte à côte
+     en barres, et distinctes pour un œil daltonien parce que la clarté suffit à
+     les séparer. */
+  --serie-1: #4a5b6b;
+  --serie-2: #7d8a5c;
+  --serie-3: #9a6b52;
+
   /* Rampe de joie : une seule famille, du calme au rayonnant. */
   /* L'écart entre 1 et 10 doit se voir d'un coup d'œil sur une grille de
      sept cents cases : la première version tenait sur quatre tons de caramel,
@@ -104,6 +115,11 @@
     --profil-6: #377500;
     --profil-7: #a42384;
 
+    /* Mêmes séries, remontées dans la bande de clarté du sombre. */
+    --serie-1: #7f95a8;
+    --serie-2: #a3b37c;
+    --serie-3: #c08f72;
+
     --joie-1: #212327;
     --joie-2: #292a29;
     --joie-3: #32322d;
@@ -147,6 +163,11 @@
   --profil-5: #a570f3;
   --profil-6: #377500;
   --profil-7: #a42384;
+
+  /* Mêmes séries, remontées dans la bande de clarté du sombre. */
+  --serie-1: #7f95a8;
+  --serie-2: #a3b37c;
+  --serie-3: #c08f72;
 
   --joie-1: #212327;
   --joie-2: #292a29;

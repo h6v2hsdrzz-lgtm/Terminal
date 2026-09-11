@@ -72,6 +72,20 @@ export function enTexteCourt(iso: string): string {
   return `${quantieme(d.getDate())} ${MOIS[d.getMonth()].slice(0, 4)}${MOIS[d.getMonth()].length > 4 ? "." : ""}`;
 }
 
+/**
+ * Un mois, avec son année : « août 2025 ».
+ *
+ * L'année n'est pas décorative ici. Le graphique des déclencheurs passe au pas
+ * mensuel au-delà de six mois, et sans elle une fenêtre de quatorze mois
+ * s'annonce « 1er août → 1er sept. » : on croit lire un mois de données là où il
+ * y en a plus d'un an.
+ */
+export function moisEnTexte(mois: string): string {
+  const [annee, numero] = mois.split("-");
+  const nom = MOIS[Number(numero) - 1] ?? "";
+  return `${nom.slice(0, 4)}${nom.length > 4 ? "." : ""} ${annee}`;
+}
+
 /** « aujourd'hui », « hier », sinon la date. */
 export function enTexteRelatif(iso: string, aujourdhui: string): string {
   if (iso === aujourdhui) return "aujourd'hui";

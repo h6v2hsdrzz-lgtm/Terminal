@@ -33,6 +33,7 @@ src/app/api/             photo, vignette, audio, avatar, scelle, lieu, export, s
 src/app/not-found.tsx    404 en français ; error.tsx pour ce qui casse
 src/composants/          un fichier par composant, noms français ; jeux/ pour les dix jeux, jeux/multi/ pour le multi, fil/ pour le fil
 src/lib/                 depot.ts + depot-jeux.ts (tout PostgreSQL), actions*.ts, logique pure
+src/lib/graphiques.ts    ce que les graphiques du profil calculent ; trace.ts, le lissage
 src/lib/stockage/        R2 : signature v4 écrite à la main, client, clés, plafond
 scripts/migrer-medias.ts déménage les octets vers R2, avec relecture et empreintes
 src/lib/jeux/            catalogue, cadre, tirage, recompense, quiz, top3, vote, inclinaison, salon, recettes, types
@@ -203,3 +204,9 @@ npx prisma migrate dev --create-only   # écrire la migration, la RELIRE, puis l
 - **Un 429 ressemble à une page absente** quand on ne regarde que « ça a marché
   ou pas ». Distinguer les codes et réessayer a fait passer la récolte d'images
   de 200 à 237 cartes.
+- **Une entrée porte des IDENTIFIANTS de déclencheurs, pas leurs noms.** Comparer
+  sur le nom rend toutes les séries à zéro — et l'écran annonce poliment
+  « aucun déclencheur coché » devant quatre cents journées qui en portent.
+- **`locator("text")` de Playwright n'est pas le `<text>` d'un SVG**, et
+  `innerText` ne marche pas dessus. L'ordre des éléments d'un SVG suit le
+  dessin, pas la lecture.

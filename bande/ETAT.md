@@ -5,7 +5,7 @@
 
 ## Lot en cours
 
-**Vague 2 : lots J, K, O2, L, M, N et O terminés.** O2 (le registre) est passé avant
+**Vague 2 : lots J, K, O2, L, M, N, O et P terminés.** O2 (le registre) est passé avant
 le lot L parce que c'est le reproche explicite de la bande sur la livraison
 précédente — « c'est vraiment x100, vas-y super fort ». Les chiffres du plan
 sont tenus et verrouillés par un test :
@@ -31,14 +31,23 @@ gros, son mode duel et son format en cinq manches. Et trois jeux de plus :
 complot » et « Le tribunal des idées », tous deux enregistrés, gardés dans la
 nouvelle table `bande_paroles` et réécoutables dans les souvenirs.
 
+**Le lot P est fait : deux graphiques, et les règles communes sur les trois.**
+L'évolution du classement général remplace rien (elle s'ajoute sous « Tes
+points ») ; les déclencheurs dans le temps remplacent « la semaine », comme le
+plan le demandait. Les trois graphiques de l'application rendent maintenant leur
+valeur au TAP, tiennent sous deux cents pixels et se lisent en clair comme en
+sombre.
+
 ## Prochaine action exacte
 
-**LOT P — les deux graphiques du profil** : l'évolution du classement général
-(une ligne par joueur, points cumulés, périodes 30/90 jours/tout) et les
-déclencheurs dans le temps. Les règles communes de P3 s'appliquent aux deux.
+**LOT Q — ce qui manque** : l'écran de réglages, les notifications poussées,
+l'état hors-ligne visible, les liens profonds, l'export/import complet, la
+recherche, les performances, et l'écran « Nouveautés ».
 
-`src/composants/Courbe.tsx` et `GraphiquePouls.tsx` existent déjà : le lot P
-part de là plutôt que d'ajouter une bibliothèque.
+Deux dettes l'attendent : la notification du lendemain matin du « Tribunal des
+idées » (lot O l'a préparée, la parole est gardée, il manque la poussée), et la
+notification d'ouverture d'un scellé (C5, reportée depuis la vague 1). Les deux
+demandent la même chose : des clés VAPID et un abonnement par appareil.
 
 ### Ce qu'il faut pour allumer R2 (lot M)
 
@@ -271,6 +280,12 @@ puisqu'il ne concerne que cette machine.
 - `prisma migrate dev --create-only`, **relire le SQL**, puis appliquer.
 - Un test qui dépend d'un classement (le mur des souvenirs) passe une fois sur
   deux : c'est le peuplement qui doit garantir la donnée, pas la chance.
+- **`e2e/production.spec.ts` rougit environ une fois sur trois en local**, sur
+  un `ECONNRESET` en allant chercher une photo ou sur un `page.evaluate` qui
+  expire. C'est le serveur de développement qui plie : ce test crée une bande,
+  réencode une vidéo et la renvoie, pendant que les flux SSE des jeux tournent
+  encore. Ce n'est pas un défaut du produit — relancé seul, il passe. À revoir
+  si ça arrive aussi contre la production.
 - **Renommer un libellé ne suffit pas** : les déclencheurs par défaut sont
   copiés en base à la création de la bande. Sans migration `UPDATE`, la
   production aurait gardé l'ancien nom. Et un `DELETE` + `INSERT` aurait emporté
@@ -309,6 +324,10 @@ puisqu'il ne concerne que cette machine.
   fichier de la tâche en cours. Lancer tout avant de clore un lot.
 - Next pose son propre `role="alert"` (l'annonceur de route) : un test qui
   cherche un message d'erreur par ce rôle doit prendre `.first()`.
+- `classementAssiduite` (`src/lib/badges.ts`) ne sert plus à aucun écran depuis
+  le lot P : le plan demandait de remplacer « Assiduité de la semaine » par le
+  graphique des déclencheurs. Le COMPOSANT a été retiré, la fonction et ses
+  tests restent — elle est juste, et c'est le genre de chose qu'on redemande.
 - `plusLongueSerie` et `serieEnCours` (`src/lib/badges.ts`) ne servent plus à
   aucun écran depuis A4. Elles restent, avec leurs tests : E4 refond les badges
   et tranchera. Ne pas les supprimer « au passage ».
@@ -316,6 +335,26 @@ puisqu'il ne concerne que cette machine.
   s'appelle `bande_photos` (elle porte les vidéos), le modèle des lieux
   s'appelle `Etiquette`. Renommer pour un mot d'interface, c'est une migration
   risquée sans rien de visible.
+
+### Le lot P (les graphiques)
+
+- **Une entrée ne porte que des IDENTIFIANTS de déclencheurs, jamais leurs
+  noms.** C'est ce qui permet de renommer « Plante verte » en « Marie Janne »
+  sans réécrire cinq cents journées — et c'est ce qui fait qu'un graphique qui
+  compare sur le nom affiche poliment « aucun déclencheur coché » devant quatre
+  cents journées qui en portent.
+- **`locator("text")` de Playwright n'est pas le `<text>` d'un SVG**, et
+  `innerText` ne marche pas dessus : « Node is not an HTMLElement ». Et l'ordre
+  des éléments d'un SVG suit le DESSIN, pas la lecture — le premier `<text>`
+  d'une courbe est un prénom en bout de ligne, pas la date de gauche.
+- **Deux étiquettes en bout de ligne se superposent dès que deux personnes sont
+  au coude à coude**, ce qui est le cas normal dans une bande de trois. On
+  écarte les étiquettes, pas les courbes, et un trait fin rattache chacune à la
+  sienne.
+- **Cinquante-deux semaines sur la largeur d'un iPhone font des barres d'un
+  pixel et demi.** Au-delà de six mois, le graphique des déclencheurs compte par
+  MOIS — et il faut alors afficher l'année, sinon « 1er août → 1er sept. »
+  raconte un mois là où il y en a quatorze.
 
 ### Le lot O (les images, et trois jeux de plus)
 
@@ -457,6 +496,7 @@ puisqu'il ne concerne que cette machine.
 | K la journée (vague 2) | **fait** |
 | M médias et stockage | **fait**, avec deux écarts assumés : miniature à 640 px et non 320 (le fil l'affiche sur toute la largeur de la carte, 320 y serait mou), et pas d'AVIF (mesuré : ce moteur ne sait pas l'encoder, il rend un PNG en silence) |
 | L le fil | **fait** : pagination par journée, en-tête collant, appui long, partage 9:16, repère de visite, filtres, tirer pour rafraîchir |
+| P les deux graphiques | **fait**, avec **un écart** : la règle « jamais plus de trois lignes » vaut pour la bande réelle, qui en compte trois. La bande de démonstration en a quatre, et on trace les quatre — cacher quelqu'un de son propre classement serait pire qu'une ligne de trop |
 | O le reste des jeux | **fait** : images Wikipédia (237/494 cartes, le reste en texte), « Le plus rapide » refait, trois jeux Marie Janne. **Un écart** : les images ne sont pas en base mais dans un fichier engendré, et les octets ne sont pas rapatriés — voir « Décisions » |
 | N les dix jeux en multi | **fait** : salon à code, SSE, trois archétypes, dix recettes, reprise de main, barre de score et podium |
 | O2 le registre | **fait** : 423 cartes « Je n'ai jamais », 204 dilemmes, 38 gages, 80 susceptibles, 50 jugements, 47 thèmes |

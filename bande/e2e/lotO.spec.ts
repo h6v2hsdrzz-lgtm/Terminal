@@ -139,6 +139,12 @@ test("dans « Le mot de passe », griller le bon mot se voit sur les deux écran
   await invite.getByRole("button", { name: /^je te grille$/i }).click();
   await expect(invite.getByText(/accusation envoyée/i)).toBeVisible({ timeout: 15_000 });
 
+  // On attend que l'accusation soit ARRIVÉE chez l'hôte avant qu'il retourne
+  // les cartes : c'est son état à lui qui sert au dépouillement, et le flux met
+  // quelques centaines de millisecondes. Sans cette attente, le verdict annonce
+  // « personne n'a rien vu venir » une fois sur trois.
+  await expect(hote.getByText(/1 sur 2 a accusé/)).toBeVisible({ timeout: 15_000 });
+
   // L'hôte retourne les cartes : le jeu n'a pas de fin mécanique, c'est lui qui
   // décide. Le verdict nomme qui a grillé qui, des deux côtés.
   await hote.getByRole("button", { name: /retourner les cartes/i }).click();

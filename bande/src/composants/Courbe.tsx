@@ -1,4 +1,9 @@
+"use client";
+
+import { useState } from "react";
+
 import { couleurProfil } from "@/lib/couleurs";
+import { cheminLisse } from "@/lib/trace";
 import { enTexteCourt } from "@/lib/dates";
 import type { Entree, Profil } from "@/lib/types";
 
@@ -9,6 +14,10 @@ import type { Entree, Profil } from "@/lib/types";
  * courbes lissées, une grille qui s'efface et des points d'extrémité marqués,
  * et se battre contre les réglages d'une bibliothèque coûtait plus cher que
  * de poser les quarante lignes qui suivent.
+ *
+ * La valeur s'affiche au TAP depuis le lot P, comme sur les deux graphiques du
+ * profil : un téléphone n'a pas de survol, et un chiffre qui n'apparaît qu'à la
+ * souris ne s'affiche jamais.
  */
 export function Courbe({
   entrees,
@@ -24,14 +33,34 @@ export function Courbe({
   const largeur = 340;
   const marge = { haut: 10, bas: 20, gauche: 18, droite: 6 };
 
+  const [touche, setTouche] = useState<number | null>(null);
+
   const x = (index: number) =>
     marge.gauche + (index * (largeur - marge.gauche - marge.droite)) / Math.max(1, jours.length - 1);
   const y = (valeur: number) =>
     marge.haut + (1 - (valeur - 1) / 9) * (hauteur - marge.haut - marge.bas);
 
+  const lues =
+    touche === null
+      ? []
+      : profils.flatMap((profil) => {
+          const e = entrees.find((x) => x.jour === jours[touche] && x.profil === profil.id);
+          return e ? [{ pseudo: profil.pseudo, joie: e.joie }] : [];
+        });
+
   return (
-    <svg viewBox={`0 0 ${largeur} ${hauteur}`} className="w-full" role="img"
-         aria-label="Évolution du niveau de joie de chaque membre de la bande">
+    <>
+    <svg viewBox={`0 0 ${largeur} ${hauteur}`} className="w-full touch-none" role="img"
+         aria-label="Évolution du niveau de joie de chaque membre de la bande"
+         onPointerDown={(evenement) => {
+           const cadre = evenement.currentTarget.getBoundingClientRect();
+           const part = (evenement.clientX - cadre.left) / cadre.width;
+           const index = Math.round(
+             ((part * largeur - marge.gauche) / (largeur - marge.gauche - marge.droite)) *
+               (jours.length - 1),
+           );
+           setTouche(Math.max(0, Math.min(jours.length - 1, index)));
+         }}>
       {/* L'échelle reste 1 → 10, jamais recadrée sur les données : resserrer
           l'axe donnerait à trois points d'écart l'allure d'un précipice. Les
           graduations disent où l'on se situe dans l'échelle entière. */}
@@ -48,6 +77,11 @@ export function Courbe({
         </g>
       ))}
 
+      {touche !== null && (
+        <line x1={x(touche)} x2={x(touche)} y1={marge.haut} y2={hauteur - marge.bas}
+              stroke="var(--trait-fort)" strokeWidth="1" />
+      )}
+
       {profils.map((profil) => {
         const siennes = jours.map((jour) => {
           const e = entrees.find((x) => x.jour === jour && x.profil === profil.id);
@@ -62,24 +96,10 @@ export function Courbe({
         });
         if (points.length === 0) return null;
 
-        // Catmull-Rom converti en cubiques : la version précédente plaçait
-        // les points de contrôle à mi-chemin en gardant l'ordonnée de départ,
-        // ce qui produisait un palier à chaque valeur répétée — une courbe en
-        // marches d'escalier là où la vie ne fait que passer d'un jour à
-        // l'autre.
-        const tension = 0.5;
-        let d = `M ${points[0][0]} ${points[0][1]}`;
-        for (let i = 0; i < points.length - 1; i += 1) {
-          const p0 = points[i - 1] ?? points[i];
-          const p1 = points[i];
-          const p2 = points[i + 1];
-          const p3 = points[i + 2] ?? p2;
-          const c1x = p1[0] + ((p2[0] - p0[0]) / 6) * tension * 2;
-          const c1y = p1[1] + ((p2[1] - p0[1]) / 6) * tension * 2;
-          const c2x = p2[0] - ((p3[0] - p1[0]) / 6) * tension * 2;
-          const c2y = p2[1] - ((p3[1] - p1[1]) / 6) * tension * 2;
-          d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2[0].toFixed(2)} ${p2[1].toFixed(2)}`;
-        }
+        // Le lissage vit dans `lib/trace.ts` depuis le lot P : deux graphiques
+        // de la même page s'en servent, et deux copies finiraient par ne plus
+        // lisser pareil.
+        const d = cheminLisse(points);
 
         const dernier = points[points.length - 1];
         return (
@@ -99,5 +119,15 @@ export function Courbe({
         {enTexteCourt(jours[jours.length - 1])}
       </text>
     </svg>
+
+    {touche !== null && (
+      <p className="mt-1 text-center text-[12px] text-encre-3">
+        {enTexteCourt(jours[touche])}
+        {lues.length === 0
+          ? " · personne n'a posé ce jour-là"
+          : ` · ${lues.map((l) => `${l.pseudo} ${l.joie}`).join(" · ")}`}
+      </p>
+    )}
+    </>
   );
 }

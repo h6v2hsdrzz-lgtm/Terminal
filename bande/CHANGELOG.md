@@ -3,6 +3,33 @@
 Les entrées vont de la plus récente à la plus ancienne. Chaque lot du chantier
 v3 y ajoute une section ; les jalons v2 sont regroupés en tête d'historique.
 
+## Lot P — Deux graphiques dans le profil
+
+### L'évolution du classement
+- Une ligne par personne, dans sa couleur — la même qu'ailleurs dans
+  l'application.
+- Les **points cumulés** et pas le rang : un rang saute d'un cran pour un point
+  d'écart et donne à un coude à coude l'allure d'un renversement.
+- Trente jours, quatre-vingt-dix jours, ou tout. Changer de fenêtre ne remet
+  personne à zéro : les lignes partent de ce que chacun avait déjà.
+- Le prénom en bout de ligne, le classement en dessous, et la valeur d'un jour
+  **au toucher**.
+
+### Les déclencheurs dans le temps
+- Il remplace « la semaine ». Biberon, Marie Janne, sport : le nombre de fois
+  par semaine — ou par mois quand la fenêtre dépasse six mois, sinon les barres
+  font un pixel.
+- Des **couleurs qui n'appartiennent à personne**, pour qu'on ne confonde pas ce
+  graphique avec celui du dessus.
+- Et la note moyenne des journées où chacun était là, en trois pastilles. **Sous
+  cinq journées, un tiret** : « 8,4 sur deux journées » a l'air d'un résultat et
+  n'en est pas un.
+
+### Partout
+- Les trois graphiques de l'application rendent leur valeur **au toucher** — un
+  téléphone n'a pas de survol — tiennent sous deux cents pixels de haut, et se
+  lisent en clair comme en sombre.
+
 ## Lot O — Des photos sur les cartes, et trois jeux de plus
 
 ### « Devine qui je suis » : des visages

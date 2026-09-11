@@ -36,6 +36,19 @@ export function EcranFond({ moteur }: { moteur: MoteurMulti }) {
   const monMot = mots[moi] ?? "";
   const autres = joueurs.filter((j) => j.membreId !== moi);
 
+  /**
+   * Combien ont déjà accusé.
+   *
+   * Sans ça, celui qui retourne les cartes ne sait pas s'il coupe une manche où
+   * quelqu'un vient d'accuser — et un test ne sait pas non plus quand
+   * l'accusation est arrivée chez l'hôte. Une ligne, et les deux problèmes
+   * tombent.
+   */
+  const compteur =
+    reponses.length === 0
+      ? "Personne n'a encore accusé."
+      : `${reponses.length} sur ${joueurs.length} ${reponses.length > 1 ? "ont" : "a"} accusé.`;
+
   if (revelation) {
     return (
       <div className="flex min-h-[70dvh] flex-col justify-between px-4 py-6">
@@ -96,6 +109,7 @@ export function EcranFond({ moteur }: { moteur: MoteurMulti }) {
       {maReponse ? (
         <div className="py-8 text-center">
           <p className="text-[15px] text-encre-2">Accusation envoyée. On verra bien.</p>
+          <p className="mt-1 text-[13px] text-encre-3">{compteur}</p>
           {moteur.jeSuisHote && (
             <button
               type="button"
@@ -144,7 +158,7 @@ export function EcranFond({ moteur }: { moteur: MoteurMulti }) {
             Je te grille
           </button>
           <p className="mt-2 text-center text-[12px] text-encre-3">
-            Juste, tu marques un point. À côté, tu en perds un.
+            Juste, tu marques un point. À côté, tu en perds un. {compteur}
           </p>
           {/* La seule sortie du jeu : il n'a pas de fin mécanique, personne
               n'est obligé d'accuser, et sans ce bouton on ne saurait jamais qui
