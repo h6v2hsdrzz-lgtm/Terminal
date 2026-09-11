@@ -31,6 +31,7 @@ import {
   supprimerCommentaire,
   aDejaPose,
   basculerEpingle,
+  retirerCopies,
   listerPageDuFil,
   masquerEntree,
   supprimerEntree,
@@ -316,6 +317,7 @@ export async function actionEnvoyerPhoto(_precedent: Etat, donnees: FormData): P
         vignette instanceof File && vignette.size > 0
           ? new Uint8Array(await vignette.arrayBuffer())
           : null,
+      mimeVignette: vignette instanceof File && vignette.size > 0 ? vignette.type : null,
       legende: texte(donnees, "legende"),
     });
     rafraichirTout();
@@ -588,6 +590,25 @@ export async function actionRetirerJournee(entreeId: string): Promise<Etat> {
   return tenter(async () => {
     const { membreId } = await quiAgit();
     await supprimerEntree(membreId, entreeId);
+    rafraichirTout();
+  });
+}
+
+/**
+ * Libérer la place prise par les copies d'un même fichier.
+ *
+ * Rend un état plutôt qu'un nombre : l'écran affiche le résultat dans le même
+ * bandeau que les erreurs, et une phrase se lit mieux qu'un compteur.
+ */
+export async function actionRetirerCopies(empreinte: string): Promise<Etat> {
+  return tenter(async () => {
+    const { membreId, contexte } = await quiAgit();
+    const bilan = await retirerCopies(membreId, contexte.groupe.id, empreinte);
+    if (bilan.retires === 0 && bilan.laissees > 0) {
+      throw new ErreurMetier(
+        "Ces copies ne sont pas les tiennes. Seul celui qui les a posées peut les retirer.",
+      );
+    }
     rafraichirTout();
   });
 }

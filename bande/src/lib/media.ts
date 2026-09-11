@@ -13,12 +13,27 @@
  * possible sans rien payer.
  */
 
-/** Le côté long d'une photo envoyée. Au-delà, personne ne voit la différence. */
-export const COTE_MAX_PHOTO = 1400;
+/**
+ * Le côté long d'une photo envoyée, et celui de sa miniature.
+ *
+ * **Deux tailles par image, jamais plus** — c'est la règle du lot M, et elle
+ * tient : l'originale est convertie puis jetée, il ne reste que ces deux-là.
+ *
+ * 1600 pour le plein écran : un iPhone Pro Max fait 1290 pixels de large, et
+ * une image plus grande que l'écran ne se voit pas, elle se télécharge.
+ *
+ * 640 pour la miniature, et pas 320 comme le plan le proposait. 320 conviendrait
+ * à la mosaïque de la galerie — trois colonnes, cent dix points de côté — mais
+ * le fil affiche la même miniature sur toute la largeur de la carte, soit trois
+ * cent soixante points, donc plus de mille pixels sur un écran à trois fois.
+ * Une image de 320 y serait visiblement molle. 640 est le compromis qui sert
+ * correctement les deux, sans ajouter une troisième taille.
+ */
+export const COTE_MAX_PHOTO = 1600;
 /** Le côté long d'une vidéo. 720 tient dans n'importe quel écran de téléphone. */
 export const COTE_MAX_VIDEO = 720;
-/** Le côté de la vignette servie au fil et à la galerie. */
-export const COTE_VIGNETTE = 400;
+/** Le côté de la vignette servie au fil et à la galerie. Voir ci-dessus. */
+export const COTE_VIGNETTE = 640;
 
 /** Huit secondes. Au-delà, ce n'est plus un instant, c'est un film. */
 export const DUREE_MAX_VIDEO = 8_000;

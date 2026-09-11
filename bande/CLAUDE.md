@@ -18,7 +18,7 @@ repo, et les termes du plan se traduisent ainsi :
 | --- | --- |
 | `supabase/migrations/` | `prisma/migrations/`, additives, relues avant d'être appliquées |
 | RLS sur chaque table | autorisation côté serveur : **toute** lecture est filtrée par `groupeId`, et les routes de médias vérifient l'appartenance à la bande |
-| Supabase Storage, buckets privés | les octets vivent dans PostgreSQL, servis par des routes qui exigent une session |
+| Supabase Storage, buckets privés | Cloudflare R2 quand les quatre variables `R2_*` sont posées, PostgreSQL sinon. Dans les deux cas les octets passent par des routes qui exigent une session : le seau est privé, aucune adresse publique n'est fabriquée |
 | Supabase Realtime | sondage d'une empreinte de version (`versionBande`), qui agrège comptes et derniers horodatages |
 
 ## Où sont les choses
@@ -33,6 +33,8 @@ src/app/api/             photo, vignette, audio, avatar, scelle, lieu, export, s
 src/app/not-found.tsx    404 en français ; error.tsx pour ce qui casse
 src/composants/          un fichier par composant, noms français ; jeux/ pour les dix jeux, fil/ pour le fil
 src/lib/                 depot.ts + depot-jeux.ts (tout PostgreSQL), actions*.ts, logique pure
+src/lib/stockage/        R2 : signature v4 écrite à la main, client, clés, plafond
+scripts/migrer-medias.ts déménage les octets vers R2, avec relecture et empreintes
 src/lib/jeux/            catalogue, cadre, tirage, recompense, quiz, top3, vote, inclinaison
 e2e/                     Playwright : captures, lot1, lotA..lotC, lotF, lotG, lotK, lotL, video, production
 ```
@@ -100,6 +102,19 @@ npx prisma migrate dev --create-only   # écrire la migration, la RELIRE, puis l
   corps du composant) : la règle `react-hooks/refs` le refuse, et elle a raison.
 - **Un affichage optimiste doit utiliser l'identifiant rendu par le serveur.**
   Un identifiant inventé sur place rend la suppression suivante inopérante.
+- **Après `prisma generate`, redémarrer `npm run dev`.** Le serveur garde en
+  mémoire le client engendré au démarrage : une colonne ajoutée donne un
+  « Unknown argument » qui ressemble à une erreur de code et n'en est pas.
+- **`toBlob` avec un type non supporté rend un PNG, sans erreur.** Vérifier
+  `blob.type` est la seule façon de savoir si l'encodage a eu lieu. (AVIF sur
+  WebKit : silencieusement du PNG.)
+- **Le poids d'un fichier est une COLONNE**, pas un `pg_column_size` : dès que
+  les octets partent chez R2, la somme calculée tombe à zéro et la jauge de
+  stockage annonce une base vide pendant que le seau se remplit.
+- **`context.setOffline(true)` casse `createImageBitmap`** dans le WebKit de
+  Playwright — artefact du harnais, pas du vrai iPhone. Pour éprouver une
+  reprise après coupure, abattre la requête d'envoi avec `page.route`, pas le
+  réseau entier.
 - **`couleurProfil` rend `var(--profil-N)`, pas une couleur.** Un canvas ne sait
   pas résoudre une variable CSS, et `addColorStop` **lève** sur une couleur
   invalide : l'image entière disparaît au milieu du dessin, sans message.

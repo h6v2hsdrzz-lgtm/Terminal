@@ -57,7 +57,7 @@ export type MediaPret = {
   largeur: number;
   hauteur: number;
   duree: number | null;
-  /** Toujours du JPEG. */
+  /** WebP quand le moteur sait l'encoder, JPEG sinon. Son type fait foi. */
   vignette: Blob | null;
 };
 
@@ -68,37 +68,91 @@ export function videoReencodable(): boolean {
 
 // ── Images ───────────────────────────────────────────────────────────────────
 
-async function versJpeg(source: CanvasImageSource, l: number, h: number, qualite: number) {
+/**
+ * Le format d'image de sortie, choisi une fois pour toutes.
+ *
+ * **WebP d'abord, JPEG sinon.** Mesuré sur WebKit, sur une image de 1600 × 1200 :
+ * WebP rend 382 Ko en 246 ms, JPEG 525 Ko en 22 ms. Vingt-sept pour cent de
+ * moins, c'est exactement ce que ce lot cherche à gagner — c'est du stockage
+ * qu'on paie — et un quart de seconde passe inaperçu au moment où l'on choisit
+ * une photo.
+ *
+ * **AVIF n'est pas dans la liste, et ce n'est pas un oubli.** La même mesure dit
+ * que ce moteur ne sait pas l'encoder — et c'est le seul moteur des téléphones
+ * de la bande. Pire, il ne le dit pas : `toBlob` rend un PNG, sans erreur, sous
+ * un autre type. L'essayer coûterait 148 ms par photo pour retomber sur WebP.
+ * D'où la vérification du type sur le blob rendu : c'est la seule façon de
+ * savoir si l'encodage a vraiment eu lieu.
+ */
+const FORMATS = ["image/webp", "image/jpeg"] as const;
+
+let formatRetenu: string | null = null;
+
+async function formatDisponible(): Promise<string> {
+  if (formatRetenu) return formatRetenu;
+  const sonde = document.createElement("canvas");
+  sonde.width = 2;
+  sonde.height = 2;
+  for (const type of FORMATS) {
+    const blob = await new Promise<Blob | null>((ok) => sonde.toBlob(ok, type, 0.8));
+    if (blob?.type === type) {
+      formatRetenu = type;
+      return type;
+    }
+  }
+  formatRetenu = "image/jpeg";
+  return formatRetenu;
+}
+
+async function versImage(source: CanvasImageSource, l: number, h: number, qualite: number) {
   const toile = document.createElement("canvas");
   toile.width = l;
   toile.height = h;
   const ctx = toile.getContext("2d");
   if (!ctx) throw new Error("toile indisponible");
   ctx.drawImage(source, 0, 0, l, h);
-  const blob = await new Promise<Blob | null>((ok) => toile.toBlob(ok, "image/jpeg", qualite));
+  const type = await formatDisponible();
+  const blob = await new Promise<Blob | null>((ok) => toile.toBlob(ok, type, qualite));
   if (!blob) throw new Error("compression impossible");
   return blob;
 }
 
 /**
- * Une photo réduite, avec sa vignette.
+ * Une photo réduite, avec sa miniature.
  *
- * `createImageBitmap` décode hors du fil principal et respecte l'orientation
- * EXIF, ce qu'une balise `<img>` ne fait pas de façon fiable — une photo prise
- * en tenant le téléphone de travers arriverait couchée.
+ * `createImageBitmap` fait trois choses qu'il faut savoir :
+ *
+ * · il décode hors du fil principal, donc l'interface ne gèle pas ;
+ * · il respecte l'orientation EXIF, ce qu'une balise `<img>` ne fait pas de
+ *   façon fiable — une photo prise en tenant le téléphone de travers arriverait
+ *   couchée ;
+ * · **il décode le HEIC** partout où le système sait le faire, c'est-à-dire sur
+ *   iPhone. Les photos d'iPhone sont en HEIC par défaut : elles entrent ici
+ *   telles quelles et ressortent en WebP, sans bibliothèque de décodage. Là où
+ *   le système ne sait pas, l'appel lève, et l'écran le dit franchement plutôt
+ *   que d'envoyer un fichier que personne ne saura relire.
  */
 export async function preparerPhoto(fichier: File): Promise<MediaPret> {
-  const image = await createImageBitmap(fichier, { imageOrientation: "from-image" });
+  let image: ImageBitmap;
+  try {
+    image = await createImageBitmap(fichier, { imageOrientation: "from-image" });
+  } catch {
+    throw new ErreurTranscodage(
+      "Ce téléphone ne sait pas lire cette image. Si elle vient d'un iPhone, " +
+        "envoie-la depuis l'iPhone : lui sait.",
+    );
+  }
   try {
     const grand = dimensionsCibles(image.width, image.height, COTE_MAX_PHOTO);
     const petit = dimensionsCibles(image.width, image.height, COTE_VIGNETTE);
+    const blob = await versImage(image, grand.largeur, grand.hauteur, 0.82);
     return {
       genre: "photo",
-      blob: await versJpeg(image, grand.largeur, grand.hauteur, 0.82),
+      blob,
       largeur: grand.largeur,
       hauteur: grand.hauteur,
       duree: null,
-      vignette: await versJpeg(image, petit.largeur, petit.hauteur, 0.72),
+      vignette: await versImage(image, petit.largeur, petit.hauteur, 0.7),
     };
   } finally {
     image.close();
@@ -147,7 +201,7 @@ async function premiereImage(video: HTMLVideoElement, l: number, h: number): Pro
   // Un poil après le début : la toute première image d'une vidéo tournée à la
   // main est souvent floue ou noire.
   await placer(video, Math.min(0.15, (video.duration || 1) / 4));
-  return versJpeg(video, l, h, 0.72);
+  return versImage(video, l, h, 0.72);
 }
 
 /**
@@ -325,7 +379,7 @@ export async function preparerMedia(
  * montrer et l'appelant s'en passe.
  */
 export async function apercuScelle(source: CanvasImageSource): Promise<Blob> {
-  return versJpeg(source, COTE_APERCU, COTE_APERCU, 0.6);
+  return versImage(source, COTE_APERCU, COTE_APERCU, 0.6);
 }
 
 /** Ce qu'un scellé emporte : le contenu réduit, et son aperçu illisible. */

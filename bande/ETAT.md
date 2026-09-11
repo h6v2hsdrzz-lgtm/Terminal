@@ -5,7 +5,7 @@
 
 ## Lot en cours
 
-**Vague 2 : lots J, K, O2 et L terminés.** O2 (le registre) est passé avant le
+**Vague 2 : lots J, K, O2, L et M terminés.** O2 (le registre) est passé avant le
 lot L parce que c'est le reproche explicite de la bande sur la livraison
 précédente — « c'est vraiment x100, vas-y super fort ». Les chiffres du plan
 sont tenus et verrouillés par un test :
@@ -15,18 +15,31 @@ renvoie.
 
 ## Prochaine action exacte
 
-**LOT M — les médias et le stockage**, dans l'ordre du plan : bascule sur
-Cloudflare R2 avec script de migration et vérification d'intégrité (M1), deux
-tailles par image — 320 px pour le fil, 1600 px pour le plein écran (M2),
-HEIC → WebP côté client et AVIF quand c'est supporté, orientation EXIF (M3),
-écran Réglages → Stockage avec jauge et « libérer de la place » (M4), envoi en
-arrière-plan avec file d'attente et reprise après coupure (M5), visionneuse
-plein écran au niveau (M6).
+**LOT N — les dix jeux en multi-téléphones**, par SSE depuis une route Next
+(décidé, voir les réponses ci-dessous) : salon avec code à quatre chiffres,
+machine à états côté serveur, robustesse (reconnexion, joueur qui part en cours
+de manche), horloge du serveur pour les jeux de vitesse. **Les dix jeux**, pas
+six — la bande a tranché.
 
-Le choix de R2 est tranché et écrit plus bas : 10 Go contre 0,5 chez Neon, et
-aucun frais de sortie. Les octets vivent aujourd'hui dans PostgreSQL
-(`bande_photos`), servis par `/api/photo`, `/api/vignette`, `/api/audio` — la
-bascule doit donc garder ces adresses et ne changer que ce qu'il y a derrière.
+Le moteur d'un téléphone existe déjà (`src/composants/jeux/`, `src/lib/jeux/`,
+`depot-jeux.ts` avec `Partie`, `ScorePartie`, `Manche`). Le multi n'est pas une
+réécriture : c'est une couche de synchronisation par-dessus, plus un salon.
+
+### Ce qu'il faut pour allumer R2 (lot M)
+
+Rien n'est cassé sans, et rien ne change tant qu'il manque une valeur. Pour
+basculer : créer un seau **privé** chez Cloudflare, un jeton « Object Read &
+Write » limité à ce seau, poser les quatre variables de `.env.example`, puis
+`npm run medias:migrer -- --garder` (migre sans vider), vérifier avec
+`npm run medias:verifier`, vivre quelques jours avec les deux, et relancer
+`npm run medias:migrer` pour libérer la place en base.
+
+**Ce qui n'a pas pu être éprouvé :** que Cloudflare accepte la signature. Il n'y
+a pas de compte. Le client a été vérifié contre la suite de tests publiée par
+AWS (la signature tombe au caractère près) et contre un faux S3 en mémoire, et
+le script de migration a vraiment déplacé 30 fichiers contre ce faux S3, avec
+relecture et comparaison d'empreintes. Le premier vrai passage mérite quand
+même `--garder`.
 
 ### Les cinq réponses (6 septembre, confirmées par la bande)
 
@@ -314,5 +327,6 @@ puisqu'il ne concerne que cette machine.
 | H audits | **fait** — voir `AUDIT.md` |
 | J le geste (vague 2) | **fait** |
 | K la journée (vague 2) | **fait** |
+| M médias et stockage | **fait**, avec deux écarts assumés : miniature à 640 px et non 320 (le fil l'affiche sur toute la largeur de la carte, 320 y serait mou), et pas d'AVIF (mesuré : ce moteur ne sait pas l'encoder, il rend un PNG en silence) |
 | L le fil | **fait** : pagination par journée, en-tête collant, appui long, partage 9:16, repère de visite, filtres, tirer pour rafraîchir |
 | O2 le registre | **fait** : 423 cartes « Je n'ai jamais », 204 dilemmes, 38 gages, 80 susceptibles, 50 jugements, 47 thèmes |

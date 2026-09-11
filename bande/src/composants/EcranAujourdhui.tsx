@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore, useTran
 import { Carte, TitreSection } from "./Carte";
 import { CarteEntree } from "./CarteEntree";
 import { BoiteMedias } from "./BoiteMedias";
+import { FileEnvoi } from "./FileEnvoi";
 import { BoiteVocale } from "./BoiteVocale";
 import { ChampEtiquettes } from "./ChampEtiquettes";
 import { CurseurDiscret } from "./CurseurDiscret";
@@ -286,6 +287,11 @@ export function EcranAujourdhui({
         </p>
       )}
 
+      {/* Les envois en cours, au niveau de l'écran : replier le formulaire
+          pour corriger sa journée ne doit pas faire disparaître l'avancement
+          d'une vidéo qui monte. */}
+      <FileEnvoi />
+
       {/* ── Le check-in, ou ce qu'on vient d'écrire ─────────────────── */}
       <AnimatePresence mode="wait" initial={false}>
         {!poste ? (
@@ -494,6 +500,9 @@ export function EcranAujourdhui({
                 </div>
               )}
 
+              {/* La file vit au niveau de l'écran, pas dans la boîte à médias :
+                  replier le formulaire pour corriger sa journée ne doit pas
+                  faire disparaître l'avancement d'une vidéo en cours d'envoi. */}
               <BoiteMedias medias={monEntree.photos} />
               <BoiteVocale audio={monEntree.audio} couleur={couleurProfil(moi)} />
               <BoutonSceller aujourdhui={jour} />

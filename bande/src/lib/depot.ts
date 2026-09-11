@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "./db";
 import { TAILLE_MAX_BANDE, TEINTES } from "./couleurs";
@@ -783,7 +785,7 @@ export async function retirerDeclencheur(groupeId: string, declencheurId: string
  */
 export { MAX_MEDIAS, POIDS_MAX_MEDIA } from "./media";
 
-const MIMES_PHOTO = ["image/jpeg", "image/webp", "image/png"];
+const MIMES_PHOTO = ["image/jpeg", "image/webp", "image/png", "image/avif"];
 /** Ce que produit le réencodage, et ce que les téléphones savent relire. */
 const MIMES_VIDEO = ["video/mp4", "video/quicktime", "video/webm"];
 
@@ -805,8 +807,9 @@ export type MediaEntrant = {
   hauteur: number;
   /** En millisecondes, pour une vidéo. */
   duree?: number | null;
-  /** Toujours du JPEG : c'est le navigateur qui la fabrique. */
+  /** Fabriquée par le navigateur : WebP s'il sait, JPEG sinon. */
   vignette?: Uint8Array<ArrayBuffer> | null;
+  mimeVignette?: string | null;
   legende?: string | null;
 };
 
@@ -851,6 +854,12 @@ export async function ajouterMedia(membreId: string, jour: string, media: MediaE
       hauteur: media.hauteur,
       duree: media.genre === "video" ? Math.min(media.duree ?? 0, DUREE_MAX_VIDEO) : null,
       legende: nettoyerLegende(media.legende),
+      // Le poids et l'empreinte sont écrits ici, une fois pour toutes : après
+      // le déménagement chez R2 il faudrait retélécharger le fichier pour les
+      // recalculer, et l'écran de stockage en a besoin à chaque affichage.
+      poids: media.octets.byteLength,
+      poidsVignette: media.vignette?.byteLength ?? 0,
+      empreinte: createHash("sha256").update(media.octets).digest("hex"),
     },
     select: { id: true },
   });
@@ -858,10 +867,14 @@ export async function ajouterMedia(membreId: string, jour: string, media: MediaE
   if (stockageDistant()) {
     try {
       const cle = await ecrireOctets(cleMedia(ligne.id), media.octets, type);
+      const mimeVignette = typeVignette(media.mimeVignette);
       const cleVignette = media.vignette
-        ? await ecrireOctets(cleMedia(ligne.id, true), media.vignette, "image/jpeg")
+        ? await ecrireOctets(cleMedia(ligne.id, true), media.vignette, mimeVignette)
         : null;
-      await prisma.media.update({ where: { id: ligne.id }, data: { cle, cleVignette } });
+      await prisma.media.update({
+        where: { id: ligne.id },
+        data: { cle, cleVignette, mimeVignette: media.vignette ? mimeVignette : null },
+      });
     } catch (erreur) {
       // R2 n'a pas voulu : la ligne repart avec. Une entrée sans octets ni clé
       // afficherait une case grise que personne ne saurait réparer.
@@ -871,11 +884,27 @@ export async function ajouterMedia(membreId: string, jour: string, media: MediaE
   } else {
     await prisma.media.update({
       where: { id: ligne.id },
-      data: { octets: media.octets, vignette: media.vignette ?? null },
+      data: {
+        octets: media.octets,
+        vignette: media.vignette ?? null,
+        mimeVignette: media.vignette ? typeVignette(media.mimeVignette) : null,
+      },
     });
   }
 
   return entree.groupeId;
+}
+
+/**
+ * Le type d'une vignette, ramené à ce qu'on sait servir.
+ *
+ * Il vient du navigateur, donc du client : on ne le met pas tel quel dans un
+ * en-tête `Content-Type`. Un type inconnu redevient du JPEG, qui est ce
+ * qu'étaient toutes les vignettes jusqu'ici.
+ */
+function typeVignette(brut: string | null | undefined): string {
+  const propre = brut?.split(";")[0].trim().toLowerCase();
+  return propre && MIMES_PHOTO.includes(propre) ? propre : "image/jpeg";
 }
 
 function nettoyerLegende(brut: string | null | undefined): string | null {
@@ -934,6 +963,7 @@ export async function lireMedia(membreId: string, mediaId: string, vignette = fa
       cle: vignette ? undefined : true,
       vignette: vignette ? true : undefined,
       cleVignette: vignette ? true : undefined,
+      mimeVignette: vignette ? true : undefined,
       entree: { select: { groupeId: true } },
     },
   });
@@ -952,7 +982,9 @@ export async function lireMedia(membreId: string, mediaId: string, vignette = fa
     // Une vignette manquante n'est pas une erreur : les photos posées avant
     // l'arrivée des vignettes n'en ont pas. La route servira l'original.
     const octets = media.vignette ?? (await lireOctets(media.cleVignette ?? ""));
-    return octets ? { mime: "image/jpeg", octets } : null;
+    // Les vignettes d'avant le lot M n'ont pas de type enregistré : elles sont
+    // toutes en JPEG, et c'est ce que la colonne vide veut dire.
+    return octets ? { mime: media.mimeVignette ?? "image/jpeg", octets } : null;
   }
   const octets = media.octets ?? (await lireOctets(media.cle ?? ""));
   return octets ? { mime: media.mime, octets } : null;
@@ -1010,16 +1042,22 @@ export async function compterMedias(groupeId: string) {
  * `pg_column_size` mesure la valeur stockée, compression TOAST comprise :
  c'est ce que la base occupe vraiment, pas la taille du fichier d'origine.
  */
+/**
+ * La place occupée par la bande.
+ *
+ * On additionne les colonnes `poids`, pas la taille des colonnes d'octets :
+ * une fois les fichiers chez R2, `pg_column_size` rendrait zéro et la jauge
+ * annoncerait une base vide pendant que le seau se remplit.
+ */
 export async function espaceOccupe(groupeId: string) {
   const [medias] = await prisma.$queryRaw<{ octets: bigint | null; nombre: bigint }[]>`
-    SELECT SUM(pg_column_size(p.octets) + COALESCE(pg_column_size(p.vignette), 0))::bigint AS octets,
-           COUNT(*)::bigint AS nombre
+    SELECT SUM(p.poids + p.poids_vignette)::bigint AS octets, COUNT(*)::bigint AS nombre
     FROM bande_photos p
     JOIN bande_entrees e ON e.id = p.entree_id
     WHERE e.groupe_id = ${groupeId}
   `;
   const [audios] = await prisma.$queryRaw<{ octets: bigint | null; nombre: bigint }[]>`
-    SELECT SUM(pg_column_size(a.octets))::bigint AS octets, COUNT(*)::bigint AS nombre
+    SELECT SUM(a.poids)::bigint AS octets, COUNT(*)::bigint AS nombre
     FROM bande_audios a
     JOIN bande_entrees e ON e.id = a.entree_id
     WHERE e.groupe_id = ${groupeId}
@@ -1027,6 +1065,182 @@ export async function espaceOccupe(groupeId: string) {
   return {
     medias: { octets: Number(medias?.octets ?? 0), nombre: Number(medias?.nombre ?? 0) },
     audios: { octets: Number(audios?.octets ?? 0), nombre: Number(audios?.nombre ?? 0) },
+  };
+}
+
+/**
+ * Ce qu'il faut pour l'écran « Stockage » : qui, quoi, et ce qui pèse.
+ *
+ * Quatre requêtes agrégées, pas une ligne d'octets ramenée. Compter la place
+ * en chargeant les fichiers serait le comble.
+ *
+ * Le **doublon** se reconnaît à son empreinte SHA-256, calculée à l'envoi. Deux
+ * fichiers de même empreinte sont le même fichier, sans hésitation possible —
+ * là où une comparaison sur le poids et les dimensions rendrait des faux
+ * positifs que personne n'oserait effacer. Les médias d'avant le lot M n'en ont
+ * pas si leurs octets étaient déjà partis : ils ne sortent simplement pas.
+ */
+export type AnalyseStockage = {
+  parPersonne: { profil: string; octets: number; nombre: number }[];
+  parType: { photos: number; videos: number; audios: number };
+  plusGros: {
+    id: string;
+    jour: string;
+    profil: string;
+    genre: string;
+    octets: number;
+    legende: string | null;
+  }[];
+  doublons: {
+    empreinte: string;
+    octets: number;
+    exemplaires: number;
+    /** Tous sauf un : ce qu'on récupérerait en les retirant. */
+    recuperable: number;
+    /** Combien de copies en trop appartiennent à celui qui regarde. */
+    miennes: number;
+    ids: string[];
+  }[];
+};
+
+export async function analyserStockage(
+  groupeId: string,
+  membreId: string,
+): Promise<AnalyseStockage> {
+  const parPersonne = await prisma.$queryRaw<
+    { profil: string; octets: bigint | null; nombre: bigint }[]
+  >`
+    SELECT e.membre_id AS profil,
+           SUM(COALESCE(p.poids, 0) + COALESCE(p.poids_vignette, 0) + COALESCE(a.poids, 0))::bigint AS octets,
+           COUNT(p.id)::bigint AS nombre
+    FROM bande_entrees e
+    LEFT JOIN bande_photos p ON p.entree_id = e.id
+    LEFT JOIN bande_audios a ON a.entree_id = e.id
+    WHERE e.groupe_id = ${groupeId}
+    GROUP BY e.membre_id
+  `;
+
+  const [types] = await prisma.$queryRaw<
+    { photos: bigint | null; videos: bigint | null }[]
+  >`
+    SELECT SUM(CASE WHEN p.genre = 'video' THEN 0 ELSE p.poids + p.poids_vignette END)::bigint AS photos,
+           SUM(CASE WHEN p.genre = 'video' THEN p.poids + p.poids_vignette ELSE 0 END)::bigint AS videos
+    FROM bande_photos p
+    JOIN bande_entrees e ON e.id = p.entree_id
+    WHERE e.groupe_id = ${groupeId}
+  `;
+  const [sons] = await prisma.$queryRaw<{ octets: bigint | null }[]>`
+    SELECT SUM(a.poids)::bigint AS octets
+    FROM bande_audios a
+    JOIN bande_entrees e ON e.id = a.entree_id
+    WHERE e.groupe_id = ${groupeId}
+  `;
+
+  const plusGros = await prisma.$queryRaw<
+    { id: string; jour: string; profil: string; genre: string; octets: bigint; legende: string | null }[]
+  >`
+    SELECT p.id, e.jour, e.membre_id AS profil, p.genre,
+           (p.poids + p.poids_vignette)::bigint AS octets, p.legende
+    FROM bande_photos p
+    JOIN bande_entrees e ON e.id = p.entree_id
+    WHERE e.groupe_id = ${groupeId}
+    ORDER BY (p.poids + p.poids_vignette) DESC
+    LIMIT 12
+  `;
+
+  const doublons = await prisma.$queryRaw<
+    {
+      empreinte: string;
+      octets: bigint;
+      exemplaires: bigint;
+      ids: string[];
+      auteurs: string[];
+    }[]
+  >`
+    SELECT p.empreinte, MAX(p.poids)::bigint AS octets,
+           COUNT(*)::bigint AS exemplaires,
+           ARRAY_AGG(p.id ORDER BY p.cree_le) AS ids,
+           ARRAY_AGG(e.membre_id ORDER BY p.cree_le) AS auteurs
+    FROM bande_photos p
+    JOIN bande_entrees e ON e.id = p.entree_id
+    WHERE e.groupe_id = ${groupeId} AND p.empreinte IS NOT NULL
+    GROUP BY p.empreinte
+    HAVING COUNT(*) > 1
+    ORDER BY MAX(p.poids) * (COUNT(*) - 1) DESC
+    LIMIT 10
+  `;
+
+  return {
+    parPersonne: parPersonne
+      .map((l) => ({ profil: l.profil, octets: Number(l.octets ?? 0), nombre: Number(l.nombre) }))
+      .sort((a, b) => b.octets - a.octets),
+    parType: {
+      photos: Number(types?.photos ?? 0),
+      videos: Number(types?.videos ?? 0),
+      audios: Number(sons?.octets ?? 0),
+    },
+    plusGros: plusGros.map((l) => ({ ...l, octets: Number(l.octets) })),
+    doublons: doublons.map((l) => ({
+      empreinte: l.empreinte,
+      octets: Number(l.octets),
+      exemplaires: Number(l.exemplaires),
+      recuperable: Number(l.octets) * (Number(l.exemplaires) - 1),
+      // Le premier envoyé reste : c'est celui qui porte les réactions et les
+      // commentaires, et l'effacer ferait disparaître une conversation.
+      ids: l.ids.slice(1),
+      // Compté ici plutôt que dans le SQL : la même tranche « tout sauf le
+      // premier » sert aux deux, et la dupliquer en agrégat ferait diverger
+      // les deux définitions au premier changement.
+      miennes: l.auteurs.slice(1).filter((a) => a === membreId).length,
+    })),
+  };
+}
+
+/**
+ * Retirer les copies d'un même fichier, en gardant la première.
+ *
+ * Deux garde-fous, et ils viennent du même endroit — on efface des souvenirs :
+ *
+ * · **la plus ancienne reste**, toujours. C'est elle qui porte les réactions et
+ *   les commentaires ; effacer celle-là ferait disparaître une conversation
+ *   pour économiser quarante kilo-octets ;
+ * · **on ne retire que les siennes.** La règle vaut partout ailleurs dans ce
+ *   fichier, elle vaut ici : libérer de la place n'est pas une raison de
+ *   toucher à la journée de quelqu'un d'autre. Le compte rendu dit combien
+ *   de copies appartiennent à d'autres, pour que l'écran puisse le dire aussi.
+ */
+export async function retirerCopies(
+  membreId: string,
+  groupeId: string,
+  empreinte: string,
+): Promise<{ retires: number; octets: number; laissees: number }> {
+  const copies = await prisma.media.findMany({
+    where: { empreinte, entree: { groupeId } },
+    select: {
+      id: true,
+      poids: true,
+      poidsVignette: true,
+      cle: true,
+      cleVignette: true,
+      entree: { select: { membreId: true } },
+    },
+    orderBy: { creeLe: "asc" },
+  });
+  if (copies.length < 2) return { retires: 0, octets: 0, laissees: 0 };
+
+  const [, ...suivantes] = copies;
+  const miennes = suivantes.filter((c) => c.entree.membreId === membreId);
+
+  for (const copie of miennes) {
+    await prisma.media.delete({ where: { id: copie.id } });
+    await supprimerOctets(copie.cle);
+    await supprimerOctets(copie.cleVignette);
+  }
+
+  return {
+    retires: miennes.length,
+    octets: miennes.reduce((s, c) => s + c.poids + c.poidsVignette, 0),
+    laissees: suivantes.length - miennes.length,
   };
 }
 
@@ -1057,8 +1271,8 @@ export async function enregistrerAudio(
   const entree = await maJournee(membreId, jour);
   const donnees = {
     mime: type,
-    octets: son.octets,
     duree: Math.min(son.duree, DUREE_MAX_AUDIO),
+    poids: son.octets.byteLength,
     // Une soixantaine de barres suffit à dessiner une onde lisible ; en garder
     // mille ferait grossir chaque page du fil pour rien.
     niveaux: son.niveaux.slice(0, 64).map((n) => Math.max(0, Math.min(100, Math.round(n)))),

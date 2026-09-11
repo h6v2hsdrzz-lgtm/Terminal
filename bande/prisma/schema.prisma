@@ -178,7 +178,9 @@ model Media {
   hauteur   Int
   /// En millisecondes, pour les vidéos seulement.
   duree     Int?
-  /// La vignette, toujours en JPEG parce que c'est nous qui la fabriquons.
+  /// La vignette, fabriquée par nous — en WebP quand le moteur sait l'encoder,
+  /// en JPEG sinon. Son type vit dans `mimeVignette` : le servir en dur comme
+  /// du JPEG afficherait du WebP sous une étiquette fausse.
   ///
   /// Le fil sert celle-ci, jamais l'original : afficher une image de 1200 px
   /// dans une case de 160 fait payer à celui qui lit une résolution qu'il ne
@@ -188,6 +190,20 @@ model Media {
   /// vignette pèse quarante kilo-octets, un original quatre méga — on peut très
   /// bien vouloir migrer l'un sans l'autre.
   cleVignette String? @map("cle_vignette")
+  /// Nul pour les vignettes d'avant le lot M : elles sont toutes en JPEG, et
+  /// c'est ce que la lecture suppose quand la colonne est vide.
+  mimeVignette String? @map("mime_vignette")
+  /// Le poids du fichier, en octets, indépendamment de l'endroit où il vit.
+  ///
+  /// Sans lui, l'écran de stockage mentirait dès le déménagement chez R2 :
+  /// `octet_length(octets)` rend zéro sur une colonne vidée, et la jauge
+  /// annoncerait une base vide pendant que le seau se remplit.
+  poids         Int     @default(0)
+  poidsVignette Int     @default(0) @map("poids_vignette")
+  /// SHA-256 du fichier, en hexadécimal. Sert à reconnaître les doublons —
+  /// la même photo envoyée deux fois depuis deux téléphones, ou deux fois par
+  /// la même personne qui a oublié.
+  empreinte     String?
   /// Deux mots sous l'image. Facultatif, comme tout le reste.
   legende   String?
   creeLe    DateTime @default(now()) @map("cree_le")
@@ -219,6 +235,8 @@ model Audio {
   /// Même règle que pour les médias : en base, ou chez R2, jamais les deux.
   octets    Bytes?
   cle       String?
+  /// Le poids réel, quel que soit l'endroit. Voir `Media.poids`.
+  poids     Int      @default(0)
   /// En millisecondes.
   duree     Int
   niveaux   Int[]

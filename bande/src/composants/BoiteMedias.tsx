@@ -4,7 +4,8 @@ import Image from "next/image";
 import { AnimatePresence, motion } from "motion/react";
 import { useRef, useState, useTransition } from "react";
 
-import { actionEnvoyerPhoto, actionLegender, actionRetirerPhoto } from "@/lib/actions";
+import { actionLegender, actionRetirerPhoto } from "@/lib/actions";
+import { deposer } from "@/lib/file-envoi";
 import { ETAT_INITIAL } from "@/lib/formulaire";
 import { RESSORT } from "@/lib/mouvement";
 import { LONGUEUR_LEGENDE, MAX_MEDIAS, enSecondes } from "@/lib/media";
@@ -70,25 +71,10 @@ export function BoiteMedias({ medias }: { medias: Media[] }) {
           setPart(null);
         }
 
-        const donnees = new FormData();
-        const extension = pret.genre === "video" ? "mp4" : "jpg";
-        donnees.set("media", new File([pret.blob], `journee.${extension}`, { type: pret.blob.type }));
-        donnees.set("genre", pret.genre);
-        donnees.set("largeur", String(pret.largeur));
-        donnees.set("hauteur", String(pret.hauteur));
-        if (pret.duree !== null) donnees.set("duree", String(pret.duree));
-        if (pret.vignette) {
-          donnees.set("vignette", new File([pret.vignette], "vignette.jpg", { type: "image/jpeg" }));
-        }
-
-        const reponse = await actionEnvoyerPhoto(ETAT_INITIAL, donnees);
-        // On s'arrête à la première erreur du serveur : les suivantes diraient
-        // la même chose, et empiler six fois le même message n'aide personne.
-        if (reponse.erreur) {
-          setEtat(reponse);
-          break;
-        }
-        setEtat(ETAT_INITIAL);
+        // Déposé, pas envoyé : la file s'en occupe, et le formulaire reste
+        // utilisable. C'est tout l'intérêt — on continue à écrire son anecdote
+        // pendant qu'une vidéo de huit secondes monte.
+        deposer(pret, fichier.name);
       }
       // Les deux champs se vident : sinon, reprendre la même photo deux fois
       // de suite ne déclenche aucun changement et n'envoie rien.
