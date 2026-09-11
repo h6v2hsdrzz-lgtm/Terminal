@@ -2,7 +2,15 @@ import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-/** Le lot G : le moteur de jeux, et les jeux eux-mêmes. */
+/**
+ * Le lot G : le moteur de jeux, et les jeux eux-mêmes.
+ *
+ * Depuis le lot N, ce fichier éprouve **le mode d'un seul téléphone** — celui
+ * qu'on se passe. Le multi, devenu le mode par défaut, a son propre fichier
+ * (`lotN.spec.ts`), et il lui faut deux contextes de navigateur. La fiche d'un
+ * jeu propose donc deux boutons, et c'est le second qu'on touche ici : « Un seul
+ * téléphone, on se le passe ».
+ */
 function codeDe(pseudo: string): string {
   const fiche = readFileSync(join(process.cwd(), ".codes-demo.txt"), "utf8");
   const ligne = fiche.split("\n").find((l) => l.startsWith(pseudo));
@@ -19,18 +27,42 @@ async function entrer(page: import("@playwright/test").Page, pseudo: string) {
 
 /**
  * Une seule partie à la fois par bande : une partie laissée en cours par un
- * test précédent bloque le bouton « Lancer » de tous les suivants.
+ * test précédent bloque le lancement de tous les suivants.
+ *
+ * Il y a **deux sorties**, parce qu'il y a deux modes. « Abandonner » est le mot
+ * du mode à un seul téléphone, et il se confirme ; « Terminer » est celui du
+ * multi, et il mène au podium. Ne connaître que le premier a coûté les seize
+ * tests de ce fichier d'un coup : une partie multi laissée par le lot N, et
+ * chacun attendait soixante secondes un bouton qui n'est pas sur cet écran-là.
  */
 async function tableRase(page: import("@playwright/test").Page) {
   await page.goto("/jeux", { waitUntil: "networkidle" });
   const reprendre = page.getByRole("link", { name: "Reprendre" });
-  if (await reprendre.isVisible().catch(() => false)) {
-    await reprendre.click();
-    await page.waitForURL(/\/jeux\/.+/);
-    await page.getByRole("button", { name: "Abandonner" }).click();
-    await page.getByRole("button", { name: "Abandonner" }).click();
+  if (!(await reprendre.isVisible().catch(() => false))) return;
+
+  await reprendre.click();
+  await page.waitForURL(/\/jeux\/.+/);
+
+  const abandonner = page.getByRole("button", { name: "Abandonner" });
+  const terminer = page.getByRole("button", { name: "Terminer" }).first();
+  const sortie = await Promise.race([
+    abandonner.waitFor({ timeout: 20_000 }).then(() => "abandon" as const),
+    terminer.waitFor({ timeout: 20_000 }).then(() => "fin" as const),
+  ]).catch(() => null);
+
+  if (sortie === "abandon") {
+    await abandonner.click();
+    await abandonner.click();
     await page.waitForURL("/jeux");
+    return;
   }
+  if (sortie === "fin") {
+    await terminer.click();
+    // On attend le podium : une navigation lancée pendant que l'action est en
+    // vol l'annule, et la partie resterait en cours.
+    await expect(page.getByText("C'est fini")).toBeVisible({ timeout: 20_000 });
+  }
+  await page.goto("/jeux", { waitUntil: "networkidle" });
 }
 
 /**
@@ -89,7 +121,7 @@ test("une partie va du lancement au podium, et le podium survit au rechargement"
   await tableRase(page);
 
   await page.getByRole("button", { name: /Je n'ai jamais/ }).first().click();
-  await page.getByRole("button", { name: /^Lancer Je n'ai jamais$/ }).click();
+  await page.getByRole("button", { name: /on se le passe/i }).click();
   await page.waitForURL(/\/jeux\/.+/);
   const adresse = page.url();
 
@@ -123,7 +155,7 @@ test("on abandonne sans rien laisser derrière", async ({ page }) => {
   await tableRase(page);
 
   await page.getByRole("button", { name: /Je n'ai jamais/ }).first().click();
-  await page.getByRole("button", { name: /^Lancer Je n'ai jamais$/ }).click();
+  await page.getByRole("button", { name: /on se le passe/i }).click();
   await page.waitForURL(/\/jeux\/.+/);
   const adresse = page.url();
 
@@ -144,7 +176,7 @@ test("une partie d'une autre bande est introuvable, pas refusée", async ({ page
   await entrer(page, "Momo");
   await tableRase(page);
   await page.getByRole("button", { name: /Je n'ai jamais/ }).first().click();
-  await page.getByRole("button", { name: /^Lancer Je n'ai jamais$/ }).click();
+  await page.getByRole("button", { name: /on se le passe/i }).click();
   await page.waitForURL(/\/jeux\/.+/);
   const partieId = page.url().split("/").pop()!;
   await page.getByRole("button", { name: "Abandonner" }).click();
@@ -166,7 +198,7 @@ test("« Devine qui je suis » se joue au doigt quand le capteur n'est pas là",
   await tableRase(page);
 
   await page.getByRole("button", { name: /Devine qui je suis/ }).first().click();
-  await page.getByRole("button", { name: /^Lancer Devine qui je suis$/ }).click();
+  await page.getByRole("button", { name: /on se le passe/i }).click();
   await page.waitForURL(/\/jeux\/.+/);
 
   // Le choix du paquet, roulette comprise.
@@ -195,7 +227,7 @@ test("le paquet « Nos potes » s'écrit et se défait sur place", async ({ page
   await entrer(page, "Momo");
   await tableRase(page);
   await page.getByRole("button", { name: /Devine qui je suis/ }).first().click();
-  await page.getByRole("button", { name: /^Lancer Devine qui je suis$/ }).click();
+  await page.getByRole("button", { name: /on se le passe/i }).click();
   await page.waitForURL(/\/jeux\/.+/);
 
   const champ = page.getByLabel("Ajouter une carte au paquet Nos potes");
@@ -241,7 +273,7 @@ for (const [nom, attendu] of Object.entries(PREMIER_ECRAN)) {
     await page.getByRole("button", { name: new RegExp(nom.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")) })
       .first()
       .click();
-    await page.getByRole("button", { name: new RegExp(`^Lancer ${nom.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) }).click();
+    await page.getByRole("button", { name: /on se le passe/i }).click();
     await page.waitForURL(/\/jeux\/.+/);
 
     await expect(page.getByText(attendu).first()).toBeVisible();
@@ -254,7 +286,7 @@ test("un vote unanime à « Tu préfères » ne fait marquer personne", async ({
   await entrer(page, "Momo");
   await tableRase(page);
   await page.getByRole("button", { name: /Tu préfères/ }).first().click();
-  await page.getByRole("button", { name: /^Lancer Tu préfères$/ }).click();
+  await page.getByRole("button", { name: /on se le passe/i }).click();
   await page.waitForURL(/\/jeux\/.+/);
 
   // Le libellé du premier choix, pour voter pareil à chaque tour.

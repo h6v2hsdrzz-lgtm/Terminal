@@ -87,6 +87,14 @@ export async function lancerPartie(
     data: {
       groupeId: moi.groupeId,
       jeu,
+      // Les DEUX colonnes, explicitement. Le lot N a fait du multi le mode par
+      // défaut du schéma, et `etat` y naît à « salon » : laisser les valeurs par
+      // défaut ici créait une partie « multi » coincée dans un salon que
+      // personne n'avait ouvert — le mode d'un seul téléphone ne démarrait plus
+      // du tout. Un défaut de colonne est une décision sur les lignes à venir,
+      // pas une dispense de dire ce qu'on veut.
+      mode: "un-telephone",
+      etat: "encours",
       scores: {
         create: melange.map((j, ordre) => ({
           membreId: j.membreId,
@@ -230,7 +238,14 @@ export async function terminerPartie(membreId: string, partieId: string): Promis
   );
 
   await prisma.$transaction([
-    prisma.partie.update({ where: { id: partieId }, data: { finieLe: new Date() } }),
+    // `etat` et `code` en même temps que `finieLe` : sans ça une partie terminée
+    // garderait l'état où elle est morte. Un salon resté « salon » continuerait
+    // d'afficher le bandeau « rejoindre » chez les autres, et un code resté
+    // valable laisserait quelqu'un entrer dans une partie qui n'existe plus.
+    prisma.partie.update({
+      where: { id: partieId },
+      data: { finieLe: new Date(), etat: "finie", code: null, version: { increment: 1 } },
+    }),
     prisma.manche.create({
       data: { partieId, numero: 0, donnees: { recompenses, jour } as never },
     }),
@@ -707,6 +722,68 @@ export async function agir(
     update: { donnees: valeur, creeeLe: new Date() },
   });
   await toucherVersion(partieId);
+}
+
+/**
+ * Reprendre la main quand l'hôte a disparu.
+ *
+ * Le transfert automatique de `quitterSalon` couvre le départ volontaire. Il
+ * reste le cas le plus fréquent : un téléphone qui s'éteint, une batterie à
+ * plat, quelqu'un qui répond au téléphone et verrouille sans réfléchir. La
+ * partie n'a alors plus personne pour la faire avancer.
+ *
+ * N'importe quel joueur PRÉSENT peut alors prendre la main — mais seulement si
+ * l'hôte est vraiment absent, c'est-à-dire sans signe de vie depuis vingt
+ * secondes. Sans cette condition, il suffirait d'appeler la fonction pour
+ * voler le salon à quelqu'un qui joue.
+ */
+export async function reprendreLaMain(membreId: string, partieId: string): Promise<boolean> {
+  const partie = await maPartie(membreId, partieId);
+  if (partie.hoteId === membreId) return true;
+
+  const scores = await prisma.scorePartie.findMany({
+    where: { partieId },
+    select: { membreId: true, vuLe: true },
+  });
+  if (!scores.some((s) => s.membreId === membreId)) {
+    throw new ErreurMetier("Tu n'es pas dans cette partie.");
+  }
+
+  const hote = scores.find((s) => s.membreId === partie.hoteId);
+  // Un hôte encore là garde la main : la reprise n'est pas un bouton de
+  // confort, c'est un dépannage.
+  if (hote && estPresent(hote.vuLe)) return false;
+
+  await prisma.partie.update({
+    where: { id: partieId },
+    data: { hoteId: membreId, version: { increment: 1 } },
+  });
+  return true;
+}
+
+/**
+ * Qui est présent, et rien d'autre.
+ *
+ * Le flux ne recharge l'état complet que lorsque la version bouge, et un
+ * battement de cœur ne la fait pas bouger — sinon trois téléphones
+ * rechargeraient la partie toutes les cinq secondes pour apprendre qu'il ne
+ * s'est rien passé. Mais une ABSENCE ne change aucune version : personne ne
+ * publie « je suis parti », on le déduit d'un silence. D'où cette lecture
+ * minuscule, que le flux compare d'un battement à l'autre.
+ *
+ * Sans elle, un téléphone qui s'éteint reste « présent » jusqu'à la prochaine
+ * reconnexion du flux — cinquante secondes — et pendant ce temps la manche
+ * attend une réponse qui ne viendra pas, et personne ne peut reprendre la main.
+ */
+export async function presenceDePartie(partieId: string): Promise<string[]> {
+  const scores = await prisma.scorePartie.findMany({
+    where: { partieId },
+    select: { membreId: true, vuLe: true },
+  });
+  return scores
+    .filter((s) => estPresent(s.vuLe))
+    .map((s) => s.membreId)
+    .sort();
 }
 
 /** La version seule : c'est tout ce que le flux relit entre deux battements. */

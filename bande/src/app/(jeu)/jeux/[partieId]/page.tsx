@@ -2,10 +2,14 @@ import { notFound } from "next/navigation";
 
 import { JeuEnCours } from "@/composants/jeux/JeuEnCours";
 import { Podium } from "@/composants/jeux/Podium";
+import { CoquilleMulti } from "@/composants/jeux/multi/CoquilleMulti";
 import { Salon } from "@/composants/jeux/Salon";
 import { cartesDeLaBande, chargerPartie, lireEtatPartie, recompensesDe } from "@/lib/depot-jeux";
 import { jeuParCle } from "@/lib/jeux/catalogue";
+import { questionsDuQuiz } from "@/lib/jeux/quiz";
+import { generateur } from "@/lib/jeux/tirage";
 import { entreesDeLaBande, exigerContexte } from "@/lib/repaire";
+import type { Entree, Profil } from "@/lib/types";
 
 export default async function Page({ params }: { params: Promise<{ partieId: string }> }) {
   const contexte = await exigerContexte();
@@ -39,23 +43,84 @@ export default async function Page({ params }: { params: Promise<{ partieId: str
         <Salon initial={etat} jeu={jeu} moi={contexte.moi.id} profils={contexte.profils} />
       );
     }
+    if (etat) {
+      // Le contenu tiré du journal est préparé ICI, sur le serveur : la recette
+      // du jeu tourne dans le navigateur de l'hôte, et lui faire charger cinq
+      // cents journées pour fabriquer une question coûterait plus cher que la
+      // partie entière.
+      const entrees = seNourritDuJournal(jeu.cle)
+        ? await entreesDeLaBande(contexte.groupe.id)
+        : [];
+      return (
+        <CoquilleMulti
+          initial={etat}
+          jeu={jeu}
+          moi={contexte.moi.id}
+          contexte={{
+            cartesMaison:
+              jeu.cle === "devine-qui"
+                ? (await cartesDeLaBande(contexte.moi.id)).map((c) => c.texte)
+                : [],
+            niveaux: ["soft", "chaud"],
+            duJournal: duJournal(jeu.cle, entrees, contexte.profils),
+          }}
+        />
+      );
+    }
   }
-
-  /**
-   * Deux jeux se nourrissent du journal. Les journées sont chargées ici, une
-   * fois, plutôt que par chaque jeu : le chargement d'une partie ne doit pas
-   * dépendre du jeu choisi, et deux allers-retours de plus au lancement se
-   * voient quand trois personnes attendent autour d'une table.
-   */
-  const seNourritDuJournal = jeu.cle === "quiz-bande" || jeu.cle === "qui-a-ecrit";
 
   return (
     <JeuEnCours
       partie={partie}
       jeu={jeu}
       cartesMaison={jeu.cle === "devine-qui" ? await cartesDeLaBande(contexte.moi.id) : []}
-      entrees={seNourritDuJournal ? await entreesDeLaBande(contexte.groupe.id) : []}
+      entrees={seNourritDuJournal(jeu.cle) ? await entreesDeLaBande(contexte.groupe.id) : []}
       profils={contexte.profils}
     />
   );
+}
+
+/**
+ * Deux jeux se nourrissent du journal. Les journées sont chargées une fois,
+ * ici, plutôt que par chaque jeu : le chargement d'une partie ne doit pas
+ * dépendre du jeu choisi, et deux allers-retours de plus au lancement se
+ * voient quand trois personnes attendent autour d'une table.
+ */
+function seNourritDuJournal(cle: string): boolean {
+  return cle === "quiz-bande" || cle === "qui-a-ecrit";
+}
+
+/**
+ * Le contenu tiré du journal, ramené à la forme que les recettes attendent.
+ *
+ * Une question de quiz et un « qui a écrit ça » sont la même chose vue de la
+ * recette : un énoncé, une bonne réponse, des options. Les fabriquer ici évite
+ * d'envoyer tout le journal au navigateur.
+ */
+function duJournal(
+  cle: string,
+  entrees: Entree[],
+  profils: Profil[],
+): { enonce: string; reponse: string; options: string[] }[] {
+  if (cle === "quiz-bande") {
+    return questionsDuQuiz(entrees, profils, generateur(entrees.length + 17), 24).map((q) => ({
+      enonce: q.intitule,
+      reponse: q.bonne,
+      options: q.options,
+    }));
+  }
+  if (cle === "qui-a-ecrit") {
+    // Une note assez longue pour avoir un style, et pas si longue qu'elle se
+    // lise en diagonale. `flatMap` plutôt qu'un filtre suivi d'un `!` : c'est
+    // le même code, et le compilateur n'a rien à croire sur parole.
+    return entrees
+      .flatMap((e) => ((e.note?.length ?? 0) > 25 && e.note ? [{ note: e.note, qui: e.profil }] : []))
+      .slice(0, 40)
+      .map((e) => ({
+        enonce: e.note,
+        reponse: e.qui,
+        options: profils.map((p) => p.id),
+      }));
+  }
+  return [];
 }

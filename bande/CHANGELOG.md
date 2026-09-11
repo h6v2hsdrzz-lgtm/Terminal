@@ -3,6 +3,55 @@
 Les entrées vont de la plus récente à la plus ancienne. Chaque lot du chantier
 v3 y ajoute une section ; les jalons v2 sont regroupés en tête d'historique.
 
+## Lot N — Les dix jeux, chacun sur son téléphone
+
+Le mode « on se le passe » reste là pour dépanner une batterie à plat. Mais par
+défaut, maintenant, chacun joue sur son écran — et l'écran n'est plus le même
+pour tout le monde.
+
+### Le salon
+- L'hôte choisit un jeu et ouvre un salon. Les deux autres voient un bandeau en
+  haut de leur accueil, ou tapent le **code à quatre chiffres** dicté à voix
+  haute — quatre chiffres traversent une cuisine, un lien non.
+- La liste des joueurs s'allume en direct, un point par personne présente.
+  L'hôte lance quand tout le monde est là ; personne ne lance à sa place.
+- Un salon oublié depuis la veille se ferme tout seul à l'ouverture du suivant.
+
+### Ce que le multi change aux jeux
+- **« Devine qui je suis » n'a plus besoin d'un téléphone sur le front** : le mot
+  s'affiche chez les deux autres, et celui qui devine regarde son propre écran
+  comme tout le monde.
+- **« Menteur »** : l'acteur écrit ses trois affirmations chez lui, personne ne
+  lit par-dessus son épaule ; les deux autres cherchent la fausse sans voir le
+  vote du voisin, et le menteur les regarde chercher.
+- **« Le jugement »** : chacun répond de son côté, et le juge voit les réponses
+  arriver sans savoir qui a écrit quoi avant de trancher.
+- **« Le plus rapide »** est enfin honnête. Le serveur annonce **à l'avance**
+  l'instant du signal ; chaque téléphone compte à rebours chez lui, et c'est
+  l'horodatage du serveur qui départage. Celui qui a la meilleure 4G ne gagne
+  plus. Appuyer avant le vert fait boire, et ne peut plus faire gagner.
+- Les dix jeux, pas six : les trois archétypes (vote, tour, réflexe) les
+  couvrent tous, et un jeu du catalogue sans règle jouable à plusieurs fait
+  rougir un test. Les quatre formes d'écran sont jouées pour de vrai à deux
+  téléphones dans la suite de tests — c'est comme ça qu'on a découvert que deux
+  des dix ne se jouaient pas du tout.
+
+### Quand ça va mal
+- Reconnexion automatique, reprise après verrouillage d'écran, et un délai
+  maximum par manche pour qu'un téléphone éteint ne bloque personne.
+- **Si l'hôte s'en va, quelqu'un d'autre reprend la main** — au bout de vingt
+  secondes sans signe de vie, et pas avant : ce n'est pas un bouton de confort.
+- Une partie ne reste jamais sans issue.
+
+### Le reste
+- L'écran reste éveillé du salon à la fin de la partie.
+- Barre de score discrète en haut, avec un anneau sur celui dont c'est le tour ;
+  podium animé à la fin, et les points convertis en points d'application.
+
+> Les lots J, K, L, M et O2 de la vague 2 (le geste, la journée, le fil, les
+> médias, le registre de cartes) sont livrés mais n'ont pas de section ici :
+> `ETAT.md` en tient le compte détaillé.
+
 ## Lot G — Les jeux
 
 Dix jeux, à trois, sur un seul téléphone qu'on se passe.

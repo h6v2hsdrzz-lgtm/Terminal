@@ -1,4 +1,4 @@
-import { lireEtatPartie, versionPartie } from "@/lib/depot-jeux";
+import { lireEtatPartie, presenceDePartie, versionPartie } from "@/lib/depot-jeux";
 import { membreConnecte } from "@/lib/session";
 
 /**
@@ -22,6 +22,15 @@ import { membreConnecte } from "@/lib/session";
  * entre « lire un entier » et « recharger une partie », et elle se voit sur
  * une base gratuite.
  *
+ * ## Pourquoi la présence se relit à part
+ *
+ * Une absence ne fait bouger aucune version : personne ne publie « mon
+ * téléphone s'éteint ». Sans cette deuxième lecture, un joueur disparu resterait
+ * « présent » jusqu'à la prochaine reconnexion du flux — cinquante secondes — et
+ * pendant ce temps la manche attendrait sa réponse, et personne ne pourrait
+ * reprendre la main. On relit donc la liste des présents deux fois par seconde
+ * et demie, et on ne recharge l'état complet que si elle a changé.
+ *
  * ## La durée
  *
  * Une fonction ne vit pas indéfiniment en production. On ferme proprement au
@@ -34,6 +43,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const CADENCE_MS = 250;
+const PRESENCE_MS = 2_500;
 const GARDE_MS = 15_000;
 const VIE_MS = 50_000;
 
@@ -77,7 +87,9 @@ export async function GET(
 
       envoyer("etat", depart);
       let connue = depart.version;
+      let presents = [...depart.presents].sort().join(",");
       let derniereGarde = Date.now();
+      let dernierePresence = Date.now();
       const finDeVie = Date.now() + VIE_MS;
 
       while (!fermé && Date.now() < finDeVie) {
@@ -92,10 +104,18 @@ export async function GET(
             envoyer("disparue", {});
             break;
           }
-          if (version !== connue) {
+
+          let aChange = version !== connue;
+          if (!aChange && Date.now() - dernierePresence > PRESENCE_MS) {
+            dernierePresence = Date.now();
+            aChange = (await presenceDePartie(partieId)).join(",") !== presents;
+          }
+
+          if (aChange) {
             const etat = await lireEtatPartie(membreId, partieId);
             if (!etat) break;
             connue = etat.version;
+            presents = [...etat.presents].sort().join(",");
             envoyer("etat", etat);
           } else if (Date.now() - derniereGarde > GARDE_MS) {
             controleur.enqueue(encodeur.encode(": garde\n\n"));

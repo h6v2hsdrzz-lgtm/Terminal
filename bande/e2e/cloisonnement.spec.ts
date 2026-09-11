@@ -82,7 +82,7 @@ test("une bande ne peut rien lire d'une autre, même avec une session valide", a
     const reprendre = cible.getByRole("link", { name: "Reprendre" });
     if (!(await reprendre.isVisible().catch(() => false))) {
       await cible.getByRole("button", { name: /Je n'ai jamais/ }).first().click();
-      await cible.getByRole("button", { name: /^Lancer Je n'ai jamais$/ }).click();
+      await cible.getByRole("button", { name: /on se le passe/i }).click();
     } else {
       await reprendre.click();
     }

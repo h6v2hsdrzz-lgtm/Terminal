@@ -5,25 +5,34 @@
 
 ## Lot en cours
 
-**Vague 2 : lots J, K, O2, L et M terminés.** O2 (le registre) est passé avant le
-lot L parce que c'est le reproche explicite de la bande sur la livraison
+**Vague 2 : lots J, K, O2, L, M et N terminés.** O2 (le registre) est passé avant
+le lot L parce que c'est le reproche explicite de la bande sur la livraison
 précédente — « c'est vraiment x100, vas-y super fort ». Les chiffres du plan
 sont tenus et verrouillés par un test :
 `src/lib/jeux/contenu/contenu.test.ts`. `PLAN.md` porte maintenant la vague 2
 (lots J à R) ; `PLAN-vague-1.md` garde la première, à laquelle `AUDIT.md`
 renvoie.
 
+**Le lot N est fait : les dix jeux se jouent sur trois téléphones.** L'état vit
+sur le serveur, un flux SSE le descend, et l'écran affiché dépend du rôle du
+joueur dans la manche. Trois archétypes couvrent les dix jeux — vote, tour,
+réflexe — et les règles restent dans des recettes (`src/lib/jeux/recettes.ts`)
+appliquées par le navigateur de l'hôte. Neuf tests de bout en bout à **deux
+contextes de navigateur**, c'est-à-dire deux téléphones : les quatre formes
+d'écran jouées pour de vrai, et la reprise de main quand l'hôte ferme son
+application.
+
 ## Prochaine action exacte
 
-**LOT N — les dix jeux en multi-téléphones**, par SSE depuis une route Next
-(décidé, voir les réponses ci-dessous) : salon avec code à quatre chiffres,
-machine à états côté serveur, robustesse (reconnexion, joueur qui part en cours
-de manche), horloge du serveur pour les jeux de vitesse. **Les dix jeux**, pas
-six — la bande a tranché.
+**LOT O — le reste des jeux** : les images de Wikipédia pour « Devine qui je
+suis », les cartes écrites par la bande et partagées entre les trois, la refonte
+de « Le plus rapide », et les trois nouveaux jeux Marie Janne (36 Le mot de
+passe, 37 La théorie du complot, 38 Le tribunal des idées).
 
-Le moteur d'un téléphone existe déjà (`src/composants/jeux/`, `src/lib/jeux/`,
-`depot-jeux.ts` avec `Partie`, `ScorePartie`, `Manche`). Le multi n'est pas une
-réécriture : c'est une couche de synchronisation par-dessus, plus un salon.
+Le multi est en place : un nouveau jeu se branche en ajoutant une recette à
+`src/lib/jeux/recettes.ts` (archétype, tirage, énoncé, dépouillement) et une
+entrée au catalogue. `jeuxSansRecette()` rougit si l'un des deux manque, donc un
+jeu ne peut plus s'ouvrir sans savoir se jouer à plusieurs.
 
 ### Ce qu'il faut pour allumer R2 (lot M)
 
@@ -290,6 +299,84 @@ puisqu'il ne concerne que cette machine.
   s'appelle `Etiquette`. Renommer pour un mot d'interface, c'est une migration
   risquée sans rien de visible.
 
+### Le lot N (multi-téléphones)
+
+- **Deux jeux sur dix ne se jouaient pas, et les tests d'archétype l'ont montré.**
+  « Le jugement » figeait : l'écran du juge publiait lui-même la phase de
+  résultat, or `publierPhase` est réservé à l'hôte — l'appel échouait en silence
+  une fois sur deux, selon le tirage de l'ordre de passage. « Menteur » n'avait
+  pas d'écran de vote du tout : son archétype est « tour », et `EcranTour` ne
+  connaissait que les deux formes de « Devine qui je suis » et du « jugement ».
+  Leçon : **un test par forme d'écran**, pas un test par jeu — mais aucune forme
+  sans test.
+- **Un défaut de colonne n'est pas une dispense de dire ce qu'on veut.** Le lot N
+  a fait du multi le mode par défaut du schéma (`mode @default("multi")`,
+  `etat @default("salon")`). `lancerPartie`, qui démarre le mode d'un seul
+  téléphone, ne posait ni l'un ni l'autre : chaque partie naissait « multi »,
+  coincée dans un salon que personne n'avait ouvert, et **le mode d'un seul
+  téléphone ne démarrait plus du tout**. Quinze tests du lot G le disaient, et
+  ils attendaient un bouton renommé — donc ils mouraient sur autre chose, et le
+  vrai défaut restait caché derrière. Corollaire : `terminerPartie` pose
+  maintenant aussi `etat: "finie"` et `code: null`, sans quoi une partie terminée
+  gardait l'état où elle était morte — bandeau « rejoindre » éternel, code encore
+  valable.
+- **`router.refresh()` pendant le rendu est une bombe à retardement.** Il
+  reprogramme un rendu, qui le rappelle, et comme un rafraîchissement recharge
+  TOUTES les routes en cache du client, deux téléphones suffisaient à noyer le
+  serveur sous les requêtes de quatre parties à la fois. La ligne était là depuis
+  le début du lot N et n'avait jamais brûlé — parce que `etat` ne passait jamais
+  à « finie ». Corriger la donnée a allumé la mèche : c'est le genre de défaut
+  qu'on ne trouve qu'en réparant autre chose.
+- **Un écran ne publie pas de phase.** `publier` ne sort plus de la coquille :
+  un écran envoie des actions, et faire avancer la partie est le travail de
+  l'hôte. C'est la règle qui manquait, et son absence ne se voyait pas.
+
+- **Une absence ne fait bouger aucune version.** Le flux ne recharge l'état
+  complet que lorsque la version change, et un battement de cœur ne la change
+  pas — sinon trois téléphones rechargeraient la partie toutes les cinq
+  secondes. Mais personne ne publie « je suis parti » : sans une relecture à
+  part de la liste des présents, un joueur disparu restait « présent » jusqu'à
+  la reconnexion du flux (cinquante secondes), et pendant ce temps la manche
+  attendait sa réponse et personne ne pouvait reprendre la main.
+- **Un écran sans phase ne doit pas afficher de boutons.** L'hôte qui ferme
+  l'application dans la seconde qui suit le lancement ne publie jamais la
+  première manche : les autres voyaient alors l'écran de vote au complet, avec
+  des boutons qui n'envoyaient rien (la réponse part dans la phase en cours, et
+  il n'y en avait pas). La coquille affiche « L'hôte distribue… » tant que
+  `etat.phase` est nul, et la reprise de main règle le reste.
+- **Un jeu « tour » où l'acteur est seul à répondre n'est pas un jeu de vote.**
+  `toutLeMondeARepondu` exclut l'acteur ; dans « Devine qui je suis », il ne
+  reste donc personne à attendre et la manche ne se révélait jamais. C'est la
+  réponse de l'ACTEUR qui clôt la phase, et il faut la verser dans les données
+  de la phase pour que le dépouillement y voie `trouve`.
+- **React ne compare pas la valeur d'un champ à son état, mais à celle qu'il a
+  notée au dernier événement.** Remplir « 5732 » par-dessus un « 5732 » écrit
+  avant l'hydratation ne lui fait voir aucun changement : pas de `onChange`,
+  pas d'état, et un bouton désactivé pour toujours. Un test qui réessaie le même
+  remplissage échoue cent fois de la même façon — il faut repasser par le vide.
+- **`page.goto()` annule l'action serveur en vol.** Cliquer « Terminer » puis
+  partir aussitôt laisse la partie en cours ; le test suivant trouve alors les
+  fiches de jeu bloquées et meurt quarante secondes plus loin sur un bouton qui
+  n'existe pas. On attend le podium avant de naviguer.
+- **Un pseudo suivi d'un marqueur se lit collé dans un instantané
+  d'accessibilité** : « Momo » + « toi » donne « Momotoi », ce qui ressemble à
+  un peuplement périmé et fait chercher au mauvais endroit pendant un moment.
+- **Un clic qui court contre une horloge mesure la chance du harnais.** Appuyer
+  « avant le vert » dans « Le plus rapide » dépend d'un délai tiré au hasard et
+  du moment où la page s'affiche : la règle du départ brûlé se vérifie sur le
+  dépouillement, en Vitest, où l'horloge est à nous.
+- **Un fichier de tests ne laisse pas de vaisselle sale aux suivants.** Le lot N
+  libérait la bande au DÉBUT de chaque test, ce qui suffit tant qu'il tourne
+  seul ; dans la suite complète, sa dernière partie multi bloquait les seize
+  tests du lot G, qui cherchaient « Abandonner » — le mot du mode d'un seul
+  téléphone, absent de l'écran multi. Un `afterAll` libère maintenant la bande,
+  et `tableRase` (lot G) connaît les deux sorties.
+- **Un `goto` lancé juste après l'entrée dans l'application se fait annuler.**
+  La redirection côté client est encore en vol quand le titre du fil apparaît :
+  « interrupted by another navigation ». Ce n'est pas du réseau, c'est un
+  croisement — une seule reprise suffit (`aller()` dans `e2e/lotN.spec.ts`), et
+  sans elle un test sur neuf rougissait une fois sur trois.
+
 ## Questions en attente
 
 1. « Rire » remplace « calme » : que fait-on des journées déjà notées ?
@@ -329,4 +416,5 @@ puisqu'il ne concerne que cette machine.
 | K la journée (vague 2) | **fait** |
 | M médias et stockage | **fait**, avec deux écarts assumés : miniature à 640 px et non 320 (le fil l'affiche sur toute la largeur de la carte, 320 y serait mou), et pas d'AVIF (mesuré : ce moteur ne sait pas l'encoder, il rend un PNG en silence) |
 | L le fil | **fait** : pagination par journée, en-tête collant, appui long, partage 9:16, repère de visite, filtres, tirer pour rafraîchir |
+| N les dix jeux en multi | **fait** : salon à code, SSE, trois archétypes, dix recettes, reprise de main, barre de score et podium |
 | O2 le registre | **fait** : 423 cartes « Je n'ai jamais », 204 dilemmes, 38 gages, 80 susceptibles, 50 jugements, 47 thèmes |

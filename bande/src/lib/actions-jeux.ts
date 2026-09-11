@@ -18,6 +18,7 @@ import {
   publierPhase,
   quitterSalon,
   rejoindreSalon,
+  reprendreLaMain,
   retirerCarte,
   terminerPartie,
   type CarteMaison,
@@ -209,4 +210,16 @@ export async function actionEtatPartie(
   partieId: string,
 ): Promise<{ erreur: string | null; valeur?: EtatPartie | null }> {
   return tenter(async () => lireEtatPartie(await quiJoue(), partieId));
+}
+
+/**
+ * Prendre la main sur une partie dont l'hôte a disparu.
+ *
+ * Le dépôt refuse si l'hôte est encore là : l'écran peut donc proposer le
+ * bouton sans risque, et sans avoir à trancher lui-même.
+ */
+export async function actionReprendreLaMain(
+  partieId: string,
+): Promise<{ erreur: string | null; valeur?: boolean }> {
+  return tenter(async () => reprendreLaMain(await quiJoue(), partieId));
 }

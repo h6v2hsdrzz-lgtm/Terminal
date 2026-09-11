@@ -19,7 +19,7 @@ repo, et les termes du plan se traduisent ainsi :
 | `supabase/migrations/` | `prisma/migrations/`, additives, relues avant d'être appliquées |
 | RLS sur chaque table | autorisation côté serveur : **toute** lecture est filtrée par `groupeId`, et les routes de médias vérifient l'appartenance à la bande |
 | Supabase Storage, buckets privés | Cloudflare R2 quand les quatre variables `R2_*` sont posées, PostgreSQL sinon. Dans les deux cas les octets passent par des routes qui exigent une session : le seau est privé, aucune adresse publique n'est fabriquée |
-| Supabase Realtime | sondage d'une empreinte de version (`versionBande`), qui agrège comptes et derniers horodatages |
+| Supabase Realtime | deux mécaniques selon l'enjeu : le reste de l'application sonde une empreinte de version (`versionBande`) toutes les trois secondes ; une **partie** passe par un flux SSE (`/api/partie/[partie]/flux`) qui relit la version quatre fois par seconde et n'envoie l'état complet que lorsqu'elle bouge |
 
 ## Où sont les choses
 
@@ -29,14 +29,14 @@ prisma/seed.ts           4 profils × 400 jours, images et sons engendrés
 src/app/(entree)/        bienvenue, créer, rejoindre, reprendre
 src/app/(repaire)/       page.tsx (le fil), aujourdhui, jeux, souvenirs, galerie, profil, reglages
 src/app/(jeu)/           l'écran d'une partie, sans barre d'onglets ni sondage
-src/app/api/             photo, vignette, audio, avatar, scelle, lieu, export, sante, version
+src/app/api/             photo, vignette, audio, avatar, scelle, lieu, export, sante, version, partie/[partie]/{flux,present}
 src/app/not-found.tsx    404 en français ; error.tsx pour ce qui casse
-src/composants/          un fichier par composant, noms français ; jeux/ pour les dix jeux, fil/ pour le fil
+src/composants/          un fichier par composant, noms français ; jeux/ pour les dix jeux, jeux/multi/ pour le multi, fil/ pour le fil
 src/lib/                 depot.ts + depot-jeux.ts (tout PostgreSQL), actions*.ts, logique pure
 src/lib/stockage/        R2 : signature v4 écrite à la main, client, clés, plafond
 scripts/migrer-medias.ts déménage les octets vers R2, avec relecture et empreintes
-src/lib/jeux/            catalogue, cadre, tirage, recompense, quiz, top3, vote, inclinaison
-e2e/                     Playwright : captures, lot1, lotA..lotC, lotF, lotG, lotK, lotL, video, production
+src/lib/jeux/            catalogue, cadre, tirage, recompense, quiz, top3, vote, inclinaison, salon, recettes, types
+e2e/                     Playwright : captures, lot1, lotA..lotC, lotF, lotG, lotK, lotL, lotM, lotN, video, production
 ```
 
 **La règle du dépôt :** rien d'autre que `depot.ts` et `depot-jeux.ts` ne parle
@@ -48,6 +48,27 @@ ne serait-ce qu'une CONSTANTE dans un fichier de dépôt entraîne Prisma et `pg
 — donc `net`, `tls`, `fs`, `dns` — dans le paquet du navigateur, et la page ne
 compile plus. Le `import "server-only"` n'arrête pas ça. Les types et les
 constantes partagés vivent dans `src/lib/jeux/types.ts`, sans dépendance.
+
+## Le multi-téléphones, en six phrases
+
+Le **serveur garde l'état** (`Partie.etat/phase/donneesPhase/version`,
+`ActionJoueur`), l'**hôte le fait avancer**, et tout le monde envoie des actions.
+Les règles des dix jeux ne sont pas dans le serveur mais dans des **recettes**
+(`src/lib/jeux/recettes.ts` : archétype, tirage, énoncé, dépouillement), que le
+navigateur de l'hôte applique — y mettre les règles aurait fait du serveur un
+moteur de jeu, alors qu'il n'a qu'une garantie à donner : que les trois écrans
+lisent la même phase au même moment.
+
+Trois **archétypes** couvrent les dix jeux : `vote` (tout le monde répond),
+`tour` (un joueur agit, les autres regardent ou jugent), `reflexe` (l'instant
+du signal est annoncé à l'avance en absolu, et chaque téléphone compte chez
+lui). `jeuxSansRecette()` rougit si un jeu du catalogue n'a pas de recette.
+
+La **présence** est un battement de cinq secondes (`/present`), une absence se
+déclare au bout de vingt, et n'importe quel joueur présent peut **reprendre la
+main** si l'hôte ne donne plus signe de vie. Le battement n'incrémente PAS la
+version : le flux relit donc la liste des présents à part, toutes les deux
+secondes et demie, parce qu'une absence ne fait bouger aucune version.
 
 **La règle des tests :** ce qui se calcule vit dans un module pur et se teste
 (`figure`, `media`, `onde`, `etiquettes`, `csv`, `analyse`, `souvenirs`,
@@ -130,3 +151,34 @@ npx prisma migrate dev --create-only   # écrire la migration, la RELIRE, puis l
 - **Un test qui dépend de la fraîcheur du peuplement rougit tout seul.** La
   bande de démonstration est figée au jour où elle a été engendrée ; un test qui
   suppose « untel a posé aujourd'hui » casse une semaine plus tard. Il pose.
+- **Une partie ne se synchronise pas par sa seule version.** Un départ de
+  joueur ne l'incrémente pas — personne ne publie « je suis parti ». Sans une
+  relecture séparée des présents, la manche attend une réponse qui ne viendra
+  jamais et personne ne peut reprendre la main.
+- **Un écran de jeu sans phase publiée ne doit montrer aucun bouton.** Une
+  réponse part dans la phase en cours ; s'il n'y en a pas, le bouton ne fait
+  rien et ne le dit pas. `CoquilleMulti` affiche « L'hôte distribue… ».
+- **React compare la valeur d'un champ à celle du dernier événement, pas à son
+  état.** Réécrire la même chaîne par-dessus une valeur posée avant
+  l'hydratation ne déclenche aucun `onChange` : le bouton reste désactivé pour
+  toujours. Dans un test, repasser par le vide avant de remplir.
+- **`page.goto()` annule une action serveur en vol.** Un test qui clique
+  « Terminer » puis navigue laisse la partie ouverte, et bloque le test suivant.
+- **Un écran de jeu n'a pas le droit de publier une phase** (`publierPhase` est
+  réservé à l'hôte, et l'appel échoue en SILENCE). Il envoie une action ; c'est
+  `CoquilleMulti`, chez l'hôte, qui en tire la suite. « Le jugement » est resté
+  figé une fois sur deux à cause de ça — selon le tirage de l'ordre de passage.
+- **`router.refresh()` ne s'appelle jamais pendant le rendu**, seulement dans un
+  effet, et une seule fois (garde par référence). Il reprogramme un rendu qui le
+  rappelle, et il recharge TOUTES les routes en cache : deux téléphones suffisent
+  à noyer le serveur.
+- **Ajouter un `@default` à une colonne ne dispense pas de la poser.** `mode`
+  naît « multi » et `etat` naît « salon » depuis le lot N : `lancerPartie` (mode
+  d'un seul téléphone) les laissait par défaut, et créait des parties coincées
+  dans un salon que personne n'avait ouvert — le mode de secours ne démarrait
+  plus. Toute création de `Partie` pose `mode` ET `etat`, et toute fin pose
+  `etat` et `code`.
+- **Un test par forme d'écran, et aucune forme sans test.** Les dix jeux tiennent
+  en trois archétypes mais quatre formes d'écran (vote, tour-acteur-agit,
+  tour-acteur-juge, tour-avec-préparation). Deux d'entre elles ne marchaient pas
+  du tout, et ça ne s'est vu qu'en les jouant vraiment à deux téléphones.
