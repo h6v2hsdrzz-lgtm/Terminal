@@ -166,7 +166,14 @@ model Media {
   /// la migration plus délicate qu'elle n'en vaut la peine pour deux cas.
   genre     String   @default("photo")
   mime      String
-  octets    Bytes
+  /// Les octets, quand ils vivent en base. Nuls quand ils sont chez R2 : c'est
+  /// `cle` qui dit alors où les relire. Les deux ne sont jamais renseignés en
+  /// même temps — ce serait payer deux fois le même fichier.
+  octets    Bytes?
+  /// La clé de l'objet distant, ou rien. C'est le seul témoin de l'endroit où
+  /// vivent les octets, et il se lit ligne par ligne : la migration peut donc
+  /// s'arrêter au milieu sans rien casser.
+  cle       String?
   largeur   Int
   hauteur   Int
   /// En millisecondes, pour les vidéos seulement.
@@ -177,6 +184,10 @@ model Media {
   /// dans une case de 160 fait payer à celui qui lit une résolution qu'il ne
   /// verra pas, et pour une vidéo ce serait le fichier entier.
   vignette  Bytes?
+  /// La clé de la vignette distante. Indépendante de celle de l'original : une
+  /// vignette pèse quarante kilo-octets, un original quatre méga — on peut très
+  /// bien vouloir migrer l'un sans l'autre.
+  cleVignette String? @map("cle_vignette")
   /// Deux mots sous l'image. Facultatif, comme tout le reste.
   legende   String?
   creeLe    DateTime @default(now()) @map("cree_le")
@@ -205,7 +216,9 @@ model Audio {
   id        String   @id @default(cuid())
   entreeId  String   @unique @map("entree_id")
   mime      String
-  octets    Bytes
+  /// Même règle que pour les médias : en base, ou chez R2, jamais les deux.
+  octets    Bytes?
+  cle       String?
   /// En millisecondes.
   duree     Int
   niveaux   Int[]

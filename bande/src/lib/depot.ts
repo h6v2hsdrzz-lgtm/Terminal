@@ -9,6 +9,14 @@ import { LONGUEUR_PSEUDO, initialesDeLaBande } from "./initiales";
 import type { Declencheur, Entree, FiltreFil, PageFil, Profil } from "./types";
 import { MAX_ETIQUETTES, cleEtiquette, nettoyerEtiquette } from "./etiquettes";
 import { DUREE_MAX_VIDEO, LONGUEUR_LEGENDE, MAX_MEDIAS, POIDS_MAX_MEDIA } from "./media";
+import {
+  cleAudio,
+  cleMedia,
+  ecrireOctets,
+  lireOctets,
+  stockageDistant,
+  supprimerOctets,
+} from "./stockage";
 // Réexporté pour que la route d'export n'ait pas à savoir qu'il a déménagé.
 export { versCsv } from "./csv";
 
@@ -829,20 +837,44 @@ export async function ajouterMedia(membreId: string, jour: string, media: MediaE
     throw new ErreurMetier(`${MAX_MEDIAS} par journée, c'est déjà un album.`);
   }
 
-  await prisma.media.create({
+  // La ligne est créée d'abord, sans octets : son identifiant est la clé de
+  // l'objet distant, et on ne peut pas écrire l'objet avant de le connaître.
+  // L'ordre inverse — écrire chez R2 puis créer la ligne — laisserait un objet
+  // orphelin à chaque échec d'insertion.
+  const ligne = await prisma.media.create({
     data: {
       entreeId: entree.id,
       ordre: deja,
       genre: media.genre,
       mime: type,
-      octets: media.octets,
       largeur: media.largeur,
       hauteur: media.hauteur,
       duree: media.genre === "video" ? Math.min(media.duree ?? 0, DUREE_MAX_VIDEO) : null,
-      vignette: media.vignette ?? null,
       legende: nettoyerLegende(media.legende),
     },
+    select: { id: true },
   });
+
+  if (stockageDistant()) {
+    try {
+      const cle = await ecrireOctets(cleMedia(ligne.id), media.octets, type);
+      const cleVignette = media.vignette
+        ? await ecrireOctets(cleMedia(ligne.id, true), media.vignette, "image/jpeg")
+        : null;
+      await prisma.media.update({ where: { id: ligne.id }, data: { cle, cleVignette } });
+    } catch (erreur) {
+      // R2 n'a pas voulu : la ligne repart avec. Une entrée sans octets ni clé
+      // afficherait une case grise que personne ne saurait réparer.
+      await prisma.media.delete({ where: { id: ligne.id } }).catch(() => {});
+      throw erreur;
+    }
+  } else {
+    await prisma.media.update({
+      where: { id: ligne.id },
+      data: { octets: media.octets, vignette: media.vignette ?? null },
+    });
+  }
+
   return entree.groupeId;
 }
 
@@ -864,7 +896,16 @@ async function monMedia(membreId: string, mediaId: string) {
 
 export async function retirerMedia(membreId: string, mediaId: string) {
   const groupeId = await monMedia(membreId, mediaId);
+  // Les clés se lisent AVANT la suppression : après, la ligne n'est plus là
+  // pour dire où vivaient les octets, et l'objet resterait dans le seau sans
+  // que rien ne s'en souvienne.
+  const cles = await prisma.media.findUnique({
+    where: { id: mediaId },
+    select: { cle: true, cleVignette: true },
+  });
   await prisma.media.delete({ where: { id: mediaId } });
+  await supprimerOctets(cles?.cle ?? null);
+  await supprimerOctets(cles?.cleVignette ?? null);
   return groupeId;
 }
 
@@ -890,7 +931,9 @@ export async function lireMedia(membreId: string, mediaId: string, vignette = fa
     select: {
       mime: true,
       octets: vignette ? undefined : true,
+      cle: vignette ? undefined : true,
       vignette: vignette ? true : undefined,
+      cleVignette: vignette ? true : undefined,
       entree: { select: { groupeId: true } },
     },
   });
@@ -901,14 +944,18 @@ export async function lireMedia(membreId: string, mediaId: string, vignette = fa
     select: { groupeId: true },
   });
   // Le média d'une autre bande ne se sert pas, même avec le bon identifiant.
+  // Le contrôle passe avant le moindre aller-retour vers R2 : on ne va pas
+  // chercher des octets qu'on n'a pas le droit de rendre.
   if (!membre || membre.groupeId !== media.entree.groupeId) return null;
 
   if (vignette) {
     // Une vignette manquante n'est pas une erreur : les photos posées avant
     // l'arrivée des vignettes n'en ont pas. La route servira l'original.
-    return media.vignette ? { mime: "image/jpeg", octets: media.vignette } : null;
+    const octets = media.vignette ?? (await lireOctets(media.cleVignette ?? ""));
+    return octets ? { mime: "image/jpeg", octets } : null;
   }
-  return media.octets ? { mime: media.mime, octets: media.octets } : null;
+  const octets = media.octets ?? (await lireOctets(media.cle ?? ""));
+  return octets ? { mime: media.mime, octets } : null;
 }
 
 /**
@@ -1016,24 +1063,41 @@ export async function enregistrerAudio(
     // mille ferait grossir chaque page du fil pour rien.
     niveaux: son.niveaux.slice(0, 64).map((n) => Math.max(0, Math.min(100, Math.round(n)))),
   };
-  await prisma.audio.upsert({
-    where: { entreeId: entree.id },
-    create: { entreeId: entree.id, ...donnees },
-    update: donnees,
-  });
+  if (stockageDistant()) {
+    // L'audio se range sous l'identifiant de la JOURNÉE, pas le sien : il y en
+    // a au plus un par journée, et réenregistrer écrase l'objet précédent au
+    // lieu d'en laisser un orphelin à chaque prise.
+    const cle = await ecrireOctets(cleAudio(entree.id), son.octets, type);
+    await prisma.audio.upsert({
+      where: { entreeId: entree.id },
+      create: { entreeId: entree.id, ...donnees, cle },
+      update: { ...donnees, cle },
+    });
+  } else {
+    await prisma.audio.upsert({
+      where: { entreeId: entree.id },
+      create: { entreeId: entree.id, ...donnees, octets: son.octets },
+      update: { ...donnees, octets: son.octets },
+    });
+  }
   return entree.groupeId;
 }
 
 export async function retirerAudio(membreId: string, jour: string) {
   const entree = await maJournee(membreId, jour);
+  const audio = await prisma.audio.findUnique({
+    where: { entreeId: entree.id },
+    select: { cle: true },
+  });
   await prisma.audio.deleteMany({ where: { entreeId: entree.id } });
+  await supprimerOctets(audio?.cle ?? null);
   return entree.groupeId;
 }
 
 export async function lireAudio(membreId: string, entreeId: string) {
   const audio = await prisma.audio.findUnique({
     where: { entreeId },
-    select: { mime: true, octets: true, entree: { select: { groupeId: true } } },
+    select: { mime: true, octets: true, cle: true, entree: { select: { groupeId: true } } },
   });
   if (!audio) return null;
 
@@ -1043,7 +1107,8 @@ export async function lireAudio(membreId: string, entreeId: string) {
   });
   if (!membre || membre.groupeId !== audio.entree.groupeId) return null;
 
-  return { mime: audio.mime, octets: audio.octets };
+  const octets = audio.octets ?? (await lireOctets(audio.cle ?? ""));
+  return octets ? { mime: audio.mime, octets } : null;
 }
 
 // ── Étiquettes ──────────────────────────────────────────────────────────────
