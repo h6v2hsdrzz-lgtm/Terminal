@@ -1,5 +1,20 @@
 @AGENTS.md
 
+# Coordination Grok / Claude Code — lire en premier
+
+Tu travailles **ici** : `Terminal`, branche `claude/daily-joy-tracker-app-gjkdyd`, dossier `bande/`.
+Continue tes lots v2 comme depuis des jours. Ne change pas de dépôt.
+
+Un dépôt privé `h6v2hsdrzz-lgtm/App` existe (copie figée + branche `securite` pour
+un patch sécu). **Ne le merge pas, ne le rebase pas, ne rebranche pas Vercel,
+ne supprime pas `bande/` ni `joie/`.** La sécu se recollera quand tu auras fini.
+
+Les prochaines apps (hors cette v2) iront dans `App/`, pas dans Terminal.
+
+Détail : `App/COORDINATION.md`.
+
+---
+
 # Journal de Joie — repères d'architecture
 
 `PLAN.md` (vague 2) est la source de vérité. `PLAN-vague-1.md` garde la vague 1,
