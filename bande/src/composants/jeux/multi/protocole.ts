@@ -28,6 +28,15 @@ export const PHASES = {
 
 export type NomPhase = (typeof PHASES)[keyof typeof PHASES];
 
+/**
+ * La durée du décompte 3-2-1 des jeux de réflexe.
+ *
+ * Elle est ici plutôt que dans l'écran : l'hôte la compte pour poser l'instant
+ * du vert, l'écran la compte pour savoir quel chiffre afficher, et deux valeurs
+ * qui devraient être égales finissent toujours par ne plus l'être.
+ */
+export const COMPTE_MS = 3_000;
+
 /** Les réponses de la phase en cours, dans la forme qu'attendent les recettes. */
 export function reponsesDe(etat: EtatPartie, phase: string): Reponse[] {
   return etat.actions

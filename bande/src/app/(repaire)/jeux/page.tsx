@@ -4,7 +4,7 @@ import { Carte, TitreSection } from "@/composants/Carte";
 import { BoiteRejoindre } from "@/composants/jeux/BoiteRejoindre";
 import { FicheJeu } from "@/composants/jeux/FicheJeu";
 import { CATEGORIES, jeuParCle, jeuxDeCategorie } from "@/lib/jeux/catalogue";
-import { historiqueParties, partieEnCours, salonOuvert } from "@/lib/depot-jeux";
+import { historiqueParties, partieDeFond, partieEnCours, salonOuvert } from "@/lib/depot-jeux";
 import { exigerContexte } from "@/lib/repaire";
 
 /**
@@ -26,6 +26,7 @@ import { exigerContexte } from "@/lib/repaire";
 export default async function Page() {
   const contexte = await exigerContexte();
   const encours = await partieEnCours(contexte.moi.id);
+  const fond = await partieDeFond(contexte.moi.id);
   const historique = await historiqueParties(contexte.moi.id);
   const salon = await salonOuvert(contexte.moi.id);
 
@@ -83,6 +84,29 @@ export default async function Page() {
         </Carte>
       )}
 
+      {/* Le jeu de fond a son propre bandeau, plus discret : il tourne pendant
+          qu'on joue à autre chose, et il ne doit pas avoir l'air d'être ce
+          qu'on est en train de faire. */}
+      {fond && (
+        <Carte className="mb-6 p-4">
+          <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-encre-3">
+            En arrière-plan
+          </p>
+          <p className="mt-1.5 text-[17px] font-semibold tracking-tight">
+            {jeuParCle(fond.jeu)?.nom ?? fond.jeu}
+          </p>
+          <p className="mt-1 text-[14px] text-encre-2">
+            Il tourne pendant que vous jouez à autre chose.
+          </p>
+          <Link
+            href={`/jeux/${fond.id}`}
+            className="cible-tactile mt-3 inline-flex items-center justify-center rounded-[var(--radius-pilule)] bg-surface-3 px-4 py-2.5 text-[15px] font-semibold"
+          >
+            Voir mon mot
+          </Link>
+        </Carte>
+      )}
+
       {CATEGORIES.map((categorie) => (
         <section key={categorie.cle} className="mb-7">
           <TitreSection>{categorie.nom}</TitreSection>
@@ -94,7 +118,10 @@ export default async function Page() {
                   jeu={jeu}
                   profils={contexte.profils}
                   moiId={contexte.moi.id}
-                  bloque={encours !== null}
+                  // Un jeu de fond se bloque sur le sien, pas sur la partie en
+                  // cours : on peut lancer « Le mot de passe » pendant une
+                  // partie de « Je n'ai jamais », et c'est tout l'intérêt.
+                  bloque={jeu.fond ? fond !== null : encours !== null}
                 />
               </li>
             ))}

@@ -5,7 +5,7 @@
 
 ## Lot en cours
 
-**Vague 2 : lots J, K, O2, L, M et N terminés.** O2 (le registre) est passé avant
+**Vague 2 : lots J, K, O2, L, M, N et O terminés.** O2 (le registre) est passé avant
 le lot L parce que c'est le reproche explicite de la bande sur la livraison
 précédente — « c'est vraiment x100, vas-y super fort ». Les chiffres du plan
 sont tenus et verrouillés par un test :
@@ -22,17 +22,23 @@ contextes de navigateur**, c'est-à-dire deux téléphones : les quatre formes
 d'écran jouées pour de vrai, et la reprise de main quand l'hôte ferme son
 application.
 
+**Le lot O est fait : treize jeux, et des photos sur les cartes.** 237 cartes de
+« Devine qui je suis » sur 494 ont une image de Wikipédia, servie par nos
+routes — le téléphone de la bande ne parle jamais à Wikimedia. « Le plus
+rapide » a son décompte 3-2-1, son délai imprévisible, ses millisecondes en
+gros, son mode duel et son format en cinq manches. Et trois jeux de plus :
+« Le mot de passe » (qui tourne en arrière-plan des autres), « La théorie du
+complot » et « Le tribunal des idées », tous deux enregistrés, gardés dans la
+nouvelle table `bande_paroles` et réécoutables dans les souvenirs.
+
 ## Prochaine action exacte
 
-**LOT O — le reste des jeux** : les images de Wikipédia pour « Devine qui je
-suis », les cartes écrites par la bande et partagées entre les trois, la refonte
-de « Le plus rapide », et les trois nouveaux jeux Marie Janne (36 Le mot de
-passe, 37 La théorie du complot, 38 Le tribunal des idées).
+**LOT P — les deux graphiques du profil** : l'évolution du classement général
+(une ligne par joueur, points cumulés, périodes 30/90 jours/tout) et les
+déclencheurs dans le temps. Les règles communes de P3 s'appliquent aux deux.
 
-Le multi est en place : un nouveau jeu se branche en ajoutant une recette à
-`src/lib/jeux/recettes.ts` (archétype, tirage, énoncé, dépouillement) et une
-entrée au catalogue. `jeuxSansRecette()` rougit si l'un des deux manque, donc un
-jeu ne peut plus s'ouvrir sans savoir se jouer à plusieurs.
+`src/composants/Courbe.tsx` et `GraphiquePouls.tsx` existent déjà : le lot P
+part de là plutôt que d'ajouter une bibliothèque.
 
 ### Ce qu'il faut pour allumer R2 (lot M)
 
@@ -239,6 +245,18 @@ puisqu'il ne concerne que cette machine.
   mélange le linéaire (45 %) et le rang (55 %) : l'échappée reste loin, la
   grappe du quotidien s'ouvre. L'ordre des deux axes est conservé.
 
+- **Les images des cartes : l'adresse en dépôt, les octets chez Wikimedia, et
+  notre serveur au milieu.** Le plan disait « stocke l'URL et l'attribution en
+  base » ; c'est un fichier engendré (`src/lib/jeux/contenu/images.ts`) plutôt
+  qu'une table, parce que les cartes sont les mêmes pour toutes les bandes et
+  que les recopier à chaque création n'apporterait rien. Les octets, eux, ne
+  sont pas rapatriés : cinq cents images de bonne qualité pèsent plus de trente
+  méga-octets, et les mettre dans le dépôt les ferait voyager à chaque
+  déploiement pour une soirée par mois. C'est une route à nous
+  (`/api/carte/[carte]`) qui va les chercher — le téléphone de la bande ne parle
+  qu'à nous, et la route prend une CARTE, jamais une adresse : un relais ouvert
+  aurait laissé n'importe qui faire partir des requêtes depuis notre serveur.
+
 ## Pièges déjà payés (ne pas les redécouvrir)
 
 - Le WebKit de Playwright **n'a pas `MediaRecorder`** : micro, caméra et
@@ -298,6 +316,29 @@ puisqu'il ne concerne que cette machine.
   s'appelle `bande_photos` (elle porte les vidéos), le modèle des lieux
   s'appelle `Etiquette`. Renommer pour un mot d'interface, c'est une migration
   risquée sans rien de visible.
+
+### Le lot O (les images, et trois jeux de plus)
+
+- **Wikimedia ne fabrique plus de vignette à la demande.** Remplacer `330px-`
+  par `800px-` dans l'adresse rendue par l'API rend un 400 et une page HTML :
+  « Use thumbnail sizes listed on… ». Seules les tailles DÉJÀ fabriquées
+  répondent, et elles ne se devinent pas — mesuré sur un fichier au hasard, 330,
+  500 et 1280 passaient, 320, 400, 640, 800 et 1024 non. L'API classique
+  (`action=query&prop=pageimages&pithumbsize=800`), elle, a le droit de
+  fabriquer : on lui demande la vignette et on garde l'adresse qu'elle rend,
+  quitte à ce qu'elle arrondisse à 960.
+- **Un refus de débit ressemble à une page absente** si on ne regarde que « ça a
+  marché ou pas ». La première version du script a annoncé « aucune page » pour
+  onze footballeurs d'affilée, tous parfaitement présents. Distinguer les cas et
+  réessayer avec patience a fait passer la récolte de 200 à 237 cartes.
+- **Une virgule finale est légale en TypeScript et interdite en JSON.** Le
+  script relit son propre fichier engendré pour ne pas tout refaire ; le
+  `JSON.parse` levait en silence, la table revenait vide, et chaque relance
+  refaisait les cinq cents requêtes. Une heure perdue pour une virgule.
+- **Un jeu qui dure toute la soirée ne doit pas compter comme « la partie en
+  cours »**, sinon il interdit de jouer à autre chose pendant trois heures —
+  c'est-à-dire exactement le contraire de ce qu'il est. D'où `Jeu.fond`, et deux
+  requêtes séparées dans le dépôt.
 
 ### Le lot N (multi-téléphones)
 
@@ -416,5 +457,6 @@ puisqu'il ne concerne que cette machine.
 | K la journée (vague 2) | **fait** |
 | M médias et stockage | **fait**, avec deux écarts assumés : miniature à 640 px et non 320 (le fil l'affiche sur toute la largeur de la carte, 320 y serait mou), et pas d'AVIF (mesuré : ce moteur ne sait pas l'encoder, il rend un PNG en silence) |
 | L le fil | **fait** : pagination par journée, en-tête collant, appui long, partage 9:16, repère de visite, filtres, tirer pour rafraîchir |
+| O le reste des jeux | **fait** : images Wikipédia (237/494 cartes, le reste en texte), « Le plus rapide » refait, trois jeux Marie Janne. **Un écart** : les images ne sont pas en base mais dans un fichier engendré, et les octets ne sont pas rapatriés — voir « Décisions » |
 | N les dix jeux en multi | **fait** : salon à code, SSE, trois archétypes, dix recettes, reprise de main, barre de score et podium |
 | O2 le registre | **fait** : 423 cartes « Je n'ai jamais », 204 dilemmes, 38 gages, 80 susceptibles, 50 jugements, 47 thèmes |

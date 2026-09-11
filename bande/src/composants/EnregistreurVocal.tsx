@@ -46,9 +46,22 @@ export type SonEnregistre = {
 export function EnregistreurVocal({
   onFini,
   desactive = false,
+  dureeMax = DUREE_MAX,
+  libelle = "Note vocale",
 }: {
   onFini: (son: SonEnregistre) => void;
   desactive?: boolean;
+  /**
+   * La durée maximale, en millisecondes.
+   *
+   * Trente secondes pour une note de journée, soixante ou quatre-vingt-dix pour
+   * les deux jeux qui s'enregistrent. C'est un paramètre plutôt qu'une constante
+   * depuis le lot O : le même micro, la même onde, le même bouton — seule la
+   * limite change.
+   */
+  dureeMax?: number;
+  /** Ce qu'annonce le bouton au repos. */
+  libelle?: string;
 }) {
   const [etat, setEtat] = useState<"repos" | "enregistre" | "refuse" | "impossible">("repos");
   const [ecoule, setEcoule] = useState(0);
@@ -104,7 +117,7 @@ export function EnregistreurVocal({
     const morceaux: Blob[] = [];
     enr.ondataavailable = (e) => { if (e.data.size > 0) morceaux.push(e.data); };
     enr.onstop = () => {
-      const duree = Math.min(Date.now() - debut.current, DUREE_MAX);
+      const duree = Math.min(Date.now() - debut.current, dureeMax);
       nettoyer();
       setEtat("repos");
       setEcoule(0);
@@ -132,7 +145,7 @@ export function EnregistreurVocal({
 
       const passe = Date.now() - debut.current;
       setEcoule(passe);
-      if (passe >= DUREE_MAX) arreter();
+      if (passe >= dureeMax) arreter();
     }, 90);
   }
 
@@ -159,7 +172,7 @@ export function EnregistreurVocal({
     );
   }
 
-  const restant = Math.max(0, Math.ceil((DUREE_MAX - ecoule) / 1000));
+  const restant = Math.max(0, Math.ceil((dureeMax - ecoule) / 1000));
 
   return (
     <div className="flex items-center gap-3">
@@ -167,7 +180,7 @@ export function EnregistreurVocal({
         type="button"
         onClick={etat === "enregistre" ? arreter : demarrer}
         disabled={desactive}
-        aria-label={etat === "enregistre" ? "Arrêter l'enregistrement" : "Enregistrer une note vocale"}
+        aria-label={etat === "enregistre" ? "Arrêter l'enregistrement" : `Enregistrer : ${libelle}`}
         className="grid h-11 w-11 shrink-0 place-items-center rounded-full border transition active:scale-95 disabled:opacity-40"
         style={
           etat === "enregistre"
@@ -204,7 +217,7 @@ export function EnregistreurVocal({
         </>
       ) : (
         <span className="text-[13px] text-encre-3">
-          Ou dis-le — 30 secondes, en plus de l&apos;écrit.
+          {libelle} — {Math.round(dureeMax / 1000)} secondes.
         </span>
       )}
     </div>

@@ -4,7 +4,7 @@ import { Prisma } from "@/generated/prisma/client";
 
 import { prisma } from "./db";
 import { jourDeLaBande } from "./dates";
-import { jeuParCle } from "./jeux/catalogue";
+import { JEUX, jeuParCle } from "./jeux/catalogue";
 import { classement, crediter } from "./jeux/recompense";
 import { codeValide, estPresent, prochainHote, tirerCode } from "./jeux/salon";
 import {
@@ -17,6 +17,8 @@ import {
   type Partie,
 } from "./jeux/types";
 import { ErreurMetier } from "./depot";
+import { cleParole } from "./stockage/cles";
+import { ecrireOctets, lireOctets, stockageDistant, supprimerOctets } from "./stockage";
 import { initialesDeLaBande } from "./initiales";
 
 /**
@@ -42,6 +44,15 @@ export type {
   Partie,
 } from "./jeux/types";
 export { LONGUEUR_CARTE, MAX_CARTES } from "./jeux/types";
+
+/**
+ * Les clés des jeux qui se jouent par-dessus les autres.
+ *
+ * Calculée une fois depuis le catalogue plutôt qu'écrite à la main : un jeu de
+ * fond ajouté sans toucher ici bloquerait toute la soirée, et le défaut ne se
+ * verrait qu'au moment de lancer autre chose.
+ */
+const JEUX_DE_FOND = JEUX.filter((j) => j.fond).map((j) => j.cle);
 
 async function bandeDe(membreId: string): Promise<string | null> {
   const membre = await prisma.membre.findUnique({
@@ -337,7 +348,37 @@ export async function partieEnCours(membreId: string): Promise<Partie | null> {
     // pouvoir changer d'avis de jeu sans avoir à l'abandonner d'abord, et
     // `ouvrirSalon` ferme le précédent tout seul. Seule une partie vraiment
     // lancée empêche d'en commencer une autre.
-    where: { groupeId: moi.groupeId, finieLe: null, etat: { not: "salon" } },
+    //
+    // Un jeu **de fond** non plus : « Le mot de passe » dure la soirée, et s'il
+    // comptait comme la partie en cours il interdirait de jouer à quoi que ce
+    // soit pendant trois heures — c'est-à-dire exactement le contraire de ce
+    // qu'il est.
+    where: {
+      groupeId: moi.groupeId,
+      finieLe: null,
+      etat: { not: "salon" },
+      jeu: { notIn: JEUX_DE_FOND },
+    },
+    orderBy: { commenceeLe: "desc" },
+    select: { id: true },
+  });
+  return partie ? chargerPartie(membreId, partie.id) : null;
+}
+
+/** Le jeu de fond ouvert, s'il y en a un. Il s'affiche à part sur la liste. */
+export async function partieDeFond(membreId: string): Promise<Partie | null> {
+  const moi = await prisma.membre.findUnique({
+    where: { id: membreId },
+    select: { groupeId: true },
+  });
+  if (!moi) return null;
+  const partie = await prisma.partie.findFirst({
+    where: {
+      groupeId: moi.groupeId,
+      finieLe: null,
+      etat: { not: "salon" },
+      jeu: { in: JEUX_DE_FOND },
+    },
     orderBy: { commenceeLe: "desc" },
     select: { id: true },
   });
@@ -356,6 +397,168 @@ export async function abandonnerPartie(membreId: string, partieId: string): Prom
   if (!partie) throw new ErreurMetier("Partie inconnue.");
   if (partie.finie) throw new ErreurMetier("Une partie finie ne s'abandonne pas.");
   await prisma.partie.delete({ where: { id: partieId } });
+}
+
+// ── Les paroles : ce qu'on a dit pendant un jeu, et qu'on garde ─────────────
+
+/** Quatre-vingt-dix secondes, plus deux de marge pour l'arrêt du micro. */
+export const DUREE_MAX_PAROLE = 92_000;
+const POIDS_MAX_PAROLE = 6 * 1024 * 1024;
+const MIMES_PAROLE = ["audio/mp4", "audio/aac", "audio/webm", "audio/ogg", "audio/mpeg"];
+
+export type Parole = {
+  id: string;
+  membreId: string;
+  manche: number;
+  sujet: string;
+  duree: number;
+  niveaux: number[];
+  note: number | null;
+  creeLe: string;
+};
+
+/**
+ * Garder une parole.
+ *
+ * Même règle que partout : les octets vont chez R2 quand il est branché, en
+ * base sinon, jamais les deux. Et la ligne est créée AVANT l'écriture distante,
+ * parce que la clé se construit sur l'identifiant.
+ */
+export async function ajouterParole(
+  membreId: string,
+  partieId: string,
+  manche: number,
+  sujet: string,
+  son: { mime: string; octets: Uint8Array<ArrayBuffer>; duree: number; niveaux: number[] },
+): Promise<string> {
+  await maPartie(membreId, partieId);
+  const type = son.mime.split(";")[0].trim();
+  if (!MIMES_PAROLE.includes(type)) throw new ErreurMetier("Ce format de son n'est pas accepté.");
+  if (son.octets.byteLength > POIDS_MAX_PAROLE) throw new ErreurMetier("Cet enregistrement est trop lourd.");
+
+  const donnees = {
+    partieId,
+    membreId,
+    manche,
+    sujet: sujet.slice(0, 200),
+    mime: type,
+    duree: Math.min(son.duree, DUREE_MAX_PAROLE),
+    poids: son.octets.byteLength,
+    niveaux: son.niveaux.slice(0, 64).map((n) => Math.max(0, Math.min(100, Math.round(n)))),
+  };
+
+  // Une seule parole par joueur et par manche : réenregistrer remplace, comme
+  // pour une note vocale. Sinon un micro capricieux laisse trois prises dont
+  // personne ne sait laquelle est la bonne.
+  const ancienne = await prisma.parole.findFirst({
+    where: { partieId, membreId, manche },
+    select: { id: true, cle: true },
+  });
+  if (ancienne) {
+    await supprimerOctets(ancienne.cle);
+    await prisma.parole.delete({ where: { id: ancienne.id } });
+  }
+
+  const ligne = await prisma.parole.create({ data: donnees, select: { id: true } });
+  if (stockageDistant()) {
+    const cle = await ecrireOctets(cleParole(ligne.id), son.octets, type);
+    await prisma.parole.update({ where: { id: ligne.id }, data: { cle } });
+  } else {
+    await prisma.parole.update({ where: { id: ligne.id }, data: { octets: son.octets } });
+  }
+  await toucherVersion(partieId);
+  return ligne.id;
+}
+
+/** Les octets d'une parole, pour qui a le droit de les entendre. */
+export async function lireParole(
+  membreId: string,
+  paroleId: string,
+): Promise<{ mime: string; octets: Uint8Array } | null> {
+  const moi = await bandeDe(membreId);
+  if (!moi) return null;
+
+  const parole = await prisma.parole.findFirst({
+    // Le filtre passe par la partie : une parole appartient à la bande qui l'a
+    // dite, et à personne d'autre. Sans ce `groupeId`, un identifiant deviné
+    // ouvrirait la soirée des voisins.
+    where: { id: paroleId, partie: { groupeId: moi } },
+    select: { mime: true, octets: true, cle: true },
+  });
+  if (!parole) return null;
+
+  const octets = parole.cle
+    ? await lireOctets(parole.cle)
+    : parole.octets
+      ? new Uint8Array(parole.octets)
+      : null;
+  return octets ? { mime: parole.mime, octets } : null;
+}
+
+/** Les paroles d'une partie, sans les octets. */
+export async function parolesDePartie(membreId: string, partieId: string): Promise<Parole[]> {
+  await maPartie(membreId, partieId);
+  const lignes = await prisma.parole.findMany({
+    where: { partieId },
+    orderBy: { creeLe: "asc" },
+    select: {
+      id: true,
+      membreId: true,
+      manche: true,
+      sujet: true,
+      duree: true,
+      niveaux: true,
+      note: true,
+      creeLe: true,
+    },
+  });
+  return lignes.map((l) => ({ ...l, creeLe: l.creeLe.toISOString() }));
+}
+
+/**
+ * Les dernières paroles de la bande, pour les souvenirs.
+ *
+ * C'est là qu'elles servent vraiment : une théorie du complot défendue un
+ * samedi soir n'a pas d'intérêt le samedi soir, elle en a le mardi suivant,
+ * quand personne ne s'y attend.
+ */
+export async function parolesDeLaBande(
+  membreId: string,
+  combien = 6,
+): Promise<(Parole & { jeu: string; pseudo: string })[]> {
+  const groupeId = await bandeDe(membreId);
+  if (!groupeId) return [];
+
+  const lignes = await prisma.parole.findMany({
+    where: { partie: { groupeId } },
+    orderBy: { creeLe: "desc" },
+    take: combien,
+    select: {
+      id: true,
+      membreId: true,
+      manche: true,
+      sujet: true,
+      duree: true,
+      niveaux: true,
+      note: true,
+      creeLe: true,
+      partie: { select: { jeu: true } },
+      membre: { select: { pseudo: true } },
+    },
+  });
+
+  return lignes.map((l) => ({
+    id: l.id,
+    membreId: l.membreId,
+    manche: l.manche,
+    sujet: l.sujet,
+    duree: l.duree,
+    niveaux: l.niveaux,
+    note: l.note,
+    creeLe: l.creeLe.toISOString(),
+    jeu: l.partie.jeu,
+    pseudo: l.membre.pseudo,
+  }));
 }
 
 /** Les dernières parties de la bande, pour la page des jeux. */

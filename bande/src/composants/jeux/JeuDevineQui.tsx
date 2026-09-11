@@ -4,9 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 
 import { Avatar } from "@/composants/Avatar";
+import { FondDeCarte } from "./CarteDevine";
 import type { Moteur } from "./CoquilleJeu";
 import { gravitéÉcran, prochaineAction } from "@/lib/jeux/inclinaison";
 import { PAQUETS, toutesLesCartes } from "@/lib/jeux/contenu/paquets";
+
 import type { CarteMaison } from "@/lib/jeux/types";
 import { PaquetDeLaBande } from "./PaquetDeLaBande";
 import { generateur, pioche } from "@/lib/jeux/tirage";
@@ -393,22 +395,50 @@ export function JeuDevineQui({
         )}
       </AnimatePresence>
 
-      <p
-        className={`pointer-events-none relative text-[46px] font-semibold tabular-nums tracking-tight ${
-          finImminente ? "text-[var(--alerte)]" : "text-encre-3"
-        }`}
-      >
-        {secondes}
-      </p>
-      <p
-        className="pointer-events-none relative mt-2 font-semibold leading-[1.05] tracking-tight"
-        style={{ fontSize: `clamp(30px, ${Math.max(34, 132 - carte.length * 3.4)}px, 76px)` }}
-      >
-        {carte}
-      </p>
-      <p className="pointer-events-none relative mt-8 text-[13px] text-encre-3">
-        ← passer · trouvé →
-      </p>
+      {/* La photo passe DERRIÈRE le chrono et les deux moitiés tactiles : le
+          téléphone est sur un front, ce sont les deux autres qui regardent, et
+          la carte doit se lire à deux mètres. Sur une photo, le texte passe en
+          blanc avec une ombre portée — l'encre du thème disparaît sur un ciel
+          clair, et on ne s'en aperçoit qu'au mauvais moment. */}
+      <FondDeCarte
+        carte={carte}
+        enfants={(surImage) => (
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-5 text-center">
+            <p
+              className={`text-[46px] font-semibold tabular-nums tracking-tight ${
+                surImage ? "" : finImminente ? "text-[var(--alerte)]" : "text-encre-3"
+              }`}
+              style={
+                surImage
+                  ? {
+                      color: finImminente ? "var(--alerte)" : "rgba(255,255,255,0.78)",
+                      textShadow: "0 2px 14px rgba(0,0,0,0.65)",
+                    }
+                  : undefined
+              }
+            >
+              {secondes}
+            </p>
+            <p
+              className="mt-2 font-semibold leading-[1.05] tracking-tight"
+              style={{
+                fontSize: `clamp(30px, ${Math.max(34, 132 - carte.length * 3.4)}px, 76px)`,
+                ...(surImage
+                  ? { color: "#fff", textShadow: "0 2px 22px rgba(0,0,0,0.7)" }
+                  : {}),
+              }}
+            >
+              {carte}
+            </p>
+            <p
+              className={`mt-8 text-[13px] ${surImage ? "" : "text-encre-3"}`}
+              style={surImage ? { color: "rgba(255,255,255,0.7)" } : undefined}
+            >
+              ← passer · trouvé →
+            </p>
+          </div>
+        )}
+      />
     </div>
   );
 }

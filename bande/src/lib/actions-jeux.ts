@@ -7,6 +7,7 @@ import {
   abandonnerPartie,
   agir,
   ajouterCarte,
+  ajouterParole,
   cartesDeLaBande,
   chargerPartie,
   demarrerPartie,
@@ -222,4 +223,40 @@ export async function actionReprendreLaMain(
   partieId: string,
 ): Promise<{ erreur: string | null; valeur?: boolean }> {
   return tenter(async () => reprendreLaMain(await quiJoue(), partieId));
+}
+
+/**
+ * Garder ce que quelqu'un vient de dire.
+ *
+ * L'audio passe par une action plutôt que par une route : c'est le même chemin
+ * que la note vocale d'une journée, et il porte déjà la session, la taille
+ * maximale et les messages d'erreur en français.
+ */
+export async function actionEnvoyerParole(
+  donnees: FormData,
+): Promise<{ erreur: string | null; valeur?: string }> {
+  return tenter(async () => {
+    const membreId = await quiJoue();
+    const fichier = donnees.get("audio");
+    if (!(fichier instanceof File) || fichier.size === 0) {
+      throw new ErreurMetier("L'enregistrement est vide.");
+    }
+    const niveaux = String(donnees.get("niveaux") ?? "")
+      .split(",")
+      .map(Number)
+      .filter((n) => Number.isFinite(n));
+
+    return ajouterParole(
+      membreId,
+      String(donnees.get("partie") ?? ""),
+      Number(donnees.get("manche") ?? 0),
+      String(donnees.get("sujet") ?? ""),
+      {
+        mime: fichier.type,
+        octets: new Uint8Array(await fichier.arrayBuffer()),
+        duree: Number(donnees.get("duree") ?? 0),
+        niveaux,
+      },
+    );
+  });
 }

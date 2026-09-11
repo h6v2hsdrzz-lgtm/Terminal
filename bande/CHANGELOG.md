@@ -3,6 +3,42 @@
 Les entrées vont de la plus récente à la plus ancienne. Chaque lot du chantier
 v3 y ajoute une section ; les jalons v2 sont regroupés en tête d'historique.
 
+## Lot O — Des photos sur les cartes, et trois jeux de plus
+
+### « Devine qui je suis » : des visages
+- Chaque carte affiche une **photo en plein cadre** quand il en existe une :
+  dégradé sombre en bas, nom en très gros par-dessus, crédit discret en pied.
+  Ça se lit à deux mètres, ce qui est toute la question quand le téléphone est
+  sur un front.
+- 237 cartes sur 494 en ont une. Les autres se jouent en texte, exactement comme
+  avant — « Un carton rouge » n'a pas de portrait, et n'en a pas besoin.
+- Les images viennent de Wikipédia, avec leur auteur et leur licence. **Elles
+  passent par nos routes** : le téléphone de la bande ne dit à personne ce qu'il
+  est en train de jouer.
+
+### « Le plus rapide », refait
+- Décompte **3-2-1**, puis un délai imprévisible d'une à cinq secondes : on ne
+  part plus sur le « 1 ».
+- Zone de tap **plein écran**, vibration à l'appui.
+- Le temps de réaction **en millisecondes, en très gros**, avec l'écart au
+  premier. C'est le résultat du jeu, plus une note de bas de page.
+- Tournoi en **cinq manches**, puis podium — il s'arrête tout seul.
+- **Mode duel** : deux joueurs s'affrontent, le troisième arbitre et voit les
+  deux temps. Les duellistes tournent d'une manche à l'autre.
+- Un départ brûlé ne prend plus de rang au classement : il ne court pas.
+
+### Trois jeux de Marie Janne
+- **Le mot de passe.** Chacun reçoit un mot improbable à placer dans la
+  conversation. « Je te grille » : juste, tu marques ; à côté, tu perds un
+  point. Il tourne **en arrière-plan** — on le lance, on pose le téléphone, et
+  on joue à autre chose pendant ce temps-là.
+- **La théorie du complot.** Deux choses sans aucun rapport, quatre-vingt-dix
+  secondes enregistrées pour les relier, et les deux autres notent sur dix.
+- **Le tribunal des idées.** Soixante secondes chrono pour défendre une
+  invention, enregistrées. Les deux autres décident si ça se finance.
+- Les enregistrements **partent dans les souvenirs** : c'est là qu'ils servent
+  vraiment, le mardi suivant, quand personne ne s'y attend.
+
 ## Lot N — Les dix jeux, chacun sur son téléphone
 
 Le mode « on se le passe » reste là pour dépanner une batterie à plat. Mais par

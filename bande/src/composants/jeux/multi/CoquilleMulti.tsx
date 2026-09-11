@@ -22,10 +22,12 @@ import { BarreScore } from "../BarreScore";
 import { Podium } from "../Podium";
 import { useEcranEveille } from "../ecranEveille";
 import { useFluxPartie } from "../fluxPartie";
+import { EcranFond } from "./EcranFond";
+import { EcranParole } from "./EcranParole";
 import { EcranReflexe } from "./EcranReflexe";
 import { EcranTour } from "./EcranTour";
 import { EcranVote } from "./EcranVote";
-import { PHASES, acteurDe, reponsesDe, toutLeMondeARepondu } from "./protocole";
+import { COMPTE_MS, PHASES, acteurDe, reponsesDe, toutLeMondeARepondu } from "./protocole";
 
 /**
  * Ce que la coquille donne aux trois écrans d'archétype.
@@ -47,6 +49,15 @@ export type MoteurMulti = {
   repondre: (donnees: Record<string, unknown>) => void;
   suivante: () => void;
   terminer: () => void;
+  /** Retourner les cartes maintenant. Réservé à l'hôte, et aux jeux sans fin. */
+  revelerMaintenant: () => void;
+  /**
+   * Les réglages de la partie — le mode duel de « Le plus rapide », par
+   * exemple. Seul l'hôte peut les changer, et le changement prend effet **à la
+   * manche suivante** : on ne change pas la règle au milieu d'un tour.
+   */
+  options: Record<string, unknown>;
+  reglerOption: (nom: string, valeur: unknown) => void;
 };
 
 /**
@@ -90,11 +101,22 @@ export function CoquilleMulti({
   initial: EtatPartie;
   jeu: Jeu;
   moi: string;
-  contexte: Omit<ContexteTirage, "manche" | "hasard" | "joueurs">;
+  contexte: Omit<ContexteTirage, "manche" | "hasard" | "joueurs" | "options">;
 }) {
   const { etat, relie, decalage } = useFluxPartie(initial.partie.id, initial);
   const [fin, setFin] = useState<FinDePartie | null>(null);
   const [eau, setEau] = useState(false);
+  /**
+   * Les réglages, chez l'hôte, recopiés dans CHAQUE phase publiée.
+   *
+   * Les garder seulement ici les perdrait au premier rechargement, et les
+   * autres téléphones ne les connaîtraient jamais. En les versant dans les
+   * données de la phase, ils voyagent avec elle : celui qui rejoint en cours de
+   * partie joue avec les mêmes règles, sans rien demander.
+   */
+  const [options, setOptions] = useState<Record<string, unknown>>(
+    () => (initial.donneesPhase.options as Record<string, unknown> | undefined) ?? {},
+  );
   const router = useRouter();
   const recette = recetteDe(jeu.cle);
 
@@ -112,9 +134,10 @@ export function CoquilleMulti({
       ...contexte,
       manche,
       joueurs,
+      options,
       hasard: generateur(manche * 7919 + partieId.length),
     }),
-    [contexte, joueurs, partieId],
+    [contexte, joueurs, options, partieId],
   );
 
   const publier = useCallback(
@@ -142,7 +165,9 @@ export function CoquilleMulti({
       if (!recette) return;
       const contexteManche = tirage(manche);
       const acteurDeLaManche = recette.acteur?.(contexteManche) ?? null;
-      const donnees = { ...recette.tirer(contexteManche), acteur: acteurDeLaManche };
+      // Les réglages voyagent avec la phase : ils survivent au rechargement, et
+      // celui qui rejoint en cours de partie joue avec les mêmes règles.
+      const donnees = { ...recette.tirer(contexteManche), acteur: acteurDeLaManche, options };
 
       // « Menteur » commence par une préparation : l'acteur écrit ses trois
       // affirmations avant que quiconque puisse voter.
@@ -152,16 +177,31 @@ export function CoquilleMulti({
         : PHASES.question;
 
       if (recette.archetype === "reflexe") {
-        // Entre deux et cinq secondes, tirées côté hôte et annoncées à tous en
-        // instant ABSOLU : chaque téléphone compte à rebours chez lui, et le
+        // Deux instants ABSOLUS, annoncés à l'avance : celui où le décompte
+        // 3-2-1 commence, et celui du vert. Entre les deux, une attente tirée au
+        // sort entre une et cinq secondes — sans elle on part sur le « 1 », et
+        // le jeu ne mesure plus rien. Chaque téléphone compte chez lui : le
         // réseau n'entre pas dans le geste.
-        const attente = 2000 + Math.floor(contexteManche.hasard() * 3000);
-        publier(premiere, { ...donnees, departA: new Date(Date.now() + attente).toISOString() }, manche, 15_000);
+        //
+        // Une seconde de battement avant le décompte laisse à l'écran le temps
+        // d'arriver chez les trois.
+        const compte = Date.now() + 1_000;
+        const attente = 1_000 + Math.floor(contexteManche.hasard() * 4_000);
+        publier(
+          premiere,
+          {
+            ...donnees,
+            compteA: new Date(compte).toISOString(),
+            departA: new Date(compte + COMPTE_MS + attente).toISOString(),
+          },
+          manche,
+          20_000,
+        );
       } else {
-        publier(premiere, donnees, manche, jeu.cle === "menteur" ? 90_000 : 60_000);
+        publier(premiere, donnees, manche, echeanceDe(jeu.cle, recette.archetype, donnees));
       }
     },
-    [jeu.cle, publier, recette, tirage],
+    [jeu.cle, options, publier, recette, tirage],
   );
 
   /**
@@ -217,6 +257,11 @@ export function CoquilleMulti({
         }
         return;
       }
+
+      // Un jeu de FOND ne se révèle pas tout seul : il dure toute la soirée, et
+      // personne n'accuse forcément. C'est l'hôte qui décide de retourner les
+      // cartes, avec son bouton.
+      if (recette.archetype === "fond") return;
 
       if (toutLeMondeARepondu(etat, joueurs, etat.phase, acteurCourant)) {
         publie.current.add(cle);
@@ -334,8 +379,52 @@ export function CoquilleMulti({
 
   const suivante = useCallback(() => {
     if (!etat) return;
+    // Un jeu au meilleur de cinq s'arrête tout seul : « on remet ça » une
+    // sixième fois transformerait un tournoi en boucle sans fin, et personne
+    // n'irait chercher le bouton « Terminer » en bas de l'écran.
+    if (recette?.manches && etat.manche >= recette.manches) {
+      void actionTerminerPartie(partieId).then((r) => {
+        if (r.valeur) setFin(r.valeur);
+      });
+      return;
+    }
     lancerManche(etat.manche + 1);
-  }, [etat, lancerManche]);
+  }, [etat, lancerManche, partieId, recette]);
+
+  /**
+   * Retourner les cartes maintenant, parce que l'hôte l'a décidé.
+   *
+   * « Le mot de passe » n'a pas de fin mécanique — il n'y a pas de moment où
+   * « tout le monde a répondu », puisque personne n'est obligé d'accuser. Ce
+   * bouton est donc le seul chemin vers la révélation, et il refait exactement
+   * ce que fait l'animateur quand une manche se termine toute seule.
+   */
+  const revelerMaintenant = useCallback(() => {
+    if (!etat || !recette || !etat.phase) return;
+    // Pas de garde contre le double appui, et c'est voulu : republier la même
+    // révélation la réécrit à l'identique. La garde qui existe ailleurs sert à
+    // empêcher l'ANIMATEUR de republier à chaque battement du flux, pas à
+    // protéger un bouton — et consulter une référence ici rendrait tout le
+    // moteur « dérivé d'une référence » aux yeux de `react-hooks/refs`, qui
+    // refuserait alors qu'on le lise pendant le rendu.
+    const bilan = recette.depouiller(etat.donneesPhase, reponsesDe(etat, etat.phase), joueurs);
+    if (bilan.gains.length > 0) void actionMarquer(partieId, bilan.gains);
+    publier(
+      PHASES.revelation,
+      {
+        ...etat.donneesPhase,
+        verdict: bilan.verdict,
+        gorgees: bilan.gorgees.map((g) => ({ ...g, nombre: Math.min(MAX_GORGEES, g.nombre) })),
+        gains: bilan.gains,
+      },
+      etat.manche,
+      null,
+    );
+  }, [etat, joueurs, partieId, publier, recette]);
+
+  const reglerOption = useCallback((nom: string, valeur: unknown) => {
+    setOptions((avant) => ({ ...avant, [nom]: valeur }));
+  }, []);
 
   const terminer = useCallback(() => {
     void actionTerminerPartie(partieId).then((r) => {
@@ -357,9 +446,26 @@ export function CoquilleMulti({
             repondre,
             suivante,
             terminer,
+            revelerMaintenant,
+            options,
+            reglerOption,
           }
         : null,
-    [acteur, decalage, etat, jeSuisHote, joueurs, moi, recette, repondre, suivante, terminer],
+    [
+      acteur,
+      decalage,
+      etat,
+      jeSuisHote,
+      joueurs,
+      moi,
+      options,
+      recette,
+      reglerOption,
+      repondre,
+      revelerMaintenant,
+      suivante,
+      terminer,
+    ],
   );
 
   if (fin) {
@@ -403,6 +509,10 @@ export function CoquilleMulti({
           </p>
         ) : recette.archetype === "reflexe" ? (
           <EcranReflexe moteur={moteur} />
+        ) : recette.archetype === "parole" ? (
+          <EcranParole moteur={moteur} jeu={jeu} />
+        ) : recette.archetype === "fond" ? (
+          <EcranFond moteur={moteur} />
         ) : recette.archetype === "tour" ? (
           <EcranTour moteur={moteur} jeu={jeu} />
         ) : (
@@ -443,3 +553,28 @@ export function CoquilleMulti({
   );
 }
 
+/**
+ * Combien de temps avant qu'on avance sans les retardataires.
+ *
+ * Une échéance trop courte coupe la parole ; une échéance absente laisse la
+ * partie figée sur un téléphone éteint. Chaque forme a la sienne :
+ *
+ * · **parole** — la durée de l'enregistrement, plus deux minutes pour écouter
+ *   et noter. Soixante secondes y auraient coupé le micro en plein plaidoyer ;
+ * · **fond** — aucune. « Le mot de passe » dure la soirée, et c'est l'hôte qui
+ *   retourne les cartes ;
+ * · **menteur** — quatre-vingt-dix secondes : on y écrit trois phrases ;
+ * · le reste — une minute, le temps d'un vote.
+ */
+function echeanceDe(
+  cle: string,
+  archetype: string,
+  donnees: Record<string, unknown>,
+): number | null {
+  if (archetype === "fond") return null;
+  if (archetype === "parole") {
+    const secondes = typeof donnees.secondes === "number" ? donnees.secondes : 60;
+    return secondes * 1000 + 120_000;
+  }
+  return cle === "menteur" ? 90_000 : 60_000;
+}

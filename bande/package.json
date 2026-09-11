@@ -15,7 +15,9 @@
     "test:suivi": "vitest",
     "vercel-build": "prisma migrate deploy && next build",
     "medias:migrer": "tsx --conditions=react-server --env-file=.env scripts/migrer-medias.ts",
-    "medias:verifier": "tsx --conditions=react-server --env-file=.env scripts/migrer-medias.ts --verifier"
+    "medias:verifier": "tsx --conditions=react-server --env-file=.env scripts/migrer-medias.ts --verifier",
+    "cartes:images": "tsx scripts/images-cartes.ts",
+    "cartes:verifier": "tsx scripts/images-cartes.ts --verifier"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

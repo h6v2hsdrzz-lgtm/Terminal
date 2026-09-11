@@ -26,3 +26,14 @@ export function cleAudio(entreeId: string): string {
 export function cleCapsule(capsuleId: string): string {
   return `scelles/${capsuleId}`;
 }
+
+/**
+ * Une parole de jeu se range sous SON identifiant.
+ *
+ * Contrairement à l'audio d'une journée, il y en a plusieurs par partie — une
+ * par manche et par joueur — et aucune ne remplace l'autre : on les garde
+ * toutes, c'est tout l'intérêt de les réécouter.
+ */
+export function cleParole(paroleId: string): string {
+  return `paroles/${paroleId}`;
+}

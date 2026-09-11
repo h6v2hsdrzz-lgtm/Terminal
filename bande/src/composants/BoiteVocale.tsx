@@ -38,7 +38,7 @@ export function BoiteVocale({ audio, couleur }: { audio: Audio | null; couleur: 
           <LecteurVocal audio={audio} couleur={couleur} nom="toi" />
         </div>
       ) : (
-        <EnregistreurVocal onFini={envoyer} desactive={enCours} />
+        <EnregistreurVocal onFini={envoyer} desactive={enCours} libelle="Ou dis-le, en plus de l'écrit" />
       )}
 
       {audio && !enCours && (

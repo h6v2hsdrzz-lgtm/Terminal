@@ -36,7 +36,10 @@ src/lib/                 depot.ts + depot-jeux.ts (tout PostgreSQL), actions*.ts
 src/lib/stockage/        R2 : signature v4 écrite à la main, client, clés, plafond
 scripts/migrer-medias.ts déménage les octets vers R2, avec relecture et empreintes
 src/lib/jeux/            catalogue, cadre, tirage, recompense, quiz, top3, vote, inclinaison, salon, recettes, types
-e2e/                     Playwright : captures, lot1, lotA..lotC, lotF, lotG, lotK, lotL, lotM, lotN, video, production
+src/lib/jeux/contenu/    jamais, dilemmes, paquets, marie-janne, images (engendré)
+scripts/images-cartes.ts récolte les images de Wikipédia pour « Devine qui je suis »
+e2e/                     Playwright : captures, lot1, lotA..lotC, lotF, lotG, lotK, lotL, lotM, lotN, lotO, video, production
+e2e/aide-jeux.ts         deux téléphones dans un test : salon, code, libération
 ```
 
 **La règle du dépôt :** rien d'autre que `depot.ts` et `depot-jeux.ts` ne parle
@@ -59,10 +62,18 @@ navigateur de l'hôte applique — y mettre les règles aurait fait du serveur u
 moteur de jeu, alors qu'il n'a qu'une garantie à donner : que les trois écrans
 lisent la même phase au même moment.
 
-Trois **archétypes** couvrent les dix jeux : `vote` (tout le monde répond),
-`tour` (un joueur agit, les autres regardent ou jugent), `reflexe` (l'instant
-du signal est annoncé à l'avance en absolu, et chaque téléphone compte chez
-lui). `jeuxSansRecette()` rougit si un jeu du catalogue n'a pas de recette.
+Cinq **archétypes** couvrent les treize jeux : `vote` (tout le monde répond),
+`tour` (un joueur agit, les autres regardent ou jugent), `reflexe` (l'instant du
+signal est annoncé à l'avance en absolu, et chaque téléphone compte chez lui),
+`parole` (un joueur enregistre, les autres notent) et `fond` (le jeu tourne
+pendant qu'on joue à autre chose). `jeuxSansRecette()` rougit si un jeu du
+catalogue n'a pas de recette.
+
+**Les images de « Devine qui je suis »** viennent de Wikipédia. Le fichier
+engendré `contenu/images.ts` garde l'adresse et l'attribution ; les octets
+passent par `/api/carte/[carte]`, qui prend une CARTE et jamais une adresse —
+sinon ce serait un relais ouvert. Une carte sans image se joue en texte, et
+c'est le cas d'une sur deux.
 
 La **présence** est un battement de cinq secondes (`/present`), une absence se
 déclare au bout de vingt, et n'importe quel joueur présent peut **reprendre la
@@ -82,8 +93,9 @@ Playwright, sur WebKit.
 `Media` photo **ou** vidéo (table `bande_photos`, voir ci-dessous) ·
 `Audio` la note vocale · `Etiquette` + `EntreeEtiquette` · `Declencheur` +
 `EntreeDeclencheur` · `Reaction` · `Commentaire` · `Capsule` (scellé) ·
-`Partie` + `ScorePartie` + `Manche` (les jeux) · `CarteBande` (ce que la bande
-écrit elle-même). La **manche 0** d'une partie n'est pas une manche : elle
+`Partie` + `ScorePartie` + `Manche` + `ActionJoueur` (les jeux) · `CarteBande`
+(ce que la bande écrit elle-même) · `Parole` (ce qu'on a dit pendant un jeu, et
+qu'on réécoute). La **manche 0** d'une partie n'est pas une manche : elle
 range le décompte final, pour que le podium survive à un rechargement.
 
 **Le modèle `Media` est mappé sur la table `bande_photos`.** Prisma ne sait pas
@@ -97,6 +109,8 @@ npm run dev            # http://localhost:3000
 npm test               # Vitest, logique pure
 npx playwright test --project=iphone   # WebKit, gabarit iPhone 15
 npm run db:seed        # bande de démonstration + .codes-demo.txt
+npm run cartes:images  # récolte les images des cartes (long : deux requêtes par carte)
+npm run cartes:verifier # chaque adresse rend-elle vraiment une image ?
 npx prisma migrate dev --create-only   # écrire la migration, la RELIRE, puis l'appliquer
 ```
 
@@ -182,3 +196,10 @@ npx prisma migrate dev --create-only   # écrire la migration, la RELIRE, puis l
   en trois archétypes mais quatre formes d'écran (vote, tour-acteur-agit,
   tour-acteur-juge, tour-avec-préparation). Deux d'entre elles ne marchaient pas
   du tout, et ça ne s'est vu qu'en les jouant vraiment à deux téléphones.
+- **Wikimedia ne fabrique plus de vignette à la demande** : remplacer `330px-`
+  par `800px-` dans une adresse rend un 400. Il faut passer par l'API
+  (`prop=pageimages&pithumbsize=`), qui a le droit de la fabriquer, et garder
+  l'adresse qu'elle rend.
+- **Un 429 ressemble à une page absente** quand on ne regarde que « ça a marché
+  ou pas ». Distinguer les codes et réessayer a fait passer la récolte d'images
+  de 200 à 237 cartes.

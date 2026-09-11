@@ -20,15 +20,18 @@ import type { Moteur } from "./CoquilleJeu";
  * À trois, chaque manche oppose deux joueurs, choisis à tour de rôle : trois
  * moitiés d'écran, ça n'existe pas.
  */
-const MIN = 2000;
-const ETENDUE = 5000;
+const MIN = 1000;
+const ETENDUE = 4000;
 const ABANDON = 8000;
+/** Le décompte avant que l'attente commence. Trois chiffres, une seconde chacun. */
+const COMPTE = 3;
 
-type Phase = "consigne" | "attente" | "vert" | "faute" | "resultat";
+type Phase = "consigne" | "compte" | "attente" | "vert" | "faute" | "resultat";
 
 export function JeuPlusRapide({ moteur }: { moteur: Moteur }) {
   const [tour, setTour] = useState(0);
   const [phase, setPhase] = useState<Phase>("consigne");
+  const [compte, setCompte] = useState(COMPTE);
   const [gagnant, setGagnant] = useState<string | null>(null);
   const [fautif, setFautif] = useState<string | null>(null);
   const vert = useRef(0);
@@ -39,6 +42,27 @@ export function JeuPlusRapide({ moteur }: { moteur: Moteur }) {
   const total = moteur.joueurs.length;
   const gauche = moteur.joueurs[tour % total];
   const droite = moteur.joueurs[(tour + 1) % total];
+
+  /**
+   * Le décompte 3-2-1, puis l'attente.
+   *
+   * Sans décompte, l'écran passe de « Prêts » à un gris qui pourrait devenir
+   * vert n'importe quand : les doigts se posent en retard et la première manche
+   * ne mesure rien. Avec, tout le monde est en position sur le « 1 » — et
+   * l'attente qui suit, tirée entre une et cinq secondes, reste imprévisible.
+   */
+  useEffect(() => {
+    if (phase !== "compte") return;
+    // Tout se décide DANS le minuteur, jamais dans le corps de l'effet : poser
+    // un état en synchrone ici relance un rendu qui relance l'effet, et la règle
+    // `react-hooks/set-state-in-effect` le refuse — à raison, on l'a déjà payé
+    // ailleurs.
+    const battement = setTimeout(() => {
+      if (compte <= 1) setPhase("attente");
+      else setCompte((n) => n - 1);
+    }, 1000);
+    return () => clearTimeout(battement);
+  }, [compte, phase]);
 
   useEffect(() => {
     if (phase !== "attente") return;
@@ -57,7 +81,10 @@ export function JeuPlusRapide({ moteur }: { moteur: Moteur }) {
   }, [phase]);
 
   function toucher(joueurId: string) {
-    if (phase === "attente") {
+    // Une vibration courte confirme l'appui : sur un écran qui change de couleur
+    // au même moment, le doigt doute de ce qu'il a fait.
+    if (navigator.vibrate) navigator.vibrate(phase === "vert" ? 12 : [6, 40, 6]);
+    if (phase === "attente" || phase === "compte") {
       setFautif(joueurId);
       const autre = joueurId === gauche.membreId ? droite : gauche;
       moteur.marquer([{ membreId: autre.membreId, delta: 1 }]);
@@ -78,6 +105,7 @@ export function JeuPlusRapide({ moteur }: { moteur: Moteur }) {
     setGagnant(null);
     setFautif(null);
     setTemps(null);
+    setCompte(COMPTE);
     setPhase("consigne");
   }
 
@@ -94,7 +122,10 @@ export function JeuPlusRapide({ moteur }: { moteur: Moteur }) {
         </p>
         <button
           type="button"
-          onClick={() => setPhase("attente")}
+          onClick={() => {
+            setCompte(COMPTE);
+            setPhase("compte");
+          }}
           className="cible-tactile mt-7 w-full max-w-xs rounded-[var(--radius-pilule)] bg-encre px-4 py-3.5 text-[17px] font-semibold text-surface"
         >
           Prêts
@@ -122,7 +153,12 @@ export function JeuPlusRapide({ moteur }: { moteur: Moteur }) {
           {phase === "faute" ? `${nom} a touché trop tôt` : `${nom} !`}
         </p>
         {temps !== null && (
-          <p className="mt-2 text-[15px] tabular-nums text-encre-2">{temps} millisecondes</p>
+          // Le temps est le résultat du jeu, pas une note de bas de page : il se
+          // lit de l'autre bout du canapé, comme le nom du vainqueur.
+          <p className="chiffres mt-3 text-[64px] font-semibold tabular-nums leading-none tracking-tight">
+            {temps}
+            <span className="ml-2 text-[20px] font-normal text-encre-3">ms</span>
+          </p>
         )}
         <button
           type="button"
@@ -137,7 +173,7 @@ export function JeuPlusRapide({ moteur }: { moteur: Moteur }) {
 
   return (
     <div
-      className={`relative flex min-h-[70dvh] select-none items-center justify-center transition-colors duration-75 ${
+      className={`relative flex min-h-[78dvh] select-none items-center justify-center transition-colors duration-75 ${
         phase === "vert" ? "bg-[var(--joie-haut)]" : "bg-surface-2"
       }`}
       style={{ touchAction: "none" }}
@@ -154,8 +190,12 @@ export function JeuPlusRapide({ moteur }: { moteur: Moteur }) {
         onClick={() => toucher(droite.membreId)}
         className="absolute inset-y-0 right-0 w-1/2"
       />
-      <p className="pointer-events-none text-[22px] font-semibold tracking-tight">
-        {phase === "vert" ? "MAINTENANT" : "attends…"}
+      <p
+        className={`pointer-events-none font-semibold tracking-tight ${
+          phase === "compte" ? "chiffres text-[120px] tabular-nums leading-none" : "text-[30px]"
+        }`}
+      >
+        {phase === "compte" ? compte : phase === "vert" ? "MAINTENANT" : "attends…"}
       </p>
     </div>
   );

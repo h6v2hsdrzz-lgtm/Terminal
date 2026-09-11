@@ -76,6 +76,7 @@ model Membre {
   reactions    Reaction[]
   commentaires Commentaire[]
   capsules     Capsule[]
+  paroles      Parole[]
   pouls        Pouls[]
 
   @@unique([groupeId, pseudo])
@@ -407,10 +408,52 @@ model Partie {
   scores  ScorePartie[]
   manches Manche[]
   actions ActionJoueur[]
+  paroles Parole[]
 
   @@index([groupeId, commenceeLe])
   @@index([groupeId, etat])
   @@map("bande_parties")
+}
+
+/// Ce que quelqu'un a dit pendant un jeu, et qu'on garde.
+///
+/// Deux jeux du lot O s'enregistrent : « La théorie du complot » (quatre-vingt-
+/// dix secondes pour relier deux choses sans rapport) et « Le tribunal des
+/// idées » (soixante secondes pour défendre une invention). Le jeu n'est pas
+/// dans la partie, il est dans la réécoute — d'où une table à part, et pas une
+/// note vocale rangée dans une journée : ça n'appartient à aucun jour, ça
+/// appartient à une soirée.
+///
+/// Les octets suivent la même règle que partout : en base, ou chez R2, jamais
+/// les deux.
+model Parole {
+  id       String   @id @default(cuid())
+  partieId String   @map("partie_id")
+  membreId String   @map("membre_id")
+  /// Le numéro de la manche, pour relier l'audio à ce qui était demandé.
+  manche   Int
+  /// Ce qu'il fallait défendre, recopié : le sujet est tiré au hasard côté
+  /// client, et le retrouver en rejouant la manche coûterait plus cher que de
+  /// le garder ici.
+  sujet    String
+  mime     String
+  octets   Bytes?
+  cle      String?
+  /// Le poids réel, quel que soit l'endroit. Voir `Media.poids`.
+  poids    Int      @default(0)
+  /// En millisecondes.
+  duree    Int
+  niveaux  Int[]
+  /// La note reçue, une fois la manche dépouillée. Nulle tant qu'on n'a pas voté.
+  note     Int?
+  creeLe   DateTime @default(now()) @map("cree_le")
+
+  partie Partie @relation(fields: [partieId], references: [id], onDelete: Cascade)
+  membre Membre @relation(fields: [membreId], references: [id], onDelete: Cascade)
+
+  @@index([partieId, manche])
+  @@index([membreId, creeLe])
+  @@map("bande_paroles")
 }
 
 /// Ce qu'un joueur a fait dans une manche.

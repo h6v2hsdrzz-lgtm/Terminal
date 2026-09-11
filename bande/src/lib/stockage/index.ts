@@ -2,7 +2,7 @@ import "server-only";
 
 import { configurationR2, ecrireR2, lireR2, supprimerR2 } from "./r2";
 
-export { cleAudio, cleCapsule, cleMedia } from "./cles";
+export { cleAudio, cleCapsule, cleMedia, cleParole } from "./cles";
 
 /**
  * Où vivent les octets.

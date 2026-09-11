@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "motion/react";
 
 import { Avatar } from "../../Avatar";
+import { CarteDevine } from "../CarteDevine";
 import type { Jeu } from "@/lib/jeux/catalogue";
-import { RESSORT } from "@/lib/mouvement";
 
 import type { MoteurMulti } from "./CoquilleMulti";
 import { EcranVote } from "./EcranVote";
@@ -149,19 +148,16 @@ export function EcranTour({ moteur, jeu }: { moteur: MoteurMulti; jeu: Jeu }) {
       );
     }
     return (
-      <div className="flex min-h-[70dvh] flex-col items-center justify-center gap-4 px-4">
-        <p className="text-[13px] uppercase tracking-[0.08em] text-encre-3">
+      <div className="relative">
+        <CarteDevine carte={recette.enonce(etat.donneesPhase)} />
+        {/* Au-dessus de l'image, pas en dessous : c'est la seule ligne qui dit
+            quoi faire, et elle doit rester lisible sur une photo claire. */}
+        <p
+          className="absolute inset-x-0 top-0 px-5 pt-4 text-center text-[13px] uppercase tracking-[0.08em]"
+          style={{ color: "rgba(255,255,255,0.9)", textShadow: "0 1px 12px rgba(0,0,0,0.7)" }}
+        >
           Fais deviner à {nomActeur}
         </p>
-        <motion.p
-          key={String(etat.donneesPhase.carte)}
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={RESSORT.moyen}
-          className="text-center text-[32px] font-semibold leading-tight tracking-[-0.02em]"
-        >
-          {recette.enonce(etat.donneesPhase)}
-        </motion.p>
       </div>
     );
   }

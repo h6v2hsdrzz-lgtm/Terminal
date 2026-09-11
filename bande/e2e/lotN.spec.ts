@@ -1,206 +1,23 @@
-import { devices, expect, test, type Browser, type Locator, type Page } from "@playwright/test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { expect, test } from "@playwright/test";
+
+import {
+  attendreDeuxPresents,
+  aller,
+  deuxTelephonesEnPartie,
+  entrer,
+  libererLaBande,
+  nouveauTelephone,
+  ouvrirSalon,
+  rejoindreParCode,
+  taper,
+} from "./aide-jeux";
 
 /**
  * Le lot N : une partie sur trois téléphones.
  *
- * Ces tests ouvrent **deux contextes de navigateur**, c'est-à-dire deux
- * sessions, c'est-à-dire deux téléphones. C'est la seule façon d'éprouver ce
- * lot : un salon qui marche sur un onglet ne prouve rien, tout l'intérêt est
- * que le deuxième écran voie le premier bouger.
+ * Les fonctions qui ouvrent deux téléphones vivent dans `aide-jeux.ts` — le lot
+ * O s'en sert aussi.
  */
-/**
- * Un deuxième téléphone.
- *
- * `browser.newContext()` n'hérite **rien** de la configuration : ni l'adresse
- * de base, ni le gabarit, ni le fuseau. Un `page.goto("/jeux")` dans un
- * contexte nu part donc vers nulle part, et le test attend soixante secondes
- * sans rien dire. D'où ces options recopiées ici, explicitement.
- */
-async function nouveauTelephone(navigateur: Browser): Promise<Page> {
-  const contexte = await navigateur.newContext({
-    ...devices["iPhone 15"],
-    baseURL: process.env.ADRESSE ?? "http://localhost:3000",
-    locale: "fr-FR",
-    timezoneId: "Europe/Paris",
-  });
-  return contexte.newPage();
-}
-
-/**
- * Aller quelque part, même si une navigation est encore en vol.
- *
- * L'entrée dans l'application finit par une redirection côté client. Le titre du
- * fil apparaît avant qu'elle soit rangée, et un `goto` lancé à cet instant se
- * fait annuler par Playwright — « interrupted by another navigation ». Une seule
- * reprise suffit : ce n'est pas un problème de réseau, c'est un croisement, et
- * il a rendu un test sur neuf instable une fois sur trois.
- */
-async function aller(page: Page, adresse: string) {
-  try {
-    await page.goto(adresse);
-  } catch (erreur) {
-    if (!/interrupted by another navigation/.test(String(erreur))) throw erreur;
-    await page.goto(adresse);
-  }
-}
-
-function codeDe(pseudo: string): string {
-  const fiche = readFileSync(join(process.cwd(), ".codes-demo.txt"), "utf8");
-  const ligne = fiche.split("\n").find((l) => l.startsWith(pseudo));
-  if (!ligne) throw new Error(`Pas de code pour ${pseudo} — lance « npm run db:seed ».`);
-  return ligne.split(/\s+/)[1];
-}
-
-async function entrer(page: Page, pseudo: string) {
-  await page.goto("/reprendre");
-  await page.fill("#reprise", codeDe(pseudo));
-  await page.getByRole("button", { name: /reconnecter/i }).click();
-  await page.waitForURL("/");
-  // Attendre le titre et pas seulement l'adresse : la redirection vers
-  // l'accueil peut encore être en vol, et une navigation lancée pendant
-  // qu'une autre se termine est annulée par Playwright.
-  await expect(page.getByRole("heading", { name: "Le fil" })).toBeVisible();
-}
-
-/**
- * Rend la bande disponible.
- *
- * Une partie lancée bloque l'ouverture de la suivante — c'est voulu dans le
- * produit, et c'est du désordre dans une suite de tests : chaque test laisse
- * derrière lui la partie qu'il a commencée. On la termine par l'écran, comme
- * le ferait quelqu'un, plutôt que d'aller bricoler la base.
- *
- * Le piège, payé une fois : `page.goto()` **annule l'action serveur en vol**.
- * Cliquer « Terminer » puis partir aussitôt laisse la partie en cours, la
- * fiche du jeu suivante reste bloquée, et le test d'après meurt quarante
- * secondes plus loin sur un bouton qui n'existe pas. On attend donc le podium.
- */
-async function libererLaBande(page: Page) {
-  await aller(page, "/jeux");
-
-  // Deux tours suffisent : une seule partie vit à la fois pour la bande. Le
-  // deuxième n'est là que pour vérifier que le premier a bien libéré.
-  for (let essai = 0; essai < 2; essai += 1) {
-    const reprendre = page.getByRole("link", { name: /reprendre/i }).first();
-    if (!(await reprendre.isVisible().catch(() => false))) return;
-
-    await reprendre.click();
-    await page.waitForURL(/\/jeux\/[a-z0-9]+/);
-
-    // « Terminer » pour une partie à plusieurs téléphones, « Abandonner » pour
-    // le mode d'un seul : une partie laissée par un autre fichier de tests ne
-    // doit pas bloquer celui-ci.
-    const terminer = page.getByRole("button", { name: /^terminer$/i }).first();
-    const abandonner = page.getByRole("button", { name: /^abandonner$/i }).first();
-    const sortie = await Promise.race([
-      terminer.waitFor({ timeout: 20_000 }).then(() => terminer),
-      abandonner.waitFor({ timeout: 20_000 }).then(() => abandonner),
-    ]).catch(() => null);
-    if (!sortie) {
-      await aller(page, "/jeux");
-      return;
-    }
-
-    await sortie.click();
-    // Le podium, ou le retour à la liste : dans les deux cas l'action a abouti.
-    await expect(
-      page.getByText("C'est fini").or(page.getByRole("heading", { name: "Les jeux" })),
-    ).toBeVisible({ timeout: 20_000 });
-    await aller(page, "/jeux");
-  }
-}
-
-/** Ouvre un salon sur le jeu nommé et rend le code à quatre chiffres. */
-async function ouvrirSalonDe(page: Page, jeu: RegExp): Promise<string> {
-  await libererLaBande(page);
-  await page.getByRole("button", { name: jeu }).first().click();
-  await page.getByRole("button", { name: /chacun son téléphone/i }).click();
-  await page.waitForURL(/\/jeux\/[a-z0-9]+/);
-  await expect(page.getByText("Le code à dicter")).toBeVisible();
-  const code = await page.locator(".chiffres").first().innerText();
-  expect(code).toMatch(/^[1-9]\d{3}$/);
-  return code;
-}
-
-/** Ouvre un salon sur « Je n'ai jamais », le jeu de référence des tests. */
-async function ouvrirSalon(page: Page): Promise<string> {
-  return ouvrirSalonDe(page, /Je n'ai jamais/i);
-}
-
-/**
- * Attendre que le deuxième téléphone soit vu par le premier.
- *
- * Le pseudo ne prouve rien : « Sam » est dans la liste des présents comme dans
- * celle des manquants, et « Sam » est d'ailleurs un préfixe de « Samy ». Le
- * point de présence, lui, ne s'allume que pour quelqu'un qui a donné signe de
- * vie il y a moins de vingt secondes — c'est exactement la question posée.
- */
-async function attendreDeuxPresents(page: Page) {
-  await expect(page.getByLabel("connecté")).toHaveCount(2, { timeout: 15_000 });
-}
-
-/**
- * Deux téléphones dans une partie lancée, et rien d'autre.
- *
- * Les quatre derniers tests partagent ces sept lignes. Les recopier était déjà
- * la deuxième fois ; à la troisième on ne corrige plus qu'une copie sur trois.
- */
-async function deuxTelephonesEnPartie(
-  navigateur: Browser,
-  jeu: RegExp,
-): Promise<{ hote: Page; invite: Page }> {
-  const hote = await nouveauTelephone(navigateur);
-  const invite = await nouveauTelephone(navigateur);
-  await entrer(hote, "Momo");
-  await entrer(invite, "Sam");
-
-  const code = await ouvrirSalonDe(hote, jeu);
-  await aller(invite, "/jeux");
-  await rejoindreParCode(invite, code);
-  await attendreDeuxPresents(hote);
-
-  await hote.getByRole("button", { name: /lancer la partie/i }).click();
-  return { hote, invite };
-}
-
-/**
- * Taper dans un champ jusqu'à ce que React l'ait vu.
- *
- * Le bouton d'envoi suit l'ÉTAT React : c'est le seul témoin fiable que la
- * saisie a été enregistrée. Vérifier la valeur du champ ne suffit pas — elle est
- * dans le DOM avant l'hydratation, et l'hydratation la remet à zéro juste après.
- * Un humain met plus d'une seconde à taper, un test non.
- *
- * Et il faut **repasser par le vide** à chaque essai. React ne compare pas la
- * valeur à son état, il compare la valeur du nœud à celle qu'il avait notée
- * lors du dernier événement : réécrire « 5732 » par-dessus un « 5732 » posé
- * avant l'hydratation ne lui fait voir aucun changement, donc aucun
- * `onChange`, donc un bouton désactivé jusqu'à la fin des temps. Un test qui
- * réessaie cent fois le même remplissage échoue cent fois de la même façon.
- */
-async function taper(champ: Locator, bouton: Locator, valeur: string) {
-  await expect(champ).toBeVisible();
-  await expect
-    .poll(
-      async () => {
-        await champ.fill("");
-        await champ.fill(valeur);
-        return bouton.isEnabled();
-      },
-      { timeout: 15_000 },
-    )
-    .toBe(true);
-}
-
-/** Taper le code à quatre chiffres et entrer dans le salon. */
-async function rejoindreParCode(page: Page, code: string) {
-  const entrer = page.getByRole("button", { name: /entrer/i });
-  await taper(page.locator("#code-partie"), entrer, code);
-  await entrer.click();
-  await page.waitForURL(/\/jeux\/[a-z0-9]+/);
-}
 
 /**
  * Rendre la bande comme on l'a trouvée, une fois le fichier terminé.
@@ -353,36 +170,37 @@ test("dans « Devine qui je suis », le mot ne s'affiche que chez les autres", a
  * instant absolu annoncé à l'avance et non d'un signal envoyé au moment voulu ;
  * et c'est l'horodatage du serveur qui départage, pas l'ordre d'arrivée.
  */
-test("dans « Le plus rapide », les deux écrans passent au vert ensemble", async ({ browser }) => {
+test("dans « Le plus rapide », le décompte puis le vert arrivent ensemble", async ({ browser }) => {
   const { hote, invite } = await deuxTelephonesEnPartie(browser, /Le plus rapide/i);
 
-  // Les deux écrans passent au vert. Le délai est tiré entre deux et cinq
-  // secondes par l'hôte et annoncé aux deux en **instant absolu** : c'est le
-  // compte à rebours local qui fait basculer chaque écran, pas un signal envoyé
-  // au moment voulu.
+  // Le décompte 3-2-1 arrive aux deux écrans. Il est calculé à partir d'un
+  // instant absolu annoncé à l'avance, pas d'un signal envoyé au moment voulu.
+  await expect(hote.getByText("Prépare-toi.")).toBeVisible({ timeout: 30_000 });
+  await expect(invite.getByText("Prépare-toi.")).toBeVisible({ timeout: 10_000 });
+
+  // Puis l'attente — d'une à cinq secondes, pour qu'on ne parte pas sur le
+  // « 1 » — puis le vert.
   //
-  // On ne cherche pas à appuyer AVANT le vert dans ce test. Le délai est tiré
-  // au hasard, l'écran apparaît quand la page veut bien, et un clic qui part
-  // une milliseconde après la bascule mesure la chance du harnais, pas le jeu.
-  // La règle du départ brûlé se vérifie sur le dépouillement, en Vitest, où
-  // l'horloge est à nous.
+  // On ne cherche pas à appuyer AVANT le vert dans ce test : le délai est tiré
+  // au hasard, et un clic qui part une milliseconde après la bascule mesure la
+  // chance du harnais, pas le jeu. La règle du départ brûlé se vérifie sur le
+  // dépouillement, en Vitest, où l'horloge est à nous.
   const vertInvite = invite.getByText("MAINTENANT");
   const vertHote = hote.getByText("MAINTENANT");
   await expect(vertInvite).toBeVisible({ timeout: 30_000 });
   await expect(vertHote).toBeVisible({ timeout: 10_000 });
 
-  // L'invité appuie le premier, et c'est l'horodatage du SERVEUR qui le dit.
+  // L'invité appuie le premier. Son temps s'affiche chez lui, en millisecondes.
   await vertInvite.click();
-  await expect(invite.getByText("Enregistré.")).toBeVisible({ timeout: 15_000 });
+  await expect(invite.getByText(/^\d+ ms$/)).toBeVisible({ timeout: 15_000 });
   await vertHote.click();
 
-  // Le verdict nomme celui qui a appuyé le premier, et c'est le MÊME texte sur
-  // les deux écrans : c'est tout ce que le multi promet, et c'est tout ce qu'il
-  // doit tenir.
-  const verdict = hote.getByText(/d'abord\./);
+  // Le verdict nomme celui qui a appuyé le premier ET son temps, et c'est le
+  // MÊME texte sur les deux écrans : c'est tout ce que le multi promet.
+  const verdict = hote.getByText(/, \d+ ms\./);
   await expect(verdict).toBeVisible({ timeout: 20_000 });
   await expect(verdict).toContainText("Sam");
-  expect(await invite.getByText(/d'abord\./).innerText()).toBe(await verdict.innerText());
+  expect(await invite.getByText(/, \d+ ms\./).innerText()).toBe(await verdict.innerText());
 
   // Et les deux appuis sont au classement, dans l'ordre, chez les deux.
   await expect(invite.getByRole("listitem")).toHaveCount(2);

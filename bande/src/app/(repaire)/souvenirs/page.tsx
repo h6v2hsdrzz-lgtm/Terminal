@@ -4,12 +4,14 @@ import { CarteEntree } from "@/composants/CarteEntree";
 import { Carte, TitreSection } from "@/composants/Carte";
 import { Scelles } from "@/composants/Scelles";
 import { MurDesFigures } from "@/composants/MurDesFigures";
+import { MurDesParoles } from "@/composants/MurDesParoles";
 import { Stats } from "@/composants/Stats";
 import { Retrospective } from "@/composants/Retrospective";
 import Link from "next/link";
 
 import { CarteDesLieux } from "@/composants/CarteDesLieux";
 import { compterMedias, etiquettesDeLaBande, listerCapsules, mediasDeLaBande } from "@/lib/depot";
+import { parolesDeLaBande } from "@/lib/depot-jeux";
 import { entreesDeLaBande, exigerContexte } from "@/lib/repaire";
 import { ceJourLa, moisDisponibles, murDeSouvenirs, retrospective } from "@/lib/souvenirs";
 import { enTexteLong, jourDeLaBande } from "@/lib/dates";
@@ -35,6 +37,7 @@ export default async function Page({
   const medias = await mediasDeLaBande(contexte.groupe.id, 8);
   const combienMedias = await compterMedias(contexte.groupe.id);
   const lieux = await etiquettesDeLaBande(contexte.groupe.id);
+  const paroles = await parolesDeLaBande(contexte.moi.id);
 
   return (
     <div className="px-4 pt-3">
@@ -44,6 +47,8 @@ export default async function Page({
           Ce que la bande garde, et ce qu&apos;elle s&apos;envoie à elle-même.
         </p>
       </header>
+
+      <MurDesParoles paroles={paroles} />
 
       {medias.length > 0 && (
         <section className="mt-7">

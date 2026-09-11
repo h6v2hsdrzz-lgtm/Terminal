@@ -1,11 +1,13 @@
 /**
- * Les dix jeux, et ce qu'on en dit avant de lancer.
+ * Les treize jeux, et ce qu'on en dit avant de lancer.
  *
  * Le plan en listait trente-cinq et prévenait lui-même : « mieux vaut trois
  * jeux impeccables que dix bâclés ». La bande en a demandé **au moins dix**.
- * Ce sont donc dix, choisis pour tenir à TROIS — pas des jeux à dix adaptés à
- * l'arrache — et dont deux n'existent que chez eux, parce qu'ils se nourrissent
- * du journal.
+ * Dix ont été écrits d'abord, choisis pour tenir à TROIS — pas des jeux à dix
+ * adaptés à l'arrache — et dont deux n'existent que chez eux, parce qu'ils se
+ * nourrissent du journal. Le lot O en ajoute trois, ceux que Marie Janne a
+ * demandés : un qui dure toute la soirée en arrière-plan, et deux qui
+ * s'enregistrent pour qu'on les réécoute le lendemain.
  *
  * Ce qui est écrit ici est lu AVANT de lancer, jamais pendant. Personne ne lit
  * une règle en cours de partie.
@@ -32,6 +34,16 @@ export type Jeu = {
   duree: number;
   /** Vrai si le jeu fait boire — il passe alors par le cadre (voir cadre.ts). */
   boit: boolean;
+  /**
+   * Un jeu **de fond** se joue par-dessus les autres.
+   *
+   * « Le mot de passe » dure toute la soirée : on le lance, on pose le
+   * téléphone, et on joue à autre chose en attendant de se griller. Il ne compte
+   * donc pas comme « la partie en cours » — sinon il interdirait de lancer quoi
+   * que ce soit pendant trois heures, ce qui est exactement le contraire de son
+   * intérêt.
+   */
+  fond?: true;
 };
 
 export const JEUX: Jeu[] = [
@@ -163,6 +175,46 @@ export const JEUX: Jeu[] = [
       "Un point par bonne réponse. Les plus vieilles sont les plus dures.",
     ],
     duree: 15,
+    boit: false,
+  },
+  {
+    cle: "mot-de-passe",
+    nom: "Le mot de passe",
+    categorie: "froid",
+    emoji: "🕵️",
+    regles: [
+      "Chacun reçoit un mot improbable, que les autres ne voient pas.",
+      "Il faut le placer dans la conversation sans se faire griller.",
+      "« Je te grille » : juste, tu marques ; à côté, tu perds un point.",
+    ],
+    duree: 90,
+    boit: false,
+    fond: true,
+  },
+  {
+    cle: "complot",
+    nom: "La théorie du complot",
+    categorie: "froid",
+    emoji: "🛸",
+    regles: [
+      "Deux choses sans aucun rapport s'affichent. À toi de les relier.",
+      "Quatre-vingt-dix secondes, enregistrées, pour être convaincant.",
+      "Les deux autres notent sur dix. L'audio part dans les souvenirs.",
+    ],
+    duree: 20,
+    boit: false,
+  },
+  {
+    cle: "tribunal",
+    nom: "Le tribunal des idées",
+    categorie: "froid",
+    emoji: "💡",
+    regles: [
+      "Soixante secondes chrono pour défendre ton idée de génie, enregistrées.",
+      "Les deux autres votent : ça se finance, ou ça ne se finance pas.",
+      "Le lendemain matin, l'application te renvoie ton propre audio.",
+    ],
+    duree: 20,
     boit: false,
   },
 ];
