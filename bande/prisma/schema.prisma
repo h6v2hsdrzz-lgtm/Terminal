@@ -66,6 +66,10 @@ model Membre {
   /// l'ancien nom et l'ancienne tête jusqu'à la prochaine écriture — c'est le
   /// même défaut que les photos et les notes vocales avaient eu.
   modifieLe      DateTime @default(now()) @updatedAt @map("modifie_le")
+  /// La dernière fois que cette personne a ouvert le fil. Distincte de
+  /// `vuLe`, qui ne bouge qu'en posant sa journée : le repère « nouveau depuis
+  /// ta dernière visite » a besoin de la visite, pas de la publication.
+  filVuLe        DateTime? @map("fil_vu_le")
 
   groupe       Groupe        @relation(fields: [groupeId], references: [id], onDelete: Cascade)
   entrees      Entree[]
@@ -120,6 +124,10 @@ model Entree {
   calme     Int?
   creeLe    DateTime @default(now()) @map("cree_le")
   modifieLe DateTime @updatedAt @map("modifie_le")
+  /// Épinglée en haut du fil par n'importe qui de la bande. C'est un geste
+  /// collectif, pas un favori personnel : une journée épinglée l'est pour les
+  /// trois, sinon le fil ne raconterait pas la même chose à chacun.
+  epingle   Boolean  @default(false)
 
   groupe       Groupe              @relation(fields: [groupeId], references: [id], onDelete: Cascade)
   membre       Membre              @relation(fields: [membreId], references: [id], onDelete: Cascade)

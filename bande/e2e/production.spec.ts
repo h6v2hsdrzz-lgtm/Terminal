@@ -47,13 +47,15 @@ test("une bande neuve, de bout en bout, puis effacée", async ({ page, request }
   await page.getByRole("button", { name: /c'est noté/i }).click();
   await page.waitForURL("/");
 
-  // Le check-in a sa propre adresse : la racine, c'est le fil.
-  await page.goto("/aujourdhui", { waitUntil: "networkidle" });
-
   // ── La figure du jour, avant d'avoir rien posé ─────────────────────────
+  // Elle vit en tête du FIL depuis le lot K3, plus sur le check-in : elle y
+  // redisait ce que la première page montre déjà, et occupait un demi-écran.
   await expect(
     page.getByRole("img", { name: /figure du jour|Personne n'a encore posé/i }).first(),
   ).toBeVisible();
+
+  // Le check-in a sa propre adresse : la racine, c'est le fil.
+  await page.goto("/aujourdhui", { waitUntil: "networkidle" });
 
   // ── Le check-in enrichi ────────────────────────────────────────────────
   await page.fill("#titre", "Premier jour");

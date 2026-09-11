@@ -26,7 +26,7 @@ function entree(surcharge: Partial<Entree> = {}): Entree {
     audio: null,
     reactions: [],
     commentaires: [],
-    posteA: "21:00",
+    posteA: "21:00", creeA: "2026-09-01T21:00:00.000Z", epingle: false,
     ...surcharge,
   };
 }

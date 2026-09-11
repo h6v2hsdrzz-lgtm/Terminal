@@ -93,6 +93,25 @@ export type Entree = {
   reactions: Reaction[];
   commentaires: Commentaire[];
   posteA: string;
+  /** L'instant exact de la publication, en ISO. Sert au repère « nouveau ». */
+  creeA: string;
+  /** Remontée en haut du fil, pour toute la bande. */
+  epingle: boolean;
+};
+
+/** Les filtres rapides du fil. Un seul actif à la fois. */
+export type FiltreFil =
+  | { genre: "tout" }
+  | { genre: "photo" }
+  | { genre: "vocal" }
+  | { genre: "personne"; profil: string };
+
+/** Une page du fil : des journées, et de quoi demander la suivante. */
+export type PageFil = {
+  /** Groupées par jour, du plus récent au plus ancien. */
+  journees: { jour: string; entrees: Entree[] }[];
+  /** Le jour à passer en curseur pour la page suivante, ou `null` à la fin. */
+  curseur: string | null;
 };
 
 export type Badge = {

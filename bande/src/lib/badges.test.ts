@@ -8,7 +8,7 @@ function entree(jour: string, joie = 6, note: string | null = null): Entree {
   return {
     id: jour, jour, profil: "moi", joie,
     titre: null, note, energie: null, calme: null, declencheurs: [],
-    etiquettes: [], photos: [], audio: null, reactions: [], commentaires: [], posteA: "20:00",
+    etiquettes: [], photos: [], audio: null, reactions: [], commentaires: [], posteA: "20:00", creeA: "2026-09-01T20:00:00.000Z", epingle: false,
   };
 }
 const suite = (debut: string, n: number) => Array.from({ length: n }, (_, i) => decaler(debut, i));

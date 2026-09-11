@@ -24,17 +24,17 @@ repo, et les termes du plan se traduisent ainsi :
 ## Où sont les choses
 
 ```
-prisma/schema.prisma     14 modèles, tous préfixés bande_
+prisma/schema.prisma     14 modèles, tous préfixés bande_ (+ Entree.epingle, Membre.filVuLe)
 prisma/seed.ts           4 profils × 400 jours, images et sons engendrés
 src/app/(entree)/        bienvenue, créer, rejoindre, reprendre
 src/app/(repaire)/       page.tsx (le fil), aujourdhui, jeux, souvenirs, galerie, profil, reglages
 src/app/(jeu)/           l'écran d'une partie, sans barre d'onglets ni sondage
 src/app/api/             photo, vignette, audio, avatar, scelle, lieu, export, sante, version
 src/app/not-found.tsx    404 en français ; error.tsx pour ce qui casse
-src/composants/          un fichier par composant, noms français ; jeux/ pour les dix jeux
+src/composants/          un fichier par composant, noms français ; jeux/ pour les dix jeux, fil/ pour le fil
 src/lib/                 depot.ts + depot-jeux.ts (tout PostgreSQL), actions*.ts, logique pure
 src/lib/jeux/            catalogue, cadre, tirage, recompense, quiz, top3, vote, inclinaison
-e2e/                     Playwright : captures, lot1, lotA..lotC, lotF, lotG, video, production
+e2e/                     Playwright : captures, lot1, lotA..lotC, lotF, lotG, lotK, lotL, video, production
 ```
 
 **La règle du dépôt :** rien d'autre que `depot.ts` et `depot-jeux.ts` ne parle
@@ -100,3 +100,18 @@ npx prisma migrate dev --create-only   # écrire la migration, la RELIRE, puis l
   corps du composant) : la règle `react-hooks/refs` le refuse, et elle a raison.
 - **Un affichage optimiste doit utiliser l'identifiant rendu par le serveur.**
   Un identifiant inventé sur place rend la suppression suivante inopérante.
+- **`couleurProfil` rend `var(--profil-N)`, pas une couleur.** Un canvas ne sait
+  pas résoudre une variable CSS, et `addColorStop` **lève** sur une couleur
+  invalide : l'image entière disparaît au milieu du dessin, sans message.
+  `resoudreCouleur` (dans `partage.ts`) la lit sur `document.documentElement`.
+- **Un `<a download>` doit être dans le document**, et son adresse d'objet ne se
+  révoque pas dans la foulée du clic : Safari ignore le premier cas sans erreur,
+  et annule le téléchargement dans le second.
+- **Le fil est un composant client** (`composants/fil/`) depuis le lot L, et
+  le voile n'a pas bougé d'un pouce pour autant : c'est le serveur qui **vide**
+  les entrées avant de sérialiser, ici comme dans l'action qui charge la suite.
+  Un filtre « photos » ou « vocaux » ferait fuiter un bit du contenu voilé — il
+  retire donc la journée des autres au lieu de la vider.
+- **Un test qui dépend de la fraîcheur du peuplement rougit tout seul.** La
+  bande de démonstration est figée au jour où elle a été engendrée ; un test qui
+  suppose « untel a posé aujourd'hui » casse une semaine plus tard. Il pose.

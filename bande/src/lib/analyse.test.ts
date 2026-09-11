@@ -17,7 +17,7 @@ function entree(jour: string, profil: string, joie: number, declencheurs: string
   return {
     id: `${jour}-${profil}`, jour, profil, joie,
     titre: null, note: null, energie: null, calme: null, declencheurs,
-    etiquettes: [], photos: [], audio: null, reactions: [], commentaires: [], posteA: "20:00",
+    etiquettes: [], photos: [], audio: null, reactions: [], commentaires: [], posteA: "20:00", creeA: "2026-09-01T20:00:00.000Z", epingle: false,
   };
 }
 

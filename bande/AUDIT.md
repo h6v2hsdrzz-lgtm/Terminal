@@ -191,6 +191,14 @@ cinq ans font environ 5 500 journées, soit quatre fois plus, sur **chaque**
 navigation, avec la latence de Neon en plus. À reprendre avant la troisième
 année : borner le fil et calculer les stats par agrégats côté base.
 
+> **Mi-corrigé au lot L (11 septembre).** Le fil — la page d'ouverture, donc
+> celle qu'on charge le plus souvent — passe par `listerPageDuFil` : deux
+> requêtes bornées à dix journées, et la suite à la demande en défilant. Restent
+> sur `listerEntrees` sans borne : les souvenirs, le profil, les statistiques
+> et les jeux qui se nourrissent du journal. Ce sont des écrans qu'on ouvre
+> rarement, et leurs calculs portent sur l'historique entier — les borner
+> demande de passer par des agrégats côté base, pas par une pagination.
+
 **Un test interrompu laisse une bande fantôme.** Les tests qui créent une bande
 la font partir dans un `finally`, mais si le navigateur meurt avant, la bande
 reste. Douze traînaient dans la base locale, effacées. Sans conséquence en
@@ -228,5 +236,6 @@ en français.
    décidé le 5 septembre.
 3. Vérifier à la main sur iPhone : HEIC, micro, caméra, inclinaison, coupure
    réseau, réinstallation de la PWA.
-4. Un jour : borner le chargement de l'historique, la file d'attente
-   hors-ligne, la notification d'ouverture des scellés.
+4. Un jour : borner le chargement de l'historique **sur les écrans qui
+   restent** (souvenirs, profil, statistiques — le fil est fait), la file
+   d'attente hors-ligne, la notification d'ouverture des scellés.

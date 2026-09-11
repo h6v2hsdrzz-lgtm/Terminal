@@ -6,7 +6,7 @@ import { TAILLE_MAX_BANDE, TEINTES } from "./couleurs";
 import { codeInvitation, creerCodeReprise, decouperCodeReprise, normaliserCode, verifierCodeReprise } from "./codes";
 import { decaler } from "./dates";
 import { LONGUEUR_PSEUDO, initialesDeLaBande } from "./initiales";
-import type { Declencheur, Entree, Profil } from "./types";
+import type { Declencheur, Entree, FiltreFil, PageFil, Profil } from "./types";
 import { MAX_ETIQUETTES, cleEtiquette, nettoyerEtiquette } from "./etiquettes";
 import { DUREE_MAX_VIDEO, LONGUEUR_LEGENDE, MAX_MEDIAS, POIDS_MAX_MEDIA } from "./media";
 // Réexporté pour que la route d'export n'ait pas à savoir qu'il a déménagé.
@@ -196,6 +196,10 @@ function versEntree(ligne: LigneEntree): Entree {
       quand: HEURE.format(c.creeLe),
     })),
     posteA: HEURE.format(ligne.creeLe),
+    // L'heure affichée est formatée pour l'écran ; le repère « nouveau depuis
+    // ta dernière visite » a besoin de l'instant brut, comparable.
+    creeA: ligne.creeLe.toISOString(),
+    epingle: ligne.epingle,
   };
 }
 
@@ -264,6 +268,141 @@ export async function chargerContexte(membreId: string): Promise<Contexte | null
   };
 }
 
+/**
+ * Une page du fil : les `NOMBRE_JOURS` journées qui précèdent le curseur.
+ *
+ * Le fil paginait par tranche d'un tableau déjà chargé en entier — c'est le
+ * défaut relevé à l'audit technique : ouvrir l'application chargeait cent
+ * vingt journées avec leurs commentaires pour en afficher douze. Ici, deux
+ * requêtes bornées, et rien de plus ne quitte la base.
+ *
+ * On pagine par **jour**, pas par entrée, parce que c'est le jour qui fait
+ * l'unité à l'écran : couper au milieu d'une journée afficherait Momo sans
+ * Sam sous le même titre, et la deuxième page rouvrirait la même date.
+ */
+export const JOURS_PAR_PAGE = 10;
+
+function filtrerEntrees(filtre: FiltreFil | undefined): Prisma.EntreeWhereInput {
+  switch (filtre?.genre) {
+    // `some: {}` ne charge rien : c'est un EXISTS, pas une jointure ramenée.
+    case "photo":
+      return { photos: { some: { genre: "photo" } } };
+    case "vocal":
+      return { audio: { isNot: null } };
+    case "personne":
+      return { membreId: filtre.profil };
+    default:
+      return {};
+  }
+}
+
+export async function listerPageDuFil(
+  groupeId: string,
+  options: { curseur?: string | null; filtre?: FiltreFil } = {},
+): Promise<PageFil> {
+  const conditions: Prisma.EntreeWhereInput = {
+    groupeId,
+    ...filtrerEntrees(options.filtre),
+    ...(options.curseur ? { jour: { lt: options.curseur } } : {}),
+  };
+
+  // Un jour de plus que demandé : c'est ce qui dit s'il reste quelque chose
+  // en dessous, sans compter la table entière à chaque page.
+  const groupes = await prisma.entree.groupBy({
+    by: ["jour"],
+    where: conditions,
+    orderBy: { jour: "desc" },
+    take: JOURS_PAR_PAGE + 1,
+  });
+
+  const encore = groupes.length > JOURS_PAR_PAGE;
+  const jours = groupes.slice(0, JOURS_PAR_PAGE).map((g) => g.jour);
+  if (jours.length === 0) return { journees: [], curseur: null };
+
+  // Les entrées des journées retenues — toutes, filtre compris : une journée
+  // « avec photo » ne doit pas afficher les entrées sans photo de ce jour-là,
+  // sinon le filtre ne filtre plus rien.
+  const lignes = await prisma.entree.findMany({
+    where: { groupeId, ...filtrerEntrees(options.filtre), jour: { in: jours } },
+    orderBy: [{ jour: "desc" }, { creeLe: "asc" }],
+    include: AVEC_TOUT,
+  });
+
+  const parJour = new Map<string, Entree[]>();
+  for (const jour of jours) parJour.set(jour, []);
+  for (const ligne of lignes) parJour.get(ligne.jour)?.push(versEntree(ligne));
+
+  return {
+    journees: jours.map((jour) => ({ jour, entrees: parJour.get(jour)! })),
+    curseur: encore ? jours[jours.length - 1] : null,
+  };
+}
+
+/**
+ * Ai-je posé ma journée ?
+ *
+ * La question du voile, et elle se pose à chaque page du fil : elle mérite
+ * donc une requête qui ne rapporte rien d'autre qu'un booléen.
+ */
+export async function aDejaPose(
+  groupeId: string,
+  membreId: string,
+  jour: string,
+): Promise<boolean> {
+  const combien = await prisma.entree.count({ where: { groupeId, membreId, jour } });
+  return combien > 0;
+}
+
+/** Les journées épinglées, hors pagination : elles restent en haut. */
+export async function listerEpinglees(groupeId: string): Promise<Entree[]> {
+  const lignes = await prisma.entree.findMany({
+    where: { groupeId, epingle: true },
+    orderBy: [{ jour: "desc" }, { creeLe: "asc" }],
+    // Une bande qui épingle tout n'épingle rien, et le fil recommencerait à
+    // charger sans borne. Douze, et le treizième remplace le plus ancien.
+    take: 12,
+    include: AVEC_TOUT,
+  });
+  return lignes.map(versEntree);
+}
+
+/**
+ * Épingler ou décrocher une journée.
+ *
+ * Le `groupeId` est dans la condition, pas seulement dans la lecture : sans
+ * lui, connaître l'identifiant d'une entrée suffirait à épingler la journée
+ * d'une autre bande. C'est la règle de toute cette couche.
+ */
+export async function basculerEpingle(
+  groupeId: string,
+  entreeId: string,
+): Promise<boolean> {
+  const entree = await prisma.entree.findFirst({
+    where: { id: entreeId, groupeId },
+    select: { epingle: true },
+  });
+  if (!entree) return false;
+  await prisma.entree.update({
+    where: { id: entreeId },
+    data: { epingle: !entree.epingle },
+  });
+  return !entree.epingle;
+}
+
+/**
+ * La dernière ouverture du fil : on lit l'ancienne valeur, puis on écrit la
+ * nouvelle. L'ordre compte — écrire d'abord effacerait le repère avant de
+ * l'avoir affiché.
+ */
+export async function toucherVisiteDuFil(membreId: string): Promise<string | null> {
+  const avant = await prisma.membre.findUnique({
+    where: { id: membreId },
+    select: { filVuLe: true },
+  });
+  await prisma.membre.update({ where: { id: membreId }, data: { filVuLe: new Date() } });
+  return avant?.filVuLe?.toISOString() ?? null;
+}
+
 export async function listerEntrees(groupeId: string, depuis?: string): Promise<Entree[]> {
   const lignes = await prisma.entree.findMany({
     where: { groupeId, ...(depuis ? { jour: { gte: depuis } } : {}) },
@@ -302,6 +441,10 @@ export function masquerEntree(entree: Entree): Entree {
     reactions: [],
     commentaires: [],
     posteA: "",
+    // L'instant reste : savoir QUE quelqu'un est passé est déjà public sous le
+    // voile (la figure du jour le montre), c'est le contenu qu'on cache.
+    creeA: entree.creeA,
+    epingle: entree.epingle,
   };
 }
 
@@ -438,6 +581,28 @@ export async function supprimerCommentaire(membreId: string, commentaireId: stri
 
   await prisma.commentaire.delete({ where: { id: commentaireId } });
   return commentaire.entree.groupeId;
+}
+
+/**
+ * Le droit de retrait, appliqué à une journée.
+ *
+ * Seul l'auteur retire la sienne. Ce n'est pas une exception au droit de
+ * retrait du plan — il dit qu'un contenu part quand il gêne **celui qu'il
+ * vise**, et une journée ne vise que celui qui l'a écrite. Les photos, le
+ * vocal, les réactions et les commentaires partent avec elle : c'est la
+ * cascade du schéma, pas une boucle à écrire ici.
+ */
+export async function supprimerEntree(membreId: string, entreeId: string) {
+  const entree = await prisma.entree.findUnique({
+    where: { id: entreeId },
+    select: { membreId: true, groupeId: true },
+  });
+  if (!entree) throw new ErreurMetier("Cette journée n'existe plus.");
+  if (entree.membreId !== membreId) {
+    throw new ErreurMetier("On ne retire que ses propres journées.");
+  }
+  await prisma.entree.delete({ where: { id: entreeId } });
+  return entree.groupeId;
 }
 
 /**

@@ -249,8 +249,22 @@ test("le fil est la page d'ouverture, et il porte le voile", async ({ page }) =>
 });
 
 test("une fois posée, le fil se dévoile", async ({ page }) => {
-  // Sam a posé aujourd'hui : pour lui, tout est lisible.
+  // On pose pour de vrai au lieu de compter sur le peuplement : la bande de
+  // démonstration est figée au jour où elle a été engendrée, et « aujourd'hui »
+  // avance sans elle. Un test qui dépend de la fraîcheur des données finit
+  // toujours par rougir un matin, sans que rien n'ait cassé.
   await entrer(page, "Sam");
+  await page.goto("/aujourdhui");
+  // Il a peut-être déjà posé — une exécution précédente du même test. On
+  // regarde l'écran au lieu de supposer son état : « corriger ta journée » est
+  // un bouton lui aussi, et le viser en aveugle rouvre le formulaire.
+  const confirme = page.getByText("C'est posé pour aujourd'hui.");
+  if (!(await confirme.isVisible())) {
+    await page.getByRole("button", { name: /poser ma joie/i }).click();
+  }
+  await expect(confirme).toBeVisible();
+
+  await page.goto("/");
   await expect(page.getByText(/de moyenne/).first()).toBeVisible();
   await expect(page.getByRole("link", { name: /C'est posé/ })).toBeVisible();
 });

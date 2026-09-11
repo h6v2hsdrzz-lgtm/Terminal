@@ -5,7 +5,7 @@
 
 ## Lot en cours
 
-**Vague 2 : lots J, K et O2 terminés.** O2 (le registre) est passé avant le
+**Vague 2 : lots J, K, O2 et L terminés.** O2 (le registre) est passé avant le
 lot L parce que c'est le reproche explicite de la bande sur la livraison
 précédente — « c'est vraiment x100, vas-y super fort ». Les chiffres du plan
 sont tenus et verrouillés par un test :
@@ -15,15 +15,18 @@ renvoie.
 
 ## Prochaine action exacte
 
-**LOT L — le fil**, dans l'ordre du plan : en-tête de date collant (L1),
-pagination infinie et bouton « revenir en haut » (L2), appui long = menu
-rapide (L3), partage d'une journée en image 9:16 générée en canvas (L4),
-repère « nouveau depuis ta dernière visite » (L5), filtres rapides (L6),
-tirer pour rafraîchir sans faire sauter le défilement (L7).
+**LOT M — les médias et le stockage**, dans l'ordre du plan : bascule sur
+Cloudflare R2 avec script de migration et vérification d'intégrité (M1), deux
+tailles par image — 320 px pour le fil, 1600 px pour le plein écran (M2),
+HEIC → WebP côté client et AVIF quand c'est supporté, orientation EXIF (M3),
+écran Réglages → Stockage avec jauge et « libérer de la place » (M4), envoi en
+arrière-plan avec file d'attente et reprise après coupure (M5), visionneuse
+plein écran au niveau (M6).
 
-Le fil rend aujourd'hui `JOURS_AFFICHES` journées d'un coup et charge tout
-l'historique côté serveur : L2 est donc aussi la réponse au défaut noté dans
-l'audit technique. À faire ensemble.
+Le choix de R2 est tranché et écrit plus bas : 10 Go contre 0,5 chez Neon, et
+aucun frais de sortie. Les octets vivent aujourd'hui dans PostgreSQL
+(`bande_photos`), servis par `/api/photo`, `/api/vignette`, `/api/audio` — la
+bascule doit donc garder ces adresses et ne changer que ce qu'il y a derrière.
 
 ### Les cinq réponses (6 septembre, confirmées par la bande)
 
@@ -311,4 +314,5 @@ puisqu'il ne concerne que cette machine.
 | H audits | **fait** — voir `AUDIT.md` |
 | J le geste (vague 2) | **fait** |
 | K la journée (vague 2) | **fait** |
+| L le fil | **fait** : pagination par journée, en-tête collant, appui long, partage 9:16, repère de visite, filtres, tirer pour rafraîchir |
 | O2 le registre | **fait** : 423 cartes « Je n'ai jamais », 204 dilemmes, 38 gages, 80 susceptibles, 50 jugements, 47 thèmes |

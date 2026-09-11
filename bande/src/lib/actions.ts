@@ -29,10 +29,16 @@ import {
   legender,
   supprimerCapsule,
   supprimerCommentaire,
+  aDejaPose,
+  basculerEpingle,
+  listerPageDuFil,
+  masquerEntree,
+  supprimerEntree,
 } from "./depot";
 import { fermerSession, garderCodeReprise, membreConnecte, oublierCodeReprise, ouvrirSession } from "./session";
 import { ETAT_INITIAL, type Etat } from "./formulaire";
 import { jourDeLaBande } from "./dates";
+import type { FiltreFil, PageFil } from "./types";
 
 /**
  * Les actions serveur.
@@ -509,5 +515,79 @@ export async function actionPoserPouls(rire: number, energie: number): Promise<E
     await poserPouls(membreId, contexte.groupe.id, jourDeLaBande(), { rire, energie });
     revalidatePath("/aujourdhui");
     revalidatePath("/");
+  });
+}
+
+// ── Le fil ───────────────────────────────────────────────────────────────────
+
+/**
+ * La page suivante du fil.
+ *
+ * Le voile est réappliqué **ici**, sur le serveur, et pas seulement au premier
+ * rendu. Une page suivante ne contient en principe que des journées passées —
+ * la pagination descend — mais « en principe » n'est pas une garantie : il
+ * suffirait d'un filtre par personne, d'un curseur bricolé à la main ou d'une
+ * journée créée entre deux pages pour qu'aujourd'hui réapparaisse plus bas. Le
+ * voile est la mécanique du produit ; il ne doit dépendre d'aucun raisonnement
+ * sur l'ordre des pages.
+ */
+export async function actionPageDuFil(
+  curseur: string | null,
+  filtre: FiltreFil,
+): Promise<PageFil> {
+  const { membreId, contexte } = await quiAgit();
+  const page = await listerPageDuFil(contexte.groupe.id, { curseur, filtre });
+
+  if (!contexte.groupe.revelerApresPost) return page;
+
+  const aujourdhui = jourDeLaBande();
+  const journeeDuJour = page.journees.find((j) => j.jour === aujourdhui);
+  // Rien d'aujourd'hui dans cette page : rien à voiler.
+  if (!journeeDuJour) return page;
+  if (await aDejaPose(contexte.groupe.id, membreId, aujourdhui)) return page;
+
+  // Un filtre « photos » ou « vocaux » dirait, d'une journée voilée, qu'elle
+  // contient une photo — un bit de son contenu, justement ce que le voile
+  // garde. Sous filtre média, la journée des autres n'est donc pas voilée :
+  // elle est absente, et elle réapparaîtra entière une fois la sienne posée.
+  const media = filtre.genre === "photo" || filtre.genre === "vocal";
+
+  return {
+    ...page,
+    journees: page.journees
+      .map((journee) =>
+        journee.jour === aujourdhui
+          ? {
+              ...journee,
+              entrees: journee.entrees.flatMap((e) =>
+                e.profil === membreId ? [e] : media ? [] : [masquerEntree(e)],
+              ),
+            }
+          : journee,
+      )
+      .filter((journee) => journee.entrees.length > 0),
+  };
+}
+
+/**
+ * Épingler une journée, ou la décrocher.
+ *
+ * N'importe qui de la bande peut le faire, et pour tout le monde : un fil qui
+ * ne raconterait pas la même chose à chacun ne serait plus un fil commun.
+ */
+export async function actionEpingler(entreeId: string): Promise<Etat> {
+  return tenter(async () => {
+    const { contexte } = await quiAgit();
+    await basculerEpingle(contexte.groupe.id, entreeId);
+    rafraichirTout();
+  });
+}
+
+/** Le droit de retrait : sa journée s'en va, sans avoir à se justifier. */
+export async function actionRetirerJournee(entreeId: string): Promise<Etat> {
+  return tenter(async () => {
+    const { membreId } = await quiAgit();
+    await supprimerEntree(membreId, entreeId);
+    rafraichirTout();
   });
 }

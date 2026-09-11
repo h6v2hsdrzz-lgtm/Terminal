@@ -8,7 +8,7 @@ function entree(surcharge: Partial<Entree> = {}): Entree {
     id: Math.random().toString(36), jour: "2026-09-01", profil: "a", joie: 7,
     titre: null, note: null, energie: null, calme: null, declencheurs: [],
     etiquettes: [], photos: [], audio: null, reactions: [], commentaires: [],
-    posteA: "21:00",
+    posteA: "21:00", creeA: "2026-09-01T20:00:00.000Z", epingle: false,
     ...surcharge,
   };
 }
