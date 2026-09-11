@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { join } from "node:path";
 
 import { imageFactice } from "../prisma/image-factice";
+import { passerLesNouveautes } from "./aide-jeux";
 
 /**
  * Le test de fumée : une bande neuve, tout le rituel, puis on efface.
@@ -46,6 +47,7 @@ test("une bande neuve, de bout en bout, puis effacée", async ({ page, request }
   await page.waitForURL(/\/bienvenue\/code/);
   await page.getByRole("button", { name: /c'est noté/i }).click();
   await page.waitForURL("/");
+  await passerLesNouveautes(page);
 
   // ── La figure du jour, avant d'avoir rien posé ─────────────────────────
   // Elle vit en tête du FIL depuis le lot K3, plus sur le check-in : elle y

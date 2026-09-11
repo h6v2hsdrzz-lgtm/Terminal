@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { imageFactice } from "../prisma/image-factice";
+import { passerLesNouveautes } from "./aide-jeux";
 
 /** Le lot K : l'ergonomie de l'écran « Aujourd'hui ». */
 const PNG = Buffer.from(imageFactice(48, 48, [120, 160, 90]));
@@ -29,6 +30,7 @@ async function bandeNeuve(page: Page, nom: string) {
   await page.waitForURL(/\/bienvenue\/code/);
   await page.getByRole("button", { name: /c'est noté/i }).click();
   await page.waitForURL("/");
+  await passerLesNouveautes(page);
 }
 
 async function entrer(page: Page, pseudo: string) {
@@ -36,6 +38,7 @@ async function entrer(page: Page, pseudo: string) {
   await page.fill("#reprise", codeDe(pseudo));
   await page.getByRole("button", { name: /reconnecter/i }).click();
   await page.waitForURL("/");
+  await passerLesNouveautes(page);
 }
 
 async function quitter(page: Page, nom: string) {

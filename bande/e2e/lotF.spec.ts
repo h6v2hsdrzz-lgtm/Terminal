@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { passerLesNouveautes } from "./aide-jeux";
 
 /**
  * Le lot F : le lieu.
@@ -21,6 +22,7 @@ async function entrer(page: import("@playwright/test").Page, pseudo: string) {
   await page.fill("#reprise", codeDe(pseudo));
   await page.getByRole("button", { name: /reconnecter/i }).click();
   await page.waitForURL("/");
+  await passerLesNouveautes(page);
 }
 
 test("la route du lieu exige une session et n'accepte pas n'importe quoi", async ({

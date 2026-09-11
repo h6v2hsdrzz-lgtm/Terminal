@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { passerLesNouveautes } from "./aide-jeux";
 
 /**
  * Les captures de référence, et les contrôles qui n'ont de sens que sur un
@@ -34,6 +35,7 @@ test.beforeEach(async ({ page }) => {
   await page.fill("#reprise", codeDe("Momo"));
   await page.getByRole("button", { name: /reconnecter/i }).click();
   await page.waitForURL("/");
+  await passerLesNouveautes(page);
 
   // Sans ce contrôle, une session perdue laisse chaque test photographier
   // l'écran d'accueil et passer au vert. C'est exactement ce qui est arrivé.

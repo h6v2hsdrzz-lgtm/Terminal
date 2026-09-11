@@ -1,7 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { aller, entrer, nouveauTelephone } from "./aide-jeux";
+import { aller, codeDe as codeLu, entrer, nouveauTelephone, passerLesNouveautes } from "./aide-jeux";
 import { TYPES } from "../src/lib/pousse/types";
+import { ecrireZip, lireZip } from "../src/lib/archive";
 
 /**
  * Le lot Q : l'écran de réglages.
@@ -34,6 +35,31 @@ function bloc(page: Page) {
 /** La case d'une ligne de réglage, trouvée par son libellé. */
 function ligne(page: Page, libelle: string | RegExp) {
   return bloc(page).locator("label").filter({ hasText: libelle }).getByRole("checkbox");
+}
+
+/**
+ * Taper dans le champ de recherche, jusqu'à ce que React l'ait vu.
+ *
+ * Le même piège que le code d'une partie, payé une deuxième fois : React
+ * compare la valeur du nœud à celle du dernier événement, pas à son état. Un
+ * `fill` qui arrive avant l'hydratation ne déclenche donc aucun `onChange`, la
+ * carte d'accueil reste affichée, et le test attend un résultat qui ne viendra
+ * jamais. On repasse par le vide, et on attend que l'écran réagisse.
+ */
+async function chercher(page: Page, mots: string) {
+  const champ = page.locator("#recherche");
+  await expect(champ).toBeVisible();
+  const accueil = page.getByText(/deux lettres suffisent/i);
+  await expect
+    .poll(
+      async () => {
+        await champ.fill("");
+        await champ.fill(mots);
+        return accueil.isHidden();
+      },
+      { timeout: 15_000 },
+    )
+    .toBe(true);
 }
 
 test("les six types de notification sont là, et les réactions sont coupées par défaut", async ({
@@ -205,7 +231,7 @@ test("chercher un mot trouve les journées, et le résultat mène au bon jour", 
   // Avant de taper, l'écran dit ce qu'il sait faire plutôt que d'afficher zéro.
   await expect(page.getByText(/deux lettres suffisent/i)).toBeVisible();
 
-  await page.fill("#recherche", "pluie");
+  await chercher(page, "pluie");
   const resultats = page.getByRole("listitem");
   await expect(resultats.first()).toBeVisible({ timeout: 15_000 });
 
@@ -226,11 +252,11 @@ test("la recherche ignore les accents et veut tous les mots", async ({ page }) =
 
   // « journee » sans accent doit trouver « journée » : c'est la moitié de
   // l'intérêt d'une recherche en français.
-  await page.fill("#recherche", "journee");
+  await chercher(page, "journee");
   await expect(page.getByRole("listitem").first()).toBeVisible({ timeout: 15_000 });
 
   // Deux mots dont un introuvable ne rendent rien : la recherche est un ET.
-  await page.fill("#recherche", "journee xyzzyx");
+  await chercher(page, "journee xyzzyx");
   await expect(page.getByText(/rien pour/i)).toBeVisible({ timeout: 15_000 });
 });
 
@@ -269,6 +295,7 @@ test("la recherche ne traverse pas le voile", async ({ browser }) => {
   await premier.waitForURL(/\/bienvenue\/code/);
   await premier.getByRole("button", { name: /c'est noté/i }).click();
   await premier.waitForURL("/");
+  await passerLesNouveautes(premier);
 
   await aller(premier, "/reglages");
   const invitation = await premier.locator(".chiffres").first().innerText();
@@ -280,6 +307,7 @@ test("la recherche ne traverse pas le voile", async ({ browser }) => {
   await second.waitForURL(/\/bienvenue\/code/);
   await second.getByRole("button", { name: /c'est noté/i }).click();
   await second.waitForURL("/");
+  await passerLesNouveautes(second);
 
   // ── Le premier pose une journée avec un mot qu'on ne trouve nulle part ────
   await aller(premier, "/aujourdhui");
@@ -291,7 +319,7 @@ test("la recherche ne traverse pas le voile", async ({ browser }) => {
 
   // ── Le second n'a rien posé : il ne doit RIEN trouver ─────────────────────
   await aller(second, "/recherche");
-  await second.fill("#recherche", marque);
+  await chercher(second, marque);
   await expect(second.getByText(/rien pour/i)).toBeVisible({ timeout: 15_000 });
 
   // ── Il pose la sienne : le voile tombe, la journée apparaît ───────────────
@@ -303,7 +331,7 @@ test("la recherche ne traverse pas le voile", async ({ browser }) => {
   });
 
   await aller(second, "/recherche");
-  await second.fill("#recherche", marque);
+  await chercher(second, marque);
   await expect(second.getByRole("listitem").first()).toBeVisible({ timeout: 15_000 });
   await expect(second.getByRole("listitem").first()).toContainText(marque);
 
@@ -316,4 +344,214 @@ test("la recherche ne traverse pas le voile", async ({ browser }) => {
     await page.getByRole("button", { name: /partir pour de bon/i }).click();
     await page.waitForURL(/\/bienvenue/);
   }
+});
+
+/**
+ * Q4 — la sauvegarde complète, et l'import qui va avec.
+ *
+ * L'archive est écrite à la main (`src/lib/archive.ts`). Le relire avec son
+ * propre lecteur ne prouve pas grand-chose : la première version déclarait un
+ * répertoire central douze octets trop long, l'aller-retour maison passait, et
+ * `unzip` parlait de « composants qui se chevauchent ». Ce test appelle donc le
+ * `unzip` du système — un avis qui ne vient pas de nous.
+ */
+test("la sauvegarde complète est un vrai ZIP, avec les photos dedans", async ({ page }) => {
+  test.slow();
+  await entrer(page, "Momo");
+
+  const reponse = await page.request.get("/api/export?format=zip");
+  expect(reponse.status()).toBe(200);
+  expect(reponse.headers()["content-type"]).toContain("application/zip");
+
+  const octets = new Uint8Array(await reponse.body());
+  const dedans = lireZip(octets);
+  const noms = dedans.map((f) => f.nom);
+  expect(noms).toContain("journal.json");
+  expect(noms).toContain("journal.csv");
+  expect(noms).toContain("LISEZ-MOI.txt");
+  // Une sauvegarde qui dit « 3 photos » sans les photos est un inventaire.
+  expect(noms.filter((n) => n.startsWith("medias/")).length).toBeGreaterThan(0);
+
+  const journal = JSON.parse(
+    new TextDecoder().decode(dedans.find((f) => f.nom === "journal.json")!.octets),
+  ) as { journees: { medias: { fichier: string }[] }[] };
+  // Chaque fichier annoncé par le JSON est réellement dans l'archive : c'est ce
+  // qui fait la différence entre une sauvegarde et une liste de courses.
+  for (const journee of journal.journees) {
+    for (const media of journee.medias) expect(noms).toContain(media.fichier);
+  }
+
+  // L'avis extérieur.
+  const { execFileSync } = await import("node:child_process");
+  const { writeFileSync, mkdtempSync } = await import("node:fs");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+  const chemin = join(mkdtempSync(join(tmpdir(), "joie-")), "sauvegarde.zip");
+  writeFileSync(chemin, octets);
+  try {
+    const sortie = execFileSync("unzip", ["-t", chemin], { encoding: "utf8" });
+    expect(sortie).toContain("No errors detected");
+  } catch (erreur) {
+    // Pas d'`unzip` sur cette machine : on ne fait pas échouer la suite pour
+    // un outil manquant, mais on le dit.
+    if (!/ENOENT/.test(String(erreur))) throw erreur;
+    test.info().annotations.push({ type: "sauté", description: "unzip absent de la machine" });
+  }
+});
+
+test("restaurer une sauvegarde remet les journées, et n'écrase rien", async ({ browser }) => {
+  test.slow();
+  const nom = `Restau ${Date.now().toString(36)}`;
+  const page = await nouveauTelephone(browser);
+
+  await page.goto("/bienvenue/creer");
+  await page.fill("#bande", nom);
+  await page.fill("#pseudo", "Gardien");
+  await page.getByRole("button", { name: /créer/i }).click();
+  await page.waitForURL(/\/bienvenue\/code/);
+  await page.getByRole("button", { name: /c'est noté/i }).click();
+  await page.waitForURL("/");
+  await passerLesNouveautes(page);
+
+  // Une petite archive faite ici : restaurer les quatre cents journées de la
+  // bande de démonstration prendrait des minutes et ne prouverait rien de plus.
+  const photo = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49, 0x46, 0]);
+  const journal = {
+    bande: nom,
+    exporteLe: "2026-01-02T10:00:00.000Z",
+    membres: [{ pseudo: "Gardien", teinte: 1, arriveLe: "2026-01-01T00:00:00.000Z" }],
+    declencheurs: [],
+    journees: [
+      {
+        jour: "2026-01-01",
+        qui: "Gardien",
+        joie: 8,
+        titre: "Le premier jour",
+        note: "Retrouvé dans une sauvegarde.",
+        declencheurs: [],
+        etiquettes: ["Chez moi"],
+        energie: null,
+        calme: null,
+        photos: 1,
+        vocal: false,
+        reactions: [],
+        commentaires: [{ de: "Gardien", texte: "Note pour plus tard.", quand: "2026-01-01T21:00:00.000Z" }],
+        posteLe: "2026-01-01T20:00:00.000Z",
+        medias: [
+          {
+            fichier: "medias/abc.jpg",
+            mime: "image/jpeg",
+            genre: "photo",
+            largeur: 100,
+            hauteur: 100,
+            duree: null,
+            legende: "Une photo de sauvegarde",
+          },
+        ],
+        audio: null,
+      },
+      {
+        jour: "2026-01-02",
+        qui: "Inconnue",
+        joie: 5,
+        titre: "Journée de quelqu'un d'autre",
+        note: null,
+        declencheurs: [],
+        etiquettes: [],
+        energie: null,
+        calme: null,
+        photos: 0,
+        vocal: false,
+        reactions: [],
+        commentaires: [],
+        posteLe: "2026-01-02T20:00:00.000Z",
+        medias: [],
+        audio: null,
+      },
+    ],
+  };
+
+  const archive = ecrireZip([
+    { nom: "journal.json", octets: new TextEncoder().encode(JSON.stringify(journal)) },
+    { nom: "medias/abc.jpg", octets: photo },
+  ]);
+
+  await aller(page, "/reglages");
+  const champ = page.getByLabel("Le fichier de sauvegarde");
+  await champ.setInputFiles({
+    name: "sauvegarde.zip",
+    mimeType: "application/zip",
+    buffer: Buffer.from(archive),
+  });
+
+  const rapport = page.getByRole("status").filter({ hasText: /journée/i });
+  await expect(rapport).toBeVisible({ timeout: 30_000 });
+  await expect(rapport).toContainText("1 journée remise en place");
+  await expect(rapport).toContainText(/1 photo/i);
+  await expect(rapport).toContainText(/1 commentaire/i);
+  // Le pseudo qu'on n'a pas su placer est DIT, pas deviné.
+  await expect(rapport).toContainText(/Inconnue/);
+
+  // La journée est vraiment là, photo comprise.
+  await aller(page, "/jour/2026-01-01");
+  await expect(page.getByText("Le premier jour")).toBeVisible();
+  await expect(page.getByText("Retrouvé dans une sauvegarde.")).toBeVisible();
+
+  // La même sauvegarde une deuxième fois : rien n'est écrasé, rien n'est doublé.
+  await aller(page, "/reglages");
+  await page.getByLabel("Le fichier de sauvegarde").setInputFiles({
+    name: "sauvegarde.zip",
+    mimeType: "application/zip",
+    buffer: Buffer.from(archive),
+  });
+  const deuxieme = page.getByRole("status").filter({ hasText: /déjà/i });
+  await expect(deuxieme).toBeVisible({ timeout: 30_000 });
+  await expect(deuxieme).toContainText(/tout y était déjà/i);
+
+  await aller(page, "/reglages");
+  await page.getByText("Quitter la bande", { exact: true }).click();
+  await page.locator("#confirmation").fill(nom);
+  await page.getByRole("button", { name: /partir pour de bon/i }).click();
+  await page.waitForURL(/\/bienvenue/);
+});
+
+/**
+ * Q7 — les nouveautés.
+ *
+ * Elles sont refermées par `passerLesNouveautes` dans tous les autres tests,
+ * pour que le voile n'intercepte pas les clics. Ici, on les regarde vraiment :
+ * sinon on aurait un produit qui affiche un écran que personne n'a jamais
+ * éprouvé, et un helper qui cache un bogue au lieu de contourner un voile.
+ */
+test("les nouveautés s'ouvrent une fois, défilent, et ne reviennent pas", async ({ browser }) => {
+  const page = await nouveauTelephone(browser);
+  await page.goto("/reprendre");
+  await page.fill("#reprise", codeLu("Momo"));
+  await page.getByRole("button", { name: /reconnecter/i }).click();
+  await page.waitForURL("/");
+  // Surtout PAS `passerLesNouveautes` ici : c'est le seul test qui les
+  // regarde, et le helper les refermerait avant qu'on ait rien vu.
+
+  const feuille = page.getByRole("dialog", { name: "Les nouveautés" });
+  await expect(feuille).toBeVisible({ timeout: 15_000 });
+  await expect(feuille.getByRole("heading").first()).toBeVisible();
+
+  // Cinq écrans, cinq pastilles, et un bouton qui change de mot au dernier.
+  const defilant = feuille.locator("div").first();
+  await expect(feuille.getByRole("button", { name: "Passer" })).toBeVisible();
+  await defilant.evaluate((element) => {
+    element.scrollTo({ left: element.scrollWidth });
+  });
+  await expect(feuille.getByRole("button", { name: /c'est parti/i })).toBeVisible({
+    timeout: 10_000,
+  });
+
+  await feuille.getByRole("button", { name: /c'est parti/i }).click();
+  await expect(feuille).toBeHidden();
+
+  // Et au rechargement, plus rien : c'est une fois par version, pas une fois
+  // par ouverture.
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Le fil" })).toBeVisible();
+  await expect(feuille).toBeHidden();
 });

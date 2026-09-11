@@ -34,15 +34,19 @@ import {
   retirerCopies,
   listerPageDuFil,
   chercherDansLaBande,
+  restaurer,
   masquerEntree,
   supprimerEntree,
 } from "./depot";
 import { fermerSession, garderCodeReprise, membreConnecte, oublierCodeReprise, ouvrirSession } from "./session";
 import { ETAT_INITIAL, type Etat } from "./formulaire";
 import { jourDeLaBande } from "./dates";
+import type { RapportRestauration } from "./depot";
 import { enregistrerAbonnement, oublierAbonnement, prevenir, reglerPreference } from "./pousse";
 import { TYPES, type TypeNotification } from "./pousse/types";
 import type { FiltreFil, PageFil, Trouvaille } from "./types";
+import { lireZip } from "./archive";
+import { POIDS_MAX_SAUVEGARDE } from "./media";
 
 /**
  * Les actions serveur.
@@ -721,6 +725,56 @@ export async function actionChercher(
         jourDeLaBande(),
       ),
     };
+  } catch (erreur) {
+    if (erreur instanceof ErreurMetier) return { erreur: erreur.message };
+    throw erreur;
+  }
+}
+
+/**
+ * Restaurer une sauvegarde.
+ *
+ * Elle arrive par `FormData` : c'est un fichier, parfois lourd, et une action
+ * qui prend un `File` le reçoit en flux plutôt qu'en base64 dans le corps du
+ * message.
+ *
+ * On accepte le ZIP **et** le JSON seul. Le second ne ramène pas les photos —
+ * elles n'y sont pas — mais quelqu'un qui a gardé un vieil export JSON de la
+ * vague 1 doit pouvoir s'en servir. Refuser ce qu'on sait lire à moitié serait
+ * de la coquetterie.
+ */
+export async function actionRestaurer(
+  donnees: FormData,
+): Promise<{ erreur: string | null; valeur?: RapportRestauration }> {
+  try {
+    const { contexte } = await quiAgit();
+    const fichier = donnees.get("sauvegarde");
+    if (!(fichier instanceof File) || fichier.size === 0) {
+      throw new ErreurMetier("Choisis le fichier de sauvegarde.");
+    }
+    if (fichier.size > POIDS_MAX_SAUVEGARDE) {
+      throw new ErreurMetier("Cette sauvegarde dépasse la taille qu'on sait recevoir.");
+    }
+
+    const octets = new Uint8Array(await fichier.arrayBuffer());
+    const estZip = octets[0] === 0x50 && octets[1] === 0x4b;
+
+    let fichiers;
+    try {
+      // Le contenu fait foi, pas l'extension : un `.zip` renommé en `.json` se
+      // reconnaît à ses deux premiers octets, et l'inverse aussi.
+      fichiers = estZip
+        ? lireZip(octets)
+        : [{ nom: "journal.json", octets }];
+    } catch (erreur) {
+      throw new ErreurMetier(
+        erreur instanceof Error ? erreur.message : "Cette archive est illisible.",
+      );
+    }
+
+    const rapport = await restaurer(contexte.groupe.id, fichiers);
+    rafraichirTout();
+    return { erreur: null, valeur: rapport };
   } catch (erreur) {
     if (erreur instanceof ErreurMetier) return { erreur: erreur.message };
     throw erreur;

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { passerLesNouveautes } from "./aide-jeux";
 
 /** Le lot B : la visionneuse, et prendre une photo depuis l'app. */
 function codeDe(pseudo: string): string {
@@ -15,6 +16,7 @@ async function entrer(page: import("@playwright/test").Page, pseudo: string) {
   await page.fill("#reprise", codeDe(pseudo));
   await page.getByRole("button", { name: /reconnecter/i }).click();
   await page.waitForURL("/");
+  await passerLesNouveautes(page);
 }
 
 test("le plein écran s'ouvre, se parcourt et se ferme", async ({ page }) => {
@@ -95,6 +97,7 @@ test("on peut prendre une photo depuis l'app, sans perdre la pellicule", async (
     await page.waitForURL(/\/bienvenue\/code/);
     await page.getByRole("button", { name: /c'est noté/i }).click();
     await page.waitForURL("/");
+    await passerLesNouveautes(page);
 
     await page.goto("/aujourdhui", { waitUntil: "networkidle" });
     await page.getByRole("button", { name: /poser ma joie/i }).click();

@@ -38,12 +38,14 @@ src/lib/graphiques.ts    ce que les graphiques du profil calculent ; trace.ts, l
 src/lib/stockage/        R2 : signature v4 écrite à la main, client, clés, plafond
 src/lib/pousse/          notifications : RFC 8291/8188/8292 à la main, envoi, préférences
 src/lib/recherche.ts     accents, casse, surlignage — sans dépendance ; reseau.ts, le bandeau
+src/lib/archive.ts       un ZIP (méthode « stocké ») écrit et relu à la main ; nouveautes.ts, les écrans
 scripts/migrer-medias.ts déménage les octets vers R2, avec relecture et empreintes
 src/lib/jeux/            catalogue, cadre, tirage, recompense, quiz, top3, vote, inclinaison, salon, recettes, types
 src/lib/jeux/contenu/    jamais, dilemmes, paquets, marie-janne, images (engendré)
 scripts/images-cartes.ts récolte les images de Wikipédia pour « Devine qui je suis »
 e2e/                     Playwright : captures, lot1, lotA..lotC, lotF, lotG, lotK, lotL, lotM, lotN, lotO, lotP, lotQ, video, production
-e2e/aide-jeux.ts         deux téléphones dans un test : salon, code, libération
+e2e/aide-jeux.ts         deux téléphones dans un test : salon, code, libération, nouveautés
+e2e/performances.spec.ts décalage de mise en page, tailles d'images, bornes de listes
 ```
 
 **La règle du dépôt :** rien d'autre que `depot.ts` et `depot-jeux.ts` ne parle
@@ -237,6 +239,22 @@ npx prisma migrate dev --create-only   # écrire la migration, la RELIRE, puis l
 - **Vérifier qu'un test de sécurité échoue quand on retire la sécurité.** Celui
   du voile passait aussi bien avec le filtre qu'avec `false &&` devant : il a
   fallu le prouver pour savoir qu'il posait la bonne question.
+- **Un ZIP écrit à la main se vérifie avec `unzip`, pas avec son propre
+  lecteur.** La taille du répertoire central était calculée en argument d'une
+  écriture — donc après que cinq champs avaient déjà fait avancer le curseur :
+  douze octets de trop, archive refusée par tous les outils du monde, et un
+  aller-retour maison parfaitement vert (il lit le NOMBRE d'entrées, pas leur
+  taille).
+- **Un voile plein écran casse toute la suite de tests d'un coup.** Les
+  nouveautés s'ouvrent à la première visite, donc dans chaque contexte de
+  navigateur neuf. `passerLesNouveautes` (dans `e2e/aide-jeux.ts`) est appelée
+  par chaque `entrer` ; le seul test qui les regarde vraiment est dans
+  `lotQ.spec.ts`, sinon le helper cacherait un bogue au lieu de contourner un
+  voile.
+- **`Uint8Array` n'est pas `Uint8Array<ArrayBuffer>`** : le premier accepte
+  aussi un `SharedArrayBuffer`, que Prisma refuse pour une colonne `Bytes`.
+  Resserrer la signature à la source (`lireOctets`, `lireR2`) évite une copie
+  de chaque octet chez chaque appelant.
 - **`locator("text")` de Playwright n'est pas le `<text>` d'un SVG**, et
   `innerText` ne marche pas dessus. L'ordre des éléments d'un SVG suit le
   dessin, pas la lecture.

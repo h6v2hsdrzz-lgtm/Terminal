@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { passerLesNouveautes } from "./aide-jeux";
 
 /**
  * La vidéo, de bout en bout, dans le moteur qui décide.
@@ -28,6 +29,7 @@ async function entrer(page: import("@playwright/test").Page, pseudo: string) {
   await page.fill("#reprise", codeDe(pseudo));
   await page.getByRole("button", { name: /reconnecter/i }).click();
   await page.waitForURL("/");
+  await passerLesNouveautes(page);
   await expect(page.getByRole("link", { name: "Souvenirs" }).first()).toBeVisible();
 }
 
@@ -234,12 +236,17 @@ test("la galerie est bornée, et le reste tient dans un lien", async ({ page }) 
   const affichees = await cases.count();
   expect(affichees).toBeLessThanOrEqual(120);
 
-  const reste = page.getByRole("link", { name: /Voir les \d+ plus ancien/ });
-  await expect(reste).toBeVisible();
+  // Depuis le lot Q le lien ajoute UNE page, il ne charge plus tout le reste :
+  // « tout voir » sur trois ans de bande posait plusieurs milliers de cases
+  // d'un coup. Le libellé a changé avec le comportement.
+  const suite = page.getByRole("link", { name: /de plus/ });
+  await expect(suite).toBeVisible();
 
   // Le lien marche sans JavaScript : c'est une navigation, pas un bouton.
-  await reste.click();
-  await expect(page).toHaveURL(/tout=1/);
-  expect(await cases.count()).toBeGreaterThan(affichees);
-  await expect(reste).toHaveCount(0);
+  await suite.click();
+  await expect(page).toHaveURL(/\/galerie\?page=2/);
+  const apres = await cases.count();
+  expect(apres).toBeGreaterThan(affichees);
+  // Et il n'a pas tout déposé : une page de plus, pas le reste du monde.
+  expect(apres - affichees).toBeLessThanOrEqual(120);
 });

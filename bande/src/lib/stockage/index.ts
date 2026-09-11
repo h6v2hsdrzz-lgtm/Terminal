@@ -48,7 +48,7 @@ export async function ecrireOctets(
  * Ne sait rien de PostgreSQL : quand la clé est nulle, l'appelant a déjà les
  * octets sous la main, et rien ne justifie un aller-retour.
  */
-export async function lireOctets(cle: string): Promise<Uint8Array | null> {
+export async function lireOctets(cle: string): Promise<Uint8Array<ArrayBuffer> | null> {
   // Une clé vide veut dire « il n'y en a pas » : les appelants passent
   // `media.cle ?? ""` pour n'avoir qu'un chemin de code, et une requête sur la
   // racine du seau ne rendrait de toute façon rien de bon.

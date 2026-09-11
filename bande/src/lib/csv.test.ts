@@ -11,6 +11,8 @@ function journee(surcharge: Partial<Export["journees"][number]> = {}): Export["j
     declencheurs: [],
     photos: 0,
     vocal: false,
+    medias: [],
+    audio: null,
     titre: null,
     etiquettes: [],
     energie: null,

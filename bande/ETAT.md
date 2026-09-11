@@ -38,20 +38,36 @@ plan le demandait. Les trois graphiques de l'application rendent maintenant leur
 valeur au TAP, tiennent sous deux cents pixels et se lisent en clair comme en
 sombre.
 
-**Le lot Q est commencé : les notifications poussées existent, écrites à la
-main.** RFC 8291 (ECDH P-256 + HKDF + AES-128-GCM), RFC 8188 (`aes128gcm`) et
-RFC 8292 (jeton VAPID ES256), avec `node:crypto` et aucune dépendance de plus —
-les tests vérifient les six intermédiaires publiés par le RFC 8291, puis
-déchiffrent pour de bon. Six types réglables, tout allumé sauf les réactions.
-L'écran de réglages porte aussi le thème (clair / sombre / le téléphone décide,
-posé avant le premier pixel) et la déconnexion. Q1 et la moitié serveur de Q3
-sont faits.
+**Le lot Q, presque entier.**
+
+- **Q1 · les réglages** — notifications par type, thème, confidentialité,
+  stockage, gestion de la bande, déconnexion. Les notifications poussées sont
+  **écrites à la main** : RFC 8291 (ECDH P-256 + HKDF + AES-128-GCM), RFC 8188
+  (`aes128gcm`) et RFC 8292 (jeton VAPID ES256), avec `node:crypto` et aucune
+  dépendance de plus. Les tests vérifient les six intermédiaires publiés par le
+  RFC 8291, puis déchiffrent pour de bon. Six types réglables, tout allumé sauf
+  les réactions.
+- **Q2 · rien n'échoue en silence** — un bandeau unique dit le hors-ligne, le
+  retour, et les gestes qui n'ont pas abouti, avec un bouton qui refait ce qui a
+  raté. Sept appels jetaient l'erreur que le serveur leur rendait, dont le
+  **retrait d'une journée**.
+- **Q3 · liens profonds** — `/jour/2026-09-11` existe, les notifications y
+  mènent, le service worker sait y emmener sans ouvrir un deuxième onglet.
+- **Q4 · sauvegarde et restauration** — un vrai ZIP, écrit à la main, avec les
+  photos et les vocaux dedans ; et l'import qui le remet en place sans rien
+  écraser.
+- **Q5 · la recherche** — accents et casse ignorés, plusieurs mots, surlignage,
+  et **le voile s'y applique** (il exclut, il ne vide pas).
+- **Q7 · les nouveautés** — cinq écrans à la première ouverture après une mise
+  à jour, revoyables depuis les réglages.
 
 ## Prochaine action exacte
 
-**LOT Q, la suite** : Q2 l'état hors-ligne visible avec bouton réessayer, Q4
-l'import (l'export existe depuis la vague 1), Q5 la recherche globale, Q6 les
-performances, Q7 l'écran « Nouveautés ».
+**LOT Q, ce qui reste : Q6, les performances.** Lighthouse mobile ≥ 90, images
+servies à la bonne taille, listes virtualisées au-delà de cent éléments, aucun
+décalage de mise en page. Lighthouse n'est pas installé dans cet
+environnement — la mesure passera par Playwright (CLS, LCP, nombre de nœuds),
+ce qui se versionne en plus.
 
 Deux dettes l'attendent, maintenant débloquées par les notifications : celle du
 lendemain matin du « Tribunal des idées » (lot O l'a préparée, la parole est

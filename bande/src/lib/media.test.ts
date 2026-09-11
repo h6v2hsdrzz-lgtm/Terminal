@@ -8,6 +8,8 @@ import {
   enPoids,
   enSecondes,
   poidsAttendu,
+  MEDIAS_PAR_PAGE,
+  borneGalerie,
 } from "./media";
 
 describe("dimensionsCibles", () => {
@@ -89,5 +91,36 @@ describe("mise en forme", () => {
     expect(enPoids(800)).toBe("800 o");
     expect(enPoids(2048)).toBe("2 ko");
     expect(enPoids(1_572_864)).toBe("1,5 Mo");
+  });
+});
+
+describe("borneGalerie", () => {
+  it("ne dépose qu'une page à la fois", () => {
+    // Le cas qui a motivé le changement : trois ans de bande.
+    expect(borneGalerie(1, 5000)).toEqual({ combien: MEDIAS_PAR_PAGE, suivante: 2 });
+    expect(borneGalerie(2, 5000)).toEqual({ combien: MEDIAS_PAR_PAGE * 2, suivante: 3 });
+  });
+
+  it("s'arrête au total, et dit qu'il n'y a plus de suite", () => {
+    expect(borneGalerie(1, 30)).toEqual({ combien: 30, suivante: null });
+    expect(borneGalerie(2, 150)).toEqual({ combien: 150, suivante: null });
+  });
+
+  it("refuse une adresse tapée à la main qui voudrait tout charger", () => {
+    // Sans cette borne, « ?page=99999 » redeviendrait « tout voir », c'est-à-dire
+    // exactement ce qu'on vient de retirer.
+    expect(borneGalerie(99999, 5000).combien).toBe(5000);
+    expect(borneGalerie(99999, 5000).suivante).toBeNull();
+    expect(borneGalerie(3, 5000).combien).toBe(360);
+  });
+
+  it("retombe sur la première page devant n'importe quoi", () => {
+    for (const absurde of ["", "abc", -4, 0, null, undefined, NaN, 1.7]) {
+      expect(borneGalerie(absurde, 5000).combien).toBe(MEDIAS_PAR_PAGE);
+    }
+  });
+
+  it("tient devant une bande vide", () => {
+    expect(borneGalerie(1, 0)).toEqual({ combien: 0, suivante: null });
   });
 });

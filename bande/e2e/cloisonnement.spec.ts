@@ -1,6 +1,7 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { passerLesNouveautes } from "./aide-jeux";
 
 /**
  * L'audit technique du plan, sa partie la plus importante : **essayer vraiment
@@ -55,6 +56,7 @@ test("une bande ne peut rien lire d'une autre, même avec une session valide", a
     await cible.fill("#reprise", codeDe("Momo"));
     await cible.getByRole("button", { name: /reconnecter/i }).click();
     await cible.waitForURL("/");
+    await passerLesNouveautes(cible);
 
     await cible.goto("/", { waitUntil: "domcontentloaded" });
     const premiereVignette = cible.locator('img[src^="/api/vignette/"]').first();
@@ -106,6 +108,7 @@ test("une bande ne peut rien lire d'une autre, même avec une session valide", a
     await intrus.waitForURL(/\/bienvenue\/code/);
     await intrus.getByRole("button", { name: /c'est noté/i }).click();
     await intrus.waitForURL("/");
+    await passerLesNouveautes(intrus);
 
     for (const adresse of privees) {
       const avecSession = await intrus.request.get(adresse);

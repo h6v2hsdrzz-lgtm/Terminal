@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { passerLesNouveautes } from "./aide-jeux";
 
 /**
  * Le lot G : le moteur de jeux, et les jeux eux-mêmes.
@@ -23,6 +24,7 @@ async function entrer(page: import("@playwright/test").Page, pseudo: string) {
   await page.fill("#reprise", codeDe(pseudo));
   await page.getByRole("button", { name: /reconnecter/i }).click();
   await page.waitForURL("/");
+  await passerLesNouveautes(page);
 }
 
 /**

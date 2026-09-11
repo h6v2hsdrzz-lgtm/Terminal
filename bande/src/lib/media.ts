@@ -46,6 +46,51 @@ export const POIDS_MAX_MEDIA = 4 * 1024 * 1024;
 /** Combien de médias par journée. Assez pour raconter, pas pour archiver. */
 export const MAX_MEDIAS = 6;
 
+/**
+ * Ce qu'on accepte de recevoir en restauration.
+ *
+ * Deux cent cinquante méga-octets : au-delà, une action serveur ne passe plus
+ * sur Vercel, et il vaut mieux le dire tout de suite que de laisser quelqu'un
+ * regarder une barre de progression pendant trois minutes pour rien. Une bande
+ * plus lourde se restaure par le script de migration, depuis une machine.
+ */
+export const POIDS_MAX_SAUVEGARDE = 250 * 1024 * 1024;
+
+/** Combien de vignettes la galerie dépose d'un coup. */
+export const MEDIAS_PAR_PAGE = 120;
+
+/**
+ * Jusqu'où charger la galerie, pour une page demandée.
+ *
+ * ## Ce que ça remplace, et pourquoi
+ *
+ * « Tout voir » chargeait TOUT : sur une bande de trois ans, c'est plusieurs
+ * milliers de cases posées d'un coup, un téléphone qui bloque plusieurs
+ * secondes, et une mémoire qui se remplit pour des images qu'on ne regardera
+ * pas. La suite se demande maintenant page par page, comme le fil.
+ *
+ * ## Ce que ce n'est PAS
+ *
+ * Ce n'est pas de la virtualisation : ce qui a été chargé reste dans le
+ * document. Virtualiser une grille d'images à hauteur variable coûte un
+ * composant de trois cents lignes et casse la position de défilement à chaque
+ * retour ; pour une bande de trois personnes, une borne par page fait le même
+ * travail. La décision est écrite ici pour qu'on sache qu'elle a été prise.
+ *
+ * La page est bornée aux deux bouts : une adresse tapée à la main
+ * (`?page=99999`) ne doit pas redevenir « tout charger ».
+ */
+export function borneGalerie(
+  page: unknown,
+  total: number,
+): { combien: number; suivante: number | null } {
+  const pages = Math.max(1, Math.ceil(total / MEDIAS_PAR_PAGE));
+  const demandee = Math.floor(Number(page));
+  const courante = Number.isFinite(demandee) ? Math.min(Math.max(1, demandee), pages) : 1;
+  const combien = Math.min(total, courante * MEDIAS_PAR_PAGE);
+  return { combien, suivante: combien < total ? courante + 1 : null };
+}
+
 /** Deux mots sous l'image. */
 export const LONGUEUR_LEGENDE = 140;
 

@@ -115,7 +115,7 @@ export async function ecrireR2(
 export async function lireR2(
   config: ConfigurationR2,
   cle: string,
-): Promise<Uint8Array | null> {
+): Promise<Uint8Array<ArrayBuffer> | null> {
   const reponse = await requete(config, "GET", cle);
   if (reponse.status === 404) return null;
   if (!reponse.ok) throw new Error(`R2 a refusé la lecture de ${cle} : ${reponse.status}`);

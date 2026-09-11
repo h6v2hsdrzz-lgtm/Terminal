@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { imageFactice } from "../prisma/image-factice";
+import { passerLesNouveautes } from "./aide-jeux";
 
 /** Le lot C : les scellés — quatre types, le sablier, l'empilement. */
 function codeDe(pseudo: string): string {
@@ -17,6 +18,7 @@ async function entrer(page: import("@playwright/test").Page, pseudo: string) {
   await page.fill("#reprise", codeDe(pseudo));
   await page.getByRole("button", { name: /reconnecter/i }).click();
   await page.waitForURL("/");
+  await passerLesNouveautes(page);
 }
 
 test("le fil empile les scellés au lieu de les aligner", async ({ page }) => {

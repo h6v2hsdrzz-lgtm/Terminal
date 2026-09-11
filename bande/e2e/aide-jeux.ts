@@ -57,6 +57,25 @@ export function codeDe(pseudo: string): string {
   return ligne.split(/\s+/)[1];
 }
 
+/**
+ * Refermer les nouveautés si elles s'ouvrent.
+ *
+ * Depuis le lot Q, la première ouverture après une mise à jour affiche cinq
+ * écrans en plein cadre — c'est le produit, pas un accident, et un contexte de
+ * navigateur neuf n'a jamais rien vu. Sans ce geste, chaque test se cognerait à
+ * un voile qui intercepte tous les clics, et la suite entière deviendrait rouge
+ * d'un coup.
+ *
+ * Le test qui éprouve les nouveautés elles-mêmes est dans `lotQ.spec.ts` : on
+ * ne les fait pas disparaître partout sans les regarder quelque part.
+ */
+export async function passerLesNouveautes(page: Page) {
+  const feuille = page.getByRole("dialog", { name: "Les nouveautés" });
+  if (!(await feuille.isVisible().catch(() => false))) return;
+  await feuille.getByRole("button", { name: /passer|c'est parti/i }).click();
+  await expect(feuille).toBeHidden();
+}
+
 export async function entrer(page: Page, pseudo: string) {
   await page.goto("/reprendre");
   await page.fill("#reprise", codeDe(pseudo));
@@ -66,6 +85,7 @@ export async function entrer(page: Page, pseudo: string) {
   // l'accueil peut encore être en vol, et une navigation lancée pendant
   // qu'une autre se termine est annulée par Playwright.
   await expect(page.getByRole("heading", { name: "Le fil" })).toBeVisible();
+  await passerLesNouveautes(page);
 }
 
 /**

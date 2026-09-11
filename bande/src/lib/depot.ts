@@ -10,6 +10,7 @@ import { decaler } from "./dates";
 import { LONGUEUR_PSEUDO, initialesDeLaBande } from "./initiales";
 import type { Declencheur, Entree, FiltreFil, PageFil, Profil, Trouvaille } from "./types";
 import { TROUVAILLES_MAX, correspond, extraire, motsDe } from "./recherche";
+import type { FichierArchive } from "./archive";
 import { MAX_ETIQUETTES, cleEtiquette, nettoyerEtiquette } from "./etiquettes";
 import { DUREE_MAX_VIDEO, LONGUEUR_LEGENDE, MAX_MEDIAS, POIDS_MAX_MEDIA } from "./media";
 import {
@@ -22,6 +23,7 @@ import {
 } from "./stockage";
 // Réexporté pour que la route d'export n'ait pas à savoir qu'il a déménagé.
 export { versCsv } from "./csv";
+import { versCsv } from "./csv";
 
 /**
  * Tout ce qui touche la base passe par ici.
@@ -158,6 +160,45 @@ const AVEC_TOUT = {
     select: { id: true, texte: true, creeLe: true, membreId: true, membre: { select: { pseudo: true } } },
   },
 } satisfies Prisma.EntreeInclude;
+
+/** Comme `AVEC_TOUT`, plus les types MIME : l'export nomme des fichiers. */
+const AVEC_TOUT_POUR_EXPORT = {
+  ...AVEC_TOUT,
+  photos: {
+    select: {
+      id: true, genre: true, largeur: true, hauteur: true, duree: true, legende: true, mime: true,
+    },
+    orderBy: { ordre: "asc" },
+  },
+  audio: { select: { duree: true, niveaux: true, mime: true } },
+} satisfies Prisma.EntreeInclude;
+
+/**
+ * Le nom d'un fichier dans l'archive.
+ *
+ * L'identifiant plutôt que la date et le pseudo : il est unique par
+ * construction, il ne contient ni accent ni barre oblique, et deux photos du
+ * même jour ne se marchent pas dessus.
+ */
+function nomDeFichier(id: string, mime: string, dossier = "medias"): string {
+  const type = mime.split(";")[0].trim().toLowerCase();
+  const extension =
+    {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+      "image/avif": "avif",
+      "image/heic": "heic",
+      "video/mp4": "mp4",
+      "video/webm": "webm",
+      "video/quicktime": "mov",
+      "audio/webm": "webm",
+      "audio/mp4": "m4a",
+      "audio/mpeg": "mp3",
+      "audio/ogg": "ogg",
+    }[type] ?? "bin";
+  return `${dossier}/${id}.${extension}`;
+}
 
 type LigneEntree = Prisma.EntreeGetPayload<{ include: typeof AVEC_TOUT }>;
 
@@ -1474,7 +1515,11 @@ export async function exporter(groupeId: string) {
       declencheurs: { orderBy: { ordre: "asc" }, select: { id: true, nom: true, emoji: true, actif: true } },
       entrees: {
         orderBy: [{ jour: "asc" }, { creeLe: "asc" }],
-        include: AVEC_TOUT,
+        // Pas `AVEC_TOUT` : l'export a besoin du type MIME de chaque média pour
+        // nommer les fichiers de l'archive, et le fil n'en a aucun usage. Lui
+        // ajouter une colonne coûterait une chaîne de plus par média sur chaque
+        // page du fil, pour un seul appelant qui s'en sert.
+        include: AVEC_TOUT_POUR_EXPORT,
       },
     },
   });
@@ -1496,6 +1541,26 @@ export async function exporter(groupeId: string) {
       declencheurs: e.declencheurs.map((d) => declencheur.get(d.declencheurId) ?? "?"),
       photos: e.photos.length,
       vocal: e.audio !== null,
+      // Les noms de fichiers de l'archive. Dans le JSON seul ils ne servent à
+      // rien ; dans le ZIP ils sont ce qui rattache une photo à sa journée, et
+      // c'est ce qui fait la différence entre une sauvegarde et une liste.
+      medias: e.photos.map((m) => ({
+        fichier: nomDeFichier(m.id, m.mime),
+        mime: m.mime,
+        genre: m.genre,
+        largeur: m.largeur,
+        hauteur: m.hauteur,
+        duree: m.duree,
+        legende: m.legende,
+      })),
+      audio: e.audio
+        ? {
+            fichier: nomDeFichier(e.id, e.audio.mime, "vocaux"),
+            mime: e.audio.mime,
+            duree: e.audio.duree,
+            niveaux: e.audio.niveaux,
+          }
+        : null,
       titre: e.titre,
       etiquettes: e.etiquettes.map((x) => x.etiquette.nom),
       energie: e.energie,
@@ -1509,6 +1574,286 @@ export async function exporter(groupeId: string) {
   };
 }
 
+
+// ── Sauvegarder, et restaurer ────────────────────────────────────────────────
+
+/**
+ * Tout ce que la bande a, dans une archive.
+ *
+ * Le JSON et le tableur existaient depuis la vague 1 ; il leur manquait
+ * l'essentiel : **les photos et les vocaux**. Un export qui dit « 3 photos »
+ * n'est pas une sauvegarde, c'est un inventaire — et le jour où le palier
+ * gratuit de Neon efface la base, un inventaire ne ramène rien.
+ *
+ * Les octets sont lus un par un plutôt qu'en une requête : une bande de
+ * quatre cents journées peut porter un demi-gigaoctet de médias, et les
+ * charger tous en mémoire avant d'écrire quoi que ce soit ferait tomber la
+ * fonction. On les prend, on les range, on les oublie.
+ */
+export async function sauvegarde(
+  groupeId: string,
+): Promise<{ nom: string; fichiers: FichierArchive[] }> {
+  const donnees = await exporter(groupeId);
+  const encodeur = new TextEncoder();
+  const fichiers: FichierArchive[] = [
+    { nom: "journal.json", octets: encodeur.encode(JSON.stringify(donnees, null, 2)) },
+    { nom: "journal.csv", octets: encodeur.encode(versCsv(donnees)) },
+    {
+      nom: "LISEZ-MOI.txt",
+      octets: encodeur.encode(
+        [
+          `Sauvegarde du journal de « ${donnees.bande} »`,
+          `Faite le ${donnees.exporteLe.slice(0, 10)}.`,
+          "",
+          "journal.json  tout, dans un format qui se relit",
+          "journal.csv   les journées à plat, pour un tableur",
+          "medias/       les photos et les vidéos",
+          "vocaux/       les notes vocales",
+          "",
+          "Pour remettre tout ça dans l'application : Réglages → Restaurer une",
+          "sauvegarde, et on redonne CE fichier .zip. Rien n'est écrasé : une",
+          "journée déjà présente est laissée telle quelle.",
+          "",
+        ].join("\n"),
+      ),
+    },
+  ];
+
+  const medias = await prisma.media.findMany({
+    where: { entree: { groupeId } },
+    select: { id: true, mime: true, octets: true, cle: true },
+  });
+  for (const media of medias) {
+    const octets = media.octets ?? (await lireOctets(media.cle ?? ""));
+    if (octets) fichiers.push({ nom: nomDeFichier(media.id, media.mime), octets });
+  }
+
+  const audios = await prisma.audio.findMany({
+    where: { entree: { groupeId } },
+    select: { entreeId: true, mime: true, octets: true, cle: true },
+  });
+  for (const audio of audios) {
+    const octets = audio.octets ?? (await lireOctets(audio.cle ?? ""));
+    if (octets) fichiers.push({ nom: nomDeFichier(audio.entreeId, audio.mime, "vocaux"), octets });
+  }
+
+  return { nom: `journal-de-joie-${donnees.exporteLe.slice(0, 10)}.zip`, fichiers };
+}
+
+export type RapportRestauration = {
+  journees: number;
+  ignorees: number;
+  medias: number;
+  vocaux: number;
+  commentaires: number;
+  /** Les pseudos de la sauvegarde qui ne correspondent à personne d'ici. */
+  inconnus: string[];
+};
+
+/**
+ * Remettre une sauvegarde dans la bande.
+ *
+ * ## Ce que « restaurer » veut dire ici, et ce que ça ne veut pas dire
+ *
+ * **Rien n'est écrasé.** Une journée déjà présente pour la même personne et le
+ * même jour est laissée telle quelle et comptée comme ignorée. C'est le seul
+ * comportement défendable : la sauvegarde a peut-être six mois, et celui qui la
+ * restaure ne s'attend pas à perdre ce qu'il a écrit depuis.
+ *
+ * **Les gens se retrouvent par leur pseudo.** Il n'y a pas d'identifiant stable
+ * entre deux bases — une restauration se fait souvent dans une bande recréée.
+ * Un pseudo qui ne correspond à personne d'ici est signalé plutôt que deviné :
+ * attribuer les journées de quelqu'un à quelqu'un d'autre serait pire que ne
+ * rien restaurer.
+ *
+ * **Le rapport dit ce qui s'est passé**, journée par catégorie. Une
+ * restauration silencieuse laisse dans le doute exactement au moment où on a
+ * besoin d'être rassuré.
+ */
+export async function restaurer(
+  groupeId: string,
+  fichiers: FichierArchive[],
+): Promise<RapportRestauration> {
+  const journal = fichiers.find((f) => f.nom === "journal.json" || f.nom.endsWith("/journal.json"));
+  if (!journal) throw new ErreurMetier("Cette archive ne contient pas de journal.json.");
+
+  let donnees: SauvegardeLue;
+  try {
+    donnees = JSON.parse(new TextDecoder().decode(journal.octets)) as SauvegardeLue;
+  } catch {
+    throw new ErreurMetier("Le journal.json de cette archive est illisible.");
+  }
+  if (!Array.isArray(donnees?.journees)) {
+    throw new ErreurMetier("Ce fichier ne ressemble pas à une sauvegarde du journal.");
+  }
+
+  const membres = await prisma.membre.findMany({
+    where: { groupeId },
+    select: { id: true, pseudo: true },
+  });
+  const parPseudo = new Map(membres.map((m) => [m.pseudo.toLowerCase(), m.id]));
+  const declencheurs = await prisma.declencheur.findMany({
+    where: { groupeId },
+    select: { id: true, nom: true },
+  });
+  const parNom = new Map(declencheurs.map((d) => [d.nom.toLowerCase(), d.id]));
+  const octetsDe = new Map(fichiers.map((f) => [f.nom, f.octets]));
+
+  const rapport: RapportRestauration = {
+    journees: 0, ignorees: 0, medias: 0, vocaux: 0, commentaires: 0, inconnus: [],
+  };
+  const inconnus = new Set<string>();
+
+  for (const journee of donnees.journees) {
+    const membreId = parPseudo.get(String(journee.qui ?? "").toLowerCase());
+    if (!membreId) {
+      inconnus.add(String(journee.qui ?? "?"));
+      continue;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(journee.jour))) continue;
+
+    const deja = await prisma.entree.findUnique({
+      where: { membreId_jour: { membreId, jour: journee.jour } },
+      select: { id: true },
+    });
+    if (deja) {
+      rapport.ignorees += 1;
+      continue;
+    }
+
+    const etiquettes = await resoudreEtiquettes(groupeId, journee.etiquettes ?? []);
+    const entree = await prisma.entree.create({
+      data: {
+        groupeId,
+        membreId,
+        jour: journee.jour,
+        joie: Math.min(10, Math.max(1, Math.round(Number(journee.joie) || 7))),
+        note: journee.note ?? null,
+        titre: journee.titre ?? null,
+        energie: auxiliaire(journee.energie),
+        calme: auxiliaire(journee.calme),
+        creeLe: journee.posteLe ? new Date(journee.posteLe) : undefined,
+        declencheurs: {
+          create: (journee.declencheurs ?? [])
+            .map((nom) => parNom.get(String(nom).toLowerCase()))
+            .filter((id): id is string => Boolean(id))
+            .map((declencheurId) => ({ declencheurId })),
+        },
+        etiquettes: { create: etiquettes.map((etiquetteId) => ({ etiquetteId })) },
+      },
+      select: { id: true },
+    });
+    rapport.journees += 1;
+
+    for (const commentaire of journee.commentaires ?? []) {
+      const auteur = parPseudo.get(String(commentaire.de ?? "").toLowerCase());
+      if (!auteur) continue;
+      await prisma.commentaire.create({
+        data: {
+          entreeId: entree.id,
+          membreId: auteur,
+          texte: String(commentaire.texte ?? "").slice(0, LONGUEUR_COMMENTAIRE),
+          creeLe: commentaire.quand ? new Date(commentaire.quand) : undefined,
+        },
+      });
+      rapport.commentaires += 1;
+    }
+
+    for (const reaction of journee.reactions ?? []) {
+      const auteur = parPseudo.get(String(reaction.de ?? "").toLowerCase());
+      const emoji = reaction.emoji;
+      if (!auteur || !emoji || !EMOJIS.includes(emoji as (typeof EMOJIS)[number])) continue;
+      // `createMany` avec `skipDuplicates` : la même personne ne réagit pas
+      // deux fois avec le même émoji, et une sauvegarde recollée deux fois ne
+      // doit pas faire tomber la restauration entière sur une contrainte.
+      await prisma.reaction.createMany({
+        data: [{ entreeId: entree.id, membreId: auteur, emoji }],
+        skipDuplicates: true,
+      });
+    }
+
+    let ordre = 0;
+    for (const media of journee.medias ?? []) {
+      const octets = octetsDe.get(media.fichier);
+      if (!octets) continue;
+      const ligne = await prisma.media.create({
+        data: {
+          entreeId: entree.id,
+          ordre: ordre,
+          genre: media.genre === "video" ? "video" : "photo",
+          mime: media.mime,
+          largeur: media.largeur ?? 0,
+          hauteur: media.hauteur ?? 0,
+          duree: media.duree ?? null,
+          legende: media.legende ?? null,
+          poids: octets.byteLength,
+          poidsVignette: 0,
+          empreinte: createHash("sha256").update(octets).digest("hex"),
+        },
+        select: { id: true },
+      });
+      const cle = await ecrireOctets(cleMedia(ligne.id), octets, media.mime);
+      await prisma.media.update({
+        where: { id: ligne.id },
+        data: cle ? { cle } : { octets },
+      });
+      ordre += 1;
+      rapport.medias += 1;
+    }
+
+    const audio = journee.audio;
+    const sonore = audio ? octetsDe.get(audio.fichier) : undefined;
+    if (audio && sonore) {
+      const ligne = await prisma.audio.create({
+        data: {
+          entreeId: entree.id,
+          mime: audio.mime,
+          duree: audio.duree ?? 0,
+          niveaux: audio.niveaux ?? [],
+          poids: sonore.byteLength,
+        },
+        select: { id: true },
+      });
+      const cle = await ecrireOctets(cleAudio(entree.id), sonore, audio.mime);
+      await prisma.audio.update({
+        where: { id: ligne.id },
+        data: cle ? { cle } : { octets: sonore },
+      });
+      rapport.vocaux += 1;
+    }
+  }
+
+  rapport.inconnus = [...inconnus];
+  return rapport;
+}
+
+/** La forme d'une sauvegarde telle qu'on ose la lire : tout y est facultatif. */
+type SauvegardeLue = {
+  journees?: {
+    jour: string;
+    qui?: string;
+    joie?: number;
+    note?: string | null;
+    titre?: string | null;
+    energie?: number | null;
+    calme?: number | null;
+    posteLe?: string;
+    declencheurs?: string[];
+    etiquettes?: string[];
+    commentaires?: { de?: string; texte?: string; quand?: string }[];
+    reactions?: { de?: string; emoji?: string }[];
+    medias?: {
+      fichier: string;
+      mime: string;
+      genre: string;
+      largeur?: number;
+      hauteur?: number;
+      duree?: number | null;
+      legende?: string | null;
+    }[];
+    audio?: { fichier: string; mime: string; duree?: number; niveaux?: number[] } | null;
+  }[];
+};
 
 /**
  * Quitter la bande.

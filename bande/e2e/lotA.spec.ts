@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { imageFactice } from "../prisma/image-factice";
+import { passerLesNouveautes } from "./aide-jeux";
 
 /** Le lot A : renommages, profil. */
 function codeDe(pseudo: string): string {
@@ -17,6 +18,7 @@ async function entrer(page: import("@playwright/test").Page, pseudo: string) {
   await page.fill("#reprise", codeDe(pseudo));
   await page.getByRole("button", { name: /reconnecter/i }).click();
   await page.waitForURL("/");
+  await passerLesNouveautes(page);
   await expect(page.getByRole("link", { name: "Souvenirs" }).first()).toBeVisible();
 }
 
@@ -169,6 +171,7 @@ test("la photo d'une autre bande ne se sert pas", async ({ page }) => {
   await page.waitForURL(/\/bienvenue\/code/);
   await page.getByRole("button", { name: /c'est noté/i }).click();
   await page.waitForURL("/");
+  await passerLesNouveautes(page);
 
   // Session valide, identifiant valide, bande différente : rien.
   expect((await page.request.get(adresse)).status()).toBe(404);

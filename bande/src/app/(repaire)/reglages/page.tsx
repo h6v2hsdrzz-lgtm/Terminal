@@ -3,7 +3,9 @@ import Link from "next/link";
 import { Carte, TitreSection } from "@/composants/Carte";
 import { BoiteInvitation } from "@/composants/BoiteInvitation";
 import { BoiteNotifications } from "@/composants/BoiteNotifications";
+import { BoiteRestauration } from "@/composants/BoiteRestauration";
 import { BoiteTheme } from "@/composants/BoiteTheme";
+import { NouveautesAuChoix } from "@/composants/Nouveautes";
 import { ReglagesBande } from "@/composants/ReglagesBande";
 import { ZoneDepart } from "@/composants/ZoneDepart";
 import { Avatar } from "@/composants/Avatar";
@@ -12,7 +14,10 @@ import { espaceOccupe } from "@/lib/depot";
 import { enPoids } from "@/lib/media";
 import { abonnementsDe, clePublique, lirePreferences } from "@/lib/pousse";
 import { exigerContexte } from "@/lib/repaire";
+import { NOUVEAUTES } from "@/lib/nouveautes";
 import { PLAFOND_STOCKAGE } from "@/lib/stockage/plafond";
+
+const RESUME_COURANT = NOUVEAUTES[0].resume;
 
 export default async function Page() {
   const contexte = await exigerContexte();
@@ -102,6 +107,16 @@ export default async function Page() {
 
       <BoiteTheme />
 
+      <section className="mt-7">
+        <TitreSection>Ce qui a changé</TitreSection>
+        <Carte className="p-4">
+          <p className="mb-3 text-[14px] leading-snug text-encre-2">
+            {RESUME_COURANT}
+          </p>
+          <NouveautesAuChoix />
+        </Carte>
+      </section>
+
       <ReglagesBande
         nom={contexte.groupe.nom}
         revelerApresPost={contexte.groupe.revelerApresPost}
@@ -109,6 +124,9 @@ export default async function Page() {
       />
 
       <ZoneDepart nomBande={contexte.groupe.nom} seul={contexte.profils.length === 1} />
+
+      {/* Après « Emporter » : on ne restaure pas avant de savoir sauvegarder. */}
+      <BoiteRestauration />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { imageFactice } from "../prisma/image-factice";
+import { passerLesNouveautes } from "./aide-jeux";
 
 test("une photo envoyée ressort en WebP, en deux tailles", async ({ page }) => {
   await page.goto("/bienvenue/creer");
@@ -12,6 +13,7 @@ test("une photo envoyée ressort en WebP, en deux tailles", async ({ page }) => 
   await page.waitForURL(/\/bienvenue\/code/);
   await page.getByRole("button", { name: /c'est noté/i }).click();
   await page.waitForURL("/");
+  await passerLesNouveautes(page);
   await page.goto("/aujourdhui");
   await page.getByRole("button", { name: /poser ma joie/i }).click();
   await expect(page.getByText("C'est posé pour aujourd'hui.")).toBeVisible();
@@ -55,6 +57,7 @@ test("l'écran de stockage montre la répartition et reprend les doublons", asyn
   await page.fill("#reprise", code);
   await page.getByRole("button", { name: /reconnecter/i }).click();
   await page.waitForURL("/");
+  await passerLesNouveautes(page);
 
   await page.goto("/reglages/stockage");
   await expect(page.getByRole("heading", { name: "Stockage" })).toBeVisible();
@@ -90,6 +93,7 @@ test("la file d'envoi laisse écrire, et reprend au retour du réseau", async ({
   await page.waitForURL(/\/bienvenue\/code/);
   await page.getByRole("button", { name: /c'est noté/i }).click();
   await page.waitForURL("/");
+  await passerLesNouveautes(page);
   await page.goto("/aujourdhui");
   await page.getByRole("button", { name: /poser ma joie/i }).click();
   await expect(page.getByText("C'est posé pour aujourd'hui.")).toBeVisible();

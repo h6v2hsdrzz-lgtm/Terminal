@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { passerLesNouveautes } from "./aide-jeux";
 
 /**
  * L'audit visuel du plan : **chaque état**, pas seulement chaque écran.
@@ -19,6 +20,7 @@ async function bandeNeuve(page: Page, nom: string) {
   await page.waitForURL(/\/bienvenue\/code/);
   await page.getByRole("button", { name: /c'est noté/i }).click();
   await page.waitForURL("/");
+  await passerLesNouveautes(page);
 }
 
 async function quitter(page: Page, nom: string) {

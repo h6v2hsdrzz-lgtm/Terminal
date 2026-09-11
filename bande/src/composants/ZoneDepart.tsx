@@ -72,10 +72,24 @@ export function ZoneDepart({ nomBande, seul }: { nomBande: string; seul: boolean
               Tableur
             </a>
           </div>
+
+          {/* La sauvegarde complète a son propre bouton, plus gros que les deux
+              autres : c'est la seule des trois qui ramène quelque chose le jour
+              où la base disparaît. */}
+          <a
+            href="/api/export?format=zip"
+            download
+            style={{ background: "var(--encre)", color: "var(--surface)" }}
+            className="cible-tactile mt-2 flex w-full items-center justify-center rounded-[var(--radius-pilule)] py-3 text-center text-[15px] font-semibold"
+          >
+            Sauvegarde complète (.zip)
+          </a>
+
           <p className="mt-2.5 text-[13px] leading-snug text-encre-3">
-            Toutes les journées de la bande, avec les notes, les déclencheurs, les
-            réactions et les commentaires. Le JSON garde tout ; le tableur met à
-            plat de quoi faire ses propres calculs.
+            Le <b>.zip</b> emporte tout, <b>photos et vocaux compris</b> — c&apos;est
+            lui qu&apos;on garde. Le JSON et le tableur ne portent que le texte : le
+            premier garde la structure, le second met à plat de quoi faire ses
+            propres calculs.
           </p>
         </Carte>
       </section>

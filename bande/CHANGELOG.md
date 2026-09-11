@@ -56,6 +56,29 @@ v3 y ajoute une section ; les jalons v2 sont regroupés en tête d'historique.
   les résultats de recherche et les notifications — faire défiler le fil
   jusqu'au 14 mars n'est pas un résultat de recherche.
 
+### Emporter, et remettre en place
+- La **sauvegarde complète** (.zip) emporte enfin ce qui manquait : les photos,
+  les vidéos et les vocaux, avec le JSON, le tableur et un fichier qui explique
+  quoi en faire. Un export qui annonce « 3 photos » sans les photos est un
+  inventaire, et un inventaire ne ramène rien.
+- Et **la restauration qui va avec** : on redonne le .zip (ou un vieux .json),
+  et tout revient. **Rien n'est écrasé** — une journée déjà là reste exactement
+  comme elle est, et le rapport dit combien de journées, de photos et de
+  commentaires sont revenus.
+- Un pseudo de la sauvegarde qui ne correspond à personne est **dit**, pas
+  deviné : attribuer les journées de quelqu'un à quelqu'un d'autre serait pire
+  que de ne rien restaurer.
+
+### Ce qui a changé
+- Cinq écrans qui défilent à la première ouverture après une mise à jour, et
+  plus jamais ensuite. Ils se revoient depuis les réglages.
+
+### La galerie ne s'écroule plus
+- « Tout voir » posait tout d'un coup : sur trois ans de bande, quelques
+  milliers de cases, un téléphone bloqué plusieurs secondes. Le lien ajoute
+  maintenant **une page de cent vingt**, comme le fil — et une adresse tapée à
+  la main ne redevient pas « tout charger ».
+
 ### L'apparence
 - Clair, sombre, ou celui du téléphone. Le réglage reste sur l'appareil et ne
   traverse jamais le réseau — le même compte sur une table de nuit et en plein
