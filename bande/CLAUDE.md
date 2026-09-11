@@ -47,6 +47,7 @@ scripts/images-cartes.ts récolte les images de Wikipédia pour « Devine qui je
 e2e/                     Playwright : captures, lot1, lotA..lotC, lotF, lotG, lotK, lotL, lotM, lotN, lotO, lotP, lotQ, video, production
 e2e/aide-jeux.ts         deux téléphones dans un test : salon, code, libération, nouveautés
 e2e/performances.spec.ts décalage de mise en page, tailles d'images, bornes de listes
+e2e/audit3.spec.ts       le parcours réel à TROIS téléphones (lot R)
 ```
 
 **La règle du dépôt :** rien d'autre que `depot.ts` et `depot-jeux.ts` ne parle
@@ -273,6 +274,17 @@ npx prisma migrate dev --create-only   # écrire la migration, la RELIRE, puis l
 - **`error.tsx` n'est pas atteignable en abattant la charge d'une navigation** :
   Next abandonne la navigation côté client et recharge la page entière, qui
   aboutit. Il ne sert que quand le rendu lui-même casse.
+- **Deux téléphones ne prouvent pas trois.** Deux défauts n'apparaissaient qu'à
+  trois : le fil qui ignore une CORRECTION de journée (son empreinte ne
+  regardait ni le titre, ni la note, ni les photos), et les boutons « Trouvé /
+  Passer » absents chez les souffleurs — invisible à deux, où il n'y a qu'un
+  souffleur qui n'en a pas besoin.
+- **`[data-enonce]` est la marque à viser dans un écran de jeu.** Chercher
+  l'énoncé par son texte attrape le conteneur au-dessus, émoji et nom du jeu
+  compris. Même raison que `data-carte` dans le fil.
+- **« MAINTENANT » se cherche en respectant la casse.** Un `/maintenant/i`
+  attrape la consigne du décompte, les trois tapent trop tôt, et « Le plus
+  rapide » annonce — correctement — que tout le monde a brûlé le départ.
 - **`locator("text")` de Playwright n'est pas le `<text>` d'un SVG**, et
   `innerText` ne marche pas dessus. L'ordre des éléments d'un SVG suit le
   dessin, pas la lecture.

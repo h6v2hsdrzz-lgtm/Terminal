@@ -33,7 +33,14 @@ export function EcranVote({ moteur }: { moteur: MoteurMulti }) {
 
   return (
     <div className="flex min-h-[70dvh] flex-col justify-between px-4 py-6">
-      <p className="text-[22px] font-semibold leading-tight tracking-[-0.01em]">
+      {/* `data-enonce` : l'énoncé est la seule chose qu'un test ait besoin de
+          viser sur cet écran, et le viser par son texte revient à attraper le
+          conteneur au-dessus — émoji et titre du jeu compris. Même raison que
+          `data-carte` dans le fil. */}
+      <p
+        data-enonce
+        className="text-[22px] font-semibold leading-tight tracking-[-0.01em]"
+      >
         {recette.enonce(etat.donneesPhase)}
       </p>
 

@@ -5,6 +5,17 @@ v3 y ajoute une section ; les jalons v2 sont regroupés en tête d'historique.
 
 ## Lot R — Les audits
 
+### Ce que trois téléphones ont montré
+- **Corriger sa journée ne changeait rien chez les autres.** Le fil comparait ce
+  que le serveur venait de rendre sur la structure et sur les épingles,
+  réactions et commentaires — pas sur le **contenu**. Un titre changé, une note
+  réécrite, une photo ajoutée : les deux autres téléphones gardaient l'ancienne
+  version jusqu'au prochain rechargement.
+- **Les deux souffleurs de « Devine qui je suis » n'avaient pas de boutons.**
+  Le plan les demandait de ce côté-ci. Les trois les ont maintenant : celui qui
+  devine est le seul à pouvoir abandonner, les souffleurs sont les seuls à savoir
+  s'il a trouvé. Le premier qui appuie termine la manche.
+
 ### Ce que les captures ont montré
 - La barre de recherche collante dessinait une **bande blanche** en travers de
   l'écran : elle était en `--surface` quand le fond de page est `--sol`.

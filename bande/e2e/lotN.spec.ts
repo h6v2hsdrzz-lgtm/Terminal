@@ -138,25 +138,32 @@ test("dans « Devine qui je suis », le mot ne s'affiche que chez les autres", a
   const { hote, invite } = await deuxTelephonesEnPartie(browser, /Devine qui je suis/i);
 
   // Un des deux devine, l'autre voit le mot. On ne sait pas lequel — l'ordre
-  // est tiré au lancement — donc on vérifie que les deux écrans DIFFÈRENT, et
-  // que celui qui devine a bien ses deux boutons.
-  const devineHote = hote.getByRole("button", { name: /^trouvé$/i });
-  const devineInvite = invite.getByRole("button", { name: /^trouvé$/i });
+  // est tiré au lancement — et depuis l'audit du lot R, **les deux** ont les
+  // boutons « Trouvé » et « Passer » : ce n'est donc plus eux qui distinguent
+  // les rôles, c'est le mot.
+  const souffleHote = hote.getByText(/fais deviner à/i);
+  const souffleInvite = invite.getByText(/fais deviner à/i);
   await expect
-    .poll(async () => (await devineHote.count()) + (await devineInvite.count()), {
+    .poll(async () => (await souffleHote.count()) + (await souffleInvite.count()), {
       timeout: 25_000,
     })
     .toBe(1);
 
-  const acteur = (await devineHote.count()) === 1 ? hote : invite;
-  const spectateur = acteur === hote ? invite : hote;
-  await expect(spectateur.getByText(/fais deviner à/i)).toBeVisible();
-  await expect(acteur.getByRole("button", { name: /^passer$/i })).toBeVisible();
+  const spectateur = (await souffleHote.count()) === 1 ? hote : invite;
+  const acteur = spectateur === hote ? invite : hote;
 
-  // L'acteur dit « trouvé », et les deux écrans passent à la révélation. Ce
-  // geste est le SEUL qui termine la manche : personne d'autre n'a de bouton,
-  // et l'hôte doit verser la réponse de l'acteur dans la phase pour que le
-  // dépouillement la voie.
+  // Le mot est chez le souffleur, et **nulle part** chez celui qui devine.
+  await expect(spectateur.locator("[data-enonce]")).toHaveCount(1);
+  await expect(acteur.locator("[data-enonce]")).toHaveCount(0);
+
+  // Les deux peuvent terminer la manche. Le plan demandait les boutons chez le
+  // souffleur ; ils n'étaient que chez l'acteur, et ça ne s'est vu qu'en jouant
+  // à trois téléphones.
+  for (const page of [acteur, spectateur]) {
+    await expect(page.getByRole("button", { name: /^trouvé$/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^passer$/i })).toBeVisible();
+  }
+
   await acteur.getByRole("button", { name: /^trouvé$/i }).click();
   await expect(acteur.getByText(/trouvé —/i)).toBeVisible({ timeout: 20_000 });
   await expect(spectateur.getByText(/trouvé —/i)).toBeVisible({ timeout: 20_000 });

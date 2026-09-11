@@ -265,17 +265,33 @@ export function CoquilleMulti({
     }
 
     if (etat.phase === PHASES.question || etat.phase === PHASES.depart) {
-      // Deux jeux « tour » ne se terminent pas sur un vote mais sur le geste de
-      // L'ACTEUR : « Devine qui je suis » (il dit « trouvé » ou « passer ») et
-      // « Le jugement » (il désigne la réponse qui gagne). On révèle donc dès
-      // que SA réponse est là, en la versant dans les données de la phase —
-      // sans ça, `depouiller` ne verrait ni `trouve` ni `gagnant`, et la manche
+      // Deux jeux « tour » ne se terminent pas sur un vote mais sur un geste,
+      // et pas sur celui de tout le monde. On révèle donc dès que LA bonne
+      // réponse est là, en la versant dans les données de la phase — sans ça,
+      // `depouiller` ne verrait ni `trouve` ni `gagnant`, et la manche
       // resterait ouverte jusqu'à l'échéance.
-      if (jeu.cle === "devine-qui" || jeu.cle === "jugement") {
+      //
+      // · « Le jugement » : c'est l'acteur qui tranche, et lui seul ;
+      // · « Devine qui je suis » : **n'importe lequel des trois**. Celui qui
+      //   devine est le seul à pouvoir abandonner, les deux souffleurs sont les
+      //   seuls à savoir si ce qu'il vient de dire est juste. Le premier qui
+      //   appuie termine la manche. (Avant l'audit du lot R, seul le geste de
+      //   l'acteur comptait, et les boutons des souffleurs — que le plan
+      //   demandait — n'existaient pas.)
+      if (jeu.cle === "jugement") {
         const sienne = reponses.find((r) => r.membreId === acteurCourant);
         if (sienne) {
           publie.current.add(cle);
           reveler({ ...etat.donneesPhase, ...sienne.donnees });
+        }
+        return;
+      }
+
+      if (jeu.cle === "devine-qui") {
+        const geste = reponses.find((r) => typeof r.donnees.trouve === "boolean");
+        if (geste) {
+          publie.current.add(cle);
+          reveler({ ...etat.donneesPhase, ...geste.donnees });
         }
         return;
       }

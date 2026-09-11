@@ -158,6 +158,39 @@ export function EcranTour({ moteur, jeu }: { moteur: MoteurMulti; jeu: Jeu }) {
         >
           Fais deviner à {nomActeur}
         </p>
+
+        {/*
+          Les deux souffleurs ont eux aussi « Trouvé » et « Passer ».
+
+          Le plan les demandait de ce côté-ci ; ils n'étaient que chez celui qui
+          devine, et ça ne s'est vu qu'en jouant à TROIS téléphones. Les deux
+          endroits se valent et c'est pour ça qu'ils coexistent : celui qui
+          devine est le seul à pouvoir décider d'abandonner, et les souffleurs
+          sont les seuls à savoir si ce qu'il vient de dire est juste. Le
+          premier qui appuie termine la manche.
+
+          Compacts et en bas : le nom de la carte occupe le bas de l'image, et
+          des pavés pleine hauteur le recouvriraient — or c'est justement ce
+          qu'il faut lire.
+        */}
+        <div className="absolute inset-x-0 bottom-0 flex gap-2 px-4 pb-5">
+          <button
+            type="button"
+            onClick={() => moteur.repondre({ trouve: false })}
+            className="cible-tactile flex-1 rounded-[var(--radius-pilule)] py-3 text-[15px] font-semibold"
+            style={{ background: "rgba(0,0,0,0.55)", color: "#fff" }}
+          >
+            Passer
+          </button>
+          <button
+            type="button"
+            onClick={() => moteur.repondre({ trouve: true })}
+            className="cible-tactile flex-1 rounded-[var(--radius-pilule)] py-3 text-[15px] font-semibold"
+            style={{ background: "#fff", color: "#000" }}
+          >
+            Trouvé
+          </button>
+        </div>
       </div>
     );
   }

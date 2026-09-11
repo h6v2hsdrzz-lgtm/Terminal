@@ -116,7 +116,9 @@ export function FondDeCarte({
 /** La carte telle que la voient ceux qui font deviner : l'image, et le nom. */
 export function CarteDevine({ carte }: { carte: string }) {
   return (
-    <div className="relative min-h-[70dvh] w-full overflow-hidden">
+    // `data-enonce` : le mot de la carte est ce qu'un test doit pouvoir lire
+    // sans deviner la mise en page — la même marque que sur l'écran de vote.
+    <div data-enonce={carte} className="relative min-h-[70dvh] w-full overflow-hidden">
       <FondDeCarte
         carte={carte}
         enfants={(surImage) =>

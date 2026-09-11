@@ -81,10 +81,19 @@ export function Fil({
    * · **la structure** — quelles journées, quelles entrées. Elle change quand
    *   quelqu'un pose sa journée : c'est ce qui décale le fil, donc c'est le
    *   seul cas qui mérite une pastille plutôt qu'une insertion ;
-   * · **le détail** — épingles, réactions, commentaires. Ça change à l'endroit
-   *   même où l'on vient d'agir, sans rien décaler : on applique tout de
-   *   suite. Sans cette deuxième empreinte, la carte qu'on vient d'épingler
-   *   continue de proposer « épingler ».
+   * · **le détail** — épingles, réactions, commentaires, **et le contenu de la
+   *   journée elle-même**. Ça change à l'endroit même où l'on vient d'agir,
+   *   sans rien décaler : on applique tout de suite. Sans cette deuxième
+   *   empreinte, la carte qu'on vient d'épingler continue de proposer
+   *   « épingler ».
+   *
+   *   Le contenu en fait partie depuis l'audit du lot R, et ce n'était pas
+   *   théorique : quand quelqu'un **corrigeait** sa journée — un titre, une
+   *   note, une photo ajoutée — l'empreinte ne bougeait pas d'un caractère.
+   *   La version de la bande, elle, changeait ; le serveur refaisait donc son
+   *   rendu, et le fil décidait qu'il n'y avait rien de neuf. Les deux autres
+   *   téléphones gardaient l'ancienne version jusqu'au prochain rechargement.
+   *   Trouvé en jouant à trois, pas en lisant le code.
    *
    * L'ajustement se fait **pendant le rendu**, pas dans un effet : React
    * refait le rendu immédiatement, sans passer par le DOM, alors qu'un effet
@@ -97,7 +106,13 @@ export function Fil({
   const detail = premierePage.journees
     .flatMap((j) =>
       j.entrees.map(
-        (e) => `${e.id}${e.epingle ? "P" : ""}:${e.reactions.length}:${e.commentaires.length}`,
+        (e) =>
+          `${e.id}${e.epingle ? "P" : ""}:${e.reactions.length}:${e.commentaires.length}` +
+          // Ce qu'une correction peut changer. Sous le voile, ces champs sont
+          // déjà vidés par le serveur : l'empreinte d'une journée masquée est
+          // donc stable, et ne raconte rien de son contenu.
+          `:${e.joie}:${e.titre ?? ""}:${e.note?.length ?? 0}` +
+          `:${e.photos.length}${e.audio ? "V" : ""}:${e.etiquettes.length}:${e.declencheurs.length}`,
       ),
     )
     .join("|");
