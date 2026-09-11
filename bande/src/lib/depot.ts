@@ -1575,6 +1575,50 @@ export async function exporter(groupeId: string) {
 }
 
 
+// ── Le réveil du matin ───────────────────────────────────────────────────────
+
+/**
+ * Les scellés qui s'ouvrent aujourd'hui et dont personne n'a encore été prévenu.
+ *
+ * C'est la dette **C5**, reportée depuis la vague 1 : un scellé qui s'ouvre sans
+ * que personne ne le sache est un scellé qui ne s'ouvre pas. Il a fallu
+ * attendre les notifications du lot Q pour pouvoir la payer.
+ *
+ * `annonceLe` est posée par l'appelant APRÈS l'envoi, pas ici : si la fonction
+ * marquait elle-même, un envoi qui échoue laisserait un scellé marqué comme
+ * annoncé et personne ne saurait jamais qu'il s'est ouvert.
+ */
+export async function scellesAAnnoncer(jour: string) {
+  const lignes = await prisma.capsule.findMany({
+    where: { ouvrirLe: { lte: jour }, annonceLe: null },
+    select: {
+      id: true,
+      groupeId: true,
+      texte: true,
+      genre: true,
+      membre: { select: { pseudo: true } },
+    },
+  });
+  return lignes.map((c) => ({
+    id: c.id,
+    groupeId: c.groupeId,
+    texte: c.texte,
+    genre: c.genre,
+    auteur: c.membre.pseudo,
+  }));
+}
+
+/** Qui est dans cette bande — pour savoir à qui parler. */
+export async function membresDe(groupeId: string): Promise<string[]> {
+  const lignes = await prisma.membre.findMany({ where: { groupeId }, select: { id: true } });
+  return lignes.map((m) => m.id);
+}
+
+/** Le scellé est annoncé. On ne recommencera pas demain. */
+export async function marquerScelleAnnonce(capsuleId: string) {
+  await prisma.capsule.update({ where: { id: capsuleId }, data: { annonceLe: new Date() } });
+}
+
 // ── Sauvegarder, et restaurer ────────────────────────────────────────────────
 
 /**

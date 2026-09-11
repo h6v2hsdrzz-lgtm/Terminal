@@ -362,6 +362,10 @@ model Capsule {
   duree    Int?
   /// Jour d'ouverture, ISO `AAAA-MM-JJ`, calé sur la journée de la bande.
   ouvrirLe String   @map("ouvrir_le")
+  /// Quand la bande a été PRÉVENUE de l'ouverture. Nulle tant qu'elle ne l'a
+  /// pas été : c'est ce qui rend le réveil quotidien rejouable sans envoyer la
+  /// même notification deux fois.
+  annonceLe DateTime? @map("annonce_le")
   creeLe   DateTime @default(now()) @map("cree_le")
 
   groupe Groupe @relation(fields: [groupeId], references: [id], onDelete: Cascade)
@@ -482,6 +486,10 @@ model Parole {
   niveaux  Int[]
   /// La note reçue, une fois la manche dépouillée. Nulle tant qu'on n'a pas voté.
   note     Int?
+  /// Quand on l'a renvoyée à son auteur, le lendemain matin — c'est le principe
+  /// du « Tribunal des idées ». Nulle tant que ce n'est pas fait, et c'est ce
+  /// qui empêche de la renvoyer chaque jour jusqu'à la fin des temps.
+  renvoyeeLe DateTime? @map("renvoyee_le")
   creeLe   DateTime @default(now()) @map("cree_le")
 
   partie Partie @relation(fields: [partieId], references: [id], onDelete: Cascade)

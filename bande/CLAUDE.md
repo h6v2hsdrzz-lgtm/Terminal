@@ -30,7 +30,8 @@ src/app/(entree)/        bienvenue, créer, rejoindre, reprendre
 src/app/(repaire)/       page.tsx (le fil), aujourdhui, jeux, souvenirs, galerie, profil, reglages,
                          recherche, jour/[jour] (une journée seule : recherche et liens profonds)
 src/app/(jeu)/           l'écran d'une partie, sans barre d'onglets ni sondage
-src/app/api/             photo, vignette, audio, avatar, scelle, lieu, export, sante, version, partie/[partie]/{flux,present}
+src/app/api/             photo, vignette, audio, avatar, scelle, lieu, export, sante, version,
+                         reveil (le cron quotidien), partie/[partie]/{flux,present}
 src/app/not-found.tsx    404 en français ; error.tsx pour ce qui casse
 src/composants/          un fichier par composant, noms français ; jeux/ pour les dix jeux, jeux/multi/ pour le multi, fil/ pour le fil
 src/lib/                 depot.ts + depot-jeux.ts (tout PostgreSQL), actions*.ts, logique pure
@@ -255,6 +256,12 @@ npx prisma migrate dev --create-only   # écrire la migration, la RELIRE, puis l
   aussi un `SharedArrayBuffer`, que Prisma refuse pour une colonne `Bytes`.
   Resserrer la signature à la source (`lireOctets`, `lireR2`) évite une copie
   de chaque octet chez chaque appelant.
+- **`prevenir` ne s'attend pas, sauf dans le cron.** Une fonction serverless qui
+  rend sa réponse est GELÉE : une notification encore en vol à cet instant ne
+  part jamais. `/api/reveil` passe donc par `prevenirEtAttendre`, et marque ce
+  qu'il a envoyé seulement après.
+- **Un envoi se marque APRÈS, jamais avant.** Marquer d'abord laisserait un
+  scellé « annoncé » que personne n'a vu passer, et il ne se rattraperait jamais.
 - **`locator("text")` de Playwright n'est pas le `<text>` d'un SVG**, et
   `innerText` ne marche pas dessus. L'ordre des éléments d'un SVG suit le
   dessin, pas la lecture.

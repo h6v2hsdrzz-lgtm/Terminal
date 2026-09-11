@@ -63,16 +63,32 @@ sombre.
 
 ## Prochaine action exacte
 
-**LOT Q, ce qui reste : Q6, les performances.** Lighthouse mobile ≥ 90, images
-servies à la bonne taille, listes virtualisées au-delà de cent éléments, aucun
-décalage de mise en page. Lighthouse n'est pas installé dans cet
-environnement — la mesure passera par Playwright (CLS, LCP, nombre de nœuds),
-ce qui se versionne en plus.
+**LOT Q terminé.** Q6 compris : le décalage de mise en page est mesuré sur
+quatre écrans (sous 0,1, la barre de Lighthouse), chaque image annonce sa
+taille, et la galerie ne dépose plus tout d'un coup — « tout voir » chargeait
+plusieurs milliers de cases sur une bande de trois ans.
 
-Deux dettes l'attendent, maintenant débloquées par les notifications : celle du
-lendemain matin du « Tribunal des idées » (lot O l'a préparée, la parole est
-gardée, il manque le réveil à l'heure dite), et l'ouverture d'un scellé (C5,
-reportée depuis la vague 1).
+**Ce qui n'a PAS été fait, et pourquoi** : Lighthouse lui-même. Il n'est pas
+installable ici, et il mesurerait le serveur de développement — un score de 40
+sans minification ne dit rien d'un score en production. **À faire à la main
+contre l'adresse en ligne**, une fois le lot R déployé. Et « listes
+virtualisées » est devenu « listes bornées par page » : virtualiser une grille
+d'images coûte trois cents lignes et casse la position de défilement ; pour
+trois personnes, une borne fait le même travail. Écrit dans `borneGalerie`.
+
+**LOT R** : les trois audits, plus les restes de la vague 1 — révoquer le jeton
+Vercel, effacer les données de démonstration avant la mise en service, et
+l'essai à la main sur un vrai iPhone.
+
+**Les deux dettes sont payées.** `/api/reveil` tourne une fois par jour
+(`vercel.json`) et fait deux choses : prévenir la bande qu'un scellé s'ouvre
+(C5, vague 1) et renvoyer à son auteur son plaidoyer du « Tribunal des idées »
+(lot O). Éprouvé en local dans les deux sens, y compris la rejouabilité — un
+deuxième passage n'envoie rien.
+
+**À poser chez Vercel avant que ça serve** : `CRON_SECRET` (n'importe quelle
+chaîne aléatoire longue). Sans elle, la route refuse tout le monde — ce qui est
+le bon défaut, mais veut dire que le réveil ne fait rien.
 
 **Pour allumer les notifications en production** : `npm run pousse:cles`, puis
 poser `VAPID_PUBLIQUE`, `VAPID_PRIVEE` et `VAPID_CONTACT` chez Vercel. Sans

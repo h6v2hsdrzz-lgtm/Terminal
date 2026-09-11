@@ -555,3 +555,27 @@ test("les nouveautés s'ouvrent une fois, défilent, et ne reviennent pas", asyn
   await expect(page.getByRole("heading", { name: "Le fil" })).toBeVisible();
   await expect(feuille).toBeHidden();
 });
+
+/**
+ * Le réveil du matin — les deux dettes que les notifications débloquaient.
+ *
+ * On ne peut pas éprouver ici qu'une notification ARRIVE : ce WebKit n'a pas
+ * `PushManager` (mesuré), et de toute façon il faudrait un service de pousse.
+ * Ce qui s'éprouve, et qui est le plus important : que la route **refuse** tout
+ * le monde sans le secret. Une route de réveil ouverte laisserait n'importe qui
+ * faire sonner trois téléphones à trois heures du matin.
+ */
+test("le réveil du matin ne s'ouvre pas sans son secret", async ({ page }) => {
+  await entrer(page, "Momo");
+
+  // Une session valide ne suffit PAS : ce n'est pas une route de l'application,
+  // c'est une route du planificateur.
+  expect((await page.request.get("/api/reveil")).status()).toBe(401);
+  expect(
+    (await page.request.get("/api/reveil", { headers: { authorization: "Bearer faux" } })).status(),
+  ).toBe(401);
+
+  // Et rien ne sort avec le refus.
+  const refus = await page.request.get("/api/reveil");
+  expect((await refus.body()).byteLength).toBeLessThan(200);
+});

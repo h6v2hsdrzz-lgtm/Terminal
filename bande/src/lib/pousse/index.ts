@@ -83,6 +83,21 @@ export function prevenir(membreIds: string[], notification: Notification): void 
   });
 }
 
+/**
+ * La même chose, mais **attendue**.
+ *
+ * Le réveil du matin (`/api/reveil`) en a besoin : une fonction serverless qui
+ * rend sa réponse est gelée, et une notification encore en vol à ce moment-là
+ * ne part jamais. Partout ailleurs on ne l'attend pas — le geste qui l'a
+ * déclenchée compte plus qu'elle.
+ */
+export async function prevenirEtAttendre(
+  membreIds: string[],
+  notification: Notification,
+): Promise<void> {
+  await pousser(membreIds, notification);
+}
+
 async function pousser(membreIds: string[], notification: Notification): Promise<void> {
   if (membreIds.length === 0) return;
 

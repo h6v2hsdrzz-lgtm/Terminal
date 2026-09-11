@@ -1087,3 +1087,43 @@ async function toucherVersion(partieId: string): Promise<void> {
     data: { version: { increment: 1 } },
   });
 }
+
+// ── Le réveil du matin ───────────────────────────────────────────────────────
+
+/**
+ * Les plaidoyers du « Tribunal des idées » à renvoyer à leur auteur.
+ *
+ * **C'est le principe du jeu**, et il est resté en dette depuis le lot O : on
+ * défend une idée absurde avec conviction, et le lendemain matin on se réécoute.
+ * La parole est gardée depuis le début ; il ne manquait que le réveil.
+ *
+ * Le lendemain et pas le soir même : à trois heures du matin, tout le monde
+ * trouve encore que c'était brillant.
+ */
+export async function parolesARenvoyer(avant: Date) {
+  const lignes = await prisma.parole.findMany({
+    where: {
+      renvoyeeLe: null,
+      creeLe: { lt: avant },
+      partie: { jeu: "tribunal" },
+    },
+    select: {
+      id: true,
+      membreId: true,
+      sujet: true,
+      partie: { select: { groupeId: true } },
+    },
+    take: 50,
+  });
+  return lignes.map((p) => ({
+    id: p.id,
+    membreId: p.membreId,
+    sujet: p.sujet,
+    groupeId: p.partie.groupeId,
+  }));
+}
+
+/** La parole est repartie chez son auteur. On ne la renverra pas demain. */
+export async function marquerParoleRenvoyee(paroleId: string) {
+  await prisma.parole.update({ where: { id: paroleId }, data: { renvoyeeLe: new Date() } });
+}

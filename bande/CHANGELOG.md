@@ -79,6 +79,17 @@ v3 y ajoute une section ; les jalons v2 sont regroupés en tête d'historique.
   maintenant **une page de cent vingt**, comme le fil — et une adresse tapée à
   la main ne redevient pas « tout charger ».
 
+### Le réveil du matin
+- Deux dettes payées, et elles attendaient la même chose : **un scellé qui
+  s'ouvre** prévient enfin la bande (elle attendait depuis la vague 1), et le
+  **plaidoyer du « Tribunal des idées »** revient chez son auteur le lendemain
+  matin — c'est le principe du jeu, pas une option.
+- Une fois par jour, appelé par Vercel et par personne d'autre : sans le secret,
+  la route refuse. Et sans secret posé du tout, elle refuse aussi — un secret
+  oublié doit couper la fonction, pas la garde.
+- Rejouable : chaque chose envoyée est marquée après coup, donc deux passages
+  dans la même matinée n'envoient rien deux fois.
+
 ### L'apparence
 - Clair, sombre, ou celui du téléphone. Le réglage reste sur l'appareil et ne
   traverse jamais le réseau — le même compte sur une table de nuit et en plein
