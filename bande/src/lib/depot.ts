@@ -8,7 +8,8 @@ import { TAILLE_MAX_BANDE, TEINTES } from "./couleurs";
 import { codeInvitation, creerCodeReprise, decouperCodeReprise, normaliserCode, verifierCodeReprise } from "./codes";
 import { decaler } from "./dates";
 import { LONGUEUR_PSEUDO, initialesDeLaBande } from "./initiales";
-import type { Declencheur, Entree, FiltreFil, PageFil, Profil } from "./types";
+import type { Declencheur, Entree, FiltreFil, PageFil, Profil, Trouvaille } from "./types";
+import { TROUVAILLES_MAX, correspond, extraire, motsDe } from "./recherche";
 import { MAX_ETIQUETTES, cleEtiquette, nettoyerEtiquette } from "./etiquettes";
 import { DUREE_MAX_VIDEO, LONGUEUR_LEGENDE, MAX_MEDIAS, POIDS_MAX_MEDIA } from "./media";
 import {
@@ -413,6 +414,16 @@ export async function toucherVisiteDuFil(membreId: string): Promise<string | nul
   return avant?.filVuLe?.toISOString() ?? null;
 }
 
+/** Les entrées d'un jour précis, pour l'écran d'une journée et les liens profonds. */
+export async function entreesDuJour(groupeId: string, jour: string): Promise<Entree[]> {
+  const lignes = await prisma.entree.findMany({
+    where: { groupeId, jour },
+    orderBy: { creeLe: "asc" },
+    include: AVEC_TOUT,
+  });
+  return lignes.map(versEntree);
+}
+
 export async function listerEntrees(groupeId: string, depuis?: string): Promise<Entree[]> {
   const lignes = await prisma.entree.findMany({
     where: { groupeId, ...(depuis ? { jour: { gte: depuis } } : {}) },
@@ -567,7 +578,12 @@ export async function basculerReaction(membreId: string, entreeId: string, emoji
   // Qui a écrit la journée, et si la réaction vient d'être POSÉE : l'appelant en
   // a besoin pour prévenir la bonne personne, et seulement quand il y a quelque
   // chose à annoncer. « Quelqu'un a retiré son cœur » n'intéresse personne.
-  return { groupeId: entree.groupeId, auteurId: entree.membreId, pose: !existante };
+  return {
+    groupeId: entree.groupeId,
+    auteurId: entree.membreId,
+    jour: entree.jour,
+    pose: !existante,
+  };
 }
 
 export const LONGUEUR_COMMENTAIRE = 280;
@@ -580,7 +596,8 @@ export async function commenter(membreId: string, entreeId: string, texte: strin
   await prisma.commentaire.create({
     data: { entreeId, membreId, texte: propre.slice(0, LONGUEUR_COMMENTAIRE) },
   });
-  return entree.groupeId;
+  // Le jour part avec : c'est le lien profond de la notification.
+  return { groupeId: entree.groupeId, jour: entree.jour };
 }
 
 /** On ne supprime que ses propres commentaires. */
@@ -632,9 +649,11 @@ async function memeBande(membreId: string, entreeId: string) {
   });
   const entree = await prisma.entree.findUnique({
     where: { id: entreeId },
-    // L'auteur vient avec : c'est lui qu'on prévient d'une réaction, et le
-    // relire dans une deuxième requête serait une requête pour rien.
-    select: { groupeId: true, membreId: true },
+    // L'auteur ET le jour viennent avec : le premier pour savoir qui prévenir
+    // d'une réaction, le second pour que la notification ouvre la bonne
+    // journée. Les relire dans une deuxième requête serait une requête pour
+    // rien.
+    select: { groupeId: true, membreId: true, jour: true },
   });
   if (!membre || !entree || membre.groupeId !== entree.groupeId) {
     throw new ErreurMetier("Cette journée n'est pas dans ta bande.");
@@ -1721,4 +1740,122 @@ export async function poulsDeLaBande(groupeId: string, depuis: string) {
     energie: l.energie,
     poseA: l.poseA.toISOString(),
   }));
+}
+
+// ── Chercher ─────────────────────────────────────────────────────────────────
+
+/**
+ * Chercher dans tout ce que la bande a écrit.
+ *
+ * ## Le voile s'applique ici aussi, et il exclut au lieu de vider
+ *
+ * Une entrée vidée qui apparaît quand même dans les résultats dirait « il y a
+ * le mot “rupture” dans la journée que tu n'as pas le droit de lire » — c'est
+ * exactement le bit d'information que le voile existe pour retenir. La journée
+ * du jour des autres est donc **retirée** des résultats tant qu'on n'a pas posé
+ * la sienne, jamais affichée en creux. C'est la leçon du filtre « photos » du
+ * lot L, appliquée au bon endroit du premier coup.
+ *
+ * ## Le corpus passe par le réseau, et c'est assumé
+ *
+ * Pas de `LIKE` en base : il faudrait `unaccent`, une extension et un index
+ * fonctionnel pour que « ete » trouve « été ». Une bande de trois personnes sur
+ * quatre cents jours, c'est quelques milliers de lignes de texte court — le
+ * tri se fait ici, et `src/lib/recherche.ts` le fait bien. Ce choix est à
+ * retourner le jour où l'application n'est plus pour trois personnes ; le brief
+ * dit qu'elle le restera.
+ */
+export async function chercherDansLaBande(
+  groupeId: string,
+  membreId: string,
+  requete: string,
+  jourCourant: string,
+): Promise<Trouvaille[]> {
+  const mots = motsDe(requete);
+  if (mots.length === 0) return [];
+
+  const groupe = await prisma.groupe.findUnique({
+    where: { id: groupeId },
+    select: { revelerApresPost: true },
+  });
+  const jaiPose =
+    (await prisma.entree.count({ where: { groupeId, membreId, jour: jourCourant } })) > 0;
+  const voile = Boolean(groupe?.revelerApresPost) && !jaiPose;
+
+  const lignes = await prisma.entree.findMany({
+    where: {
+      groupeId,
+      // Le voile, en dur dans la requête : ce qui ne doit pas être lu ne sort
+      // pas de la base, plutôt que d'être filtré trois couches plus haut.
+      ...(voile ? { NOT: { AND: [{ jour: jourCourant }, { membreId: { not: membreId } }] } } : {}),
+    },
+    orderBy: { jour: "desc" },
+    select: {
+      id: true,
+      jour: true,
+      membreId: true,
+      titre: true,
+      note: true,
+      etiquettes: { select: { etiquette: { select: { nom: true } } } },
+      photos: { select: { legende: true } },
+      commentaires: { select: { texte: true, membreId: true } },
+    },
+  });
+
+  const trouvailles: Trouvaille[] = [];
+
+  for (const ligne of lignes) {
+    if (trouvailles.length >= TROUVAILLES_MAX) break;
+    const etiquettes = ligne.etiquettes.map((e) => e.etiquette.nom);
+    const commun = { entreeId: ligne.id, jour: ligne.jour, profil: ligne.membreId };
+
+    // La journée elle-même : titre, note et étiquettes comptent pour un seul
+    // résultat. Trois lignes pour une journée dont on a écrit le lieu dans le
+    // titre ET dans l'étiquette, c'est du bruit.
+    if (correspond([ligne.titre, ligne.note, ...etiquettes], mots)) {
+      const dansLeTexte = correspond([ligne.titre, ligne.note], mots);
+      // Le titre part TOUJOURS avec le résultat, et l'extrait est la note. La
+      // première version ne rendait que la note quand elle existait : un mot
+      // trouvé dans le titre donnait donc une carte où rien n'était surligné,
+      // et le résultat avait l'air tiré au sort. Vu sur une capture, pas dans
+      // un test — aucun test n'aurait posé la question.
+      trouvailles.push({
+        ...commun,
+        ou: dansLeTexte ? "journee" : "etiquette",
+        parQui: null,
+        titre: ligne.titre,
+        extrait: ligne.note
+          ? extraire(ligne.note, mots)
+          : dansLeTexte
+            ? ""
+            : etiquettes.join(" · "),
+      });
+    }
+
+    for (const commentaire of ligne.commentaires) {
+      if (trouvailles.length >= TROUVAILLES_MAX) break;
+      if (!correspond([commentaire.texte], mots)) continue;
+      trouvailles.push({
+        ...commun,
+        ou: "commentaire",
+        parQui: commentaire.membreId,
+        titre: ligne.titre,
+        extrait: extraire(commentaire.texte, mots),
+      });
+    }
+
+    for (const photo of ligne.photos) {
+      if (trouvailles.length >= TROUVAILLES_MAX) break;
+      if (!photo.legende || !correspond([photo.legende], mots)) continue;
+      trouvailles.push({
+        ...commun,
+        ou: "legende",
+        parQui: null,
+        titre: ligne.titre,
+        extrait: extraire(photo.legende, mots),
+      });
+    }
+  }
+
+  return trouvailles;
 }

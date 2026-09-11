@@ -99,6 +99,25 @@ export type Entree = {
   epingle: boolean;
 };
 
+/**
+ * Ce que la recherche rend : une trouvaille par endroit où les mots sont, et
+ * pas une par journée. Un mot dans un commentaire et un mot dans la note de la
+ * même journée sont deux raisons différentes de s'y rendre.
+ */
+export type Trouvaille = {
+  /** L'identifiant de l'entrée, pour l'ancre dans la journée. */
+  entreeId: string;
+  jour: string;
+  /** Qui a écrit la journée — pas forcément qui a écrit le morceau trouvé. */
+  profil: string;
+  ou: "journee" | "commentaire" | "legende" | "etiquette";
+  /** Qui a écrit le morceau trouvé, quand ce n'est pas l'auteur de la journée. */
+  parQui: string | null;
+  titre: string | null;
+  /** Le morceau où les mots ont été trouvés, déjà recadré. */
+  extrait: string;
+};
+
 /** Les filtres rapides du fil. Un seul actif à la fois. */
 export type FiltreFil =
   | { genre: "tout" }

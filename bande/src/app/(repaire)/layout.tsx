@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { BandeauReseau } from "@/composants/BandeauReseau";
 import { BarreOnglets } from "@/composants/BarreOnglets";
 import { Synchronisation } from "@/composants/Synchronisation";
 import { chargerContexte, versionBande } from "@/lib/depot";
@@ -23,6 +24,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
   return (
     <>
       <Synchronisation version={await versionBande(contexte.groupe.id)} />
+      <BandeauReseau />
       {/* La marge basse ne sert que sous la barre du bas ; à gauche, elle fait
           place au rail. */}
       <div className="min-h-dvh lg:pl-60">

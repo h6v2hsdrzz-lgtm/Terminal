@@ -33,6 +33,7 @@ import {
   basculerEpingle,
   retirerCopies,
   listerPageDuFil,
+  chercherDansLaBande,
   masquerEntree,
   supprimerEntree,
 } from "./depot";
@@ -41,7 +42,7 @@ import { ETAT_INITIAL, type Etat } from "./formulaire";
 import { jourDeLaBande } from "./dates";
 import { enregistrerAbonnement, oublierAbonnement, prevenir, reglerPreference } from "./pousse";
 import { TYPES, type TypeNotification } from "./pousse/types";
-import type { FiltreFil, PageFil } from "./types";
+import type { FiltreFil, PageFil, Trouvaille } from "./types";
 
 /**
  * Les actions serveur.
@@ -168,7 +169,7 @@ export async function actionPoserJournee(_precedent: Etat, donnees: FormData): P
         type: "journee",
         titre: `${contexte.moi.pseudo} a posé sa journée`,
         corps: texte(donnees, "titre") || "Va voir.",
-        vers: "/",
+        vers: `/jour/${jourDeLaBande()}`,
         etiquette: `journee-${membreId}-${jourDeLaBande()}`,
       },
     );
@@ -200,7 +201,7 @@ async function quiAgit() {
 export async function actionReagir(entreeId: string, emoji: string): Promise<Etat> {
   return tenter(async () => {
     const { membreId, contexte } = await quiAgit();
-    const { auteurId, pose } = await basculerReaction(membreId, entreeId, emoji);
+    const { auteurId, jour, pose } = await basculerReaction(membreId, entreeId, emoji);
     // Seulement quand on AJOUTE une réaction, jamais quand on la retire : une
     // notification « quelqu'un a changé d'avis » n'apporte rien.
     if (pose && auteurId !== membreId) {
@@ -208,7 +209,7 @@ export async function actionReagir(entreeId: string, emoji: string): Promise<Eta
         type: "reaction",
         titre: `${contexte.moi.pseudo} ${emoji}`,
         corps: "a réagi à ta journée.",
-        vers: "/",
+        vers: `/jour/${jour}#entree-${entreeId}`,
         // Une étiquette par journée : cinq réactions sur la même font une ligne
         // qui se met à jour, pas cinq notifications.
         etiquette: `reaction-${entreeId}`,
@@ -223,7 +224,7 @@ export async function actionCommenter(_precedent: Etat, donnees: FormData): Prom
     const { membreId, contexte } = await quiAgit();
     const entreeId = texte(donnees, "entree");
     const message = texte(donnees, "texte");
-    await commenter(membreId, entreeId, message);
+    const { jour } = await commenter(membreId, entreeId, message);
 
     // Tout le monde sauf soi : un commentaire sous la journée de quelqu'un
     // intéresse aussi le troisième, qui a commenté juste avant.
@@ -233,7 +234,7 @@ export async function actionCommenter(_precedent: Etat, donnees: FormData): Prom
         type: "commentaire",
         titre: contexte.moi.pseudo,
         corps: message.slice(0, 120),
-        vers: "/",
+        vers: `/jour/${jour}#entree-${entreeId}`,
         etiquette: `commentaire-${entreeId}`,
       },
     );
@@ -693,4 +694,35 @@ export async function actionReglerNotification(type: string, valeur: boolean): P
     await reglerPreference(membreId, type as TypeNotification, valeur);
     rafraichirTout();
   });
+}
+
+/**
+ * Chercher, à chaque frappe ou presque.
+ *
+ * Une action plutôt qu'une route : elle porte déjà la session, et le résultat
+ * est typé de bout en bout. L'écran attend trois cents millisecondes entre deux
+ * frappes — sans ça, « anniversaire » ferait treize recherches.
+ *
+ * Le voile est appliqué dans le dépôt, pas ici : une recherche qui contourne le
+ * voile serait exactement le trou que le voile existe pour boucher, et ce genre
+ * de règle doit vivre aussi près de la base que possible.
+ */
+export async function actionChercher(
+  requete: string,
+): Promise<{ erreur: string | null; valeur?: Trouvaille[] }> {
+  try {
+    const { membreId, contexte } = await quiAgit();
+    return {
+      erreur: null,
+      valeur: await chercherDansLaBande(
+        contexte.groupe.id,
+        membreId,
+        requete.slice(0, 120),
+        jourDeLaBande(),
+      ),
+    };
+  } catch (erreur) {
+    if (erreur instanceof ErreurMetier) return { erreur: erreur.message };
+    throw erreur;
+  }
 }

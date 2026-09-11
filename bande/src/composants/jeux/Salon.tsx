@@ -14,6 +14,7 @@ import type { Profil } from "@/lib/types";
 
 import { useFluxPartie } from "./fluxPartie";
 import { useEcranEveille } from "./ecranEveille";
+import { sansSilence } from "@/lib/reseau";
 
 /**
  * Le salon : on attend que tout le monde soit là.
@@ -179,8 +180,9 @@ export function Salon({
           disabled={enCours}
           onClick={() =>
             demarrer(async () => {
-              await actionQuitterSalon(etat.partie.id);
-              router.push("/jeux");
+              if (await sansSilence(() => actionQuitterSalon(etat.partie.id), "Le départ")) {
+                router.push("/jeux");
+              }
             })
           }
           className="cible-tactile w-full py-2.5 text-center text-[14px] text-encre-3 transition hover:text-encre-2"

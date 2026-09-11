@@ -26,6 +26,36 @@ v3 y ajoute une section ; les jalons v2 sont regroupés en tête d'historique.
 - Rien n'est cassé sans les clés : l'écran de réglages le dit, et le reste
   tourne.
 
+### Rien n'échoue en silence
+- Un **bandeau unique** dit les trois choses qui peuvent mal se passer : hors
+  ligne (ce n'est pas une erreur, c'est un tunnel), de retour (trois secondes,
+  puis ça se tait), et **un geste qui n'est pas passé** — avec un bouton qui
+  refait exactement ce qui a raté.
+- Sept appels jetaient l'erreur que le serveur leur rendait : une réaction, une
+  épingle, un commentaire supprimé, un scellé retiré, un départ de salon, une
+  réponse de jeu, une manche publiée — et **le retrait d'une journée**, qui est
+  la règle numéro un du produit.
+- Une réaction affichée avant la réponse du serveur est reprise si le serveur
+  refuse. Un cœur qui reste affiché sur un geste qui n'a pas eu lieu est un
+  mensonge.
+
+### Chercher
+- Un écran, une loupe en haut du fil. Les journées, les titres, les
+  commentaires, les légendes des photos, les lieux.
+- **Les accents et la casse ne comptent pas** — « ete » trouve « été » — et
+  plusieurs mots se cherchent dans n'importe quel ordre, y compris répartis
+  entre le titre et le lieu.
+- Le mot trouvé est **surligné**, dans le titre comme dans l'extrait, et
+  l'extrait est recadré autour de lui.
+- **Le voile s'applique à la recherche**, et il exclut au lieu de vider : dire
+  « il y a ce mot dans la journée que tu n'as pas le droit de lire » serait
+  exactement ce que le voile existe pour empêcher.
+
+### L'écran d'une journée
+- `/jour/2026-09-11` : la journée de toute la bande, seule. C'est là que mènent
+  les résultats de recherche et les notifications — faire défiler le fil
+  jusqu'au 14 mars n'est pas un résultat de recherche.
+
 ### L'apparence
 - Clair, sombre, ou celui du téléphone. Le réglage reste sur l'appareil et ne
   traverse jamais le réseau — le même compte sur une table de nuit et en plein

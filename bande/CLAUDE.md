@@ -27,7 +27,8 @@ repo, et les termes du plan se traduisent ainsi :
 prisma/schema.prisma     14 modèles, tous préfixés bande_ (+ Entree.epingle, Membre.filVuLe)
 prisma/seed.ts           4 profils × 400 jours, images et sons engendrés
 src/app/(entree)/        bienvenue, créer, rejoindre, reprendre
-src/app/(repaire)/       page.tsx (le fil), aujourdhui, jeux, souvenirs, galerie, profil, reglages
+src/app/(repaire)/       page.tsx (le fil), aujourdhui, jeux, souvenirs, galerie, profil, reglages,
+                         recherche, jour/[jour] (une journée seule : recherche et liens profonds)
 src/app/(jeu)/           l'écran d'une partie, sans barre d'onglets ni sondage
 src/app/api/             photo, vignette, audio, avatar, scelle, lieu, export, sante, version, partie/[partie]/{flux,present}
 src/app/not-found.tsx    404 en français ; error.tsx pour ce qui casse
@@ -36,6 +37,7 @@ src/lib/                 depot.ts + depot-jeux.ts (tout PostgreSQL), actions*.ts
 src/lib/graphiques.ts    ce que les graphiques du profil calculent ; trace.ts, le lissage
 src/lib/stockage/        R2 : signature v4 écrite à la main, client, clés, plafond
 src/lib/pousse/          notifications : RFC 8291/8188/8292 à la main, envoi, préférences
+src/lib/recherche.ts     accents, casse, surlignage — sans dépendance ; reseau.ts, le bandeau
 scripts/migrer-medias.ts déménage les octets vers R2, avec relecture et empreintes
 src/lib/jeux/            catalogue, cadre, tirage, recompense, quiz, top3, vote, inclinaison, salon, recettes, types
 src/lib/jeux/contenu/    jamais, dilemmes, paquets, marie-janne, images (engendré)
@@ -220,6 +222,21 @@ npx prisma migrate dev --create-only   # écrire la migration, la RELIRE, puis l
 - **La clé publique VAPID part telle quelle dans `applicationServerKey`.** Elle
   voyage avec chaque abonnement et n'est pas un secret ; la PRIVÉE ne quitte
   jamais le serveur, et `.env` est ignoré par git.
+- **Une action serveur qui rend `{ erreur }` ne sert à rien si l'appelant la
+  jette.** Sept le faisaient, dont le retrait d'une journée. `sansSilence`
+  (`src/lib/reseau.ts`) fait remonter l'échec au bandeau unique, avec de quoi
+  réessayer ; le bandeau s'efface dès qu'une autre action passe, ce qui évite
+  de rejouer une phase de jeu périmée.
+- **Le voile s'applique aussi à la recherche, et il EXCLUT au lieu de vider.**
+  Une entrée vidée qui apparaît quand même dirait « il y a ce mot dans la
+  journée que tu ne peux pas lire ». C'est écrit dans le `where` Prisma, au plus
+  près de la base.
+- **Un test du voile ne doit pas dépendre du peuplement** : « ai-je posé
+  aujourd'hui » change à chaque exécution de la suite. Le test crée sa bande,
+  la remplit et la rend.
+- **Vérifier qu'un test de sécurité échoue quand on retire la sécurité.** Celui
+  du voile passait aussi bien avec le filtre qu'avec `false &&` devant : il a
+  fallu le prouver pour savoir qu'il posait la bonne question.
 - **`locator("text")` de Playwright n'est pas le `<text>` d'un SVG**, et
   `innerText` ne marche pas dessus. L'ordre des éléments d'un SVG suit le
   dessin, pas la lecture.

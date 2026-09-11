@@ -28,6 +28,7 @@ import { EcranReflexe } from "./EcranReflexe";
 import { EcranTour } from "./EcranTour";
 import { EcranVote } from "./EcranVote";
 import { COMPTE_MS, PHASES, acteurDe, reponsesDe, toutLeMondeARepondu } from "./protocole";
+import { sansSilence } from "@/lib/reseau";
 
 /**
  * Ce que la coquille donne aux trois écrans d'archétype.
@@ -140,17 +141,38 @@ export function CoquilleMulti({
     [contexte, joueurs, options, partieId],
   );
 
+  /**
+   * Publier, et le dire si ça ne part pas.
+   *
+   * Une phase qui n'arrive pas au serveur, c'est trois écrans figés sur la
+   * précédente, sans rien pour l'expliquer. Le bouton « Réessayer » du bandeau
+   * renvoie exactement la même phase — et il disparaît dès qu'une autre action
+   * passe, ce qui évite de rejouer une phase périmée dix minutes plus tard.
+   */
   const publier = useCallback(
     (nom: string, donnees: Record<string, unknown>, manche?: number, delai?: number | null) => {
-      void actionPublierPhase(partieId, { nom, donnees, manche, delai });
+      void sansSilence(
+        () => actionPublierPhase(partieId, { nom, donnees, manche, delai }),
+        "La manche",
+      );
     },
     [partieId],
   );
 
+  /**
+   * Répondre, et le dire si ça ne part pas.
+   *
+   * C'est l'appel le plus coûteux à perdre de toute l'application : la manche
+   * attend une réponse qui n'arrivera jamais, et personne ne sait pourquoi.
+   * `agir` fait un `upsert` sur (partie, manche, phase, joueur) : renvoyer deux
+   * fois la même réponse ne crée pas deux votes.
+   */
   const repondre = useCallback(
     (donnees: Record<string, unknown>) => {
       if (!etat?.phase) return;
-      void actionAgir(partieId, etat.manche, etat.phase, donnees);
+      const manche = etat.manche;
+      const phase = etat.phase;
+      void sansSilence(() => actionAgir(partieId, manche, phase, donnees), "Ta réponse");
     },
     [etat, partieId],
   );

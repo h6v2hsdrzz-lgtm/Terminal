@@ -97,9 +97,27 @@ export default async function Page() {
         />
       )}
 
-      <header className="mb-5 zone-sure-haute">
-        <h1 className="text-[26px] font-semibold tracking-[-0.02em]">Le fil</h1>
-        <p className="mt-0.5 text-[14px] text-encre-3">Tout ce que la bande a posé, jour après jour.</p>
+      <header className="mb-5 flex items-start gap-3 zone-sure-haute">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-[26px] font-semibold tracking-[-0.02em]">Le fil</h1>
+          <p className="mt-0.5 text-[14px] text-encre-3">
+            Tout ce que la bande a posé, jour après jour.
+          </p>
+        </div>
+
+        {/* La loupe vit ici et pas dans la barre du bas : on cherche une fois
+            par semaine, on ouvre le fil dix fois par jour. Un sixième onglet
+            aurait coûté de la place à tout le monde, tout le temps. */}
+        <Link
+          href="/recherche"
+          aria-label="Chercher dans le journal"
+          className="cible-tactile grid h-11 w-11 shrink-0 place-items-center rounded-full border border-trait bg-surface-2 text-encre-2 transition hover:border-trait-fort"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-3.5-3.5" />
+          </svg>
+        </Link>
       </header>
 
       {/* La carte d'appel : la figure du jour, et le bouton qui mène au

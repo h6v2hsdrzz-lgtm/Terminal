@@ -1,7 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+
+import { signalerReseau } from "@/lib/reseau";
 
 /**
  * Le temps réel, par sondage.
@@ -18,13 +20,17 @@ import { useEffect, useRef, useState } from "react";
  *   raison d'interroger la base toutes les trois secondes ;
  * · au retour de veille, on sonde immédiatement plutôt que d'attendre le
  *   prochain tour — c'est le moment exact où l'on veut voir ce qu'on a raté.
+ *
+ * Ce composant n'affiche RIEN depuis le lot Q. Il dit ce qu'il voit du réseau
+ * à `src/lib/reseau.ts`, et c'est `BandeauReseau` qui l'affiche — au même
+ * endroit que les gestes qui n'ont pas abouti, parce que pour la personne qui
+ * regarde c'est le même sujet.
  */
 const CADENCE_MS = 3000;
 
 export function Synchronisation({ version }: { version: string }) {
   const router = useRouter();
   const connue = useRef(version);
-  const [horsLigne, setHorsLigne] = useState(false);
 
   // La version rendue par le serveur fait foi : sans cette remise à niveau, un
   // rafraîchissement déclenché par nous relancerait le suivant en boucle. Elle
@@ -45,16 +51,21 @@ export function Synchronisation({ version }: { version: string }) {
           const reponse = await fetch("/api/version", { cache: "no-store" });
           if (reponse.ok) {
             const { version: fraiche } = (await reponse.json()) as { version: string };
-            setHorsLigne(false);
+            signalerReseau(true);
             if (fraiche !== connue.current) {
               connue.current = fraiche;
               router.refresh();
             }
+          } else {
+            // Le serveur répond mais refuse : pour la personne qui regarde,
+            // c'est exactement la même chose qu'un tunnel — les journées des
+            // autres n'arrivent plus.
+            signalerReseau(false);
           }
         } catch {
           // Réseau coupé : on le signale et on continue d'essayer. Ce n'est pas
           // une erreur, c'est un tunnel.
-          setHorsLigne(true);
+          signalerReseau(false);
         }
       }
       minuteur = setTimeout(sonder, CADENCE_MS);
@@ -79,15 +90,5 @@ export function Synchronisation({ version }: { version: string }) {
     };
   }, [router]);
 
-  if (!horsLigne) return null;
-
-  return (
-    <p
-      role="status"
-      className="fixed inset-x-0 top-0 z-50 bg-encre px-4 py-1.5 text-center text-[12px] font-medium"
-      style={{ color: "var(--surface)" }}
-    >
-      Hors ligne — les journées des autres n&apos;arrivent plus
-    </p>
-  );
+  return null;
 }

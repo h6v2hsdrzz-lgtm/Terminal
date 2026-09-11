@@ -12,6 +12,7 @@ import { decaler, enTexteLongAvecAnnee } from "@/lib/dates";
 import { decompte, nomDuGenre } from "@/lib/scelle";
 import { ErreurTranscodage, preparerScelle } from "@/lib/transcodage";
 import type { Capsule, GenreScelle } from "@/lib/depot";
+import { sansSilence } from "@/lib/reseau";
 
 /**
  * Les scellés : un mot, une photo, une vidéo ou une voix, fermés jusqu'à une
@@ -178,7 +179,11 @@ function ScelleOuvert({ capsule, moi }: { capsule: Capsule; moi: string }) {
           <button
             type="button"
             disabled={enCours}
-            onClick={() => demarrer(async () => { await actionSupprimerCapsule(capsule.id); })}
+            onClick={() =>
+              demarrer(async () => {
+                await sansSilence(() => actionSupprimerCapsule(capsule.id), "Le retrait");
+              })
+            }
             className="mt-2 text-[13px] text-encre-3 underline underline-offset-2 hover:text-encre-2"
           >
             le retirer

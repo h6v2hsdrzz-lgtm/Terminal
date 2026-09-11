@@ -7,6 +7,7 @@ import { actionEpingler, actionReagir, actionRetirerJournee } from "@/lib/action
 import { RESSORT } from "@/lib/mouvement";
 import { partagerJournee } from "@/lib/partage";
 import type { Annuaire, Entree } from "@/lib/types";
+import { sansSilence } from "@/lib/reseau";
 
 /**
  * L'appui long sur une carte du fil.
@@ -141,8 +142,7 @@ function FeuilleMenu({
 
   function reagir(emoji: string) {
     demarrer(async () => {
-      await actionReagir(entree.id, emoji);
-      fermer();
+      if (await sansSilence(() => actionReagir(entree.id, emoji), "Ta réaction")) fermer();
     });
   }
 
@@ -220,8 +220,7 @@ function FeuilleMenu({
             occupe={enCours}
             onClick={() =>
               demarrer(async () => {
-                await actionEpingler(entree.id);
-                fermer();
+                if (await sansSilence(() => actionEpingler(entree.id), "L'épingle")) fermer();
               })
             }
           >
@@ -239,8 +238,12 @@ function FeuilleMenu({
                 occupe={enCours}
                 onClick={() =>
                   demarrer(async () => {
-                    await actionRetirerJournee(entree.id);
-                    fermer();
+                    // Le droit de retrait est la règle numéro un : un retrait
+                    // qui ne part pas et qui ne le dit pas laisse quelqu'un
+                    // croire que sa journée a disparu.
+                    if (await sansSilence(() => actionRetirerJournee(entree.id), "Le retrait")) {
+                      fermer();
+                    }
                   })
                 }
               >

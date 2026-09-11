@@ -12,6 +12,7 @@ import {
 import { RESSORT } from "@/lib/mouvement";
 import { ETAT_INITIAL } from "@/lib/formulaire";
 import type { Annuaire, Commentaire, Reaction } from "@/lib/types";
+import { sansSilence } from "@/lib/reseau";
 
 /**
  * Le bas d'une journée : réagir, commenter.
@@ -56,7 +57,11 @@ export function PiedEntree({
     setChoixOuvert(false);
     demarrer(async () => {
       basculer({ emoji });
-      await actionReagir(entreeId, emoji);
+      // L'affichage est optimiste : si le serveur refuse, le cœur affiché est
+      // un mensonge. On le reprend, et on le dit.
+      if (!(await sansSilence(() => actionReagir(entreeId, emoji), "Ta réaction"))) {
+        basculer({ emoji });
+      }
     });
   }
 
@@ -206,7 +211,14 @@ function FilCommentaires({
                   {c.auteurId === moi && (
                     <button
                       type="button"
-                      onClick={() => demarrer(async () => { await actionSupprimerCommentaire(c.id); })}
+                      onClick={() =>
+                        demarrer(async () => {
+                          await sansSilence(
+                            () => actionSupprimerCommentaire(c.id),
+                            "La suppression",
+                          );
+                        })
+                      }
                       className="cible-tactile py-1 underline underline-offset-2 transition hover:text-encre-2"
                     >
                       supprimer
