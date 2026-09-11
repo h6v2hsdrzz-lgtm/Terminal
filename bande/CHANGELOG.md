@@ -79,6 +79,12 @@ v3 y ajoute une section ; les jalons v2 sont regroupés en tête d'historique.
   maintenant **une page de cent vingt**, comme le fil — et une adresse tapée à
   la main ne redevient pas « tout charger ».
 
+### Et une ligne de moins dans la console
+- Les six premières vignettes de la galerie se chargent **sans attendre** : ce
+  sont elles qu'on voit en arrivant, et les charger paresseusement faisait
+  attendre le plus gros élément de la page. Next le disait dans la console
+  depuis un moment.
+
 ### Le réveil du matin
 - Deux dettes payées, et elles attendaient la même chose : **un scellé qui
   s'ouvre** prévient enfin la bande (elle attendait depuis la vague 1), et le

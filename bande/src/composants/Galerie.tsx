@@ -64,7 +64,7 @@ export function Galerie({
               {libelleMois(groupe.cle)}
             </h3>
             <ul className="grid grid-cols-3 gap-1.5">
-              {groupe.medias.map((media) => (
+              {groupe.medias.map((media, rang) => (
                 <li key={media.id}>
                   <button
                     type="button"
@@ -78,6 +78,11 @@ export function Galerie({
                       width={400}
                       height={400}
                       unoptimized
+                      // Les six premières du PREMIER mois sont au-dessus de la
+                      // ligne de flottaison : les charger paresseusement fait
+                      // attendre le plus gros élément de la page. Next le dit
+                      // dans la console du développement, et il a raison.
+                      priority={groupe.cle === mois[0]?.cle && rang < 6}
                       className="aspect-square w-full object-cover"
                     />
 
