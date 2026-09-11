@@ -39,6 +39,8 @@ import {
 import { fermerSession, garderCodeReprise, membreConnecte, oublierCodeReprise, ouvrirSession } from "./session";
 import { ETAT_INITIAL, type Etat } from "./formulaire";
 import { jourDeLaBande } from "./dates";
+import { enregistrerAbonnement, oublierAbonnement, prevenir, reglerPreference } from "./pousse";
+import { TYPES, type TypeNotification } from "./pousse/types";
 import type { FiltreFil, PageFil } from "./types";
 
 /**
@@ -157,6 +159,19 @@ export async function actionPoserJournee(_precedent: Etat, donnees: FormData): P
       position: positionDuLieu(donnees),
     });
 
+    // Les deux autres apprennent qu'il y a quelque chose à lire. Une seule par
+    // personne et par jour : l'étiquette porte le jour, donc modifier sa
+    // journée ne renotifie pas.
+    prevenir(
+      contexte.profils.map((p) => p.id).filter((id) => id !== membreId),
+      {
+        type: "journee",
+        titre: `${contexte.moi.pseudo} a posé sa journée`,
+        corps: texte(donnees, "titre") || "Va voir.",
+        vers: "/",
+        etiquette: `journee-${membreId}-${jourDeLaBande()}`,
+      },
+    );
     rafraichirTout();
   });
 }
@@ -184,16 +199,44 @@ async function quiAgit() {
 
 export async function actionReagir(entreeId: string, emoji: string): Promise<Etat> {
   return tenter(async () => {
-    const { membreId } = await quiAgit();
-    await basculerReaction(membreId, entreeId, emoji);
+    const { membreId, contexte } = await quiAgit();
+    const { auteurId, pose } = await basculerReaction(membreId, entreeId, emoji);
+    // Seulement quand on AJOUTE une réaction, jamais quand on la retire : une
+    // notification « quelqu'un a changé d'avis » n'apporte rien.
+    if (pose && auteurId !== membreId) {
+      prevenir([auteurId], {
+        type: "reaction",
+        titre: `${contexte.moi.pseudo} ${emoji}`,
+        corps: "a réagi à ta journée.",
+        vers: "/",
+        // Une étiquette par journée : cinq réactions sur la même font une ligne
+        // qui se met à jour, pas cinq notifications.
+        etiquette: `reaction-${entreeId}`,
+      });
+    }
     rafraichirTout();
   });
 }
 
 export async function actionCommenter(_precedent: Etat, donnees: FormData): Promise<Etat> {
   return tenter(async () => {
-    const { membreId } = await quiAgit();
-    await commenter(membreId, texte(donnees, "entree"), texte(donnees, "texte"));
+    const { membreId, contexte } = await quiAgit();
+    const entreeId = texte(donnees, "entree");
+    const message = texte(donnees, "texte");
+    await commenter(membreId, entreeId, message);
+
+    // Tout le monde sauf soi : un commentaire sous la journée de quelqu'un
+    // intéresse aussi le troisième, qui a commenté juste avant.
+    prevenir(
+      contexte.profils.map((p) => p.id).filter((id) => id !== membreId),
+      {
+        type: "commentaire",
+        titre: contexte.moi.pseudo,
+        corps: message.slice(0, 120),
+        vers: "/",
+        etiquette: `commentaire-${entreeId}`,
+      },
+    );
     rafraichirTout();
   });
 }
@@ -609,6 +652,45 @@ export async function actionRetirerCopies(empreinte: string): Promise<Etat> {
         "Ces copies ne sont pas les tiennes. Seul celui qui les a posées peut les retirer.",
       );
     }
+    rafraichirTout();
+  });
+}
+
+// ── Les notifications poussées ──────────────────────────────────────────────
+
+/**
+ * S'abonner depuis cet appareil.
+ *
+ * Le navigateur fabrique lui-même la paire de clés et l'adresse d'abonnement ;
+ * on ne fait que les ranger. Rien ici ne donne accès à quoi que ce soit : sans
+ * la moitié privée de notre paire VAPID, personne d'autre ne peut pousser sur
+ * cette adresse.
+ */
+export async function actionAbonner(abonnement: {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}): Promise<Etat> {
+  return tenter(async () => {
+    const { membreId } = await quiAgit();
+    await enregistrerAbonnement(membreId, abonnement);
+  });
+}
+
+export async function actionDesabonner(endpoint: string): Promise<Etat> {
+  return tenter(async () => {
+    await quiAgit();
+    await oublierAbonnement(endpoint);
+  });
+}
+
+export async function actionReglerNotification(type: string, valeur: boolean): Promise<Etat> {
+  return tenter(async () => {
+    const { membreId } = await quiAgit();
+    if (!(TYPES as readonly string[]).includes(type)) {
+      throw new ErreurMetier("Ce type de notification n'existe pas.");
+    }
+    await reglerPreference(membreId, type as TypeNotification, valeur);
     rafraichirTout();
   });
 }

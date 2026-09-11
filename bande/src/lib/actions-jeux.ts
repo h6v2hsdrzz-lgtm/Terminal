@@ -27,6 +27,9 @@ import {
   type FinDePartie,
   type Partie,
 } from "./depot-jeux";
+import { jeuParCle } from "./jeux/catalogue";
+import { prevenir } from "./pousse";
+import { exigerContexte } from "./repaire";
 import { membreConnecte } from "./session";
 
 /**
@@ -147,7 +150,27 @@ export async function actionOuvrirSalon(
   jeu: string,
 ): Promise<{ erreur: string | null; valeur?: string }> {
   return tenter(async () => {
-    const id = await ouvrirSalon(await quiJoue(), jeu);
+    const membreId = await quiJoue();
+    const contexte = await exigerContexte();
+    const id = await ouvrirSalon(membreId, jeu);
+
+    // Le bandeau de l'accueil couvre le cas où l'application est ouverte. La
+    // notification couvre l'autre — et c'est le seul moment du produit où être
+    // prévenu compte vraiment : une partie qui attend, c'est deux personnes
+    // assises qui regardent leur téléphone.
+    prevenir(
+      contexte.profils.map((p) => p.id).filter((autre) => autre !== membreId),
+      {
+        type: "jeu",
+        titre: `${contexte.moi.pseudo} lance ${jeuParCle(jeu)?.nom ?? jeu}`,
+        corps: "Rejoins quand tu veux.",
+        // Le lien profond mène AU SALON, pas à la liste des jeux : on touche la
+        // notification, on est dedans.
+        vers: `/jeux/${id}`,
+        etiquette: "salon",
+      },
+    );
+
     // L'accueil porte le bandeau « rejoindre » : sans cette invalidation, les
     // deux autres ne verraient le salon qu'au prochain rafraîchissement.
     revalidatePath("/");

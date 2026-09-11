@@ -2,12 +2,15 @@ import Link from "next/link";
 
 import { Carte, TitreSection } from "@/composants/Carte";
 import { BoiteInvitation } from "@/composants/BoiteInvitation";
+import { BoiteNotifications } from "@/composants/BoiteNotifications";
+import { BoiteTheme } from "@/composants/BoiteTheme";
 import { ReglagesBande } from "@/composants/ReglagesBande";
 import { ZoneDepart } from "@/composants/ZoneDepart";
 import { Avatar } from "@/composants/Avatar";
 import { TAILLE_MAX_BANDE } from "@/lib/couleurs";
 import { espaceOccupe } from "@/lib/depot";
 import { enPoids } from "@/lib/media";
+import { abonnementsDe, clePublique, lirePreferences } from "@/lib/pousse";
 import { exigerContexte } from "@/lib/repaire";
 import { PLAFOND_STOCKAGE } from "@/lib/stockage/plafond";
 
@@ -16,6 +19,8 @@ export default async function Page() {
   const espace = await espaceOccupe(contexte.groupe.id);
   const total = espace.medias.octets + espace.audios.octets;
   const part = Math.min(1, total / PLAFOND_STOCKAGE);
+  const preferences = await lirePreferences(contexte.moi.id);
+  const abonnements = await abonnementsDe(contexte.moi.id);
 
   return (
     <div className="px-4 pt-3">
@@ -88,6 +93,14 @@ export default async function Page() {
           </Carte>
         </Link>
       </section>
+
+      <BoiteNotifications
+        clePublique={clePublique()}
+        preferences={preferences}
+        abonnements={abonnements}
+      />
+
+      <BoiteTheme />
 
       <ReglagesBande
         nom={contexte.groupe.nom}

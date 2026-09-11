@@ -38,16 +38,30 @@ plan le demandait. Les trois graphiques de l'application rendent maintenant leur
 valeur au TAP, tiennent sous deux cents pixels et se lisent en clair comme en
 sombre.
 
+**Le lot Q est commencé : les notifications poussées existent, écrites à la
+main.** RFC 8291 (ECDH P-256 + HKDF + AES-128-GCM), RFC 8188 (`aes128gcm`) et
+RFC 8292 (jeton VAPID ES256), avec `node:crypto` et aucune dépendance de plus —
+les tests vérifient les six intermédiaires publiés par le RFC 8291, puis
+déchiffrent pour de bon. Six types réglables, tout allumé sauf les réactions.
+L'écran de réglages porte aussi le thème (clair / sombre / le téléphone décide,
+posé avant le premier pixel) et la déconnexion. Q1 et la moitié serveur de Q3
+sont faits.
+
 ## Prochaine action exacte
 
-**LOT Q — ce qui manque** : l'écran de réglages, les notifications poussées,
-l'état hors-ligne visible, les liens profonds, l'export/import complet, la
-recherche, les performances, et l'écran « Nouveautés ».
+**LOT Q, la suite** : Q2 l'état hors-ligne visible avec bouton réessayer, Q4
+l'import (l'export existe depuis la vague 1), Q5 la recherche globale, Q6 les
+performances, Q7 l'écran « Nouveautés ».
 
-Deux dettes l'attendent : la notification du lendemain matin du « Tribunal des
-idées » (lot O l'a préparée, la parole est gardée, il manque la poussée), et la
-notification d'ouverture d'un scellé (C5, reportée depuis la vague 1). Les deux
-demandent la même chose : des clés VAPID et un abonnement par appareil.
+Deux dettes l'attendent, maintenant débloquées par les notifications : celle du
+lendemain matin du « Tribunal des idées » (lot O l'a préparée, la parole est
+gardée, il manque le réveil à l'heure dite), et l'ouverture d'un scellé (C5,
+reportée depuis la vague 1).
+
+**Pour allumer les notifications en production** : `npm run pousse:cles`, puis
+poser `VAPID_PUBLIQUE`, `VAPID_PRIVEE` et `VAPID_CONTACT` chez Vercel. Sans
+elles l'écran de réglages le dit et le reste tourne. En local, `.env` porte une
+paire de développement — et `.env` est ignoré par git.
 
 ### Ce qu'il faut pour allumer R2 (lot M)
 

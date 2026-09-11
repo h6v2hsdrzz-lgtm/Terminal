@@ -17,7 +17,8 @@
     "medias:migrer": "tsx --conditions=react-server --env-file=.env scripts/migrer-medias.ts",
     "medias:verifier": "tsx --conditions=react-server --env-file=.env scripts/migrer-medias.ts --verifier",
     "cartes:images": "tsx scripts/images-cartes.ts",
-    "cartes:verifier": "tsx scripts/images-cartes.ts --verifier"
+    "cartes:verifier": "tsx scripts/images-cartes.ts --verifier",
+    "pousse:cles": "tsx scripts/cles-vapid.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",

@@ -22,9 +22,22 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+/**
+ * Le thème choisi, posé AVANT le premier rendu.
+ *
+ * Sans ce script, la page s'affiche dans le thème du système puis bascule quand
+ * React se réveille : un éclair blanc à minuit, et l'application est rangée dans
+ * les choses qui font mal aux yeux. Il est minuscule et synchrone exprès — c'est
+ * la seule façon d'être là avant la peinture.
+ */
+const THEME = `try{var t=localStorage.getItem("joie-theme");if(t==="clair"||t==="sombre")document.documentElement.classList.add(t)}catch(e){}`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME }} />
+      </head>
       <body>
         {children}
         <Clavier />

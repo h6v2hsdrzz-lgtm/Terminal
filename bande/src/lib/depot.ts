@@ -564,7 +564,10 @@ export async function basculerReaction(membreId: string, entreeId: string, emoji
   if (existante) await prisma.reaction.delete({ where: { id: existante.id } });
   else await prisma.reaction.create({ data: { entreeId, membreId, emoji } });
 
-  return entree.groupeId;
+  // Qui a écrit la journée, et si la réaction vient d'être POSÉE : l'appelant en
+  // a besoin pour prévenir la bonne personne, et seulement quand il y a quelque
+  // chose à annoncer. « Quelqu'un a retiré son cœur » n'intéresse personne.
+  return { groupeId: entree.groupeId, auteurId: entree.membreId, pose: !existante };
 }
 
 export const LONGUEUR_COMMENTAIRE = 280;
@@ -629,7 +632,9 @@ async function memeBande(membreId: string, entreeId: string) {
   });
   const entree = await prisma.entree.findUnique({
     where: { id: entreeId },
-    select: { groupeId: true },
+    // L'auteur vient avec : c'est lui qu'on prévient d'une réaction, et le
+    // relire dans une deuxième requête serait une requête pour rien.
+    select: { groupeId: true, membreId: true },
   });
   if (!membre || !entree || membre.groupeId !== entree.groupeId) {
     throw new ErreurMetier("Cette journée n'est pas dans ta bande.");

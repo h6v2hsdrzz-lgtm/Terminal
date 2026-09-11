@@ -35,11 +35,12 @@ src/composants/          un fichier par composant, noms français ; jeux/ pour l
 src/lib/                 depot.ts + depot-jeux.ts (tout PostgreSQL), actions*.ts, logique pure
 src/lib/graphiques.ts    ce que les graphiques du profil calculent ; trace.ts, le lissage
 src/lib/stockage/        R2 : signature v4 écrite à la main, client, clés, plafond
+src/lib/pousse/          notifications : RFC 8291/8188/8292 à la main, envoi, préférences
 scripts/migrer-medias.ts déménage les octets vers R2, avec relecture et empreintes
 src/lib/jeux/            catalogue, cadre, tirage, recompense, quiz, top3, vote, inclinaison, salon, recettes, types
 src/lib/jeux/contenu/    jamais, dilemmes, paquets, marie-janne, images (engendré)
 scripts/images-cartes.ts récolte les images de Wikipédia pour « Devine qui je suis »
-e2e/                     Playwright : captures, lot1, lotA..lotC, lotF, lotG, lotK, lotL, lotM, lotN, lotO, video, production
+e2e/                     Playwright : captures, lot1, lotA..lotC, lotF, lotG, lotK, lotL, lotM, lotN, lotO, lotP, lotQ, video, production
 e2e/aide-jeux.ts         deux téléphones dans un test : salon, code, libération
 ```
 
@@ -207,6 +208,18 @@ npx prisma migrate dev --create-only   # écrire la migration, la RELIRE, puis l
 - **Une entrée porte des IDENTIFIANTS de déclencheurs, pas leurs noms.** Comparer
   sur le nom rend toutes les séries à zéro — et l'écran annonce poliment
   « aucun déclencheur coché » devant quatre cents journées qui en portent.
+- **Le WebKit de Playwright n'a ni `PushManager` ni `Notification`** (mesuré, pas
+  supposé). Un abonnement ne s'y éprouve donc pas ; ce qui s'y éprouve, c'est ce
+  qu'un appareil sans pousse doit voir — et c'est aussi le cas d'un iPhone tant
+  que l'application n'est pas sur l'écran d'accueil. Le chiffrement, lui, se
+  vérifie en Vitest contre les intermédiaires publiés du RFC 8291.
+- **`role="alert"` n'est pas à nous tout seuls** : Next.js en pose un, invisible,
+  pour annoncer les changements de route. Un `getByRole("alert")` sur la page
+  entière trouve deux éléments et échoue en mode strict. Idem pour les cases à
+  cocher : l'écran de réglages en a d'autres que celles des notifications.
+- **La clé publique VAPID part telle quelle dans `applicationServerKey`.** Elle
+  voyage avec chaque abonnement et n'est pas un secret ; la PRIVÉE ne quitte
+  jamais le serveur, et `.env` est ignoré par git.
 - **`locator("text")` de Playwright n'est pas le `<text>` d'un SVG**, et
   `innerText` ne marche pas dessus. L'ordre des éléments d'un SVG suit le
   dessin, pas la lecture.

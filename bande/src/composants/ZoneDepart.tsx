@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 
 import { Carte, TitreSection } from "./Carte";
 import { MessageErreur, styleChamp } from "./Champ";
-import { actionQuitterLaBande, actionQuitterLaBandeSimple } from "@/lib/actions";
+import { actionQuitter, actionQuitterLaBande, actionQuitterLaBandeSimple } from "@/lib/actions";
 import { ETAT_INITIAL } from "@/lib/formulaire";
 
 /**
@@ -22,6 +22,35 @@ export function ZoneDepart({ nomBande, seul }: { nomBande: string; seul: boolean
 
   return (
     <>
+      {/* Se déconnecter, et rien d'autre.
+          C'est le geste le plus banal d'une application et le plus dangereux de
+          celle-ci : sans mot de passe, le code de reprise est la SEULE façon de
+          revenir. On le dit avant, pas après. */}
+      <section className="mt-7">
+        <TitreSection>Se déconnecter</TitreSection>
+        <Carte className="p-4">
+          <p className="text-[14px] leading-snug text-encre-2">
+            Se déconnecter efface la session de ce téléphone. Tes journées restent,
+            la bande reste — mais pour revenir il faudra <strong>ton code de
+            reprise</strong>, et c&apos;est la seule façon.
+          </p>
+          <a
+            href="/reprendre"
+            className="cible-tactile mt-3 inline-flex text-[13px] text-encre-3 underline underline-offset-2"
+          >
+            Revoir comment on revient
+          </a>
+          <form action={actionQuitter}>
+            <button
+              type="submit"
+              className="cible-tactile mt-3 w-full rounded-[var(--radius-pilule)] border border-trait-fort bg-surface py-2.5 text-center text-[15px] font-medium transition hover:border-encre-3"
+            >
+              Se déconnecter
+            </button>
+          </form>
+        </Carte>
+      </section>
+
       <section className="mt-7">
         <TitreSection>Emporter</TitreSection>
         <Carte className="p-4">

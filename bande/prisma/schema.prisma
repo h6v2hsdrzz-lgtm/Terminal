@@ -71,6 +71,11 @@ model Membre {
   /// ta dernière visite » a besoin de la visite, pas de la publication.
   filVuLe        DateTime? @map("fil_vu_le")
 
+  /// Ce qu'on accepte de recevoir, par type. Une personne, pas un appareil :
+  /// choisir « pas les réactions » sur son téléphone et les recevoir sur sa
+  /// tablette n'aurait aucun sens. Voir `src/lib/pousse/types.ts`.
+  notifications Json @default("{}")
+
   groupe       Groupe        @relation(fields: [groupeId], references: [id], onDelete: Cascade)
   entrees      Entree[]
   reactions    Reaction[]
@@ -78,6 +83,7 @@ model Membre {
   capsules     Capsule[]
   paroles      Parole[]
   pouls        Pouls[]
+  abonnements  Abonnement[]
 
   @@unique([groupeId, pseudo])
   @@index([groupeId])
@@ -247,6 +253,36 @@ model Audio {
   entree Entree @relation(fields: [entreeId], references: [id], onDelete: Cascade)
 
   @@map("bande_audios")
+}
+
+/// Un appareil abonné aux notifications poussées.
+///
+/// Une ligne par APPAREIL, pas par personne : le même compte peut être ouvert
+/// sur un téléphone et une tablette, et chacun a son adresse d'abonnement et
+/// ses clés. Elles viennent du navigateur, qui les fabrique lui-même — nous ne
+/// possédons que la moitié publique de la paire VAPID qui signe les envois.
+///
+/// Une adresse d'abonnement périme : le navigateur la renouvelle, ou l'utilisateur
+/// désinstalle. Le serveur de pousse répond alors 404 ou 410, et la ligne part.
+model Abonnement {
+  id        String   @id @default(cuid())
+  membreId  String   @map("membre_id")
+  /// L'adresse du serveur de pousse. Unique : un même appareil ne s'abonne
+  /// qu'une fois, et se réabonner remplace.
+  endpoint  String   @unique
+  /// La clé publique du navigateur, en base64url.
+  p256dh    String
+  /// Le secret d'authentification, en base64url. C'est lui qui empêche le
+  /// serveur de pousse de fabriquer un message valide.
+  auth      String
+  creeLe    DateTime @default(now()) @map("cree_le")
+  /// Le dernier envoi accepté. Sert à repérer un abonnement qui ne répond plus.
+  vuLe      DateTime @default(now()) @map("vu_le")
+
+  membre Membre @relation(fields: [membreId], references: [id], onDelete: Cascade)
+
+  @@index([membreId])
+  @@map("bande_abonnements")
 }
 
 /// Une étiquette libre de la bande : sport, taf, soirée, glandage.

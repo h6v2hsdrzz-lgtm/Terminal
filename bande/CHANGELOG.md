@@ -3,6 +3,42 @@
 Les entrées vont de la plus récente à la plus ancienne. Chaque lot du chantier
 v3 y ajoute une section ; les jalons v2 sont regroupés en tête d'historique.
 
+## Lot Q — Réglages, notifications et le reste
+
+### Les notifications poussées
+- **Écrites à la main**, sans dépendance : ECDH P-256 + HKDF + AES-128-GCM
+  (RFC 8291), l'encodage `aes128gcm` (RFC 8188) et le jeton VAPID ES256
+  (RFC 8292), avec `node:crypto` et rien d'autre. Les tests vérifient les six
+  intermédiaires publiés par le RFC, puis déchiffrent pour de bon.
+- **Six types**, réglables un par un : une journée posée, un commentaire, une
+  réaction, une partie qui s'ouvre, un scellé qui s'ouvre, sa propre voix le
+  lendemain. Tout est allumé **sauf les réactions** — un petit cœur n'appelle
+  pas de réponse, et une notification par cœur transforme un geste léger en
+  interruption.
+- L'appareil et la personne sont deux réglages distincts : recevoir sur son
+  téléphone et pas sur l'ordinateur du bureau, mais choisir une bonne fois pour
+  toutes ce qu'on veut recevoir.
+- Deux notifications de même **étiquette** se remplacent au lieu de s'empiler :
+  trois commentaires sur la même journée font une ligne, pas trois.
+- **Un lien profond** dans chacune : on la touche, on est dans la partie, pas
+  sur l'accueil. Et si l'application est déjà ouverte, elle y va sans ouvrir un
+  deuxième onglet.
+- Rien n'est cassé sans les clés : l'écran de réglages le dit, et le reste
+  tourne.
+
+### L'apparence
+- Clair, sombre, ou celui du téléphone. Le réglage reste sur l'appareil et ne
+  traverse jamais le réseau — le même compte sur une table de nuit et en plein
+  jour n'a pas la même bonne réponse.
+- Posé par un script **avant le premier pixel** : sans lui, la page s'affiche
+  dans le thème du système puis bascule. Un éclair blanc à minuit range une
+  application dans les choses qui font mal aux yeux.
+
+### Se déconnecter
+- Le geste le plus banal d'une application et le plus dangereux de celle-ci :
+  sans mot de passe, le code de reprise est la seule porte de retour. On le dit
+  **avant**, pas après.
+
 ## Lot P — Deux graphiques dans le profil
 
 ### L'évolution du classement
