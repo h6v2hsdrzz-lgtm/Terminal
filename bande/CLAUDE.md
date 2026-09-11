@@ -262,6 +262,17 @@ npx prisma migrate dev --create-only   # écrire la migration, la RELIRE, puis l
   qu'il a envoyé seulement après.
 - **Un envoi se marque APRÈS, jamais avant.** Marquer d'abord laisserait un
   scellé « annoncé » que personne n'a vu passer, et il ne se rattraperait jamais.
+- **Un champ de fichier natif parle anglais**, et aucune règle CSS ne réécrit
+  « Choose File » ni « no file selected ». Il faut le cacher (`sr-only`, mais en
+  16 px : il reste focalisable) et faire du `<label>` le bouton.
+- **Une barre collante se met en `bg-sol`, pas `bg-surface`** : le fond de page
+  est `--sol`, et `--surface` y dessine une bande blanche pleine largeur.
+- **Sans `loading.tsx`, Next garde l'écran PRÉCÉDENT** jusqu'à ce que le suivant
+  soit prêt. Sur cinquante millisecondes c'est le bon comportement ; sur les
+  huit cents millisecondes des souvenirs, l'application a l'air bloquée.
+- **`error.tsx` n'est pas atteignable en abattant la charge d'une navigation** :
+  Next abandonne la navigation côté client et recharge la page entière, qui
+  aboutit. Il ne sert que quand le rendu lui-même casse.
 - **`locator("text")` de Playwright n'est pas le `<text>` d'un SVG**, et
   `innerText` ne marche pas dessus. L'ordre des éléments d'un SVG suit le
   dessin, pas la lecture.

@@ -43,6 +43,10 @@ export function CourbeDeclencheurs({
   declencheurs: { id: string; nom: string; emoji: string }[];
   aujourdhui: string;
 }) {
+  // Quatre-vingt-dix jours par défaut, alors que la courbe des points s'ouvre
+  // sur trente : ce graphique compte PAR SEMAINE, et trente jours n'en font que
+  // quatre. Quatre barres ne racontent rien. Les deux réglages diffèrent sur le
+  // même écran, et c'est voulu — la forme des données n'est pas la même.
   const [periode, setPeriode] = useState<Periode>(90);
   const [touche, setTouche] = useState<number | null>(null);
 

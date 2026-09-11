@@ -3,6 +3,21 @@
 Les entrées vont de la plus récente à la plus ancienne. Chaque lot du chantier
 v3 y ajoute une section ; les jalons v2 sont regroupés en tête d'historique.
 
+## Lot R — Les audits
+
+### Ce que les captures ont montré
+- La barre de recherche collante dessinait une **bande blanche** en travers de
+  l'écran : elle était en `--surface` quand le fond de page est `--sol`.
+- Le champ de fichier de la restauration affichait **« Choose File »** et
+  **« no file selected »**, en anglais. Aucun style ne réécrit ces deux chaînes :
+  le champ natif est caché, et c'est son libellé qui fait bouton.
+- « Restaurer » était rangé **après** « Quitter la bande ». On ne met pas
+  « remets tes données » derrière le bouton qui les efface.
+- **Il n'y avait aucun état de chargement.** Les souvenirs prennent huit cents
+  millisecondes avec la base en local ; avec Neon à l'autre bout, on touche
+  l'onglet et il ne se passe rien pendant une seconde. Un squelette dit
+  maintenant où le contenu va arriver.
+
 ## Lot Q — Réglages, notifications et le reste
 
 ### Les notifications poussées

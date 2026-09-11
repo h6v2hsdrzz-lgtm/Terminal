@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { passerLesNouveautes } from "./aide-jeux";
+import { codeDe as lireCode, entrer, passerLesNouveautes } from "./aide-jeux";
 
 /**
  * L'audit visuel du plan : **chaque état**, pas seulement chaque écran.
@@ -38,6 +38,8 @@ const VIDES = [
   { nom: "souvenirs", url: "/souvenirs" },
   { nom: "galerie", url: "/galerie" },
   { nom: "profil", url: "/profil" },
+  { nom: "recherche", url: "/recherche" },
+  { nom: "jour", url: "/jour/1999-01-01" },
 ];
 
 test("les écrans vides d'une bande qui vient de naître", async ({ page }, infos) => {
@@ -97,4 +99,88 @@ test("le portail, avant toute session", async ({ page }, infos) => {
   await page.getByRole("button", { name: /reconnecter/i }).click();
   await expect(page.getByText(/ne correspond à rien|pas la bonne forme/)).toBeVisible();
   await page.screenshot({ path: `captures/${infos.project.name}/etat-code-refuse.png` });
+});
+
+/**
+ * Les états du lot Q, ceux qu'on ne voit que quand ça se passe mal.
+ *
+ * Ils comptent autant que les écrans pleins : un bandeau mal posé se voit
+ * exactement au moment où la personne est déjà contrariée.
+ */
+test("le réseau qui lâche, et le geste qui ne passe pas", async ({ page }, infos) => {
+  test.slow();
+  await entrer(page, "Momo");
+
+  // Hors ligne : le sondage de version est le seul témoin dont dispose
+  // l'application, c'est donc lui qu'on abat.
+  await page.route("**/api/version", (route) => route.abort());
+  await expect(page.getByRole("status").filter({ hasText: /hors ligne/i })).toBeVisible({
+    timeout: 15_000,
+  });
+  await page.waitForTimeout(600);
+  await page.screenshot({
+    path: `captures/${infos.project.name}/etat-hors-ligne.png`,
+    clip: { x: 0, y: 0, width: 393, height: 220 },
+  });
+
+  // Une action serveur qui n'arrive pas : un POST reconnaissable à son en-tête.
+  await page.route("**/*", async (route) => {
+    const requete = route.request();
+    if (requete.method() === "POST" && requete.headers()["next-action"]) return route.abort();
+    return route.fallback();
+  });
+  await page.getByRole("button", { name: "Ajouter une réaction" }).first().click();
+  await page.getByRole("button", { name: "🔥" }).first().click();
+  await expect(page.getByRole("alert").filter({ hasText: /n'a pas pu partir/i })).toBeVisible({
+    timeout: 15_000,
+  });
+  await page.waitForTimeout(1200);
+  await page.screenshot({
+    path: `captures/${infos.project.name}/etat-panne.png`,
+    clip: { x: 0, y: 0, width: 393, height: 220 },
+  });
+});
+
+test("l'écran qui casse, et celui qui charge", async ({ page }, infos) => {
+  test.slow();
+  await entrer(page, "Momo");
+
+  // Le squelette de chargement : on retient la réponse du serveur assez
+  // longtemps pour le voir. C'est exactement ce qui se passe avec une base à
+  // l'autre bout du monde et une barre de métro.
+  await page.route("**/souvenirs?_rsc=*", async (route) => {
+    await new Promise((suite) => setTimeout(suite, 2500));
+    await route.fallback();
+  });
+  await page.getByRole("link", { name: "Souvenirs" }).first().click();
+  await expect(page.getByText("Chargement…")).toBeAttached({ timeout: 10_000 });
+  await page.screenshot({ path: `captures/${infos.project.name}/etat-chargement.png` });
+  await page.unroute("**/souvenirs?_rsc=*");
+
+  // Et ce qui se passe quand la charge d'une navigation n'arrive JAMAIS.
+  //
+  // On s'attendait à voir `error.tsx`. On voit autre chose, et c'est mieux :
+  // Next abandonne la navigation côté client et **recharge la page en entier**,
+  // qui aboutit. L'écran d'erreur n'est donc pas atteignable de l'extérieur —
+  // il ne sert que quand c'est le rendu lui-même qui casse. C'est une bonne
+  // nouvelle, et elle se vérifie plutôt que de se supposer.
+  await page.goto("/", { waitUntil: "networkidle" });
+  await page.route("**/profil?_rsc=*", (route) => route.abort());
+  await page.getByRole("link", { name: "Profil" }).first().click();
+  await expect(page).toHaveURL(/\/profil/, { timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: /tes points/i }).first()).toBeVisible({
+    timeout: 15_000,
+  });
+});
+
+test("les nouveautés, en plein cadre", async ({ page }, infos) => {
+  await page.goto("/reprendre");
+  await page.fill("#reprise", lireCode("Momo"));
+  await page.getByRole("button", { name: /reconnecter/i }).click();
+  await page.waitForURL("/");
+  // Pas de `passerLesNouveautes` : c'est elles qu'on photographie.
+  const feuille = page.getByRole("dialog", { name: "Les nouveautés" });
+  await expect(feuille).toBeVisible({ timeout: 15_000 });
+  await page.waitForTimeout(600);
+  await page.screenshot({ path: `captures/${infos.project.name}/etat-nouveautes.png` });
 });

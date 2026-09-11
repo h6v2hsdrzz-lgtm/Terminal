@@ -477,7 +477,9 @@ test("restaurer une sauvegarde remet les journées, et n'écrase rien", async ({
   ]);
 
   await aller(page, "/reglages");
-  const champ = page.getByLabel("Le fichier de sauvegarde");
+  // Le champ natif est caché derrière son libellé : c'est le seul moyen
+  // d'avoir un bouton en français. `setInputFiles` s'en accommode.
+  const champ = page.getByLabel("Choisir un fichier");
   await champ.setInputFiles({
     name: "sauvegarde.zip",
     mimeType: "application/zip",
@@ -499,7 +501,7 @@ test("restaurer une sauvegarde remet les journées, et n'écrase rien", async ({
 
   // La même sauvegarde une deuxième fois : rien n'est écrasé, rien n'est doublé.
   await aller(page, "/reglages");
-  await page.getByLabel("Le fichier de sauvegarde").setInputFiles({
+  await page.getByLabel("Choisir un fichier").setInputFiles({
     name: "sauvegarde.zip",
     mimeType: "application/zip",
     buffer: Buffer.from(archive),

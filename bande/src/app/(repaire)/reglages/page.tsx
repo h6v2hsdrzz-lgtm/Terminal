@@ -123,10 +123,14 @@ export default async function Page() {
         declencheurs={contexte.declencheurs}
       />
 
-      <ZoneDepart nomBande={contexte.groupe.nom} seul={contexte.profils.length === 1} />
-
-      {/* Après « Emporter » : on ne restaure pas avant de savoir sauvegarder. */}
-      <BoiteRestauration />
+      {/* La restauration s'intercale entre « Emporter » et « Partir » : on ne
+          restaure pas avant de savoir sauvegarder, et surtout on ne la range pas
+          derrière le bouton qui efface tout. */}
+      <ZoneDepart
+        nomBande={contexte.groupe.nom}
+        seul={contexte.profils.length === 1}
+        apresEmporter={<BoiteRestauration />}
+      />
     </div>
   );
 }

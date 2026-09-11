@@ -14,7 +14,23 @@ import { ETAT_INITIAL } from "@/lib/formulaire";
  * une application où les données ne sortent pas est une application qui vous
  * retient. On peut tout récupérer sans rien supprimer.
  */
-export function ZoneDepart({ nomBande, seul }: { nomBande: string; seul: boolean }) {
+export function ZoneDepart({
+  nomBande,
+  seul,
+  apresEmporter,
+}: {
+  nomBande: string;
+  seul: boolean;
+  /**
+   * Ce qui s'intercale entre « Emporter » et « Partir ».
+   *
+   * La restauration vivait après « Partir », donc **après** le bouton qui
+   * efface tout. Vu sur une capture : on ne range pas « remets tes données »
+   * derrière « supprime tes données ». Elle appartient à côté de l'export,
+   * et « Partir » reste le dernier bloc de l'écran — c'est le plus définitif.
+   */
+  apresEmporter?: React.ReactNode;
+}) {
   const [etat, setEtat] = useState(ETAT_INITIAL);
   const [enCours, demarrer] = useTransition();
   const [ouvert, setOuvert] = useState(false);
@@ -93,6 +109,8 @@ export function ZoneDepart({ nomBande, seul }: { nomBande: string; seul: boolean
           </p>
         </Carte>
       </section>
+
+      {apresEmporter}
 
       <section className="mt-7 mb-4">
         <TitreSection>Partir</TitreSection>

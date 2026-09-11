@@ -19,6 +19,10 @@ const ECRANS = [
   { nom: "galerie", url: "/galerie" },
   { nom: "profil", url: "/profil" },
   { nom: "reglages", url: "/reglages" },
+  // Les deux écrans du lot Q. Le jour vise une date de la bande de
+  // démonstration ; s'il n'y a rien ce jour-là, l'écran vide est justement ce
+  // qu'on veut voir.
+  { nom: "recherche", url: "/recherche" },
 ];
 
 function codeDe(pseudo: string): string {
@@ -122,4 +126,35 @@ test("la barre d'onglets respecte la zone sûre du bas", async ({ page }, infos)
   // En simulation, `env(safe-area-inset-bottom)` vaut 0 : on vérifie que la
   // déclaration est bien là, pas sa valeur.
   expect(padding).toBeDefined();
+});
+
+/**
+ * Les mêmes écrans, en sombre.
+ *
+ * La règle est dans le plan : lisible en clair **et** en sombre. Les deux
+ * thèmes ne se dérivent pas l'un de l'autre dans cette application — ce sont
+ * deux jeux de couleurs choisis — donc une capture claire ne dit rien du
+ * sombre, et c'est là que les contrastes se cassent en silence.
+ *
+ * On force le thème du SYSTÈME plutôt que le réglage de l'application : c'est
+ * le chemin par défaut, celui que prendront les trois téléphones.
+ */
+test("les écrans en sombre", async ({ page }, infos) => {
+  test.slow();
+  await page.emulateMedia({ colorScheme: "dark" });
+
+  for (const ecran of ECRANS) {
+    await page.goto(ecran.url, { waitUntil: "networkidle" });
+    await expect(page.getByRole("link", { name: "Souvenirs" }).first()).toBeVisible();
+    await page.waitForTimeout(500);
+
+    const depart = page.viewportSize()!;
+    const hauteur = await page.evaluate(() => document.documentElement.scrollHeight);
+    if (hauteur > depart.height) {
+      await page.setViewportSize({ width: depart.width, height: Math.min(hauteur, 6000) });
+      await page.waitForTimeout(400);
+    }
+    await page.screenshot({ path: `captures/${infos.project.name}/sombre-${ecran.nom}.png` });
+    await page.setViewportSize(depart);
+  }
 });

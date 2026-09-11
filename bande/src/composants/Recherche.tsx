@@ -68,7 +68,11 @@ export function Recherche({ annuaire, moi, aujourdhui }: {
 
   return (
     <>
-      <div className="sticky top-0 z-20 -mx-4 bg-surface/90 px-4 pb-3 backdrop-blur">
+      {/* `bg-sol` et pas `bg-surface` : le fond de la page est `--sol`, et une
+          barre collante en `--surface` dessine une bande blanche en travers de
+          l'écran. Vu sur une capture — c'est la même couleur que le fil emploie
+          pour son en-tête de date. */}
+      <div className="sticky top-0 z-20 -mx-4 bg-sol/95 px-4 pb-3 backdrop-blur">
         <label htmlFor="recherche" className="sr-only">
           Chercher dans le journal
         </label>

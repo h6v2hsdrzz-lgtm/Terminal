@@ -28,6 +28,7 @@ export function BoiteRestauration() {
   const champ = useRef<HTMLInputElement>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [rapport, setRapport] = useState<RapportRestauration | null>(null);
+  const [nom, setNom] = useState<string | null>(null);
   const [enCours, demarrer] = useTransition();
 
   return (
@@ -40,16 +41,22 @@ export function BoiteRestauration() {
           exactement comme elle est.
         </p>
 
+        {/* Le champ natif est CACHÉ, et c'est le libellé qui fait bouton.
+            Sinon Safari écrit « Choose File » et « no file selected » en
+            anglais, au milieu d'une application qui est en français du premier
+            au dernier mot — et aucun style ne réécrit ces deux chaînes. Vu sur
+            une capture. */}
         <input
           ref={champ}
+          id="sauvegarde"
           type="file"
           accept=".zip,.json,application/zip,application/json"
-          aria-label="Le fichier de sauvegarde"
           onChange={(evenement) => {
             const fichier = evenement.target.files?.[0];
             if (!fichier) return;
             setErreur(null);
             setRapport(null);
+            setNom(fichier.name);
             const donnees = new FormData();
             donnees.set("sauvegarde", fichier);
             demarrer(async () => {
@@ -62,13 +69,23 @@ export function BoiteRestauration() {
             });
           }}
           disabled={enCours}
-          // 16 px sur le champ lui-même, pas seulement sur son bouton : sous
-          // cette taille, Safari iOS zoome à la mise au point et ne dézoome
-          // jamais seul. La règle vaut pour TOUS les champs, y compris ceux
-          // qu'on croit inoffensifs — un test de la suite compte ceux qui la
-          // violent, et il a attrapé celui-ci.
-          className="champ-saisie mt-3 block w-full text-encre-3 file:mr-3 file:cible-tactile file:rounded-[var(--radius-pilule)] file:border file:border-trait-fort file:bg-surface file:px-4 file:py-2.5 file:text-[15px] file:font-medium file:text-encre"
+          // 16 px même caché : `sr-only` masque à l'œil mais garde le champ
+          // focalisable, et le clic sur le libellé le focalise justement. Sous
+          // 16 px, Safari iOS zoome — et le test de la suite compte ceux qui
+          // violent la règle, y compris ceux qu'on croit hors d'atteinte.
+          className="sr-only text-[16px]"
         />
+        <label
+          htmlFor="sauvegarde"
+          className={`cible-tactile mt-3 flex w-full cursor-pointer items-center justify-center rounded-[var(--radius-pilule)] border border-trait-fort bg-surface py-3 text-center text-[15px] font-medium transition hover:border-encre-3 ${
+            enCours ? "opacity-40" : ""
+          }`}
+        >
+          Choisir un fichier
+        </label>
+        {nom && !enCours && (
+          <p className="mt-2 truncate text-[13px] text-encre-3">{nom}</p>
+        )}
 
         {enCours && (
           <p role="status" className="mt-3 text-[13px] text-encre-3">
