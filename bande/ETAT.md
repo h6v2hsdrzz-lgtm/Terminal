@@ -87,10 +87,19 @@ sombre.
 
 **La vague 2 est terminée côté code.** Ce qui reste ne se fait pas depuis ici :
 
-1. **Poser les variables chez Vercel** — `CRON_SECRET` (le réveil du matin) et
-   les trois `VAPID_*` (`npm run pousse:cles`). Sans elles, les deux
-   fonctionnent « en sécurité » : la route refuse tout le monde, et l'écran de
-   réglages annonce que les notifications ne sont pas branchées.
+1. ~~Poser les variables chez Vercel~~ — **fait le 12 septembre.** Les quatre
+   (`CRON_SECRET`, `VAPID_PUBLIQUE`, `VAPID_PRIVEE`, `VAPID_CONTACT`) sont
+   posées en `production` et `preview`, les deux secrètes chiffrées. Elles se
+   relisent avec `vercel env pull` ; elles ne sont écrites **nulle part** dans
+   le dépôt. Vérifié depuis l'extérieur : `/api/reveil` refuse sans le secret
+   (401) et rend `{"scelles":0,"paroles":0}` avec. Le cron est enregistré sur
+   le déploiement (`0 7 * * *`), une fois par jour — ce que le palier gratuit
+   autorise.
+
+   `VAPID_CONTACT` est l'adresse du site et non un `mailto:` : le RFC 8292
+   accepte les deux, et je n'allais pas poser l'adresse de courriel de
+   quelqu'un chez Apple et Google sans qu'il me le demande. À changer en
+   `mailto:` si vous voulez être joignables par un opérateur de pousse.
 2. **Lighthouse mobile ≥ 90**, à la main, contre l'adresse en ligne. Pas
    mesurable ici : Lighthouse n'est pas installable, et il jugerait le serveur
    de développement.
@@ -101,6 +110,13 @@ sombre.
    à la caméra, une HEIC choisie dans la pellicule, le Wake Lock, l'haptique.
 4. **Effacer les données de démonstration** avant la mise en service.
 5. **Révoquer le jeton Vercel** de la session de développement.
+
+**Ce qui n'est PAS branché, et pourquoi** : le projet Vercel n'est pas relié à
+GitHub. Chaque mise en ligne se lance à la main (`vercel --prod`), et c'est
+pour ça que la production est restée six jours sur le lot H. Le relier
+(`vercel git connect`) ferait partir un déploiement à chaque poussée — la note
+de coordination en tête de `CLAUDE.md` dit « ne rebranche pas Vercel », donc ça
+attend un feu vert explicite.
 
 **Pour rejouer la suite de bout en bout** : elle dure une vingtaine de minutes,
 et le serveur de développement a été fauché deux fois en plein milieu (tout ce
