@@ -3,6 +3,20 @@
 > Mis à jour à la fin de chaque tâche, jamais plus tard.
 > À lire en premier, avant `CLAUDE.md`.
 
+## Ce dossier a déménagé
+
+**L'application vit maintenant dans le dépôt privé `h6v2hsdrzz-lgtm/App`,
+dossier `bande/`.** Cette copie-ci s'arrête au lot R et n'est plus tenue à jour.
+
+Vercel déploie **automatiquement** depuis `App`, branche `main`, racine `bande`
+(relié le 12 septembre). Le détail est dans `App/VERCEL.md`.
+
+Ce qu'il reste là-bas : recoller la branche `securite` (limitation de débit,
+jetons signés, en-têtes CSP), et supprimer `joie/` et `bande/` d'ici — `APPS.md`
+à la racine de `Terminal` disait d'attendre justement le rebranchement.
+
+---
+
 ## Lot en cours
 
 **Vague 2 : tous les lots sont terminés, J à R.** O2 (le registre) est passé avant
