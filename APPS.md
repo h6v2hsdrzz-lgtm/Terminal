@@ -31,7 +31,16 @@ rien en ligne n'en dépendait :
 Ce qui n'est pas vérifié, et qui est donc écrit comme tel : **à quoi le projet
 Vercel de la v1 est relié.** Le jeton disponible ici ne l'autorise plus à lire
 l'API Vercel (403). Ça ne change rien au raisonnement ci-dessus, qui ne repose
-pas dessus — mais ça veut dire qu'il reste une chose à faire un jour : retirer
-`joie/` de `main`, et cela demande de savoir d'abord d'où la v1 déploie.
+pas dessus.
+
+Une chose a quand même pu être mesurée de l'extérieur, et elle compte :
+`journal-de-joie.vercel.app` répond 200 mais sert encore `x-powered-by: Next.js`
+et **aucune** `content-security-policy`. Or le patch sécu posait ces en-têtes
+dans `joie/next.config.ts` aussi, et le push qui a déployé la v2 le portait.
+Donc **la v1 ne se construit pas depuis `App/main`** — sinon elle aurait changé.
+
+> **Ne pas retirer `joie/` de la branche `main` de ce dépôt.** C'est peut-être
+> de là qu'elle déploie, et personne ne peut l'affirmer sans regarder le réglage
+> sur vercel.com → projet `journal-de-joie` → Settings → Git.
 
 L'historique garde les deux copies si besoin.
