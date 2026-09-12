@@ -5,7 +5,7 @@
 
 ## Lot en cours
 
-**Vague 2 : lots J, K, O2, L, M, N, O et P terminés.** O2 (le registre) est passé avant
+**Vague 2 : tous les lots sont terminés, J à R.** O2 (le registre) est passé avant
 le lot L parce que c'est le reproche explicite de la bande sur la livraison
 précédente — « c'est vraiment x100, vas-y super fort ». Les chiffres du plan
 sont tenus et verrouillés par un test :
@@ -38,7 +38,7 @@ plan le demandait. Les trois graphiques de l'application rendent maintenant leur
 valeur au TAP, tiennent sous deux cents pixels et se lisent en clair comme en
 sombre.
 
-**Le lot Q, presque entier.**
+**Le lot Q est entier.**
 
 - **Q1 · les réglages** — notifications par type, thème, confidentialité,
   stockage, gestion de la bande, déconnexion. Les notifications poussées sont
@@ -58,42 +58,64 @@ sombre.
   écraser.
 - **Q5 · la recherche** — accents et casse ignorés, plusieurs mots, surlignage,
   et **le voile s'y applique** (il exclut, il ne vide pas).
+- **Q6 · les performances** — le décalage de mise en page mesuré sous 0,1 sur
+  quatre écrans, chaque image qui annonce sa taille, la galerie qui ne dépose
+  plus tout d'un coup, et un build de production sans un seul avertissement.
+  Lighthouse lui-même reste à lancer à la main : voir plus bas.
 - **Q7 · les nouveautés** — cinq écrans à la première ouverture après une mise
   à jour, revoyables depuis les réglages.
+- **Les deux dettes** — le réveil du matin (`/api/reveil`, une fois par jour)
+  prévient d'un scellé qui s'ouvre et renvoie son plaidoyer à l'auteur.
+
+**Le lot R est fait : les trois audits.**
+
+- **Audit 1, fonctionnel** (`AUDIT-vague-2.md`) — les quarante-sept points de
+  `PLAN.md` repris un par un : 44 faits, 3 partiels, 0 pas fait. Chaque
+  affirmation vérifiée dans le code, pas recopiée d'ici.
+- **Audit 2, visuel** (`AUDIT-vague-2-visuel.md`) — huit familles de captures,
+  clair et sombre, plein et vide. Quatre défauts trouvés **en regardant** : une
+  bande blanche en travers de la recherche, « Choose File » en anglais,
+  « Restaurer » rangé derrière « Quitter la bande », et aucun état de chargement
+  nulle part.
+- **Audit 3, parcours réel** (`AUDIT-vague-2-parcours.md`, `e2e/audit3.spec.ts`)
+  — trois téléphones, des parties complètes. Deux défauts que deux téléphones ne
+  pouvaient pas montrer : **corriger sa journée ne changeait rien chez les
+  autres**, et les deux souffleurs de « Devine qui je suis » n'avaient pas de
+  boutons.
 
 ## Prochaine action exacte
 
-**LOT Q terminé.** Q6 compris : le décalage de mise en page est mesuré sur
-quatre écrans (sous 0,1, la barre de Lighthouse), chaque image annonce sa
-taille, et la galerie ne dépose plus tout d'un coup — « tout voir » chargeait
-plusieurs milliers de cases sur une bande de trois ans.
+**La vague 2 est terminée côté code.** Ce qui reste ne se fait pas depuis ici :
 
-**Ce qui n'a PAS été fait, et pourquoi** : Lighthouse lui-même. Il n'est pas
-installable ici, et il mesurerait le serveur de développement — un score de 40
-sans minification ne dit rien d'un score en production. **À faire à la main
-contre l'adresse en ligne**, une fois le lot R déployé. Et « listes
-virtualisées » est devenu « listes bornées par page » : virtualiser une grille
-d'images coûte trois cents lignes et casse la position de défilement ; pour
-trois personnes, une borne fait le même travail. Écrit dans `borneGalerie`.
+1. **Poser les variables chez Vercel** — `CRON_SECRET` (le réveil du matin) et
+   les trois `VAPID_*` (`npm run pousse:cles`). Sans elles, les deux
+   fonctionnent « en sécurité » : la route refuse tout le monde, et l'écran de
+   réglages annonce que les notifications ne sont pas branchées.
+2. **Lighthouse mobile ≥ 90**, à la main, contre l'adresse en ligne. Pas
+   mesurable ici : Lighthouse n'est pas installable, et il jugerait le serveur
+   de développement.
+3. **L'essai à la main sur un vrai iPhone.** Ce WebKit n'a ni `MediaRecorder`,
+   ni `PushManager`, ni `Notification`, et le sélecteur de fichiers d'iOS ne s'y
+   ouvre pas. La liste précise est à la fin de `AUDIT-vague-2-parcours.md` :
+   les deux jeux enregistrés, une notification reçue et touchée, une photo prise
+   à la caméra, une HEIC choisie dans la pellicule, le Wake Lock, l'haptique.
+4. **Effacer les données de démonstration** avant la mise en service.
+5. **Révoquer le jeton Vercel** de la session de développement.
 
-**LOT R** : les trois audits, plus les restes de la vague 1 — révoquer le jeton
-Vercel, effacer les données de démonstration avant la mise en service, et
-l'essai à la main sur un vrai iPhone.
+**Pour rejouer la suite de bout en bout** : elle dure une vingtaine de minutes,
+et le serveur de développement a été fauché deux fois en plein milieu (tout ce
+qui suit échoue alors en trois cents millisecondes sur « Connection refused »,
+ce qui n'a rien d'une régression). En trois tranches, tout passe :
 
-**Les deux dettes sont payées.** `/api/reveil` tourne une fois par jour
-(`vercel.json`) et fait deux choses : prévenir la bande qu'un scellé s'ouvre
-(C5, vague 1) et renvoyer à son auteur son plaidoyer du « Tribunal des idées »
-(lot O). Éprouvé en local dans les deux sens, y compris la rejouabilité — un
-deuxième passage n'envoie rien.
-
-**À poser chez Vercel avant que ça serve** : `CRON_SECRET` (n'importe quelle
-chaîne aléatoire longue). Sans elle, la route refuse tout le monde — ce qui est
-le bon défaut, mais veut dire que le réveil ne fait rien.
-
-**Pour allumer les notifications en production** : `npm run pousse:cles`, puis
-poser `VAPID_PUBLIQUE`, `VAPID_PRIVEE` et `VAPID_CONTACT` chez Vercel. Sans
-elles l'écran de réglages le dit et le reste tourne. En local, `.env` porte une
-paire de développement — et `.env` est ignoré par git.
+```bash
+npx playwright test --project=iphone e2e/audit3.spec.ts e2e/captures.spec.ts \
+  e2e/cloisonnement.spec.ts e2e/etats.spec.ts e2e/lot1.spec.ts e2e/lotA.spec.ts \
+  e2e/lotB.spec.ts e2e/lotC.spec.ts
+npx playwright test --project=iphone e2e/lotF.spec.ts e2e/lotG.spec.ts \
+  e2e/lotK.spec.ts e2e/lotL.spec.ts e2e/lotM.spec.ts e2e/lotN.spec.ts e2e/lotO.spec.ts
+npx playwright test --project=iphone e2e/lotP.spec.ts e2e/lotQ.spec.ts \
+  e2e/performances.spec.ts e2e/production.spec.ts e2e/video.spec.ts
+```
 
 ### Ce qu'il faut pour allumer R2 (lot M)
 

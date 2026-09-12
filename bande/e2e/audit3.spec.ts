@@ -69,6 +69,69 @@ async function partieATrois(bande: Bande, jeu: RegExp) {
   await bande.momo.getByRole("button", { name: /lancer la partie/i }).click();
 }
 
+/**
+ * Une bande NEUVE à trois, et rien d'autre dedans.
+ *
+ * Les parcours qui **écrivent une journée** ne peuvent pas se faire dans la
+ * bande de démonstration : la journée reste posée après le test, et quatre
+ * tests d'autres fichiers supposent le contraire — celui du voile veut que Momo
+ * n'ait rien posé, celui des renommages veut le formulaire ouvert. C'est le
+ * piège déjà écrit dans `CLAUDE.md` (« un test qui dépend de la fraîcheur du
+ * peuplement rougit tout seul »), pris par l'autre bout : ici c'est le test qui
+ * SALIT le peuplement des autres.
+ *
+ * Les parties de jeu, elles, restent dans la bande de démonstration : elles ne
+ * touchent à aucune journée.
+ */
+async function bandeNeuveATrois(
+  browser: Parameters<typeof nouveauTelephone>[0],
+  nom: string,
+): Promise<Bande> {
+  const momo = await nouveauTelephone(browser);
+  await momo.goto("/bienvenue/creer");
+  await momo.fill("#bande", nom);
+  await momo.fill("#pseudo", "Un");
+  await momo.getByRole("button", { name: /créer/i }).click();
+  await momo.waitForURL(/\/bienvenue\/code/);
+  await momo.getByRole("button", { name: /c'est noté/i }).click();
+  await momo.waitForURL("/");
+  await passerLesNouveautes(momo);
+
+  await aller(momo, "/reglages");
+  const invitation = (await momo.locator(".chiffres").first().innerText()).replace(/\s+/g, "");
+
+  const autres: Page[] = [];
+  for (const pseudo of ["Deux", "Trois"]) {
+    const page = await nouveauTelephone(browser);
+    await page.goto("/bienvenue/rejoindre");
+    await page.fill("#invitation", invitation);
+    await page.fill("#pseudo", pseudo);
+    await page.getByRole("button", { name: /rejoindre/i }).click();
+    await page.waitForURL(/\/bienvenue\/code/);
+    await page.getByRole("button", { name: /c'est noté/i }).click();
+    await page.waitForURL("/");
+    await passerLesNouveautes(page);
+    autres.push(page);
+  }
+
+  return { momo, sam: autres[0], samy: autres[1] };
+}
+
+/** Tout le monde quitte : la dernière personne partie emporte la bande. */
+async function rendreLaBande(bande: Bande, nom: string) {
+  for (const page of [bande.sam, bande.samy, bande.momo]) {
+    await aller(page, "/reglages").catch(() => {});
+    await page.getByText("Quitter la bande", { exact: true }).click().catch(() => {});
+    await page.locator("#confirmation").fill(nom).catch(() => {});
+    await page
+      .getByRole("button", { name: /partir pour de bon/i })
+      .click()
+      .catch(() => {});
+    await page.waitForURL(/\/bienvenue/).catch(() => {});
+    await page.context().close().catch(() => {});
+  }
+}
+
 test.afterAll(async ({ browser }) => {
   const page = await nouveauTelephone(browser);
   await entrer(page, "Momo");
@@ -251,18 +314,29 @@ test("« Le plus rapide » : le signal part au même instant pour les trois", as
 
 test("une journée posée arrive sur les deux autres téléphones toute seule", async ({ browser }) => {
   test.slow();
-  const bande = await troisTelephones(browser);
+  const nom = `Direct ${Date.now().toString(36)}`;
+  const bande = await bandeNeuveATrois(browser, nom);
   const marque = `audit3-${Date.now().toString(36)}`;
   try {
-    // Les deux autres regardent le fil, sans rien toucher.
+    // Les deux autres posent d'abord la leur : sans ça le VOILE s'applique, et
+    // ils ne verraient rien — ce qui est le comportement voulu, et ce qui ne
+    // dit rien sur le temps réel.
+    for (const page of [bande.sam, bande.samy]) {
+      await aller(page, "/aujourdhui");
+      await page.fill("#note", "Pour lever le voile.");
+      await page.getByRole("button", { name: /poser ma joie du jour/i }).click();
+      await expect(page.getByRole("button", { name: /corriger ta journée/i })).toBeVisible({
+        timeout: 20_000,
+      });
+    }
+
+    // Puis ils regardent le fil, sans plus rien toucher.
     await aller(bande.sam, "/");
     await aller(bande.samy, "/");
 
     await aller(bande.momo, "/aujourdhui");
-    const corriger = bande.momo.getByRole("button", { name: /corriger ta journée/i });
-    if (await corriger.isVisible().catch(() => false)) await corriger.click();
     await bande.momo.fill("#titre", marque);
-    await bande.momo.getByRole("button", { name: /poser ma joie du jour|corriger/i }).click();
+    await bande.momo.getByRole("button", { name: /poser ma joie du jour/i }).click();
     await expect(bande.momo.getByRole("button", { name: /corriger ta journée/i })).toBeVisible({
       timeout: 20_000,
     });
@@ -271,8 +345,19 @@ test("une journée posée arrive sur les deux autres téléphones toute seule", 
     // se faire sans que personne ne rafraîchisse.
     await expect(bande.sam.getByText(marque).first()).toBeVisible({ timeout: 30_000 });
     await expect(bande.samy.getByText(marque).first()).toBeVisible({ timeout: 30_000 });
+
+    // Et la CORRECTION arrive aussi. C'est le défaut que l'audit a trouvé :
+    // l'empreinte du fil ne regardait ni le titre, ni la note, ni les photos,
+    // donc une journée corrigée restait à l'ancienne version chez les autres
+    // jusqu'au prochain rechargement.
+    const corrige = `${marque}-corrigé`;
+    await bande.momo.getByRole("button", { name: /corriger ta journée/i }).click();
+    await bande.momo.fill("#titre", corrige);
+    await bande.momo.getByRole("button", { name: /^corriger$/i }).click();
+    await expect(bande.sam.getByText(corrige).first()).toBeVisible({ timeout: 30_000 });
+    await expect(bande.samy.getByText(corrige).first()).toBeVisible({ timeout: 30_000 });
   } finally {
-    await fermer(bande);
+    await rendreLaBande(bande, nom);
   }
 });
 

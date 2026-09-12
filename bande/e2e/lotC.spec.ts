@@ -135,6 +135,13 @@ test("les stats ont rejoint les souvenirs, la rétrospective est en pied de page
   await expect(page.getByRole("link", { name: "Stats" })).toHaveCount(0);
   await page.goto("/stats");
   await expect(page).toHaveURL(/\/souvenirs/);
+  // Attendre le CONTENU, pas seulement l'adresse.
+  //
+  // Depuis le lot R il y a un squelette de chargement : l'adresse change dès
+  // qu'il s'affiche, donc `page.content()` juste après rend le squelette et
+  // rien d'autre. C'est le bon comportement du produit — on voit tout de suite
+  // qu'il se passe quelque chose — et c'est au test de suivre.
+  await expect(page.getByRole("heading", { name: "Les souvenirs" })).toBeVisible();
 
   const souvenirs = await page.content();
   // L'ordre du plan : la galerie, puis les stats, puis la rétrospective.

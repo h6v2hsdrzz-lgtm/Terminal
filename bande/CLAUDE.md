@@ -115,7 +115,9 @@ donc la perte des photos en ligne. Un nom de table daté coûte moins cher.
 ```bash
 npm run dev            # http://localhost:3000
 npm test               # Vitest, logique pure
-npx playwright test --project=iphone   # WebKit, gabarit iPhone 15
+npx playwright test --project=iphone   # WebKit, gabarit iPhone 15 — voir la note
+                                      # ci-dessous : la suite entière dure ~20 min
+                                      # et le serveur de dev ne tient pas toujours
 npm run db:seed        # bande de démonstration + .codes-demo.txt
 npm run cartes:images  # récolte les images des cartes (long : deux requêtes par carte)
 npm run cartes:verifier # chaque adresse rend-elle vraiment une image ?
@@ -285,6 +287,26 @@ npx prisma migrate dev --create-only   # écrire la migration, la RELIRE, puis l
 - **« MAINTENANT » se cherche en respectant la casse.** Un `/maintenant/i`
   attrape la consigne du décompte, les trois tapent trop tôt, et « Le plus
   rapide » annonce — correctement — que tout le monde a brûlé le départ.
+- **Un test qui SALIT le peuplement commun casse les autres.** Un parcours du
+  lot R posait la journée de Momo dans la bande de démonstration : quatre tests
+  d'autres fichiers supposent le contraire (le voile veut que Momo n'ait rien
+  posé, les renommages veulent le formulaire ouvert). Tout ce qui écrit une
+  journée se fait dans une bande créée pour l'occasion, et rendue à la fin.
+- **Un test qui écrit une donnée durable ne suppose pas son point de départ.**
+  Les préférences de notification sont en base : un échec au milieu du test les
+  laissait à l'envers, et le suivant rougissait pour une raison étrangère. On
+  lit l'état, on le change, on le remet dans un `finally`.
+- **Depuis `loading.tsx`, `page.goto()` rend la main sur le SQUELETTE.**
+  `page.content()` juste après ne contient pas encore l'écran. C'est le bon
+  comportement du produit ; les tests attendent le titre.
+- **La suite entière dure une vingtaine de minutes, et le serveur de
+  développement ne tient pas toujours jusqu'au bout** — il a été fauché deux
+  fois en plein milieu, et tout ce qui suit échoue alors en trois cents
+  millisecondes sur « Connection refused ». Ce n'est pas une régression : on
+  relance `npm run dev` et on rejoue la fin. En trois tranches, tout passe :
+  `audit3 captures cloisonnement etats lot1 lotA lotB lotC`, puis
+  `lotF lotG lotK lotL lotM lotN lotO`, puis
+  `lotP lotQ performances production video`.
 - **`locator("text")` de Playwright n'est pas le `<text>` d'un SVG**, et
   `innerText` ne marche pas dessus. L'ordre des éléments d'un SVG suit le
   dessin, pas la lecture.

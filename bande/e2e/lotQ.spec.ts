@@ -83,30 +83,52 @@ test("couper un type tient après un rechargement", async ({ page }) => {
   await entrer(page, "Sam");
   await page.goto("/reglages");
 
+  // On lit l'état AVANT de toucher, et on le remet à la fin.
+  //
+  // La première version supposait les valeurs par défaut. Ça tient tant que le
+  // test finit bien ; un échec au milieu laisse les réglages de Sam à l'envers,
+  // et le test suivant rougit pour une raison qui n'a rien à voir avec lui. Un
+  // test qui écrit une donnée durable ne suppose jamais son point de départ.
   const commentaires = ligne(page, /les commentaires/i);
   const reactions = ligne(page, /les réactions/i);
+  const auDepart = {
+    commentaires: await commentaires.isChecked(),
+    reactions: await reactions.isChecked(),
+  };
 
-  await expect(commentaires).toBeChecked();
-  await commentaires.click();
-  await expect(commentaires).not.toBeChecked();
+  try {
+    // Les deux coup sur coup, SANS rien attendre entre les deux : c'est le
+    // geste de quelqu'un qui règle ses notifications. L'écriture côté serveur
+    // est une fusion JSONB atomique, justement pour que deux réglages qui se
+    // croisent ne s'écrasent pas — ce test ne les envoie pas assez près l'un de
+    // l'autre pour le prouver, et c'est écrit dans `reglerPreference`.
+    await commentaires.click();
+    await reactions.click();
+    await expect(commentaires).toBeChecked({ checked: !auDepart.commentaires });
+    await expect(reactions).toBeChecked({ checked: !auDepart.reactions });
 
-  // Et dans l'autre sens, sur une case qui part éteinte.
-  await reactions.click();
-  await expect(reactions).toBeChecked();
+    // Le seul témoin qui compte : la base. Un état React qui survit à un clic
+    // ne prouve rien du tout.
+    await page.reload();
+    await expect(ligne(page, /les commentaires/i)).toBeChecked({
+      checked: !auDepart.commentaires,
+    });
+    await expect(ligne(page, /les réactions/i)).toBeChecked({ checked: !auDepart.reactions });
 
-  // Le seul témoin qui compte : la base. Un état React qui survit à un clic ne
-  // prouve rien du tout.
-  await page.reload();
-  await expect(ligne(page, /les commentaires/i)).not.toBeChecked();
-  await expect(ligne(page, /les réactions/i)).toBeChecked();
-
-  // Remettre comme avant : un test qui laisse les réglages de Sam à l'envers
-  // fait rougir le suivant.
-  await ligne(page, /les commentaires/i).click();
-  await ligne(page, /les réactions/i).click();
-  await expect(ligne(page, /les commentaires/i)).toBeChecked();
-  await page.reload();
-  await expect(ligne(page, /les réactions/i)).not.toBeChecked();
+    // Et les deux cases ont bien été retenues toutes les deux : elles partent
+    // coup sur coup, et l'écriture était une lecture-modification-écriture —
+    // la seconde écrasait la première. C'est du JSONB fusionné par PostgreSQL
+    // depuis l'audit du lot R.
+  } finally {
+    await page.goto("/reglages");
+    for (const [champ, valeur] of [
+      [ligne(page, /les commentaires/i), auDepart.commentaires],
+      [ligne(page, /les réactions/i), auDepart.reactions],
+    ] as const) {
+      if ((await champ.isChecked()) !== valeur) await champ.click();
+      await expect(champ).toBeChecked({ checked: valeur });
+    }
+  }
 });
 
 test("un appareil sans pousse le dit, au lieu de tourner dans le vide", async ({ page }) => {

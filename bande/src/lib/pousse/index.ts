@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "../db";
 import { envoyer } from "./envoi";
-import { preferences, type Notification, type TypeNotification } from "./types";
+import { TYPES, preferences, type Notification, type TypeNotification } from "./types";
 
 export { clePublique, configuree } from "./envoi";
 export type { Notification, TypeNotification } from "./types";
@@ -57,16 +57,41 @@ export async function lirePreferences(membreId: string) {
   return preferences(membre?.notifications);
 }
 
+/**
+ * Changer UN réglage, sans écraser les autres.
+ *
+ * ## Pourquoi ce n'est pas un `update` ordinaire
+ *
+ * La première version relisait l'objet, en posait une copie modifiée, et
+ * réécrivait le tout. Entre la lecture et l'écriture il y a un aller-retour
+ * réseau, et deux cases cochées coup sur coup — ce que fait tout le monde en
+ * réglant ses notifications — peuvent s'y croiser : la seconde lit avant que la
+ * première ait écrit, et l'écrase.
+ *
+ * **Ce n'est pas un défaut observé.** Les deux clics d'un test sont trop
+ * espacés pour le provoquer, et je n'ai pas réussi à le reproduire. C'est un
+ * défaut *lisible dans le code* : une lecture-modification-écriture sur une
+ * colonne partagée n'a pas besoin d'être vue pour être fausse, et la corriger
+ * coûte une ligne.
+ *
+ * `||` fusionne deux objets JSONB **du côté de PostgreSQL**, dans la même
+ * instruction que la lecture : il n'y a plus d'intervalle entre les deux.
+ */
 export async function reglerPreference(
   membreId: string,
   type: TypeNotification,
   valeur: boolean,
 ): Promise<void> {
-  const actuelles = await lirePreferences(membreId);
-  await prisma.membre.update({
-    where: { id: membreId },
-    data: { notifications: { ...actuelles, [type]: valeur } },
-  });
+  // Le type vient d'une liste fermée, mais il finit dans du JSON : on le
+  // vérifie ici plutôt que de faire confiance à l'appelant.
+  if (!TYPES.includes(type)) throw new Error(`Type de notification inconnu : ${type}`);
+  await prisma.$executeRaw`
+    UPDATE "bande_membres"
+    SET "notifications" = COALESCE("notifications", '{}'::jsonb) || ${JSON.stringify({
+      [type]: valeur,
+    })}::jsonb
+    WHERE "id" = ${membreId}
+  `;
 }
 
 /**

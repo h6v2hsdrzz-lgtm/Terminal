@@ -148,14 +148,19 @@ test("l'écran qui casse, et celui qui charge", async ({ page }, infos) => {
   // Le squelette de chargement : on retient la réponse du serveur assez
   // longtemps pour le voir. C'est exactement ce qui se passe avec une base à
   // l'autre bout du monde et une barre de métro.
-  await page.route("**/souvenirs?_rsc=*", async (route) => {
+  // Un PRÉDICAT et pas un motif : l'adresse d'une charge React de Next porte
+  // `_rsc` mais pas toujours à la même place, et un `**/souvenirs?_rsc=*` rate
+  // une fois sur trois — le squelette passe alors trop vite pour être vu.
+  const estLaChargeDesSouvenirs = (url: URL) =>
+    url.pathname.startsWith("/souvenirs") && url.searchParams.has("_rsc");
+  await page.route(estLaChargeDesSouvenirs, async (route) => {
     await new Promise((suite) => setTimeout(suite, 2500));
     await route.fallback();
   });
   await page.getByRole("link", { name: "Souvenirs" }).first().click();
-  await expect(page.getByText("Chargement…")).toBeAttached({ timeout: 10_000 });
+  await expect(page.getByText("Chargement…")).toBeAttached({ timeout: 15_000 });
   await page.screenshot({ path: `captures/${infos.project.name}/etat-chargement.png` });
-  await page.unroute("**/souvenirs?_rsc=*");
+  await page.unroute(estLaChargeDesSouvenirs);
 
   // Et ce qui se passe quand la charge d'une navigation n'arrive JAMAIS.
   //

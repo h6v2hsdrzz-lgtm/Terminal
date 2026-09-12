@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { passerLesNouveautes } from "./aide-jeux";
+import { aller, passerLesNouveautes } from "./aide-jeux";
 
 /**
  * Les captures de référence, et les contrôles qui n'ont de sens que sur un
@@ -144,7 +144,11 @@ test("les écrans en sombre", async ({ page }, infos) => {
   await page.emulateMedia({ colorScheme: "dark" });
 
   for (const ecran of ECRANS) {
-    await page.goto(ecran.url, { waitUntil: "networkidle" });
+    // `aller` et pas `goto` : la redirection d'entrée peut encore être en vol,
+    // et une navigation lancée pendant qu'une autre se termine est annulée par
+    // Playwright. Piège déjà payé trois fois dans cette suite.
+    await aller(page, ecran.url);
+    await page.waitForLoadState("networkidle");
     await expect(page.getByRole("link", { name: "Souvenirs" }).first()).toBeVisible();
     await page.waitForTimeout(500);
 
