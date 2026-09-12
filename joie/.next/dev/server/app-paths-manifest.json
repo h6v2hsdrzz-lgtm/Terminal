@@ -1,0 +1,6 @@
+{
+  "/api/entrees/[id]/route": "app/api/entrees/[id]/route.js",
+  "/api/entrees/route": "app/api/entrees/route.js",
+  "/api/version/route": "app/api/version/route.js",
+  "/page": "app/page.js"
+}

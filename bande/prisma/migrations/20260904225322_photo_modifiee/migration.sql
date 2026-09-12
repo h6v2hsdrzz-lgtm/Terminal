@@ -1,2 +1,0 @@
--- AlterTable
-ALTER TABLE "bande_photos" ADD COLUMN     "modifie_le" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

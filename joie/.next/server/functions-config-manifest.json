@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "functions": {
+    "/api/entrees": {},
+    "/api/entrees/[id]": {},
+    "/api/version": {}
+  }
+}
