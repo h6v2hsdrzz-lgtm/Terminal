@@ -5,6 +5,16 @@
 !.env.example
 **/.env
 
+# Dépendances et artefacts de compilation, à TOUTE profondeur.
+#
+# Absents de ce filet, ils ont été avalés par un `git add -A` : quarante-deux
+# mille fichiers de `node_modules` poussés d'un coup sur un dépôt public, dans
+# le commit censé en RETIRER. Le filet `.env` ci-dessus, lui, a tenu — aucun
+# secret n'est parti. Celui-ci manquait.
+node_modules/
+.next/
+out/
+
 # artefacts Python
 __pycache__/
 *.py[cod]
