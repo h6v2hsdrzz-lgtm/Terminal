@@ -379,6 +379,13 @@ main {
   main { padding-top: 12px; }
 }
 
+@media (max-width: 620px) {
+  /* la barre d'outils tient sur une ligne : l'aide reste atteignable par la
+     palette et par « ? », le bouton peut céder la place */
+  #btn-aide { display: none; }
+  .tete-titre h1 { font-size: 17px; }
+}
+
 /* ═══════════════════ Cartes ═══════════════════ */
 
 .pile { display: flex; flex-direction: column; gap: 16px; }
