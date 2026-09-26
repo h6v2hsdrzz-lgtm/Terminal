@@ -559,12 +559,16 @@ details.repliable[open] > summary::before { transform: rotate(90deg); }
   border-radius: 18px;
   box-shadow: var(--ombre-3);
   width: min(640px, 100%);
+  transition: width .15s;
   max-height: min(88vh, 920px);
   display: flex; flex-direction: column;
   animation: monte-dialogue .18s cubic-bezier(.2, .8, .3, 1);
 }
 @keyframes monte-dialogue { from { opacity: 0; transform: translateY(12px) scale(.985); } }
 
+#dialogue.large { width: min(960px, 100%); }
+#dialogue.large .tronque { max-width: 230px; }
+.tronque { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
 #dialogue-tete { display: flex; align-items: center; gap: 10px; padding: 16px 19px; border-bottom: 1px solid var(--bordure); }
 #dialogue-tete h2 { font-size: 16.5px; margin-right: auto; }
 #dialogue-corps { padding: 19px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
@@ -704,6 +708,9 @@ kbd {
     <g id="ic-calendrier" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
       <rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/>
     </g>
+    <g id="ic-suivi" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3.5 12h4l2.5-6 3.5 12 2.5-6h4.5"/>
+    </g>
     <g id="ic-categories" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v8.5l6 6"/>
     </g>
@@ -773,6 +780,7 @@ kbd {
       <button data-vue="flux"><svg class="ic" viewBox="0 0 24 24"><use href="#ic-flux"/></svg>Revenus &amp; dépenses</button>
       <button data-vue="projection"><svg class="ic" viewBox="0 0 24 24"><use href="#ic-projection"/></svg>Projection</button>
       <button data-vue="calendrier"><svg class="ic" viewBox="0 0 24 24"><use href="#ic-calendrier"/></svg>Calendrier</button>
+      <button data-vue="suivi"><svg class="ic" viewBox="0 0 24 24"><use href="#ic-suivi"/></svg>Suivi</button>
       <button data-vue="categories"><svg class="ic" viewBox="0 0 24 24"><use href="#ic-categories"/></svg>Catégories</button>
       <button data-vue="objectifs"><svg class="ic" viewBox="0 0 24 24"><use href="#ic-objectifs"/></svg>Objectifs</button>
       <button data-vue="scenarios"><svg class="ic" viewBox="0 0 24 24"><use href="#ic-scenarios"/></svg>Scénarios</button>
@@ -824,6 +832,7 @@ kbd {
       <section id="vue-flux" class="vue pile masque"></section>
       <section id="vue-projection" class="vue pile masque"></section>
       <section id="vue-calendrier" class="vue pile masque"></section>
+      <section id="vue-suivi" class="vue pile masque"></section>
       <section id="vue-categories" class="vue pile masque"></section>
       <section id="vue-objectifs" class="vue pile masque"></section>
       <section id="vue-scenarios" class="vue pile masque"></section>
@@ -857,7 +866,7 @@ kbd {
 
 const CLE_ETAT = "prevoyant:etat:v1";
 const CLE_THEME = "prevoyant:theme";
-const VERSION_ETAT = 1;
+const VERSION_ETAT = 2;
 
 const TEINTES_MAX = 8;
 const HORIZONS = [3, 6, 12, 24, 36, 60];
@@ -1112,13 +1121,42 @@ function normaliserCategorie(brut, i) {
   };
 }
 
+/**
+ * Un relevé : « le 26 septembre, ce compte affichait 2 840 € ».
+ *
+ * `prevu` est ce que l'application annonçait pour ce jour-là au moment du
+ * pointage. L'écart entre les deux — la dérive — est la seule mesure
+ * honnête de ce que vaut la prévision. Il vaut `null` pour le tout premier
+ * relevé, qui n'a rien à comparer.
+ */
+function normaliserReleve(brut) {
+  if (!brut || typeof brut !== "object" || !estIso(brut.date)) return null;
+  const prevu = brut.prevu === null || brut.prevu === undefined ? null : arrondi2(nombreSur(brut.prevu, 0));
+  return {
+    date: brut.date,
+    solde: arrondi2(nombreSur(brut.solde, 0)),
+    prevu,
+    // le nombre de jours couverts sert à ramener la dérive au mois
+    jours: Math.max(0, Math.round(nombreSur(brut.jours, 0, 0, 4000))),
+  };
+}
+
 function normaliserCompte(brut, i) {
   if (!brut || typeof brut !== "object") return null;
+  const releves = (Array.isArray(brut.releves) ? brut.releves : [])
+    .map(normaliserReleve).filter(Boolean).slice(-200);
+  releves.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  // un solde constaté dans le futur n'a pas de sens : il serait reporté
+  // à l'envers par la projection
+  let soldeDate = estIso(brut.soldeDate) ? brut.soldeDate : aujourdhui();
+  if (soldeDate > aujourdhui()) soldeDate = aujourdhui();
   return {
     id: texteSur(brut.id, identifiant("cpt"), 60),
     nom: texteSur(brut.nom, "Compte " + (i + 1), 40),
     type: brut.type === "epargne" ? "epargne" : "courant",
     solde: arrondi2(nombreSur(brut.solde, 0)),
+    soldeDate,
+    releves,
     teinte: nombreSur(brut.teinte, (i % TEINTES_MAX) + 1, 1, TEINTES_MAX),
   };
 }
@@ -1212,8 +1250,42 @@ function normaliserScenario(brut, i, comptes, categories) {
   };
 }
 
+/**
+ * Migrations d'un schéma à l'autre.
+ *
+ * Elles s'enchaînent : un état v1 passe par `1 → 2` puis par les suivantes.
+ * Chacune ne fait qu'ajouter ou transformer ce que sa version a changé ;
+ * `normaliser` s'occupe ensuite de valider le tout. Un état sans numéro de
+ * version est traité comme un v1 — c'est ce qu'écrivaient les premières
+ * versions de l'application.
+ */
+const MIGRATIONS = {
+  // v2 : les comptes gagnent un solde daté et l'historique de leurs relevés
+  1: (etat) => {
+    for (const c of etat.comptes || []) {
+      if (!c || typeof c !== "object") continue;
+      if (!c.soldeDate) c.soldeDate = aujourdhui();
+      if (!Array.isArray(c.releves)) c.releves = [];
+    }
+    return etat;
+  },
+};
+
+function migrer(brut) {
+  if (!brut || typeof brut !== "object") return brut;
+  let etat = brut;
+  let version = Number(etat.version) || 1;
+  let garde = 0;
+  while (version < VERSION_ETAT && MIGRATIONS[version] && garde++ < 20) {
+    etat = MIGRATIONS[version](etat) || etat;
+    version += 1;
+    etat.version = version;
+  }
+  return etat;
+}
+
 function normaliser(brut) {
-  const src = brut && typeof brut === "object" ? brut : {};
+  const src = migrer(brut && typeof brut === "object" ? brut : {}) || {};
   const p = src.parametres && typeof src.parametres === "object" ? src.parametres : {};
 
   const parametres = {
@@ -1253,7 +1325,10 @@ function categorie(id) { return ETAT.categories.find((c) => c.id === id) || null
 function compte(id) { return ETAT.comptes.find((c) => c.id === id) || null; }
 function nomCategorie(id) { const c = categorie(id); return c ? c.nom : "Sans catégorie"; }
 function nomCompte(id) { const c = compte(id); return c ? c.nom : "—"; }
-function soldeDepart() { return ETAT.comptes.reduce((s, c) => s + c.solde, 0); }
+function soldeDepart(date) {
+  const quand = estIso(date) ? date : departProjection();
+  return arrondi2(ETAT.comptes.reduce((s, c) => s + soldeRoule(c, quand), 0));
+}
 function departProjection() { return ETAT.parametres.debutProjection || aujourdhui(); }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -1372,8 +1447,8 @@ function projeter(options) {
   const comptes = o.comptes || ETAT.comptes;
   const soldeInitial = o.soldeInitial !== undefined
     ? o.soldeInitial
-    : (o.compteId ? (compte(o.compteId) ? compte(o.compteId).solde : 0)
-                  : comptes.reduce((s, c) => s + c.solde, 0));
+    : (o.compteId ? soldeRoule(compte(o.compteId), du)
+                  : arrondi2(comptes.reduce((s, c) => s + soldeRoule(c, du), 0)));
 
   /* Un virement n'est ni un revenu ni une dépense : c'est de l'argent qui
      change de poche. Il ne compte dans les totaux que si sa contrepartie est
@@ -1502,6 +1577,25 @@ function projeter(options) {
   };
 }
 
+/**
+ * Solde d'un compte à une date donnée, reporté depuis son dernier relevé.
+ *
+ * Le solde saisi est daté. Entre ce jour-là et le départ de la projection,
+ * les échéances du compte ont continué de tomber : les rejouer évite de
+ * partir d'un chiffre périmé, ce qui décalerait toute la courbe.
+ */
+function soldeRoule(compte, date) {
+  if (!compte) return 0;
+  const depart = compte.soldeDate;
+  if (!estIso(depart) || !estIso(date) || depart >= date) return compte.solde;
+  return projeter({
+    du: ajouterJours(depart, 1),
+    au: date,
+    compteId: compte.id,
+    soldeInitial: compte.solde,
+  }).soldeFinal;
+}
+
 /** Solde projeté à une date donnée, lu sur la courbe en escalier. */
 function soldeALaDate(projection, date) {
   if (!projection.points.length) return projection.soldeInitial;
@@ -1618,6 +1712,122 @@ function resteAVivre(projection) {
   };
 }
 
+/* ── Pointage et dérive ───────────────────────────────────────────────── */
+
+/**
+ * Pointer un compte : « voilà ce que la banque affiche aujourd'hui ».
+ *
+ * C'est la seule boucle de retour de l'application. On enregistre le solde
+ * réel, et à côté ce que la projection annonçait pour ce jour-là. L'écart
+ * entre les deux — la dérive — dit ce que vaut la prévision : un budget
+ * qui ne se compare jamais au relevé finit par décrire un foyer imaginaire.
+ *
+ * Renvoie le relevé créé, ou null si la date est refusée (antérieure au
+ * dernier pointage, ou dans le futur).
+ */
+function pointerSolde(compteId, date, solde) {
+  const c = compte(compteId);
+  if (!c || !estIso(date) || date > aujourdhui() || date < c.soldeDate) return null;
+
+  const jours = joursEntre(c.soldeDate, date);
+  const releve = {
+    date,
+    solde: arrondi2(nombreSur(solde, 0)),
+    prevu: jours > 0 ? soldeRoule(c, date) : c.solde,
+    jours,
+  };
+  // deux pointages le même jour : le second corrige le premier
+  c.releves = c.releves.filter((r) => r.date !== date).concat([releve]);
+  c.releves.sort((a, b) => (a.date < b.date ? -1 : 1));
+  if (c.releves.length > 200) c.releves = c.releves.slice(-200);
+  c.solde = releve.solde;
+  c.soldeDate = date;
+  return releve;
+}
+
+/** Les dérives exploitables : un pointage qui ne couvre aucun jour n'en est
+ *  pas une, c'est une correction de saisie. */
+function derives(comptes) {
+  const liste = comptes || ETAT.comptes;
+  const points = [];
+  for (const c of liste) {
+    for (const r of c.releves || []) {
+      if (!r.jours || r.prevu === null) continue;
+      const ecart = arrondi2(r.solde - r.prevu);
+      points.push({
+        compteId: c.id, date: r.date, jours: r.jours,
+        ecart, parMois: arrondi2((ecart / r.jours) * 30.44),
+      });
+    }
+  }
+  points.sort((a, b) => (a.date < b.date ? -1 : 1));
+  return points;
+}
+
+/**
+ * Ce que l'historique des dérives dit de la prévision à venir.
+ *
+ * `biais` est la dérive moyenne par mois — un budget systématiquement
+ * optimiste le montre ici. `ecartType` est sa dispersion. Les deux ne
+ * valent quelque chose qu'à partir de quelques pointages : en dessous de
+ * trois, l'application ne s'en sert pas et le dit.
+ */
+const DERIVE_MINIMUM = 3;
+
+function statistiquesDerive(comptes) {
+  const points = derives(comptes);
+  const n = points.length;
+  if (!n) return { n: 0, biais: 0, ecartType: 0, total: 0, exploitable: false, points };
+
+  const valeurs = points.map((p) => p.parMois);
+  const biais = valeurs.reduce((s, v) => s + v, 0) / n;
+  const variance = n > 1
+    ? valeurs.reduce((s, v) => s + (v - biais) * (v - biais), 0) / (n - 1)
+    : 0;
+  return {
+    n,
+    biais: arrondi2(biais),
+    ecartType: arrondi2(Math.sqrt(variance)),
+    total: arrondi2(points.reduce((s, p) => s + p.ecart, 0)),
+    jours: points.reduce((s, p) => s + p.jours, 0),
+    exploitable: n >= DERIVE_MINIMUM,
+    points,
+  };
+}
+
+/**
+ * La bande d'incertitude autour de la courbe de solde.
+ *
+ * Le modèle est délibérément simple, et c'est ce qui le rend lisible : la
+ * dérive de chaque mois est traitée comme un tirage indépendant de moyenne
+ * `biais` et d'écart-type `ecartType`. Sur t mois elle s'accumule en
+ * moyenne à `biais × t`, et se disperse en `ecartType × √t` — la racine,
+ * pas t, parce que les écarts se compensent en partie.
+ *
+ * Le coefficient 1,28 correspond à 80 % des cas si les dérives suivent une
+ * loi normale. Elles n'y sont pas tenues : c'est une marge indicative, et
+ * l'application l'annonce comme telle.
+ */
+const COEFF_BANDE = 1.28;
+
+function bandeIncertitude(projection, stats) {
+  if (!stats || !stats.exploitable) return null;
+  const bande = [];
+  for (const p of projection.points) {
+    const mois = Math.max(0, moisEntre(projection.du, p.date) +
+      (joursEntre(ajouterMois(projection.du, moisEntre(projection.du, p.date)), p.date) / 30.44));
+    const centre = p.solde + stats.biais * mois;
+    const demi = COEFF_BANDE * stats.ecartType * Math.sqrt(mois);
+    bande.push({
+      date: p.date,
+      centre: arrondi2(centre),
+      bas: arrondi2(centre - demi),
+      haut: arrondi2(centre + demi),
+    });
+  }
+  return bande;
+}
+
 /* ── Calendrier d'un mois ─────────────────────────────────────────────── */
 
 /** 0 = lundi, 6 = dimanche. */
@@ -1664,6 +1874,410 @@ function mensualitePret(capital, tauxAnnuel, mois) {
   const t = (Number(tauxAnnuel) || 0) / 100 / 12;
   if (t <= 0) return arrondi2(capital / mois);
   return arrondi2((capital * t) / (1 - Math.pow(1 + t, -mois)));
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   Lecture d'un relevé bancaire
+
+   Saisir un budget à la main est le vrai obstacle : on oublie la moitié
+   des prélèvements, et on renonce. Un relevé exporté depuis la banque
+   contient déjà tout. Reste à le lire — ce qu'aucune banque n'écrit de la
+   même façon — puis à y reconnaître ce qui revient.
+   ══════════════════════════════════════════════════════════════════════ */
+
+const SEPARATEURS = [";", ",", "\t", "|"];
+
+/** Découpe une ligne de CSV en respectant les guillemets et les doublés. */
+function decouperLigne(ligne, separateur) {
+  const cellules = [];
+  let courante = "";
+  let entreGuillemets = false;
+  for (let i = 0; i < ligne.length; i++) {
+    const c = ligne[i];
+    if (entreGuillemets) {
+      if (c === '"') {
+        if (ligne[i + 1] === '"') { courante += '"'; i++; }
+        else entreGuillemets = false;
+      } else courante += c;
+    } else if (c === '"') entreGuillemets = true;
+    else if (c === separateur) { cellules.push(courante.trim()); courante = ""; }
+    else courante += c;
+  }
+  cellules.push(courante.trim());
+  return cellules;
+}
+
+/**
+ * Le séparateur est celui qui donne le plus de colonnes, et surtout le même
+ * nombre sur toutes les lignes : un point-virgule qui découpe proprement bat
+ * une virgule qui tombe au hasard dans les libellés.
+ */
+function detecterSeparateur(lignes) {
+  let meilleur = ";", score = -1;
+  for (const sep of SEPARATEURS) {
+    const tailles = lignes.slice(0, 20).map((l) => decouperLigne(l, sep).length);
+    if (!tailles.length) continue;
+    const colonnes = tailles[0];
+    if (colonnes < 2) continue;
+    const reguliers = tailles.filter((t) => t === colonnes).length / tailles.length;
+    const note = colonnes * reguliers;
+    if (note > score) { score = note; meilleur = sep; }
+  }
+  return meilleur;
+}
+
+/** Une date de relevé : jour/mois/année, année-mois-jour, avec / . ou -. */
+function lireDate(valeur) {
+  if (typeof valeur !== "string") return null;
+  const t = valeur.trim();
+  let m = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/.exec(t);
+  if (m) {
+    const iso = m[1] + "-" + deuxChiffres(Number(m[2])) + "-" + deuxChiffres(Number(m[3]));
+    return estIso(iso) ? iso : null;
+  }
+  m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})/.exec(t);
+  if (m) {
+    let annee = Number(m[3]);
+    // « 24 » veut dire 2024 : un relevé bancaire ne remonte pas au siècle dernier
+    if (annee < 100) annee += annee > 70 ? 1900 : 2000;
+    const iso = annee + "-" + deuxChiffres(Number(m[2])) + "-" + deuxChiffres(Number(m[1]));
+    return estIso(iso) ? iso : null;
+  }
+  return null;
+}
+
+/**
+ * Un montant de relevé. Les banques écrivent « 1 234,56 », « -1234.56 »,
+ * « 1,234.56 » ou « (123,45) » pour un débit. Le dernier séparateur rencontré
+ * est le séparateur décimal — c'est ce qui permet de trancher entre les deux
+ * conventions sans rien demander.
+ */
+function lireMontant(valeur) {
+  if (typeof valeur === "number") return isFinite(valeur) ? valeur : null;
+  if (typeof valeur !== "string") return null;
+  let t = valeur.trim().replace(/\s| | /g, "").replace(/[€$£]/g, "");
+  if (!t) return null;
+  let signe = 1;
+  if (/^\(.*\)$/.test(t)) { signe = -1; t = t.slice(1, -1); }
+  if (t[0] === "-" || t[0] === "−") { signe = -1; t = t.slice(1); }
+  else if (t[0] === "+") t = t.slice(1);
+  if (!/^[\d.,]+$/.test(t) || !/\d/.test(t)) return null;
+
+  const dernierePoint = t.lastIndexOf(".");
+  const derniereVirgule = t.lastIndexOf(",");
+  const decimal = Math.max(dernierePoint, derniereVirgule);
+  let entier, fraction = "";
+  if (decimal >= 0 && t.length - decimal - 1 <= 2 && t.length - decimal - 1 > 0) {
+    entier = t.slice(0, decimal);
+    fraction = t.slice(decimal + 1);
+  } else entier = t;
+  entier = entier.replace(/[.,]/g, "");
+  if (!/^\d*$/.test(entier) || !/^\d*$/.test(fraction)) return null;
+  const n = Number((entier || "0") + (fraction ? "." + fraction : ""));
+  return isFinite(n) ? signe * n : null;
+}
+
+/**
+ * Analyse un fichier : séparateur, lignes, en-tête, et le rôle probable de
+ * chaque colonne. Le repérage se fait sur le contenu, pas sur les titres :
+ * une colonne dont huit valeurs sur dix sont des dates est la colonne date,
+ * quel que soit son intitulé.
+ */
+function analyserCsv(texte) {
+  const propre = String(texte || "").replace(/^﻿/, "");
+  const lignes = propre.split(/\r\n|\r|\n/).filter((l) => l.trim().length);
+  if (lignes.length < 2) return { erreur: "Ce fichier ne contient pas assez de lignes.", lignes: [] };
+
+  const separateur = detecterSeparateur(lignes);
+  const grille = lignes.map((l) => decouperLigne(l, separateur));
+  const colonnes = Math.max.apply(null, grille.map((g) => g.length));
+  for (const g of grille) while (g.length < colonnes) g.push("");
+
+  // une première ligne sans aucune date ni montant est un en-tête
+  const premiere = grille[0];
+  const entete = premiere.every((c) => lireDate(c) === null) &&
+    premiere.filter((c) => lireMontant(c) !== null).length <= 1 ? premiere : null;
+  const corps = entete ? grille.slice(1) : grille;
+  if (!corps.length) return { erreur: "Ce fichier ne contient aucune ligne de données.", lignes: [] };
+
+  const echantillon = corps.slice(0, 60);
+  const notes = [];
+  for (let i = 0; i < colonnes; i++) {
+    const valeurs = echantillon.map((l) => l[i] || "");
+    const remplies = valeurs.filter((v) => v !== "");
+    const dates = valeurs.filter((v) => lireDate(v) !== null).length;
+    const montants = remplies.filter((v) => lireMontant(v) !== null);
+    const textes = remplies.filter((v) => v.length > 3 && lireMontant(v) === null && lireDate(v) === null);
+    notes.push({
+      i,
+      titre: entete ? entete[i] : "Colonne " + (i + 1),
+      partDates: dates / echantillon.length,
+      // la part se mesure sur les cellules remplies : une colonne « crédit »
+      // est vide une ligne sur deux sans cesser d'être une colonne de montants
+      partMontants: remplies.length ? montants.length / remplies.length : 0,
+      remplissage: remplies.length / echantillon.length,
+      distincts: new Set(textes).size,
+      negatifs: montants.filter((v) => lireMontant(v) < 0).length,
+      valeurs: montants.map(lireMontant),
+    });
+  }
+
+  const parDate = notes.slice().sort((a, b) => b.partDates - a.partDates);
+  const colonneDate = parDate[0] && parDate[0].partDates > 0.6 ? parDate[0].i : -1;
+  const parTexte = notes.slice().sort((a, b) => b.distincts - a.distincts);
+  const colonneLibelle = parTexte[0] && parTexte[0].distincts > 1 ? parTexte[0].i : -1;
+
+  const numeriques = notes.filter((n) => n.i !== colonneDate && n.partMontants > 0.8 && n.remplissage > 0.02);
+  let colonneMontant = -1, colonneDebit = -1, colonneCredit = -1;
+
+  /* Deux colonnes qui se complètent sans jamais se chevaucher : un débit et
+     un crédit séparés, comme les écrivent beaucoup de banques françaises.
+     Le seuil est bas sur chacune — un relevé peut ne compter que trois
+     salaires pour quarante prélèvements — mais leur somme doit couvrir
+     toutes les lignes, ce qui écarte une colonne accessoire. */
+  const partielles = numeriques.filter((n) => n.remplissage < 0.96);
+  let paire = null;
+  for (let a = 0; a < partielles.length && !paire; a++) {
+    for (let b = a + 1; b < partielles.length && !paire; b++) {
+      if (Math.abs(partielles[a].remplissage + partielles[b].remplissage - 1) < 0.12) {
+        paire = [partielles[a], partielles[b]];
+      }
+    }
+  }
+
+  if (paire) {
+    const [a, b] = paire.slice().sort((x, y) => x.i - y.i);
+    const titre = (n) => (n.titre || "").toLowerCase();
+    const debitDabord = /cr[ée]dit|recette|entr[ée]e/.test(titre(b)) || !/cr[ée]dit|recette|entr[ée]e/.test(titre(a));
+    colonneDebit = debitDabord ? a.i : b.i;
+    colonneCredit = debitDabord ? b.i : a.i;
+  } else if (numeriques.length) {
+    /* Sinon la colonne de montants est la plus remplie — sauf si une autre
+       colonne est son solde courant, reconnaissable à ceci : ses écarts
+       successifs reproduisent les montants. Un solde pris pour un montant
+       ferait un budget entièrement faux. */
+    const pleines = numeriques.slice().sort((x, y) => y.remplissage - x.remplissage);
+    const estSoldeDe = (solde, montant) => {
+      if (solde.valeurs.length < 3 || solde.valeurs.length !== montant.valeurs.length) return false;
+      let bons = 0;
+      for (let k = 1; k < solde.valeurs.length; k++) {
+        if (Math.abs((solde.valeurs[k] - solde.valeurs[k - 1]) - montant.valeurs[k]) < 0.02) bons++;
+      }
+      return bons / (solde.valeurs.length - 1) > 0.8;
+    };
+    let choix = pleines[0];
+    for (const candidat of pleines) {
+      if (pleines.some((autre) => autre !== candidat && estSoldeDe(autre, candidat))) { choix = candidat; break; }
+    }
+    colonneMontant = choix.i;
+  }
+
+  return {
+    separateur, entete, lignes: corps, colonnes, notes,
+    colonneDate, colonneLibelle, colonneMontant, colonneDebit, colonneCredit,
+  };
+}
+
+/** Transforme la grille en opérations datées, selon le plan de colonnes. */
+function operationsCsv(analyse, plan) {
+  const p = plan || analyse;
+  const operations = [];
+  let ignorees = 0;
+  for (const ligne of analyse.lignes) {
+    const date = lireDate(ligne[p.colonneDate]);
+    let montant = null;
+    if (p.colonneMontant >= 0) montant = lireMontant(ligne[p.colonneMontant]);
+    else {
+      const debit = lireMontant(ligne[p.colonneDebit]);
+      const credit = lireMontant(ligne[p.colonneCredit]);
+      if (debit !== null && Math.abs(debit) > 0) montant = -Math.abs(debit);
+      else if (credit !== null && Math.abs(credit) > 0) montant = Math.abs(credit);
+    }
+    const libelle = texteSur(ligne[p.colonneLibelle], "", 90);
+    if (!date || montant === null || !isFinite(montant) || montant === 0) { ignorees++; continue; }
+    operations.push({ date, libelle: libelle || "Sans libellé", montant: arrondi2(montant) });
+  }
+  operations.sort((a, b) => (a.date < b.date ? -1 : 1));
+  return { operations, ignorees };
+}
+
+/* ── Reconnaître ce qui revient ───────────────────────────────────────── */
+
+const BRUIT_LIBELLE = /^(carte|cb|paiement|achat|prlv|prelevement|prélèvement|vir|virement|sepa|inst|facture|ech|echeance|retrait|dab|remise|de|du|le|par|pour|ref)$/i;
+
+/**
+ * Réduit un libellé de relevé à ce qui l'identifie.
+ *
+ * « CARTE 12/09 MONOPRIX 2456 PARIS » et « CARTE 04/10 MONOPRIX 2456 LYON »
+ * décrivent la même dépense récurrente : on retire les mots de service, les
+ * dates et les suites de chiffres, et on garde les premiers mots utiles.
+ */
+function normaliserLibelle(libelle, motsGardes) {
+  const sansAccent = String(libelle || "")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .toUpperCase();
+  const mots = sansAccent
+    .replace(/\d{1,2}[/.-]\d{1,2}([/.-]\d{2,4})?/g, " ")   // dates
+    .replace(/\d{4,}/g, " ")                                 // numéros de carte, références
+    .replace(/[^A-Z0-9]+/g, " ")
+    .split(" ")
+    .filter((m) => m && !BRUIT_LIBELLE.test(m) && m.length > 1);
+  return mots.slice(0, motsGardes || 3).join(" ") || sansAccent.trim().slice(0, 24) || "SANS LIBELLE";
+}
+
+function mediane(valeurs) {
+  if (!valeurs.length) return 0;
+  const t = valeurs.slice().sort((a, b) => a - b);
+  const m = Math.floor(t.length / 2);
+  return t.length % 2 ? t[m] : (t[m - 1] + t[m]) / 2;
+}
+
+/* Un rythme est reconnu par l'écart médian entre deux opérations. Les
+   tolérances sont larges pour les longues périodes : un prélèvement
+   « mensuel » tombe le 3 ou le 5 selon les week-ends. */
+const RYTHMES_DETECTES = [
+  { id: "hebdo", jours: 7, tolerance: 2, minimum: 4 },
+  { id: "quinzaine", jours: 14, tolerance: 3, minimum: 3 },
+  { id: "mensuel", jours: 30.44, tolerance: 6, minimum: 3 },
+  { id: "bimestriel", jours: 60.88, tolerance: 9, minimum: 3 },
+  { id: "trimestriel", jours: 91.31, tolerance: 13, minimum: 3 },
+  // au-delà du trimestre, un relevé d'un an ne peut pas en montrer trois :
+  // deux suffisent, faute de mieux
+  { id: "semestriel", jours: 182.6, tolerance: 22, minimum: 2 },
+  { id: "annuel", jours: 365.25, tolerance: 40, minimum: 2 },
+];
+
+/**
+ * Cherche un rythme dans une suite de dates.
+ *
+ * L'écart médian sert de candidat, et la part des écarts qui tombent dans la
+ * tolérance donne la confiance. Une suite irrégulière — des courses faites
+ * quand le frigo est vide — n'atteint jamais le seuil, et c'est voulu : on
+ * ne veut pas transformer du bruit en prélèvement mensuel.
+ */
+function detecterRythme(dates) {
+  if (dates.length < 2) return null;
+  const tries = dates.slice().sort();
+  const ecarts = [];
+  for (let i = 1; i < tries.length; i++) ecarts.push(joursEntre(tries[i - 1], tries[i]));
+  const medianEcart = mediane(ecarts);
+  if (medianEcart <= 0) return null;
+
+  let meilleur = null;
+  for (const r of RYTHMES_DETECTES) {
+    if (tries.length < r.minimum) continue;
+    if (Math.abs(medianEcart - r.jours) > r.tolerance) continue;
+    const dedans = ecarts.filter((e) => Math.abs(e - r.jours) <= r.tolerance).length;
+    const confiance = dedans / ecarts.length;
+    if (!meilleur || confiance > meilleur.confiance) {
+      meilleur = { frequence: r.id, confiance, ecartMedian: arrondi2(medianEcart) };
+    }
+  }
+  if (!meilleur || meilleur.confiance < 0.6) return null;
+  return meilleur;
+}
+
+/** La prochaine échéance attendue après la dernière observée. */
+function prochaineEcheancePrevue(dates, frequence, apres) {
+  const dernier = dates.slice().sort().pop();
+  const freq = FREQ[frequence] || FREQ.mensuel;
+  let date = dernier;
+  let garde = 0;
+  do {
+    date = freq.jours ? ajouterJours(date, freq.jours) : ajouterMois(date, freq.mois);
+  } while (date <= apres && garde++ < 400);
+  return date;
+}
+
+/**
+ * Regroupe les opérations et en tire des propositions de flux.
+ *
+ * Ce qui ne se répète pas n'est pas jeté : la somme des opérations isolées
+ * est ramenée à une moyenne mensuelle et proposée comme une enveloppe de
+ * dépenses variables. C'est le poste que personne ne pense à saisir, et
+ * celui qui fait mentir toutes les projections.
+ */
+function detecterRecurrences(operations, options) {
+  const o = options || {};
+  const depuis = o.depuis || aujourdhui();
+  const propositions = [];
+
+  /* Trois passes, de la plus exacte à la plus large. « MONOPRIX PARIS » et
+     « MONOPRIX LYON » ne se rejoignent qu'au second tour, une fois établi
+     qu'aucun des deux ne tient un rythme tout seul. Une passe large exige
+     davantage de régularité, faute de quoi elle rapprocherait des dépenses
+     qui n'ont que leur premier mot en commun. */
+  const PASSES = [
+    { mots: 3, confiance: 0.6, minimum: 2 },
+    { mots: 2, confiance: 0.6, minimum: 3 },
+    { mots: 1, confiance: 0.75, minimum: 3 },
+  ];
+
+  let restantes = operations.slice();
+  for (const passe of PASSES) {
+    const groupes = new Map();
+    for (const op of restantes) {
+      const cle = (op.montant < 0 ? "D:" : "R:") + normaliserLibelle(op.libelle, passe.mots);
+      if (!groupes.has(cle)) groupes.set(cle, { cle, libelle: op.libelle, operations: [] });
+      groupes.get(cle).operations.push(op);
+    }
+
+    const suivantes = [];
+    for (const g of groupes.values()) {
+      const dates = g.operations.map((x) => x.date);
+      const rythme = g.operations.length >= passe.minimum ? detecterRythme(dates) : null;
+      if (!rythme || rythme.confiance < passe.confiance) { suivantes.push.apply(suivantes, g.operations); continue; }
+
+      const montants = g.operations.map((x) => Math.abs(x.montant));
+      const montant = arrondi2(mediane(montants));
+      propositions.push({
+        libelle: titreLisible(normaliserLibelle(g.libelle, passe.mots)),
+        libelleBrut: g.libelle,
+        type: g.operations[0].montant < 0 ? "depense" : "revenu",
+        montant,
+        dispersion: montants.length > 1 ? arrondi2(mediane(montants.map((m) => Math.abs(m - montant)))) : 0,
+        frequence: rythme.frequence,
+        confiance: rythme.confiance,
+        nombre: g.operations.length,
+        premiere: dates.slice().sort()[0],
+        derniere: dates.slice().sort().pop(),
+        debut: prochaineEcheancePrevue(dates, rythme.frequence, depuis),
+        operations: g.operations,
+      });
+    }
+    restantes = suivantes;
+  }
+  const isolees = restantes;
+
+  propositions.sort((a, b) => (b.montant * (FREQ[b.frequence].parAn || 1)) - (a.montant * (FREQ[a.frequence].parAn || 1)));
+
+  // enveloppe des opérations isolées, ramenée au mois
+  let variables = null;
+  const sorties = isolees.filter((x) => x.montant < 0);
+  if (sorties.length >= 3) {
+    const jours = Math.max(28, joursEntre(
+      operations[0].date, operations[operations.length - 1].date) + 1);
+    const total = sorties.reduce((s, x) => s + Math.abs(x.montant), 0);
+    variables = {
+      libelle: "Dépenses variables",
+      type: "depense",
+      montant: arrondi2((total / jours) * 30.44),
+      frequence: "mensuel",
+      nombre: sorties.length,
+      total: arrondi2(total),
+      jours,
+      debut: debutDeMois(moisSuivant(cleMois(depuis))),
+    };
+  }
+
+  return { propositions, variables, isolees };
+}
+
+/** « EDF CLIENTS » → « Edf clients ». */
+function titreLisible(libelle) {
+  const base = String(libelle || "").toLowerCase();
+  return base.charAt(0).toUpperCase() + base.slice(1);
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -1737,9 +2351,26 @@ function jeuDemo() {
   const debut = debutDeMois(cleMois(aujourdhui()));
   const an = (n) => ajouterMois(debut, n);
 
+  /* Quatre pointages : le premier n'a rien à comparer, les trois suivants
+     montrent un budget légèrement optimiste — de quoi faire apparaître la
+     marge d'erreur dès la première ouverture, et montrer à quoi elle sert. */
+  const jour = (recul) => ajouterJours(aujourdhui(), -recul);
   const comptes = [
-    { id: "cpt-courant", nom: "Compte courant", type: "courant", solde: 2840, teinte: 1 },
-    { id: "cpt-livret", nom: "Livret d'épargne", type: "epargne", solde: 6200, teinte: 2 },
+    {
+      id: "cpt-courant", nom: "Compte courant", type: "courant", solde: 2840, teinte: 1,
+      soldeDate: aujourdhui(),
+      releves: [
+        { date: jour(90), solde: 3105, prevu: null, jours: 0 },
+        { date: jour(60), solde: 2980, prevu: 3042, jours: 30 },
+        { date: jour(30), solde: 2905, prevu: 3000, jours: 30 },
+        { date: aujourdhui(), solde: 2840, prevu: 2888, jours: 30 },
+      ],
+    },
+    {
+      id: "cpt-livret", nom: "Livret d'épargne", type: "epargne", solde: 6200, teinte: 2,
+      soldeDate: aujourdhui(),
+      releves: [{ date: aujourdhui(), solde: 6200, prevu: null, jours: 0 }],
+    },
   ];
 
   const f = (libelle, type, montant, categorieId, frequence, jour, extra) => Object.assign({
@@ -1907,6 +2538,7 @@ function grapheCourbes(cible, series, options) {
 
   let min = Infinity, max = -Infinity;
   for (const s of utiles) for (const p of s.points) { if (p.solde < min) min = p.solde; if (p.solde > max) max = p.solde; }
+  if (o.bande) for (const b of o.bande) { if (b.bas < min) min = b.bas; if (b.haut > max) max = b.haut; }
   if (o.seuil > 0) { min = Math.min(min, o.seuil); max = Math.max(max, o.seuil); }
   min = Math.min(min, 0);
   const marge = (max - min) * 0.08 || 100;
@@ -1944,6 +2576,31 @@ function grapheCourbes(cible, series, options) {
     const iso = ajouterMois(utiles[0].points[0].date, k);
     if (versUTC(iso) > t1) break;
     svg += '<text class="axe" x="' + gx(iso).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle">' + esc(libelleMois(cleMois(iso), true)) + "</text>";
+  }
+
+  /* La bande d'incertitude passe sous les courbes : elle est un fond, pas
+     une série. Elle suit le même escalier qu'elles. */
+  if (o.bande && o.bande.length > 1) {
+    let haut = "", bas = "";
+    let px = null, pHaut = null, pBas = null;
+    for (const b of o.bande) {
+      const x = gx(b.date), yh = gy(b.haut), yb = gy(b.bas);
+      if (px === null) { haut = "M" + x.toFixed(1) + "," + yh.toFixed(1); bas = "L" + x.toFixed(1) + "," + yb.toFixed(1); }
+      else {
+        haut += "L" + x.toFixed(1) + "," + pHaut.toFixed(1) + "L" + x.toFixed(1) + "," + yh.toFixed(1);
+        bas = "L" + x.toFixed(1) + "," + yb.toFixed(1) + "L" + x.toFixed(1) + "," + pBas.toFixed(1) + bas;
+      }
+      px = x; pHaut = yh; pBas = yb;
+    }
+    svg += '<path d="' + haut + bas + 'Z" fill="var(--accent)" opacity=".16"/>';
+    let centre = "", cx0 = null, cy0 = null;
+    for (const b of o.bande) {
+      const x = gx(b.date), y = gy(b.centre);
+      if (cx0 === null) centre = "M" + x.toFixed(1) + "," + y.toFixed(1);
+      else centre += "L" + x.toFixed(1) + "," + cy0.toFixed(1) + "L" + x.toFixed(1) + "," + y.toFixed(1);
+      cx0 = x; cy0 = y;
+    }
+    svg += '<path d="' + centre + '" fill="none" stroke="var(--accent)" stroke-width="1.4" stroke-dasharray="2 4" opacity=".75"/>';
   }
 
   // courbes en escalier : entre deux échéances, le solde ne bouge pas
@@ -1998,6 +2655,12 @@ function grapheCourbes(cible, series, options) {
     for (const s of utiles) {
       const v = lireSurPoints(s.points, iso);
       html += '<div class="l"><span><i class="puce" style="background:' + s.couleur + '"></i>' + esc(s.nom) + "</span><b>" + esc(argent(v)) + "</b></div>";
+    }
+    if (o.bande && o.bande.length) {
+      let b = o.bande[0];
+      for (const c of o.bande) { if (c.date > iso) break; b = c; }
+      html += '<div class="l"><span class="faible">Marge observée</span><b class="faible">' +
+        esc(argentCourt(b.bas)) + " … " + esc(argentCourt(b.haut)) + "</b></div>";
     }
     bulle.innerHTML = html;
     placerBulle(bulle, cible, gx(iso), mg.h + 6);
@@ -2116,13 +2779,14 @@ function grapheAnneau(cible, parts, options) {
    9. Vues
    ══════════════════════════════════════════════════════════════════════ */
 
-const VUES = ["tableau", "flux", "projection", "calendrier", "categories", "objectifs", "scenarios", "comptes", "reglages"];
+const VUES = ["tableau", "flux", "projection", "calendrier", "suivi", "categories", "objectifs", "scenarios", "comptes", "reglages"];
 
 const TITRES = {
   tableau: ["Vue d'ensemble", "Tableau de bord"],
   flux: ["Ce qui entre et ce qui sort", "Revenus & dépenses"],
   projection: ["Mois par mois", "Projection"],
   calendrier: ["Jour par jour", "Calendrier"],
+  suivi: ["Prévu contre réel", "Suivi"],
   categories: ["Où part l'argent", "Catégories & enveloppes"],
   objectifs: ["Ce que vous visez", "Objectifs d'épargne"],
   scenarios: ["Et si ?", "Scénarios"],
@@ -2200,6 +2864,8 @@ function kpi(etiquette, valeur, note, couleur, fond) {
 function rendreTableau(cible, p) {
   if (!ETAT.flux.length) { cible.innerHTML = etatVide(); return; }
 
+  const stats = statistiquesDerive();
+  const bande = bandeIncertitude(p, stats);
   const t = p.totaux;
   const evolution = arrondi2(p.soldeFinal - p.soldeInitial);
   const rav = resteAVivre(p);
@@ -2209,7 +2875,9 @@ function rendreTableau(cible, p) {
     kpi("Solde aujourd'hui", argent(p.soldeInitial),
       esc(ETAT.comptes.length + (ETAT.comptes.length > 1 ? " comptes" : " compte"))) +
     kpi("Dans " + horizonTexte, argent(p.soldeFinal),
-      '<span class="' + (evolution >= 0 ? "pos" : "neg") + '">' + esc(argent(evolution, { signe: true })) + "</span> sur la période",
+      bande
+        ? esc(argent(bande[bande.length - 1].centre)) + " au rythme de dérive observé"
+        : '<span class="' + (evolution >= 0 ? "pos" : "neg") + '">' + esc(argent(evolution, { signe: true })) + "</span> sur la période",
       evolution >= 0 ? "var(--revenu-texte)" : "var(--depense-texte)",
       etincelle(p.points, evolution >= 0 ? "var(--revenu)" : "var(--depense)")) +
     kpi("Reste chaque mois", argent(t.netMensuel, { signe: true }),
@@ -2239,9 +2907,18 @@ function rendreTableau(cible, p) {
 
   const courbe = carte('<div id="g-solde"></div>' +
     '<div class="legende"><span><i class="puce" style="background:var(--accent)"></i>Solde projeté</span>' +
+    (bande ? '<span><svg width="18" height="8" aria-hidden="true"><line x1="0" y1="4" x2="18" y2="4" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="2 4"/></svg>&nbsp;Corrigé de la dérive</span>' +
+             '<span><i class="puce" style="background:var(--accent);opacity:.35"></i>Marge observée (80 %)</span>' : "") +
     (ETAT.parametres.seuilAlerte > 0 ? '<span><svg width="18" height="8" aria-hidden="true"><line x1="0" y1="4" x2="18" y2="4" class="ligne-seuil"/></svg>&nbsp;Seuil de sécurité</span>' : "") +
     (a.dateDecouvert ? '<span><i class="puce" style="background:var(--depense)"></i>Passage sous zéro</span>' : "") +
-    "</div>",
+    "</div>" +
+    (bande
+      ? '<p class="sous" style="margin:10px 0 0">La marge vient de vos ' + esc(nombre(stats.n)) +
+        " pointages : en moyenne " + esc(argent(stats.biais, { signe: true })) + " par mois d'écart avec la prévision, " +
+        "dispersés de " + esc(argent(stats.ecartType)) + ". Elle s'ouvre en racine du temps." +
+        ' <button class="btn fantome petit" data-act="vue-suivi">Voir le suivi</button></p>'
+      : '<p class="sous" style="margin:10px 0 0">Cette courbe n\'a encore jamais été confrontée à vos relevés.' +
+        ' <button class="btn fantome petit" data-act="vue-suivi">Pointer un compte</button></p>'),
     { titre: "Solde jour par jour", sous: "Chaque marche est une échéance. Le tracé suppose que tous les flux se réalisent comme prévu.",
       droite: esc(libelleDate(p.du, true) + " → " + libelleDate(p.au, true)) });
 
@@ -2317,9 +2994,10 @@ function rendreTableau(cible, p) {
     '<div class="grille g-2-1">' + repartition + equilibre + "</div>";
 
   grapheCourbes(boite("g-solde"), [{
-    nom: "Solde", couleur: "var(--accent)", points: p.points, remplir: true, epaisseur: 2.2,
+    nom: "Solde", couleur: "var(--accent)", points: p.points, remplir: !bande, epaisseur: 2.2,
   }], {
     seuil: ETAT.parametres.seuilAlerte,
+    bande,
     marqueur: a.dateDecouvert ? { date: a.dateDecouvert, valeur: soldeALaDate(p, a.dateDecouvert) } : null,
     hauteur: 300,
   });
@@ -2684,6 +3362,242 @@ function ouvrirAjustement(fluxId, date) {
   });
 }
 
+
+/* ── Suivi : pointer les comptes, lire la dérive ──────────────────────── */
+
+/** Barres signées, une par pointage : l'écart entre le réel et le prévu. */
+function grapheDerive(cible, points, options) {
+  const o = options || {};
+  const L = largeurDe(cible);
+  const H = o.hauteur || 190;
+  const mg = { h: 14, d: 10, b: 24, g: 58 };
+  const l = L - mg.g - mg.d;
+  const h = H - mg.h - mg.b;
+  if (!points.length) { cible.innerHTML = '<div class="vide">Aucune dérive mesurée pour l\'instant.</div>'; return; }
+
+  const ampleur = Math.max(1, ...points.map((p) => Math.abs(p.parMois)));
+  const ticks = graduations(-ampleur, ampleur, 4);
+  const borne = Math.max(Math.abs(ticks[0]), Math.abs(ticks[ticks.length - 1]));
+  const gy = (v) => mg.h + h / 2 - (v / borne) * (h / 2);
+  const pas = l / points.length;
+  const largeur = Math.max(4, Math.min(34, pas - 10));
+
+  let svg = '<svg class="graphe" width="' + L + '" height="' + H + '" viewBox="0 0 ' + L + ' ' + H +
+    '" role="img" aria-label="Écart entre le solde réel et le solde prévu, à chaque pointage">';
+  for (const t of ticks) {
+    const y = gy(t);
+    svg += '<line class="ligne-grille" x1="' + mg.g + '" y1="' + y.toFixed(1) + '" x2="' + (mg.g + l) + '" y2="' + y.toFixed(1) + '"/>';
+    svg += '<text class="axe" x="' + (mg.g - 8) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end">' + esc(argentCourt(t)) + "</text>";
+  }
+  svg += '<line class="ligne-zero" x1="' + mg.g + '" y1="' + gy(0).toFixed(1) + '" x2="' + (mg.g + l) + '" y2="' + gy(0).toFixed(1) + '"/>';
+
+  points.forEach((p, i) => {
+    const centre = mg.g + i * pas + pas / 2;
+    const y0 = gy(0), y1 = gy(p.parMois);
+    svg += '<rect class="barre" x="' + (centre - largeur / 2).toFixed(1) + '" y="' + Math.min(y0, y1).toFixed(1) +
+      '" width="' + largeur.toFixed(1) + '" height="' + Math.max(1, Math.abs(y1 - y0)).toFixed(1) +
+      '" rx="3" fill="var(--' + (p.parMois >= 0 ? "revenu" : "depense") + ')"><title>' +
+      esc(libelleDate(p.date) + " · " + argent(p.parMois, { signe: true }) + " par mois") + "</title></rect>";
+    if (points.length <= 14) {
+      svg += '<text class="axe" x="' + centre.toFixed(1) + '" y="' + (H - 7) + '" text-anchor="middle">' +
+        esc(libelleJourMois(p.date)) + "</text>";
+    }
+  });
+
+  if (o.biais !== undefined && Math.abs(o.biais) > 0.01) {
+    svg += '<line x1="' + mg.g + '" y1="' + gy(o.biais).toFixed(1) + '" x2="' + (mg.g + l) + '" y2="' + gy(o.biais).toFixed(1) +
+      '" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4"/>';
+  }
+  svg += "</svg>";
+  cible.innerHTML = svg;
+}
+
+function rendreSuivi(cible, p) {
+  const st = statistiquesDerive();
+  const points = [...st.points];
+  const dernier = ETAT.comptes
+    .map((c) => c.soldeDate)
+    .sort()
+    .slice(-1)[0];
+  const jamaisPointe = !points.length;
+
+  const kpis = '<div class="kpis">' +
+    kpi("Dérive moyenne", st.n ? argent(st.biais, { signe: true }) + " /mois" : "—",
+      st.n ? (st.biais < 0 ? "vous dépensez plus que prévu" : st.biais > 0 ? "vous dépensez moins que prévu" : "la prévision tombe juste")
+           : "aucun pointage",
+      st.n ? (st.biais < 0 ? "var(--depense-texte)" : "var(--revenu-texte)") : "") +
+    kpi("Dispersion", st.n > 1 ? "± " + argent(st.ecartType) : "—",
+      st.n > 1 ? "d'un mois à l'autre" : "il faut plusieurs pointages") +
+    kpi("Écart cumulé", st.n ? argent(st.total, { signe: true }) : "—",
+      st.n ? esc("sur " + nombre(st.jours) + " jours suivis") : "rien à comparer",
+      st.n ? (st.total < 0 ? "var(--depense-texte)" : "var(--revenu-texte)") : "") +
+    kpi("Dernier pointage", dernier ? libelleDate(dernier, true) : "—",
+      dernier ? esc(delaiDepuis(dernier)) : "jamais") +
+    "</div>";
+
+  const comptes = carte(
+    '<div class="tableau-boite"><table><thead><tr><th>Compte</th><th class="num">Solde constaté</th>' +
+    '<th>Constaté le</th><th class="num">Projeté aujourd\'hui</th><th class="num">Pointages</th><th></th></tr></thead><tbody>' +
+    ETAT.comptes.map((c) => {
+      const roule = soldeRoule(c, aujourdhui());
+      const vieux = joursEntre(c.soldeDate, aujourdhui());
+      return '<tr><td><i class="puce" style="background:' + teinte(c.teinte) + '"></i><b>' + esc(c.nom) + "</b>" +
+        (c.type === "epargne" ? ' <span class="etiquette">épargne</span>' : "") + "</td>" +
+        '<td class="num">' + esc(argent(c.solde)) + "</td>" +
+        '<td class="' + (vieux > 45 ? "neg" : "dim") + '">' + esc(libelleDate(c.soldeDate, true)) +
+          (vieux > 0 ? ' <span class="faible">· il y a ' + nombre(vieux) + " j</span>" : "") + "</td>" +
+        '<td class="num dim">' + esc(argent(roule)) + "</td>" +
+        '<td class="num dim">' + ((c.releves || []).length || "—") + "</td>" +
+        '<td class="actions"><button class="btn petit primaire" data-act="pointer" data-id="' + esc(c.id) + '">Pointer</button></td></tr>';
+    }).join("") + "</tbody></table></div>",
+    { titre: "Où en sont vos comptes",
+      sous: "« Projeté aujourd'hui » est ce que l'application calcule à partir du dernier solde constaté et des flux passés depuis. Pointer, c'est lui dire ce que la banque affiche vraiment." });
+
+  const explication = jamaisPointe
+    ? carte('<div class="vide"><p class="titre-vide">La prévision ne s\'est encore jamais confrontée au réel.</p>' +
+        "<p>Une projection ne vaut que par la saisie qui la nourrit — et une saisie dérive toujours un peu : " +
+        "un achat oublié, un montant qui a changé, une dépense que personne n'avait prévue. Pointer un compte " +
+        "prend dix secondes : vous lisez le solde sur votre application bancaire, vous l'entrez ici, et " +
+        "l'application vous dit de combien elle s'était trompée.</p>" +
+        "<p>Au bout de trois pointages, elle sait mesurer sa propre marge d'erreur et l'affiche autour de la courbe.</p>" +
+        '<button class="btn primaire" data-act="pointer" data-id="' + esc(ETAT.comptes[0].id) + '">Pointer ' + esc(ETAT.comptes[0].nom) + "</button></div>")
+    : carte('<div id="g-derive"></div>' +
+        '<div class="legende"><span><i class="puce" style="background:var(--revenu)"></i>Il restait plus que prévu</span>' +
+        '<span><i class="puce" style="background:var(--depense)"></i>Il restait moins que prévu</span>' +
+        (Math.abs(st.biais) > 0.01 ? '<span><svg width="18" height="8" aria-hidden="true"><line x1="0" y1="4" x2="18" y2="4" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 4"/></svg>&nbsp;Moyenne</span>' : "") +
+        "</div>",
+        { titre: "Dérive à chaque pointage", droite: esc(nombre(st.n) + (st.n > 1 ? " mesures" : " mesure")),
+          sous: "Chaque barre est l'écart entre ce que vous aviez et ce que l'application annonçait, ramené à un mois pour que des périodes inégales restent comparables." });
+
+  const lecture = st.n
+    ? carte('<p class="sous" style="margin:0">' + esc(lectureDerive(st)) + "</p>" +
+        (st.exploitable
+          ? '<p class="sous" style="margin:10px 0 0">La courbe du tableau de bord porte désormais une <b>marge observée</b> : ' +
+            "elle s'ouvre en racine du temps, parce que des écarts successifs se compensent en partie au lieu de s'ajouter. " +
+            "Elle couvre 80 % des cas <i>si</i> vos dérives suivent une loi normale — elles n'y sont pas tenues.</p>"
+          : '<p class="sous" style="margin:10px 0 0">Encore ' + (DERIVE_MINIMUM - st.n) +
+            " pointage" + (DERIVE_MINIMUM - st.n > 1 ? "s" : "") + " avant que l'application ose en tirer une marge d'erreur.</p>"),
+        { titre: "Ce que cela dit" })
+    : "";
+
+  const historique = points.length
+    ? carte('<div class="tableau-boite"><table><thead><tr><th>Date</th><th>Compte</th><th class="num">Prévu</th>' +
+        '<th class="num">Réel</th><th class="num">Écart</th><th class="num">Par mois</th><th class="num">Jours</th></tr></thead><tbody>' +
+        points.slice().reverse().map((d) => {
+          const r = (compte(d.compteId).releves || []).find((x) => x.date === d.date) || {};
+          return "<tr><td>" + esc(libelleDate(d.date)) + "</td>" +
+            "<td><i class=\"puce\" style=\"background:" + teinte(compte(d.compteId).teinte) + "\"></i>" + esc(nomCompte(d.compteId)) + "</td>" +
+            '<td class="num dim">' + esc(argent(r.prevu)) + "</td>" +
+            '<td class="num">' + esc(argent(r.solde)) + "</td>" +
+            '<td class="num ' + (d.ecart >= 0 ? "pos" : "neg") + '">' + esc(argent(d.ecart, { signe: true })) + "</td>" +
+            '<td class="num ' + (d.parMois >= 0 ? "pos" : "neg") + '">' + esc(argent(d.parMois, { signe: true })) + "</td>" +
+            '<td class="num dim">' + nombre(d.jours) + "</td></tr>";
+        }).join("") + "</tbody></table></div>",
+        { titre: "Historique des pointages" })
+    : "";
+
+  cible.innerHTML = kpis + comptes + explication + lecture + historique;
+  if (points.length) grapheDerive(boite("g-derive"), points, { biais: st.biais });
+}
+
+/** Une phrase qui dit ce que l'historique de dérive signifie, en euros. */
+function lectureDerive(st) {
+  const sens = st.biais < 0 ? "de moins" : "de plus";
+  const ampleur = Math.abs(st.biais);
+  if (st.n < 2) {
+    return "Un seul pointage ne dit rien d'une tendance : l'écart mesuré vaut " + argent(st.total, { signe: true }) +
+      " sur " + nombre(st.jours) + " jours. Il faut plusieurs mesures pour distinguer un budget mal saisi d'un mois inhabituel.";
+  }
+  if (ampleur < 20) {
+    return "Votre budget tombe juste : la dérive moyenne est de " + argent(ampleur) + " par mois, " +
+      "c'est-à-dire du bruit. La projection peut être lue telle quelle.";
+  }
+  if (ampleur < st.ecartType) {
+    return "Il reste en moyenne " + argent(ampleur) + " " + sens + " que prévu chaque mois, mais d'un mois à l'autre " +
+      "l'écart varie de " + argent(st.ecartType) + " : la dispersion dépasse la tendance, donc rien ne prouve encore " +
+      "un biais systématique. Ce sont plutôt des mois irréguliers.";
+  }
+  return "Il reste systématiquement " + argent(ampleur) + " " + sens + " que prévu chaque mois, soit " +
+    argent(ampleur * 12) + " sur un an. " +
+    (st.biais < 0
+      ? "Quelque chose manque à la saisie : une dépense récurrente non listée, ou des montants sous-estimés. Le calendrier aide à repérer laquelle."
+      : "Vos dépenses réelles sont plus basses que ce que vous avez saisi : certains montants peuvent être revus à la baisse.");
+}
+
+/** « il y a 12 jours », pour un pointage. */
+function delaiDepuis(iso) {
+  const n = joursEntre(iso, aujourdhui());
+  if (n <= 0) return "aujourd'hui";
+  if (n === 1) return "hier";
+  if (n < 31) return "il y a " + n + " jours";
+  return "il y a " + Math.round(n / 30.44) + " mois";
+}
+
+/* ── Dialogue de pointage ─────────────────────────────────────────────── */
+
+function ouvrirPointage(compteId) {
+  const c = compte(compteId);
+  if (!c) return;
+  const date = aujourdhui();
+  const prevu = soldeRoule(c, date);
+  const jours = joursEntre(c.soldeDate, date);
+
+  const corps =
+    '<p class="sous" style="margin:0">Ouvrez votre application bancaire et recopiez le solde de <b>' + esc(c.nom) +
+    "</b>. L'application le compare à ce qu'elle annonçait, et garde l'écart pour mesurer sa propre marge d'erreur.</p>" +
+    '<div class="ligne-champs">' +
+    '<label class="champ"><span class="ttl">Solde réel</span>' +
+    '<input type="number" id="pt-solde" step="0.01" value="' + esc(prevu) + '"></label>' +
+    '<label class="champ"><span class="ttl">Constaté le</span>' +
+    '<input type="date" id="pt-date" value="' + esc(date) + '" min="' + esc(c.soldeDate) + '" max="' + esc(date) + '">' +
+    '<span class="aide">Entre le dernier pointage et aujourd\'hui.</span></label></div>' +
+    '<div class="sep"></div>' +
+    '<div class="rangee" style="justify-content:space-between">' +
+    '<span class="dim">Projeté pour ce jour</span><b class="chiffre" style="font-family:var(--display);font-size:17px">' + esc(argent(prevu)) + "</b></div>" +
+    '<div class="rangee" style="justify-content:space-between">' +
+    '<span class="dim">Écart</span><b id="pt-ecart" class="chiffre" style="font-family:var(--display);font-size:17px">' + esc(argent(0, { signe: true })) + "</b></div>" +
+    (jours > 0
+      ? '<p class="sous" style="margin:0">Depuis le ' + esc(libelleDate(c.soldeDate)) + ", soit " + nombre(jours) + " jours.</p>"
+      : '<p class="sous" style="margin:0">Le dernier solde date d\'aujourd\'hui : ce pointage le corrige, il ne mesure aucune dérive.</p>');
+
+  ouvrirDialogue("Pointer « " + c.nom + " »", corps, [
+    { texte: "Annuler", action: fermerDialogue },
+    {
+      texte: "Enregistrer", classe: "primaire", action: () => {
+        const valeur = Number(String(boite("pt-solde").value).replace(",", "."));
+        const quand = boite("pt-date").value;
+        if (!isFinite(valeur)) { message("Entrez le solde affiché par votre banque."); return; }
+        if (!estIso(quand) || quand > aujourdhui() || quand < c.soldeDate) {
+          message("Cette date doit suivre le dernier pointage, sans dépasser aujourd'hui.");
+          return;
+        }
+        let releve = null;
+        modifier(() => { releve = pointerSolde(compteId, quand, valeur); });
+        fermerDialogue();
+        const ecart = releve ? arrondi2(releve.solde - releve.prevu) : 0;
+        message(releve && releve.jours > 0
+          ? (Math.abs(ecart) < 1 ? "Pile sur la prévision." : argent(ecart, { signe: true }) + " par rapport à la prévision.")
+          : "Solde corrigé.", { annuler: true });
+      },
+    },
+  ], () => {
+    const recalculer = () => {
+      const valeur = Number(String(boite("pt-solde").value).replace(",", "."));
+      const quand = boite("pt-date").value;
+      const attendu = estIso(quand) ? soldeRoule(c, quand) : prevu;
+      const ecart = isFinite(valeur) ? arrondi2(valeur - attendu) : 0;
+      const champ = boite("pt-ecart");
+      champ.textContent = argent(ecart, { signe: true });
+      champ.className = "chiffre " + (Math.abs(ecart) < 1 ? "dim" : ecart > 0 ? "pos" : "neg");
+      champ.style.fontFamily = "var(--display)";
+      champ.style.fontSize = "17px";
+    };
+    boite("pt-solde").addEventListener("input", recalculer);
+    boite("pt-date").addEventListener("change", recalculer);
+    boite("pt-solde").select();
+  });
+}
+
 /* ── Catégories ───────────────────────────────────────────────────────── */
 
 function rendreCategories(cible, p) {
@@ -2922,6 +3836,7 @@ function rendreReglages(cible, p) {
     '<div class="rangee">' +
     '<button class="btn" data-act="export-json">Exporter mes données (JSON)</button>' +
     '<button class="btn" data-act="import-json">Importer un fichier</button>' +
+    '<button class="btn" data-act="import-releve">Importer un relevé bancaire (CSV)</button>' +
     '<button class="btn" data-act="export-csv">Exporter la projection (CSV)</button>' +
     '<button class="btn" data-act="demo">Recharger l\'exemple</button>' +
     '<button class="btn danger" data-act="raz">Repartir de zéro</button>' +
@@ -2959,7 +3874,8 @@ function rendreReglages(cible, p) {
    10. Dialogues
    ══════════════════════════════════════════════════════════════════════ */
 
-function ouvrirDialogue(titre, corpsHTML, boutons, apres) {
+function ouvrirDialogue(titre, corpsHTML, boutons, apres, classe) {
+  boite("dialogue").classList.toggle("large", classe === "large");
   boite("dialogue-titre").textContent = titre;
   // le corps est remplacé par un clone vide : les écouteurs posés par le
   // dialogue précédent partent avec l'ancien nœud, et ne s'empilent pas
@@ -3532,6 +4448,257 @@ function exporterCsv(projection) {
     projection.operations.length + " opérations exportées.");
 }
 
+/* ── Importer un relevé bancaire ──────────────────────────────────────── */
+
+/** État de l'assistant, le temps des deux étapes. */
+let RELEVE = null;
+
+function importerReleve() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".csv,.txt,text/csv,text/plain";
+  input.addEventListener("change", () => {
+    const fichier = input.files && input.files[0];
+    if (!fichier) return;
+    if (fichier.size > 8 * 1024 * 1024) { message("Ce fichier dépasse 8 Mo."); return; }
+    const lecteur = new FileReader();
+    lecteur.onload = () => {
+      const analyse = analyserCsv(String(lecteur.result));
+      if (analyse.erreur) { message(analyse.erreur); return; }
+      RELEVE = { analyse, plan: {
+        colonneDate: analyse.colonneDate,
+        colonneLibelle: analyse.colonneLibelle,
+        colonneMontant: analyse.colonneMontant,
+        colonneDebit: analyse.colonneDebit,
+        colonneCredit: analyse.colonneCredit,
+      }, nom: fichier.name };
+      etapeColonnes();
+    };
+    lecteur.onerror = () => message("Ce fichier n'a pas pu être lu.");
+    // la plupart des banques françaises exportent en Windows-1252 ; l'UTF-8
+    // reste le choix par défaut, et les accents abîmés se voient à l'aperçu
+    lecteur.readAsText(fichier, "utf-8");
+  });
+  input.click();
+}
+
+/** Étape 1 : vérifier que chaque colonne a été comprise. */
+function etapeColonnes() {
+  const { analyse, plan } = RELEVE;
+  const options = (choisie, avecVide) =>
+    (avecVide ? '<option value="-1">— aucune —</option>' : "") +
+    analyse.notes.map((n) => '<option value="' + n.i + '"' + (n.i === choisie ? " selected" : "") + ">" +
+      esc(n.titre || "Colonne " + (n.i + 1)) + "</option>").join("");
+
+  const apercu = analyse.lignes.slice(0, 6);
+  const corps =
+    '<p class="sous" style="margin:0">' + esc(nombre(analyse.lignes.length)) + " lignes lues dans « " + esc(RELEVE.nom) +
+    " ». Vérifiez que les colonnes ont été reconnues — les banques n'écrivent pas deux relevés de la même façon.</p>" +
+    '<div class="ligne-champs">' +
+    '<label class="champ"><span class="ttl">Date</span><select id="im-date">' + options(plan.colonneDate) + "</select></label>" +
+    '<label class="champ"><span class="ttl">Libellé</span><select id="im-libelle">' + options(plan.colonneLibelle) + "</select></label>" +
+    "</div>" +
+    '<div class="segments" id="im-mode" style="margin-top:4px">' +
+    '<button data-v="simple" class="' + (plan.colonneMontant >= 0 ? "on" : "") + '">Une colonne signée</button>' +
+    '<button data-v="double" class="' + (plan.colonneMontant >= 0 ? "" : "on") + '">Débit et crédit séparés</button></div>' +
+    '<div class="ligne-champs" id="im-simple"' + (plan.colonneMontant >= 0 ? "" : ' style="display:none"') + ">" +
+    '<label class="champ"><span class="ttl">Montant</span><select id="im-montant">' + options(plan.colonneMontant) + "</select></label></div>" +
+    '<div class="ligne-champs" id="im-double"' + (plan.colonneMontant >= 0 ? ' style="display:none"' : "") + ">" +
+    '<label class="champ"><span class="ttl">Débit (ce qui sort)</span><select id="im-debit">' + options(plan.colonneDebit, true) + "</select></label>" +
+    '<label class="champ"><span class="ttl">Crédit (ce qui entre)</span><select id="im-credit">' + options(plan.colonneCredit, true) + "</select></label></div>" +
+    '<div class="sep"></div>' +
+    '<div class="ttl" style="font-weight:600">Aperçu</div>' +
+    '<div class="tableau-boite" style="margin:0"><table><thead><tr>' +
+    analyse.notes.map((n) => "<th>" + esc(n.titre || "Colonne " + (n.i + 1)) + "</th>").join("") +
+    "</tr></thead><tbody>" +
+    apercu.map((l) => "<tr>" + l.map((c) => "<td>" + esc(String(c).slice(0, 34)) + "</td>").join("") + "</tr>").join("") +
+    "</tbody></table></div>" +
+    '<div id="im-verdict" class="sous" style="margin:0"></div>';
+
+  ouvrirDialogue("Importer un relevé — 1/2 : les colonnes", corps, [
+    { texte: "Annuler", action: () => { RELEVE = null; fermerDialogue(); } },
+    { texte: "Analyser le relevé", classe: "primaire", action: () => {
+      if (!lirePlan()) { message("Il faut au moins une colonne de date et une colonne de montant."); return; }
+      etapeRecurrences();
+    } },
+  ], () => {
+    const basculer = (mode) => {
+      boite("im-simple").style.display = mode === "simple" ? "" : "none";
+      boite("im-double").style.display = mode === "double" ? "" : "none";
+      verdict();
+    };
+    boite("dialogue-corps").querySelectorAll("#im-mode button").forEach((b) => {
+      b.addEventListener("click", () => {
+        boite("dialogue-corps").querySelectorAll("#im-mode button").forEach((x) => x.classList.remove("on"));
+        b.classList.add("on");
+        basculer(b.dataset.v);
+      });
+    });
+    boite("dialogue-corps").querySelectorAll("select").forEach((sel) => sel.addEventListener("change", verdict));
+    verdict();
+  }, "large");
+
+  function mode() {
+    const actif = boite("dialogue-corps").querySelector("#im-mode .on");
+    return actif ? actif.dataset.v : "simple";
+  }
+
+  function lirePlan() {
+    const simple = mode() === "simple";
+    RELEVE.plan = {
+      colonneDate: Number(boite("im-date").value),
+      colonneLibelle: Number(boite("im-libelle").value),
+      colonneMontant: simple ? Number(boite("im-montant").value) : -1,
+      colonneDebit: simple ? -1 : Number(boite("im-debit").value),
+      colonneCredit: simple ? -1 : Number(boite("im-credit").value),
+    };
+    const p = RELEVE.plan;
+    return p.colonneDate >= 0 && (p.colonneMontant >= 0 || p.colonneDebit >= 0 || p.colonneCredit >= 0);
+  }
+
+  /** L'aperçu du résultat, recalculé à chaque changement de colonne. */
+  function verdict() {
+    if (!lirePlan()) { boite("im-verdict").innerHTML = "Choisissez au moins une date et un montant."; return; }
+    const { operations, ignorees } = operationsCsv(analyse, RELEVE.plan);
+    if (!operations.length) {
+      boite("im-verdict").innerHTML = "Aucune opération lisible avec ces colonnes.";
+      return;
+    }
+    const entrees = operations.filter((x) => x.montant > 0);
+    const sorties = operations.filter((x) => x.montant < 0);
+    boite("im-verdict").innerHTML =
+      "<b>" + esc(nombre(operations.length)) + " opérations</b> du " + esc(libelleDate(operations[0].date)) +
+      " au " + esc(libelleDate(operations[operations.length - 1].date)) + " — " +
+      esc(nombre(entrees.length)) + " entrées (" + esc(argent(entrees.reduce((s, x) => s + x.montant, 0))) + "), " +
+      esc(nombre(sorties.length)) + " sorties (" + esc(argent(sorties.reduce((s, x) => s + x.montant, 0))) + ")" +
+      (ignorees ? ", " + esc(nombre(ignorees)) + " lignes ignorées" : "") + ".";
+  }
+}
+
+/** Étape 2 : choisir ce qu'on garde. */
+function etapeRecurrences() {
+  const { analyse, plan } = RELEVE;
+  const { operations } = operationsCsv(analyse, plan);
+  const trouve = detecterRecurrences(operations, { depuis: departProjection() });
+  RELEVE.trouve = trouve;
+  RELEVE.choix = {};
+  const compteParDefaut = ETAT.comptes[0].id;
+
+  const ligne = (cle, prop, coche) => {
+    const freq = FREQ[prop.frequence] || FREQ.mensuel;
+    const cats = ETAT.categories.filter((c) => c.type === prop.type);
+    return '<tr data-cle="' + esc(cle) + '">' +
+      '<td><label class="case"><input type="checkbox" class="im-garde" data-cle="' + esc(cle) + '"' + (coche ? " checked" : "") + ">" +
+      '<span class="tronque"><b>' + esc(prop.libelle) + "</b>" +
+      '<div class="faible tronque" style="font-size:12px" title="' + esc(prop.libelleBrut) + '">' +
+      esc(prop.libelleBrut) + "</div></span></label></td>" +
+      '<td><span class="etiquette">' + esc(freq.court) + "</span>" +
+      (prop.confiance < 0.9 ? ' <span class="etiquette" title="Rythme un peu irrégulier">~</span>' : "") + "</td>" +
+      '<td class="num ' + (prop.type === "revenu" ? "pos" : "neg") + '">' + esc(argent(prop.type === "revenu" ? prop.montant : -prop.montant, { signe: true })) +
+      (prop.dispersion > prop.montant * 0.12 ? '<div class="faible" style="font-size:11.5px">± ' + esc(argent(prop.dispersion)) + "</div>" : "") + "</td>" +
+      '<td class="num dim">' + esc(nombre(prop.nombre)) + "</td>" +
+      '<td class="dim">' + esc(libelleDate(prop.debut, true)) + "</td>" +
+      '<td><select class="im-cat" data-cle="' + esc(cle) + '">' +
+      cats.map((c) => '<option value="' + esc(c.id) + '"' + (c.id === categorieProbable(prop) ? " selected" : "") + ">" + esc(c.nom) + "</option>").join("") +
+      "</select></td></tr>";
+  };
+
+  const props = trouve.propositions;
+  const corps =
+    '<p class="sous" style="margin:0">' + esc(nombre(props.length)) + " rythme" + (props.length > 1 ? "s" : "") +
+    " reconnu" + (props.length > 1 ? "s" : "") + " dans " + esc(nombre(operations.length)) +
+    " opérations. Décochez ce que vous ne voulez pas, ajustez la catégorie, et créez le tout d'un coup. " +
+    "Les montants sont des médianes : une facture exceptionnelle ne tire pas la moyenne vers le haut.</p>" +
+    (props.length
+      ? '<div class="tableau-boite" style="margin:0"><table><thead><tr><th>Flux</th><th>Rythme</th>' +
+        '<th class="num">Montant</th><th class="num">Vu</th><th>Prochaine</th><th>Catégorie</th></tr></thead><tbody>' +
+        props.map((p, i) => ligne("p" + i, p, true)).join("") + "</tbody></table></div>"
+      : '<div class="vide">Aucun rythme régulier reconnu. Un relevé de trois mois au moins donne de meilleurs résultats.</div>') +
+    (trouve.variables
+      ? '<div class="sep"></div><div class="ttl" style="font-weight:600">Le reste</div>' +
+        '<label class="case"><input type="checkbox" class="im-garde" data-cle="var" checked>' +
+        "<span><b>" + esc(trouve.variables.libelle) + "</b> — " + esc(argent(trouve.variables.montant)) + " par mois" +
+        '<div class="faible" style="font-size:12px">' + esc(nombre(trouve.variables.nombre)) +
+        " opérations sans rythme, " + esc(argent(trouve.variables.total)) + " sur " + esc(nombre(trouve.variables.jours)) +
+        " jours</div></span></label>" +
+        '<p class="sous" style="margin:0">C\'est le poste que personne ne pense à saisir, et celui qui fait mentir les projections : ' +
+        "les courses d'appoint, les restaurants, les imprévus. Le garder en enveloppe mensuelle vaut mieux que de l'oublier.</p>"
+      : "") +
+    '<div class="sep"></div>' +
+    '<label class="champ"><span class="ttl">Rattacher à</span><select id="im-compte">' + optionsComptes(compteParDefaut) + "</select></label>";
+
+  ouvrirDialogue("Importer un relevé — 2/2 : ce qu'on garde", corps, [
+    { texte: "Retour", gauche: true, action: etapeColonnes },
+    { texte: "Annuler", action: () => { RELEVE = null; fermerDialogue(); } },
+    { texte: "Créer les flux", classe: "primaire", action: creerFluxImportes },
+  ], null, "large");
+}
+
+/** Devine la catégorie d'un flux proposé d'après son libellé. */
+const INDICES_CATEGORIE = [
+  [/loyer|bail|logement|gestion immo|syndic|copropriete/i, "cat-logement"],
+  [/monoprix|carrefour|leclerc|auchan|lidl|intermarche|casino|super|courses|franprix|picard/i, "cat-courses"],
+  [/edf|engie|gaz|electricite|eau|veolia|suez|energie|total energies/i, "cat-energie"],
+  [/essence|carburant|sncf|ratp|navigo|uber|peage|total|station|garage|auto/i, "cat-transport"],
+  [/mutuelle|pharmacie|medecin|sante|dentiste|hopital|harmonie/i, "cat-sante"],
+  [/netflix|spotify|canal|deezer|orange|sfr|bouygues|free|internet|mobile|abonnement|apple|amazon prime/i, "cat-abos"],
+  [/restaurant|cinema|sport|gym|basic fit|fnac|loisir|bar |brasserie|theatre/i, "cat-loisirs"],
+  [/impot|dgfip|tresor public|taxe|urssaf/i, "cat-impots"],
+  [/credit|pret|emprunt|financement/i, "cat-credits"],
+  [/salaire|paie|payroll|remuneration|traitement/i, "cat-salaire"],
+  [/prime|bonus|interessement|participation/i, "cat-primes"],
+  [/caf|allocation|pension|aide|apl/i, "cat-aides"],
+];
+
+function categorieProbable(prop) {
+  const texte = prop.libelleBrut + " " + prop.libelle;
+  for (const [motif, cible] of INDICES_CATEGORIE) {
+    const c = categorie(cible);
+    if (c && c.type === prop.type && motif.test(texte)) return c.id;
+  }
+  const memeType = ETAT.categories.filter((c) => c.type === prop.type);
+  const divers = memeType.find((c) => /divers|autre/i.test(c.nom));
+  return (divers || memeType[0] || {}).id;
+}
+
+function creerFluxImportes() {
+  const compteId = boite("im-compte").value;
+  const gardes = Array.from(document.querySelectorAll(".im-garde:checked")).map((x) => x.dataset.cle);
+  if (!gardes.length) { message("Rien de sélectionné."); return; }
+  const categories = {};
+  document.querySelectorAll(".im-cat").forEach((sel) => { categories[sel.dataset.cle] = sel.value; });
+
+  const aCreer = [];
+  for (const cle of gardes) {
+    if (cle === "var") {
+      const v = RELEVE.trouve.variables;
+      aCreer.push({
+        libelle: v.libelle, type: "depense", montant: v.montant, frequence: "mensuel",
+        debut: v.debut, compteId, categorieId: categorieProbable({ libelleBrut: "divers", libelle: "divers", type: "depense" }),
+        note: v.nombre + " opérations sans rythme, relevées sur " + v.jours + " jours.",
+      });
+      continue;
+    }
+    const prop = RELEVE.trouve.propositions[Number(cle.slice(1))];
+    if (!prop) continue;
+    aCreer.push({
+      libelle: prop.libelle, type: prop.type, montant: prop.montant, frequence: prop.frequence,
+      debut: prop.debut, compteId, categorieId: categories[cle],
+      note: "Importé d'un relevé : " + prop.nombre + " occurrences entre le " +
+        libelleDate(prop.premiere) + " et le " + libelleDate(prop.derniere) + ".",
+    });
+  }
+
+  modifier(() => {
+    for (const brut of aCreer) {
+      ETAT.flux.push(normaliserFlux(Object.assign({ id: identifiant("flx") }, brut), 0, ETAT.comptes, ETAT.categories));
+    }
+  }, aCreer.length + (aCreer.length > 1 ? " flux créés." : " flux créé."));
+  RELEVE = null;
+  fermerDialogue();
+  allerA("flux");
+}
+
 function importerJson() {
   const input = document.createElement("input");
   input.type = "file";
@@ -3601,7 +4768,7 @@ function rendre() {
 
   const rendus = {
     tableau: rendreTableau, flux: rendreFlux, projection: rendreProjection,
-    calendrier: rendreCalendrier, categories: rendreCategories, objectifs: rendreObjectifs,
+    calendrier: rendreCalendrier, suivi: rendreSuivi, categories: rendreCategories, objectifs: rendreObjectifs,
     scenarios: rendreScenarios, comptes: rendreComptes, reglages: rendreReglages,
   };
   rendus[vueActive](boite("vue-" + vueActive), PROJECTION);
@@ -3711,6 +4878,8 @@ const ACTIONS = {
   "scn-dupliquer": (b) => dupliquerScenario(b.dataset.id),
   "op-ajuster": (b) => ouvrirAjustement(b.dataset.flux, b.dataset.date),
   "cal-jour": (b) => ouvrirJour(b.dataset.date),
+  "pointer": (b) => ouvrirPointage(b.dataset.id),
+  "vue-suivi": () => allerA("suivi"),
   "cal-precedent": () => {
     const cle = moisCalendrier(PROJECTION);
     ui.moisCalendrier = cle.slice(5) === "01"
@@ -3732,6 +4901,7 @@ const ACTIONS = {
     ? projeter({ du: PROJECTION.du, au: PROJECTION.au, compteId: ui.compteProjection })
     : PROJECTION),
   "import-json": importerJson,
+  "import-releve": importerReleve,
 };
 
 const RACCOURCIS = [
@@ -3894,6 +5064,9 @@ if (typeof globalThis !== "undefined") {
     normaliser, occurrences, projeter, soldeALaDate, mensualiteMoyenne, mensualitePret,
     evaluerObjectif, enveloppes, fluxDuScenario, projeterScenario, jeuDemo, montantA,
     resteAVivre, calendrier, jourSemaine, exceptionDe, poserException, normaliserExceptions,
+    soldeRoule, soldeDepart, pointerSolde, derives, statistiquesDerive, bandeIncertitude, migrer,
+    analyserCsv, operationsCsv, lireDate, lireMontant, decouperLigne, detecterSeparateur,
+    normaliserLibelle, detecterRythme, detecterRecurrences, mediane, prochaineEcheancePrevue,
     ajouterMois, ajouterJours, moisEntre, joursEntre, joursDansMois, estIso, cleMois,
     finDeMois, moisSuivant, graduations, arrondi2,
     etat: () => ETAT,
