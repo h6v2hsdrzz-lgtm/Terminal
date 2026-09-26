@@ -47,11 +47,26 @@ test("un objectif suivi sur un compte ne compte que ce compte", () => {
   assert.equal(e.verdict, "atteint");
 });
 
-test("une date au-delà de l'horizon n'est pas jugée", () => {
+test("un objectif au-delà de l'horizon est jugé quand même", () => {
+  // l'horizon d'affichage vaut 24 mois ; la cible est à quatre ans
   const etat = avecObjectif(3000, "2030-01-01");
   const e = P.evaluerObjectif(etat.objectifs[0], P.projeter({}));
-  assert.equal(e.verdict, "hors-horizon");
+  assert.equal(e.verdict, "atteint");
+  assert.equal(e.auDelaHorizon, true);
+  assert.ok(e.projete > 3000);
+});
+
+test("au-delà de dix ans, l'application refuse de se prononcer", () => {
+  const etat = avecObjectif(3000, "2045-01-01");
+  const e = P.evaluerObjectif(etat.objectifs[0], P.projeter({}));
+  assert.equal(e.verdict, "trop-loin");
   assert.equal(e.projete, null);
+});
+
+test("un objectif dans l'horizon ne prolonge rien", () => {
+  const etat = avecObjectif(3000, "2026-12-31");
+  const e = P.evaluerObjectif(etat.objectifs[0], P.projeter({}));
+  assert.equal(e.auDelaHorizon, false);
 });
 
 test("la progression reste bornée entre 0 et 1", () => {

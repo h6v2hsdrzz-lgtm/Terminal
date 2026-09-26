@@ -765,10 +765,56 @@ kbd {
   border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; color: var(--attenue);
 }
 
+/* ═══════════════════ Impression ═══════════════════
+
+   Un budget s'imprime : pour un rendez-vous à la banque, pour le mettre au
+   mur, pour le lire autrement. La page imprimée n'est pas la page à
+   l'écran : les commandes disparaissent, les invitations à cliquer aussi,
+   et un en-tête rappelle de quel budget et de quelle date il s'agit. */
+
+#entete-impression { display: none; }
+
 @media print {
-  #rail, header#tete, .btn, #messages { display: none !important; }
+  #rail, header#tete, #messages, #voile, #voile-palette,
+  .btn, .segments, .actions, select, input, .legende button { display: none !important; }
   #appli { grid-template-columns: minmax(0, 1fr); }
-  .carte { break-inside: avoid; box-shadow: none; }
+  body { background: #fff; color: #000; font-size: 11pt; }
+
+  #entete-impression {
+    display: block;
+    border-bottom: 1.5pt solid #000;
+    padding-bottom: 8pt;
+    margin-bottom: 14pt;
+  }
+  #entete-impression h1 { font-size: 17pt; margin: 0; }
+  #entete-impression .lignes { display: flex; gap: 18pt; flex-wrap: wrap; font-size: 9.5pt; margin-top: 4pt; }
+
+  main { padding: 0; max-width: none; }
+  .pile { gap: 12pt; }
+  .carte {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 0.5pt solid #999;
+    border-radius: 3pt;
+    padding: 9pt 11pt;
+  }
+  .carte-tete h2 { font-size: 12pt; }
+  .sous { font-size: 9pt; }
+  .kpis { border-color: #999; box-shadow: none; }
+  .kpi { padding: 7pt 9pt; }
+  .kpi .val { font-size: 15pt; }
+
+  table { font-size: 9pt; }
+  thead { display: table-header-group; }
+  tr { break-inside: avoid; }
+  table th { border-bottom: 0.5pt solid #666; }
+  table td { padding: 3pt 5pt; border-bottom: 0.25pt solid #ccc; }
+  .tableau-boite { overflow: visible; margin: 0; padding: 0; }
+
+  .constat { break-inside: avoid; border-color: #999; }
+  .cal-case { min-height: 46pt; border-color: #bbb; }
+  .graphe { max-height: 60mm; }
+  a[href]::after { content: ""; }
 }
 </style>
 </head>
@@ -918,6 +964,15 @@ kbd {
     </header>
 
     <main>
+      <div id="entete-impression" aria-hidden="true">
+        <h1 id="imp-titre"></h1>
+        <div class="lignes">
+          <span id="imp-vue"></span>
+          <span id="imp-date"></span>
+          <span id="imp-solde"></span>
+          <span id="imp-horizon"></span>
+        </div>
+      </div>
       <section id="vue-tableau" class="vue pile"></section>
       <section id="vue-flux" class="vue pile masque"></section>
       <section id="vue-projection" class="vue pile masque"></section>
@@ -1757,26 +1812,36 @@ function projeterScenario(scenario, du, au) {
  * on lit le solde projeté à la date cible et on en déduit ce qu'il
  * manquerait, chaque mois, pour y arriver.
  */
+/* Un objectif ne se juge pas à l'horizon d'affichage : viser un apport dans
+   trois ans avec une projection réglée sur douze mois est parfaitement
+   sensé. La projection est donc prolongée jusqu'à la date visée, dans la
+   limite de dix ans — au-delà, une prévision de budget ne veut plus rien
+   dire, et l'application préfère le dire. */
+const OBJECTIF_PORTEE_MAX = 120;
+
 function evaluerObjectif(objectif, projection) {
   const depart = projection.du;
   const cpt = objectif.compteId ? compte(objectif.compteId) : null;
-  const proj = objectif.compteId
-    ? projeter({ du: projection.du, au: projection.au, compteId: objectif.compteId })
+  const limite = ajouterMois(depart, OBJECTIF_PORTEE_MAX);
+  const tropLoin = objectif.dateCible > limite;
+  const au = objectif.dateCible > projection.au && !tropLoin ? objectif.dateCible : projection.au;
+  const proj = objectif.compteId || au !== projection.au
+    ? projeter({ du: depart, au, compteId: objectif.compteId || undefined })
     : projection;
 
-  const actuel = cpt ? cpt.solde : projection.soldeInitial;
-  const dansFenetre = objectif.dateCible <= proj.au;
-  const projete = dansFenetre ? soldeALaDate(proj, objectif.dateCible) : null;
+  const actuel = cpt ? soldeRoule(cpt, depart) : projection.soldeInitial;
+  const projete = tropLoin ? null : soldeALaDate(proj, objectif.dateCible);
   const moisRestants = Math.max(0, moisEntre(depart, objectif.dateCible));
   const manque = projete === null ? null : arrondi2(objectif.cible - projete);
   const rythmeProjete = proj.totaux.netMensuel;
 
-  let verdict = "hors-horizon";
+  let verdict = "trop-loin";
   if (objectif.dateCible < depart) verdict = "echu";
   else if (projete !== null) verdict = manque <= 0 ? "atteint" : (manque <= objectif.cible * 0.1 ? "juste" : "insuffisant");
 
   return {
     objectif, actuel, projete, manque, moisRestants, rythmeProjete, verdict,
+    auDelaHorizon: objectif.dateCible > projection.au && !tropLoin,
     progression: objectif.cible > 0 ? Math.max(0, Math.min(1, (projete === null ? actuel : projete) / objectif.cible)) : 0,
     progressionActuelle: objectif.cible > 0 ? Math.max(0, Math.min(1, actuel / objectif.cible)) : 0,
     effortMensuel: manque !== null && manque > 0 && moisRestants > 0 ? arrondi2(manque / moisRestants) : 0,
@@ -4179,10 +4244,12 @@ function rendreObjectifs(cible, p) {
       atteint: ['<span class="etiquette rev">Atteint</span>', "Au rythme projeté, l'objectif est dépassé de " + argent(-e.manque) + " à la date visée."],
       juste: ['<span class="etiquette">De justesse</span>', "Il manquerait " + argent(e.manque) + ", soit " + argent(e.effortMensuel) + " de plus par mois."],
       insuffisant: ['<span class="etiquette dep">Hors d\'atteinte</span>', "Il manquerait " + argent(e.manque) + " — soit " + argent(e.effortMensuel) + " de plus chaque mois pendant " + nombre(e.moisRestants) + " mois."],
-      "hors-horizon": ['<span class="etiquette">Au-delà de l\'horizon</span>', "La date visée dépasse la fenêtre de projection ; allongez l'horizon pour l'évaluer."],
+      "trop-loin": ['<span class="etiquette">Trop lointain</span>', "La date visée dépasse dix ans : au-delà, une projection de budget ne dit plus grand-chose."],
       echu: ['<span class="etiquette">Échue</span>', "La date visée est passée."],
     };
     const [badge, phrase] = verdicts[e.verdict] || verdicts.insuffisant;
+    const epargne = ETAT.comptes.filter((x) => x.id !== o.compteId);
+    const peutVirer = e.effortMensuel > 0 && o.compteId && epargne.length;
 
     return carte(
       '<div class="carte-tete"><h3>' + esc(o.nom) + "</h3><div class=\"droite\">" + badge + "</div></div>" +
@@ -4193,8 +4260,14 @@ function rendreObjectifs(cible, p) {
       '<div class="rangee" style="justify-content:space-between;margin-top:6px;font-size:12.5px">' +
       '<span class="dim">Aujourd\'hui ' + esc(argent(e.actuel)) + " · " + esc(pourcent(e.progressionActuelle * 100, 0)) + "</span>" +
       '<span class="dim">' + esc(nombre(e.moisRestants)) + " mois restants</span></div>" +
-      '<p class="sous" style="margin:10px 0 0">' + esc(phrase) + "</p>" +
-      '<div class="rangee fin" style="margin-top:8px">' +
+      '<p class="sous" style="margin:10px 0 0">' + esc(phrase) +
+      (e.auDelaHorizon ? " La projection a été prolongée jusqu'à cette date, au-delà de l'horizon affiché." : "") + "</p>" +
+      '<div class="rangee" style="margin-top:10px">' +
+      (peutVirer
+        ? '<button class="btn petit primaire" data-act="obj-virement" data-id="' + esc(o.id) + '">Mettre ' +
+          esc(argent(e.effortMensuel)) + " de côté chaque mois</button>"
+        : "") +
+      '<span class="pousse"></span>' +
       '<button class="btn fantome petit" data-act="obj-editer" data-id="' + esc(o.id) + '">Modifier</button>' +
       '<button class="btn fantome petit" data-act="obj-supprimer" data-id="' + esc(o.id) + '">Supprimer</button></div>');
   }).join("");
@@ -5314,6 +5387,13 @@ function rendre() {
   boite("tete-titre").textContent = TITRES[vueActive][1];
   document.title = ETAT.parametres.titre + " — Prévoyant";
 
+  // l'en-tête n'apparaît qu'à l'impression, mais se tient prêt
+  boite("imp-titre").textContent = ETAT.parametres.titre;
+  boite("imp-vue").textContent = TITRES[vueActive][1];
+  boite("imp-date").textContent = "Établi le " + libelleDate(aujourdhui());
+  boite("imp-solde").textContent = "Solde de départ " + argent(PROJECTION.soldeInitial);
+  boite("imp-horizon").textContent = "Horizon " + ETAT.parametres.horizon + " mois, jusqu'au " + libelleDate(PROJECTION.au);
+
   for (const v of VUES) boite("vue-" + v).classList.toggle("masque", v !== vueActive);
   document.querySelectorAll("#onglets button").forEach((b) => {
     const actif = b.dataset.vue === vueActive;
@@ -5410,6 +5490,24 @@ const ACTIONS = {
   "cpt-editer": (b) => ouvrirCompte(b.dataset.id),
   "cpt-supprimer": (b) => supprimerCompte(b.dataset.id),
   "obj-nouveau": () => ouvrirObjectif(null),
+  "obj-virement": (b) => {
+    const o = ETAT.objectifs.find((x) => x.id === b.dataset.id);
+    if (!o || !o.compteId) return;
+    const e = evaluerObjectif(o, PROJECTION);
+    const source = ETAT.comptes.find((c) => c.id !== o.compteId && c.type !== "epargne") ||
+      ETAT.comptes.find((c) => c.id !== o.compteId);
+    if (!source) { message("Il faut un second compte pour virer de l'argent."); return; }
+    // un virement mensuel préparé, que l'on peut encore ajuster avant d'ajouter
+    ouvrirFlux(null, {
+      libelle: "Épargne — " + o.nom,
+      type: "virement",
+      montant: e.effortMensuel,
+      compteId: source.id,
+      compteDest: o.compteId,
+      frequence: "mensuel",
+      debut: debutDeMois(moisSuivant(cleMois(departProjection()))),
+    });
+  },
   "obj-editer": (b) => ouvrirObjectif(b.dataset.id),
   "obj-supprimer": (b) => {
     const o = ETAT.objectifs.find((x) => x.id === b.dataset.id);
