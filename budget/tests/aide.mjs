@@ -9,7 +9,7 @@ import vm from "node:vm";
 
 const chemin = fileURLToPath(new URL("../index.html", import.meta.url));
 
-export function chargerMoteur() {
+export function chargerMoteur(extras) {
   const html = readFileSync(chemin, "utf8");
   const debut = html.indexOf('<script id="code">');
   const fin = html.lastIndexOf("</script>");
@@ -18,7 +18,7 @@ export function chargerMoteur() {
 
   // pas de document ni de localStorage : le script ne démarre pas l'interface
   // et se contente de publier son moteur.
-  const contexte = vm.createContext({ console, Intl, Date, Math, JSON });
+  const contexte = vm.createContext(Object.assign({ console, Intl, Date, Math, JSON }, extras || {}));
   vm.runInContext(source, contexte, { filename: "index.html" });
   if (!contexte.Prevoyant) throw new Error("Le moteur n'a pas été exposé");
   return contexte.Prevoyant;

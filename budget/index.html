@@ -575,6 +575,53 @@ details.repliable[open] > summary::before { transform: rotate(90deg); }
 #dialogue-pied { display: flex; gap: 8px; justify-content: flex-end; padding: 14px 19px; border-top: 1px solid var(--bordure); flex-wrap: wrap; background: var(--surface-2); border-radius: 0 0 17px 17px; }
 #dialogue-pied .gauche { margin-right: auto; }
 
+/* ═══════════════════ Palette de commandes ═══════════════════ */
+
+#voile-palette {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgb(6 12 16 / .5);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: max(8vh, 40px) 16px 16px;
+  animation: fondu .12s ease-out;
+}
+#palette {
+  width: min(620px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--bordure-2);
+  border-radius: 16px;
+  box-shadow: var(--ombre-3);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  max-height: min(70vh, 620px);
+  animation: monte-dialogue .16s cubic-bezier(.2, .8, .3, 1);
+}
+#palette-champ {
+  border: 0; border-bottom: 1px solid var(--bordure); border-radius: 0;
+  padding: 15px 18px; font-size: 16px; background: none;
+}
+#palette-champ:focus { box-shadow: none; border-color: var(--bordure); }
+#palette-liste { overflow-y: auto; padding: 6px; }
+.palette-groupe {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em;
+  color: var(--faible); font-weight: 700; padding: 10px 12px 4px;
+}
+.palette-item {
+  display: flex; align-items: baseline; gap: 12px; justify-content: space-between;
+  padding: 8px 12px; border-radius: var(--r-s); cursor: pointer; font-size: 14px;
+}
+.palette-item span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.palette-item span.faible { font-size: 12.5px; white-space: nowrap; flex: none; }
+.palette-item.on { background: var(--accent-doux); }
+.palette-item.on span:first-child { font-weight: 600; }
+.palette-vide { padding: 26px; text-align: center; color: var(--attenue); font-size: 14px; }
+#palette-pied {
+  display: flex; gap: 16px; padding: 9px 16px;
+  border-top: 1px solid var(--bordure); background: var(--surface-2);
+  font-size: 12px; color: var(--faible);
+}
+#palette-pied span { display: inline-flex; align-items: center; gap: 5px; }
+
 /* ═══════════════════ Messages ═══════════════════ */
 
 #messages {
@@ -628,6 +675,43 @@ details.repliable[open] > summary::before { transform: rotate(90deg); }
 }
 .infobulle .t { font-weight: 600; margin-bottom: 4px; font-size: 12px; }
 .infobulle .l { display: flex; justify-content: space-between; gap: 16px; font-variant-numeric: tabular-nums; padding: 1px 0; }
+
+/* ═══════════════════ Constats ═══════════════════ */
+
+.constats { display: grid; gap: 10px; }
+.constat {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  gap: 2px 12px;
+  align-items: start;
+  padding: 12px 14px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--r);
+  background: var(--surface-2);
+  transition: border-color .12s, background .12s;
+}
+.constat:hover { border-color: var(--bordure-2); }
+.constat .marque-ton {
+  grid-row: span 2;
+  width: 26px; height: 26px;
+  border-radius: 8px;
+  display: grid; place-items: center;
+  flex: none;
+}
+.constat .marque-ton svg { width: 15px; height: 15px; }
+.constat b { font-size: 14px; font-weight: 600; }
+.constat p { margin: 0; font-size: 13px; color: var(--attenue); grid-column: 2 / 4; }
+.constat .btn { grid-row: span 2; align-self: center; }
+.constat.info .marque-ton { background: var(--accent-doux); color: var(--accent-fort); }
+.constat.attention { background: var(--alerte-fond); border-color: color-mix(in srgb, var(--alerte) 28%, var(--bordure)); }
+.constat.attention .marque-ton { background: color-mix(in srgb, var(--alerte) 22%, transparent); color: var(--alerte-texte); }
+.constat.bien { background: var(--revenu-fond); border-color: color-mix(in srgb, var(--revenu) 24%, var(--bordure)); }
+.constat.bien .marque-ton { background: color-mix(in srgb, var(--revenu) 20%, transparent); color: var(--revenu-texte); }
+@media (max-width: 560px) {
+  .constat { grid-template-columns: 26px minmax(0, 1fr); }
+  .constat .btn { display: none; }
+  .constat p { grid-column: 2 / 3; }
+}
 
 /* ═══════════════════ Calendrier ═══════════════════ */
 
@@ -726,6 +810,9 @@ kbd {
     <g id="ic-reglages" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
       <path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2.2"/><circle cx="8" cy="17" r="2.2"/>
     </g>
+    <g id="ic-chercher" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>
+    </g>
     <g id="ic-theme" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor" stroke="none"/>
     </g>
@@ -818,6 +905,9 @@ kbd {
           </select>
         </label>
         <button class="btn primaire" data-act="flux-nouveau">+ Flux</button>
+        <button class="outil" id="btn-palette" title="Chercher une commande (Ctrl/⌘ + K)" aria-label="Palette de commandes">
+          <svg viewBox="0 0 24 24"><use href="#ic-chercher"/></svg>
+        </button>
         <button class="outil" id="btn-aide" title="Raccourcis clavier" aria-label="Raccourcis clavier">
           <svg viewBox="0 0 24 24"><use href="#ic-aide"/></svg>
         </button>
@@ -855,7 +945,7 @@ kbd {
   </div>
 </div>
 
-<div id="messages" aria-live="polite"></div>
+<div id="messages" role="status" aria-live="polite"></div>
 
 <script id="code">
 "use strict";
@@ -1435,8 +1525,30 @@ function mensualiteMoyenne(flux) {
  * Renvoie les opérations datées, la courbe de solde, le détail mois par mois,
  * la répartition par catégorie et les dates de rupture.
  */
+/* Une même projection est demandée plusieurs fois par rendu : par le
+   tableau de bord, par chaque règle d'observation, par le report de solde de
+   chaque compte. Les résultats sont mis en cache tant que l'état ne change
+   pas — un compteur de révision, incrémenté à chaque écriture, sert de clé.
+   Les projections d'un scénario ne sont pas mises en cache : leur liste de
+   flux est construite à la volée, et n'a pas de clé stable. */
+let REVISION = 0;
+const CACHE_PROJECTION = new Map();
+const CACHE_MAX = 60;
+
+function invaliderProjections() {
+  REVISION++;
+  CACHE_PROJECTION.clear();
+}
+
 function projeter(options) {
   const o = options || {};
+
+  const cle = o.flux || o.comptes ? null : [
+    REVISION, o.du || "", o.au || "", o.compteId || "",
+    o.soldeInitial === undefined ? "" : o.soldeInitial,
+    ETAT.parametres.horizon, ETAT.parametres.seuilAlerte, ETAT.parametres.debutProjection || "",
+  ].join("|");
+  if (cle && CACHE_PROJECTION.has(cle)) return CACHE_PROJECTION.get(cle);
   const du = estIso(o.du) ? o.du : departProjection();
   // l'horizon se compte en mois pleins : douze mois, c'est jusqu'à la fin du
   // douzième — pas jusqu'au même quantième, qui laisserait un mois tronqué
@@ -1560,7 +1672,7 @@ function projeter(options) {
   const totalDepenses = arrondi2(mois.reduce((s, m) => s + m.depenses, 0));
   const nbMois = Math.max(1, mois.length);
 
-  return {
+  const resultat = {
     du, au, soldeInitial, soldeFinal: solde,
     operations, points, mois, parCategorie,
     nbMois,
@@ -1575,6 +1687,13 @@ function projeter(options) {
     },
     alerte: { dateDecouvert, dateSousSeuil, soldeMin, dateSoldeMin, seuil },
   };
+
+  if (cle) {
+    // une table qui ne grandit pas indéfiniment : au-delà, on repart à neuf
+    if (CACHE_PROJECTION.size > CACHE_MAX) CACHE_PROJECTION.clear();
+    CACHE_PROJECTION.set(cle, resultat);
+  }
+  return resultat;
 }
 
 /**
@@ -1827,6 +1946,258 @@ function bandeIncertitude(projection, stats) {
   }
   return bande;
 }
+
+/* ── Observations : ce que les chiffres disent ────────────────────────── */
+
+/**
+ * Chaque règle lit la projection et renvoie un constat, ou rien.
+ *
+ * Ce sont des constats, pas des conseils : « vos abonnements coûtent 1 128 €
+ * par an » est vérifiable, « vous devriez les résilier » ne regarde que
+ * vous. Chacun porte le chiffre qui le fonde, pour qu'on puisse le
+ * contredire. Le poids sert à les ranger : ce qui coûte cher d'abord.
+ */
+function observations(p) {
+  const res = [];
+  for (const regle of REGLES_OBSERVATION) {
+    const trouve = regle(p);
+    if (!trouve) continue;
+    if (Array.isArray(trouve)) res.push.apply(res, trouve.filter(Boolean));
+    else res.push(trouve);
+  }
+  return res.sort((a, b) => (b.poids || 0) - (a.poids || 0));
+}
+
+/** Total annuel d'une catégorie, lu sur la projection. */
+function annuelCategorie(p, categorieId) {
+  const e = p.parCategorie.get(categorieId);
+  return e ? arrondi2((e.total / p.nbMois) * 12) : 0;
+}
+
+const REGLES_OBSERVATION = [
+
+  // — le plus gros poste de dépense —
+  (p) => {
+    const parts = [...p.parCategorie.values()].filter((e) => e.type === "depense" && e.total > 0);
+    if (parts.length < 2) return null;
+    parts.sort((a, b) => b.total - a.total);
+    const gros = parts[0];
+    const c = categorie(gros.categorieId);
+    const total = parts.reduce((s, e) => s + e.total, 0);
+    const part = (gros.total / total) * 100;
+    if (!c || part < 18) return null;
+    return {
+      id: "poste-principal", ton: "info", poids: part,
+      titre: c.nom + " est votre premier poste",
+      texte: argent(gros.total / p.nbMois) + " par mois, soit " + pourcent(part, 0) +
+        " de vos dépenses et " + argent(annuelCategorie(p, gros.categorieId)) + " par an.",
+      vue: "categories",
+    };
+  },
+
+  // — le poids du logement dans les revenus —
+  (p) => {
+    const c = ETAT.categories.find((x) => x.type === "depense" && /logement|loyer|habitation/i.test(x.nom));
+    if (!c || !p.totaux.revenusMensuels) return null;
+    const mensuel = (p.parCategorie.get(c.id) || { total: 0 }).total / p.nbMois;
+    if (mensuel <= 0) return null;
+    const part = (mensuel / p.totaux.revenusMensuels) * 100;
+    return {
+      id: "poids-logement", ton: part > 33 ? "attention" : "info", poids: part * 1.2,
+      // une décimale : arrondi à l'entier, 32,5 % s'afficherait « 33 % »
+      // juste après avoir été déclaré en dessous du tiers
+      titre: "Le logement pèse " + pourcent(part, 1) + " de vos revenus",
+      texte: argent(mensuel) + " par mois sur " + argent(p.totaux.revenusMensuels) + " qui entrent. " +
+        (part > 33
+          ? "Au-delà d'un tiers, l'usage bancaire parle de taux d'effort élevé — c'est une convention de prêteur, pas une règle de vie."
+          : "L'usage bancaire situe la limite à un tiers ; vous êtes en dessous."),
+      vue: "categories",
+    };
+  },
+
+  // — ce que coûtent les dépenses choisies —
+  (p) => {
+    const choisies = ETAT.categories.filter((c) => c.type === "depense" && c.essentiel === false);
+    const total = choisies.reduce((s, c) => s + annuelCategorie(p, c.id), 0);
+    if (total < 240) return null;
+    const detail = choisies
+      .map((c) => ({ nom: c.nom, an: annuelCategorie(p, c.id) }))
+      .filter((x) => x.an > 0)
+      .sort((a, b) => b.an - a.an)
+      .slice(0, 3);
+    return {
+      id: "depenses-choisies", ton: "info", poids: total / 40,
+      titre: argent(total) + " par an de dépenses choisies",
+      texte: detail.map((x) => x.nom + " " + argent(x.an)).join(", ") +
+        ". C'est la part sur laquelle vous avez la main — le reste tombe quoi qu'il arrive.",
+      vue: "categories",
+    };
+  },
+
+  // — les charges non mensuelles, et ce qu'il faudrait provisionner —
+  (p) => {
+    const lourdes = ETAT.flux.filter((f) => f.actif && f.type === "depense" &&
+      ["trimestriel", "semestriel", "annuel"].indexOf(f.frequence) >= 0);
+    if (!lourdes.length) return null;
+    const parAn = lourdes.reduce((s, f) => s + f.montant * FREQ[f.frequence].parAn, 0);
+    if (parAn < 200) return null;
+    return {
+      id: "charges-lourdes", ton: "info", poids: parAn / 30,
+      titre: nombre(lourdes.length) + " charges tombent en une fois",
+      texte: argent(parAn) + " par an — assurances, impôts, vacances. Mises de côté, cela ferait " +
+        argent(parAn / 12) + " par mois. C'est ce qui creuse les mois difficiles quand rien n'est provisionné.",
+      vue: "calendrier",
+    };
+  },
+
+  // — le mois le plus lourd de la période —
+  (p) => {
+    const mois = p.mois.filter((m) => m.depenses > 0);
+    if (mois.length < 4) return null;
+    const medianeDep = mediane(mois.map((m) => m.depenses));
+    const pire = mois.slice().sort((a, b) => b.depenses - a.depenses)[0];
+    if (!medianeDep || pire.depenses < medianeDep * 1.3) return null;
+    return {
+      id: "mois-lourd", ton: "attention", poids: (pire.depenses / medianeDep) * 20,
+      titre: libelleMois(pire.cle) + " est le mois le plus chargé",
+      texte: argent(pire.depenses) + " de dépenses, soit " + nombre(pire.depenses / medianeDep, 1) +
+        " fois un mois ordinaire (" + argent(medianeDep) + "). Le solde y descend à " + argent(pire.soldeMin) + ".",
+      vue: "calendrier",
+    };
+  },
+
+  // — un flux qui se termine libère une mensualité —
+  (p) => {
+    const finissants = ETAT.flux
+      .filter((f) => f.actif && f.type === "depense" && f.fin && f.fin >= p.du && f.fin <= p.au)
+      .map((f) => ({ flux: f, mensuel: mensualiteMoyenne(f) }))
+      .filter((x) => x.mensuel > 20)
+      .sort((a, b) => b.mensuel - a.mensuel);
+    if (!finissants.length) return null;
+    const x = finissants[0];
+    return {
+      id: "flux-fini", ton: "bien", poids: x.mensuel / 4,
+      titre: x.flux.libelle + " se termine le " + libelleDate(x.flux.fin),
+      texte: "À partir de là, " + argent(x.mensuel) + " par mois cessent de sortir, soit " +
+        argent(x.mensuel * 12) + " par an" +
+        (finissants.length > 1 ? ". " + nombre(finissants.length - 1) + " autre" +
+          (finissants.length > 2 ? "s flux se terminent" : " flux se termine") + " aussi dans la période." : "."),
+      vue: "flux",
+    };
+  },
+
+  // — ce que l'épargne couvre —
+  (p) => {
+    const epargne = ETAT.comptes.filter((c) => c.type === "epargne")
+      .reduce((s, c) => s + soldeRoule(c, p.du), 0);
+    const rav = resteAVivre(p);
+    // sous 200 € de charges contraintes, le rapport ne veut plus rien dire :
+    // il annoncerait « trente mois de couverture » sur un budget incomplet
+    if (epargne <= 0 || rav.contraint < 200) return null;
+    const mois = epargne / rav.contraint;
+    return {
+      id: "couverture", ton: mois < 3 ? "attention" : "bien", poids: 45,
+      titre: "Votre épargne couvre " + nombre(mois, 1) + " mois de charges contraintes",
+      texte: argent(epargne) + " mis de côté pour " + argent(rav.contraint) + " de charges par mois. " +
+        (mois < 3
+          ? "Trois mois est le matelas que recommandent la plupart des conseillers — encore " +
+            argent(rav.contraint * 3 - epargne) + " à mettre de côté."
+          : "C'est au-dessus des trois mois communément recommandés."),
+      vue: "objectifs",
+    };
+  },
+
+  // — la revalorisation, qui coûte sans qu'on la voie —
+  (p) => {
+    const indexes = ETAT.flux.filter((f) => f.actif && f.indexation > 0 && f.type === "depense");
+    if (!indexes.length) return null;
+    /* Le surcoût d'une revalorisation ne dépend pas de la date à laquelle
+       elle tombe : c'est le montant, multiplié par le taux, sur une année
+       entière de son rythme. */
+    const parAn = indexes.reduce((s, f) => s + f.montant * (f.indexation / 100) * FREQ[f.frequence].parAn, 0);
+    if (parAn < 60) return null;
+    return {
+      id: "revalorisation", ton: "info", poids: parAn / 12,
+      titre: "Vos revalorisations ajoutent " + argent(parAn) + " par an",
+      texte: "Après une revalorisation, " + nombre(indexes.length) + " charge" + (indexes.length > 1 ? "s" : "") +
+        " coûteront " + argent(parAn / 12) + " de plus par mois qu'aujourd'hui, et autant de plus " +
+        "chaque année suivante. C'est le coût de l'inflation que vous avez saisie.",
+      vue: "flux",
+    };
+  },
+
+  // — le jour du mois où tout tombe —
+  (p) => {
+    const parJour = new Map();
+    for (const op of p.operations) {
+      if (op.montant >= 0 || !op.comptable) continue;
+      const jour = Number(op.date.slice(8, 10));
+      parJour.set(jour, (parJour.get(jour) || 0) + -op.montant);
+    }
+    if (parJour.size < 5) return null;
+    const total = [...parJour.values()].reduce((s, v) => s + v, 0);
+    const [jour, montant] = [...parJour.entries()].sort((a, b) => b[1] - a[1])[0];
+    const part = (montant / total) * 100;
+    if (part < 15) return null;
+    return {
+      id: "jour-charge", ton: "info", poids: part,
+      titre: "Le " + jour + " de chaque mois concentre " + pourcent(part, 0) + " de vos sorties",
+      texte: argent(montant / p.nbMois) + " par mois tombent ce jour-là. Si le salaire arrive après, " +
+        "c'est là que le compte plonge — décaler un prélèvement de quelques jours suffit parfois.",
+      vue: "calendrier",
+    };
+  },
+
+  // — l'argent qui dort sur le compte courant —
+  (p) => {
+    const courants = ETAT.comptes.filter((c) => c.type !== "epargne");
+    if (!courants.length || ETAT.comptes.length < 2) return null;
+    const proj = courants.length === 1
+      ? projeter({ du: p.du, au: p.au, compteId: courants[0].id })
+      : null;
+    if (!proj) return null;
+    const plancher = proj.alerte.soldeMin;
+    const marge = ETAT.parametres.seuilAlerte || 500;
+    if (plancher < marge * 2) return null;
+    return {
+      id: "dormant", ton: "info", poids: plancher / 60,
+      titre: argent(plancher - marge) + " ne descendent jamais du compte courant",
+      texte: "Sur toute la période, le solde de « " + courants[0].nom + " » ne passe jamais sous " +
+        argent(plancher) + ". Au-delà de votre seuil de " + argent(marge) + ", cette part pourrait rejoindre l'épargne.",
+      vue: "comptes",
+    };
+  },
+
+  // — la dérive mesurée, quand il y en a une —
+  () => {
+    const st = statistiquesDerive();
+    if (!st.exploitable || Math.abs(st.biais) < 20) return null;
+    return {
+      id: "derive", ton: st.biais < 0 ? "attention" : "bien", poids: Math.abs(st.biais) * 1.5,
+      titre: "Votre budget est " + (st.biais < 0 ? "optimiste" : "prudent") + " de " + argent(Math.abs(st.biais)) + " par mois",
+      texte: "Mesuré sur " + nombre(st.n) + " pointages : il reste en moyenne " + argent(Math.abs(st.biais)) +
+        (st.biais < 0 ? " de moins" : " de plus") + " que prévu, soit " + argent(Math.abs(st.biais) * 12) +
+        " sur un an. La courbe du tableau de bord en tient compte.",
+      vue: "suivi",
+    };
+  },
+
+  // — un compte pointé il y a trop longtemps —
+  () => {
+    const vieux = ETAT.comptes
+      .map((c) => ({ c, jours: joursEntre(c.soldeDate, aujourdhui()) }))
+      .filter((x) => x.jours > 45)
+      .sort((a, b) => b.jours - a.jours)[0];
+    if (!vieux) return null;
+    return {
+      id: "pointage-vieux", ton: "attention", poids: 60,
+      titre: "« " + vieux.c.nom + " » n'a pas été pointé depuis " + nombre(vieux.jours) + " jours",
+      texte: "Le solde de départ est reporté depuis le " + libelleDate(vieux.c.soldeDate) +
+        " en rejouant les échéances. Plus le report est long, plus l'écart avec la réalité peut être grand.",
+      vue: "suivi",
+    };
+  },
+];
 
 /* ── Calendrier d'un mois ─────────────────────────────────────────────── */
 
@@ -2300,14 +2671,85 @@ function chargerEtat() {
   const t = lireLocal(CLE_ETAT);
   if (t) { try { brut = JSON.parse(t); } catch (e) { brut = null; } }
   ETAT = normaliser(brut);
+  invaliderProjections();
   return brut !== null;
 }
 
 function enregistrerEtat() {
   _formats = {};
-  if (!ecrireLocal(CLE_ETAT, JSON.stringify(ETAT))) {
+  invaliderProjections();
+  const serialise = JSON.stringify(ETAT);
+  if (!ecrireLocal(CLE_ETAT, serialise)) {
     message("Sauvegarde impossible : ce navigateur refuse le stockage local.");
+    return;
   }
+  peutEtreSauvegarder(serialise);
+}
+
+/* ── Sauvegardes automatiques ─────────────────────────────────────────────
+
+   Les données ne vivent que dans ce navigateur : vider les données du site
+   les efface, et une mauvaise manipulation aussi. L'application garde donc
+   quelques instantanés tournants, au plus un par heure — assez pour revenir
+   en arrière après une fausse manœuvre découverte trop tard, assez peu pour
+   ne pas saturer un stockage qui se compte en mégaoctets.
+
+   Cela ne remplace pas l'export JSON : un instantané disparaît avec le reste
+   si l'on vide les données du site. L'application le dit. */
+
+const CLE_SAUVEGARDES = "prevoyant:sauvegardes:v1";
+const SAUVEGARDES_MAX = 6;
+const SAUVEGARDE_INTERVALLE = 3600 * 1000;
+const SAUVEGARDE_TAILLE_MAX = 400 * 1024;
+
+function lireSauvegardes() {
+  try {
+    const brut = JSON.parse(lireLocal(CLE_SAUVEGARDES) || "[]");
+    return Array.isArray(brut) ? brut.filter((s) => s && typeof s.quand === "number" && typeof s.etat === "string") : [];
+  } catch (e) { return []; }
+}
+
+/** Renvoie l'instantané créé, ou null s'il n'y avait pas lieu d'en créer un. */
+function peutEtreSauvegarder(serialise, maintenant) {
+  if (serialise.length > SAUVEGARDE_TAILLE_MAX) return null;
+  const quand = maintenant === undefined ? Date.now() : maintenant;
+  const liste = lireSauvegardes();
+  const dernier = liste[liste.length - 1];
+  if (dernier && quand - dernier.quand < SAUVEGARDE_INTERVALLE) return null;
+  if (dernier && dernier.etat === serialise) return null;
+
+  const instantane = { quand, taille: serialise.length, etat: serialise };
+  const suite = liste.concat([instantane]).slice(-SAUVEGARDES_MAX);
+  // un stockage plein ne doit pas empêcher la sauvegarde principale :
+  // on abandonne les instantanés plutôt que de faire échouer l'écriture
+  if (!ecrireLocal(CLE_SAUVEGARDES, JSON.stringify(suite))) {
+    ecrireLocal(CLE_SAUVEGARDES, JSON.stringify(suite.slice(-2)));
+  }
+  return instantane;
+}
+
+function restaurerSauvegarde(quand) {
+  const trouve = lireSauvegardes().find((s) => s.quand === quand);
+  if (!trouve) { message("Cette sauvegarde n'existe plus."); return; }
+  let contenu;
+  try { contenu = JSON.parse(trouve.etat); } catch (e) { message("Cette sauvegarde est illisible."); return; }
+  const propre = normaliser(contenu);
+  confirmer("Revenir à cette sauvegarde ?",
+    "Elle date du " + libelleDateHeure(trouve.quand) + " et contient " + propre.flux.length + " flux. " +
+    "L'état actuel sera remplacé — « Annuler » permet d'y revenir.",
+    "Restaurer", () => {
+      memoriser();
+      ETAT = propre;
+      enregistrerEtat();
+      rendre();
+      message("Sauvegarde restaurée.", { annuler: true });
+    });
+}
+
+function libelleDateHeure(ms) {
+  const d = new Date(ms);
+  const iso = d.getFullYear() + "-" + deuxChiffres(d.getMonth() + 1) + "-" + deuxChiffres(d.getDate());
+  return libelleDate(iso) + " à " + deuxChiffres(d.getHours()) + " h " + deuxChiffres(d.getMinutes());
 }
 
 /* Toute modification est réversible : l'état d'avant est empilé, et la
@@ -2333,6 +2775,7 @@ function annuler() {
   const avant = HISTORIQUE.pop();
   if (avant === undefined) { message("Rien à annuler."); return; }
   ETAT = normaliser(JSON.parse(avant));
+  invaliderProjections();
   enregistrerEtat();
   rendre();
   message("Modification annulée.");
@@ -2804,6 +3247,7 @@ const ui = {
   compteProjection: "",
   moisOuverts: new Set(),
   moisCalendrier: null,
+  tousConstats: false,
 };
 
 function icone(nom, classe) {
@@ -2989,8 +3433,25 @@ function rendreTableau(cible, p) {
       sous: "Le partage vient de vos catégories, pas d'un classement automatique : ce qui est un loisir chez l'un est un besoin chez l'autre.",
       droite: rav.partContrainte === null ? "" : esc(pourcent(rav.partContrainte, 0) + " des revenus") });
 
+  const constats = observations(p);
+  const carteConstats = constats.length
+    ? carte('<div class="constats">' + constats.slice(0, ui.tousConstats ? 99 : 4).map((o) =>
+        '<div class="constat ' + o.ton + '"><span class="marque-ton">' +
+        icone(o.ton === "attention" ? "alerte" : o.ton === "bien" ? "ok" : "oeil", "") + "</span>" +
+        "<b>" + esc(o.titre) + "</b>" +
+        (o.vue ? '<button class="btn petit" data-act="vue-aller" data-vue="' + esc(o.vue) + '">Voir</button>' : "<span></span>") +
+        "<p>" + esc(o.texte) + "</p></div>").join("") + "</div>" +
+        (constats.length > 4
+          ? '<div class="rangee" style="margin-top:12px"><button class="btn fantome petit" data-act="constats-tout">' +
+            (ui.tousConstats ? "Voir moins" : "Voir les " + (constats.length - 4) + " autres") + "</button></div>"
+          : ""),
+        { titre: "Ce que vos chiffres disent",
+          sous: "Des constats, pas des conseils : chacun porte le chiffre qui le fonde, pour que vous puissiez le contredire." })
+    : "";
+
   cible.innerHTML = kpis + bandeau + courbe +
     '<div class="grille g-2-1">' + barres + agenda + "</div>" +
+    carteConstats +
     '<div class="grille g-2-1">' + repartition + equilibre + "</div>";
 
   grapheCourbes(boite("g-solde"), [{
@@ -3009,18 +3470,34 @@ function etatVide() {
   return carte(
     '<div class="vide"><p class="titre-vide">Rien à projeter — pour l\'instant.</p>' +
     "<p>Un budget prévisionnel se construit à partir de vos flux : ce qui rentre, ce qui sort, à quel rythme, " +
-    "et à partir de quand. Ajoutez-les un par un, ou partez d'un foyer d'exemple et remplacez les montants.</p>" +
+    "et à partir de quand. Le plus sûr est de partir d'un relevé : votre banque sait l'exporter en CSV, " +
+    "et l'application y reconnaît toute seule ce qui revient tous les mois.</p>" +
     '<div class="rangee" style="justify-content:center">' +
-    '<button class="btn primaire" data-act="flux-nouveau">Ajouter un premier flux</button>' +
-    '<button class="btn" data-act="demo">Charger un exemple</button>' +
-    "</div></div>");
+    '<button class="btn primaire" data-act="import-releve">Importer un relevé bancaire</button>' +
+    '<button class="btn" data-act="flux-nouveau">Saisir un premier flux</button>' +
+    '<button class="btn fantome" data-act="demo">Voir un exemple</button>' +
+    "</div>" +
+    '<p class="faible" style="font-size:12.5px;margin-top:14px">Le fichier ne quitte pas votre navigateur : ' +
+    "il est lu sur place, rien n'est envoyé nulle part.</p></div>");
 }
 
 /* ── Revenus & dépenses ───────────────────────────────────────────────── */
 
-function prochaineEcheance(f, du, au) {
-  const oc = occurrences(f, du, au, du);
-  return oc.length ? oc[0] : null;
+/**
+ * Ce que chaque flux pèse sur l'horizon, lu sur la projection déjà calculée.
+ *
+ * Rejouer les échéances flux par flux coûtait une seconde projection
+ * complète à chaque frappe dans la recherche ; tout est déjà là.
+ */
+function resumeParFlux(p) {
+  const par = new Map();
+  for (const op of p.operations) {
+    let e = par.get(op.fluxId);
+    if (!e) { e = { total: 0, nombre: 0, premiere: op.date }; par.set(op.fluxId, e); }
+    e.total = arrondi2(e.total + op.brut);
+    e.nombre++;
+  }
+  return par;
 }
 
 function rendreFlux(cible, p) {
@@ -3056,30 +3533,47 @@ function rendreFlux(cible, p) {
     "</div>" +
     '<button class="btn primaire" data-act="flux-nouveau" style="margin-left:auto">+ Nouveau flux</button></div>';
 
+  cible.innerHTML = (ETAT.flux.length ? entete : "") +
+    carte(barreOutils + '<div id="flux-table"></div>', {
+      sous: ETAT.flux.length
+        ? "« Par mois » lisse chaque flux sur l'année : un trimestriel de 300 € y compte pour 100 €. La projection, elle, place chaque échéance à sa date."
+        : "",
+    });
+  boite("flux-table").innerHTML = tableauFlux(p);
+
+  /* La recherche ne redessine que le tableau : recréer le champ à chaque
+     frappe obligeait à lui rendre le curseur, et la vue entière y passait. */
+  const rech = boite("rech");
+  if (rech) {
+    rech.addEventListener("input", () => {
+      ui.recherche = rech.value;
+      boite("flux-table").innerHTML = tableauFlux(p);
+    });
+  }
+}
+
+/** Le tableau seul, recalculé à chaque frappe dans la recherche. */
+function tableauFlux(p) {
   let liste = ETAT.flux.slice();
   if (ui.filtreType !== "tous") liste = liste.filter((f) => f.type === ui.filtreType);
   if (ui.recherche.trim()) {
     const q = ui.recherche.trim().toLowerCase();
     liste = liste.filter((f) => (f.libelle + " " + nomCategorie(f.categorieId) + " " + f.note).toLowerCase().includes(q));
   }
-  const suivante = new Map(liste.map((f) => [f.id, prochaineEcheance(f, p.du, p.au)]));
-  const totalHorizon = new Map();
-  for (const f of liste) {
-    totalHorizon.set(f.id, occurrences(f, p.du, p.au, p.du).reduce((s, o) => s + o.montant, 0));
-  }
+  const resume = resumeParFlux(p);
   liste.sort((a, b) => {
     if (ui.tri === "libelle") return a.libelle.localeCompare(b.libelle, "fr");
     if (ui.tri === "date") {
-      const da = suivante.get(a.id), db = suivante.get(b.id);
+      const da = resume.get(a.id), db = resume.get(b.id);
       if (!da) return 1; if (!db) return -1;
-      return da.date < db.date ? -1 : da.date > db.date ? 1 : 0;
+      return da.premiere < db.premiere ? -1 : da.premiere > db.premiere ? 1 : 0;
     }
     return mensualiteMoyenne(b) - mensualiteMoyenne(a);
   });
 
   const lignes = liste.map((f) => {
     const c = categorie(f.categorieId);
-    const s = suivante.get(f.id);
+    const s = resume.get(f.id);
     const freq = FREQ[f.frequence] || FREQ.mensuel;
     return '<tr class="cliquable" data-act="flux-editer" data-id="' + esc(f.id) + '">' +
       "<td><div style=\"font-weight:500\">" + esc(f.libelle) +
@@ -3098,8 +3592,8 @@ function rendreFlux(cible, p) {
       '<td class="num ' + (f.type === "revenu" ? "pos" : f.type === "depense" ? "neg" : "dim") + '" style="font-weight:600">' +
         esc(f.type === "virement" ? "↔ " + argent(f.montant) : argent(f.type === "revenu" ? f.montant : -f.montant, { signe: true })) + "</td>" +
       '<td class="num dim">' + esc(argent(mensualiteMoyenne(f))) + "</td>" +
-      '<td class="dim">' + (s ? esc(libelleDate(s.date, true)) : '<span class="faible">—</span>') + "</td>" +
-      '<td class="num dim">' + esc(argent(totalHorizon.get(f.id) || 0)) + "</td>" +
+      '<td class="dim">' + (s ? esc(libelleDate(s.premiere, true)) : '<span class="faible">—</span>') + "</td>" +
+      '<td class="num dim">' + esc(argent(s ? s.total : 0)) + "</td>" +
       '<td class="actions">' +
         '<button class="btn fantome icone" data-act="flux-basculer" data-id="' + esc(f.id) + '" title="' +
           (f.actif ? "Mettre en pause" : "Réactiver") + '">' + icone(f.actif ? "pause" : "lecture", "") + "</button>" +
@@ -3107,29 +3601,11 @@ function rendreFlux(cible, p) {
         '<button class="btn fantome icone" data-act="flux-supprimer" data-id="' + esc(f.id) + '" title="Supprimer">' + icone("croix", "") + "</button></td></tr>";
   }).join("");
 
-  const table = liste.length
+  return liste.length
     ? '<div class="tableau-boite"><table><thead><tr>' +
       "<th>Flux</th><th>Rythme</th><th class=\"num\">Montant</th><th class=\"num\">Par mois</th><th>Prochaine</th>" +
       '<th class="num">Sur ' + ETAT.parametres.horizon + " mois</th><th></th></tr></thead><tbody>" + lignes + "</tbody></table></div>"
     : '<div class="vide">Aucun flux ne correspond à cette recherche.</div>';
-
-  cible.innerHTML = (ETAT.flux.length ? entete : "") +
-    carte(barreOutils + table, {
-      sous: ETAT.flux.length
-        ? "« Par mois » lisse chaque flux sur l'année : un trimestriel de 300 € y compte pour 100 €. La projection, elle, place chaque échéance à sa date."
-        : "",
-    });
-
-  const rech = boite("rech");
-  if (rech) {
-    rech.addEventListener("input", () => {
-      ui.recherche = rech.value;
-      const pos = rech.selectionStart;
-      rendre();
-      const neuf = boite("rech");
-      if (neuf) { neuf.focus(); neuf.setSelectionRange(pos, pos); }
-    });
-  }
 }
 
 /* ── Projection ───────────────────────────────────────────────────────── */
@@ -3227,6 +3703,10 @@ function rendreCalendrier(cible, p) {
   const mois = p.mois.find((m) => m.cle === cle);
   const premier = cleMois(p.du), dernier = cleMois(p.au);
 
+  /* Un seul jour est atteignable par tabulation — celui d'aujourd'hui, ou
+     le premier du mois : on circule ensuite aux flèches, comme dans une
+     grille. Trente arrêts de tabulation rendraient la vue impraticable. */
+  const ancre = cal.jours.find((x) => x.date === aujourdhui()) || cal.jours[0];
   const cases = [];
   for (let i = 0; i < cal.decalage; i++) cases.push('<div class="cal-case vide"></div>');
   for (const j of cal.jours) {
@@ -3239,9 +3719,13 @@ function rendreCalendrier(cible, p) {
       (j.date === aujourdhui() ? " aujourdhui" : "") +
       (!j.dedans ? " hors" : "") +
       (j.solde !== null && j.solde < 0 ? " rouge" : "") +
-      '" data-act="cal-jour" data-date="' + j.date + '"' +
-      (j.operations.length ? "" : " tabindex=\"-1\"") + ">" +
-      '<span class="jour">' + j.jour + "</span>" +
+      '" data-act="cal-jour" data-date="' + j.date + '" role="gridcell"' +
+      ' aria-label="' + esc(libelleDate(j.date) + (j.operations.length
+        ? " : " + j.operations.length + " opération" + (j.operations.length > 1 ? "s" : "") +
+          (j.solde !== null ? ", solde " + argent(j.solde) : "")
+        : ", rien de prévu")) + '"' +
+      ' tabindex="' + (j === ancre ? "0" : "-1") + '">' +
+      '<span class="jour" aria-hidden="true">' + j.jour + "</span>" +
       (j.entrees ? '<span class="mv pos">+ ' + esc(argentCourt(j.entrees)) + "</span>" : "") +
       (j.sorties ? '<span class="mv neg">− ' + esc(argentCourt(j.sorties)) + "</span>" : "") +
       (points ? '<span class="points">' + points + "</span>" : "") +
@@ -3265,9 +3749,9 @@ function rendreCalendrier(cible, p) {
     "</span></div>" +
     '<div class="cal-grille" style="margin-bottom:6px">' +
     JOURS_COURTS.map((j) => '<div class="cal-jour-nom">' + j + "</div>").join("") + "</div>" +
-    '<div class="cal-grille">' + cases.join("") + "</div>",
+    '<div class="cal-grille" role="grid" aria-label="Calendrier de ' + esc(libelleMois(cle)) + '">' + cases.join("") + "</div>",
     { titre: "Le mois au jour le jour",
-      sous: "Chaque case porte les mouvements du jour et le solde au soir ; les jours en rouge passent sous zéro. Cliquez un jour pour le détail." }) +
+      sous: "Chaque case porte les mouvements du jour et le solde au soir ; les jours en rouge passent sous zéro. Cliquez un jour — ou circulez aux flèches — pour le détail." }) +
     '<div class="grille g2">' +
     carte(gros.length
       ? '<ul class="agenda">' + gros.map((j) =>
@@ -3855,6 +4339,24 @@ function rendreReglages(cible, p) {
     kpi("Opérations projetées", nombre(p.operations.length), esc("sur " + ETAT.parametres.horizon + " mois")) +
     "</div>";
 
+  const sauvegardes = lireSauvegardes().slice().reverse();
+  const carteSauvegardes = carte(
+    sauvegardes.length
+      ? '<div class="tableau-boite"><table><thead><tr><th>Instantané</th><th class="num">Flux</th>' +
+        '<th class="num">Taille</th><th></th></tr></thead><tbody>' +
+        sauvegardes.map((sv) => {
+          let nb = "?";
+          try { nb = (JSON.parse(sv.etat).flux || []).length; } catch (e) { nb = "?"; }
+          return "<tr><td>" + esc(libelleDateHeure(sv.quand)) + "</td>" +
+            '<td class="num dim">' + esc(String(nb)) + "</td>" +
+            '<td class="num dim">' + esc(nombre(Math.round(sv.taille / 1024))) + " Ko</td>" +
+            '<td class="actions"><button class="btn petit" data-act="restaurer" data-quand="' + sv.quand + '">Restaurer</button></td></tr>';
+        }).join("") + "</tbody></table></div>"
+      : '<div class="vide">Aucune sauvegarde pour l\'instant. La première est prise à la prochaine modification.</div>',
+    { titre: "Sauvegardes automatiques",
+      sous: "Au plus une par heure, les " + SAUVEGARDES_MAX + " dernières conservées. Elles vivent dans ce navigateur : " +
+        "vider les données du site les efface avec le reste. L'export JSON reste la seule sauvegarde qui vous survit." });
+
   const apropos = carte(
     "<p class=\"sous\">Le solde projeté n'est pas une prévision de ce qui arrivera : c'est la conséquence arithmétique " +
     "des flux que vous avez saisis. Il vaut ce que vaut la saisie — un abonnement oublié, et la courbe ment de son montant. " +
@@ -3867,14 +4369,25 @@ function rendreReglages(cible, p) {
     "Installé depuis le navigateur, il fonctionne hors ligne.</p>",
     { titre: "Ce que la projection dit, et ce qu'elle ne dit pas" });
 
-  cible.innerHTML = parametres + donnees + apropos;
+  cible.innerHTML = parametres + donnees + carteSauvegardes + apropos;
 }
 
 /* ══════════════════════════════════════════════════════════════════════
    10. Dialogues
    ══════════════════════════════════════════════════════════════════════ */
 
+/* Le focus qu'il faudra rendre à la fermeture : sans cela, fermer un
+   dialogue renvoie le clavier en haut de page, et il faut tout retraverser. */
+let FOCUS_AVANT_DIALOGUE = null;
+
+function focusables(racine) {
+  return Array.from(racine.querySelectorAll(
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
+  )).filter((n) => n.offsetParent !== null || n === document.activeElement);
+}
+
 function ouvrirDialogue(titre, corpsHTML, boutons, apres, classe) {
+  if (boite("voile").classList.contains("masque")) FOCUS_AVANT_DIALOGUE = document.activeElement;
   boite("dialogue").classList.toggle("large", classe === "large");
   boite("dialogue-titre").textContent = titre;
   // le corps est remplacé par un clone vide : les écouteurs posés par le
@@ -3894,13 +4407,20 @@ function ouvrirDialogue(titre, corpsHTML, boutons, apres, classe) {
   }
   boite("voile").classList.remove("masque");
   if (apres) apres();
-  const premier = boite("dialogue-corps").querySelector("input, select, textarea");
+  /* Le clavier entre dans le dialogue : d'abord un champ s'il y en a un,
+     sinon le premier élément atteignable — sans quoi la tabulation reprend
+     en haut de page et le piège ne sert à rien. */
+  const premier = boite("dialogue-corps").querySelector("input, select, textarea") ||
+    focusables(boite("dialogue"))[0];
   if (premier) premier.focus();
 }
 
 function fermerDialogue() {
   boite("voile").classList.add("masque");
   boite("dialogue-corps").innerHTML = "";
+  const retour = FOCUS_AVANT_DIALOGUE;
+  FOCUS_AVANT_DIALOGUE = null;
+  if (retour && retour.focus && document.contains(retour)) retour.focus();
 }
 
 function confirmer(titre, texte, libelleAction, action) {
@@ -4880,6 +5400,8 @@ const ACTIONS = {
   "cal-jour": (b) => ouvrirJour(b.dataset.date),
   "pointer": (b) => ouvrirPointage(b.dataset.id),
   "vue-suivi": () => allerA("suivi"),
+  "vue-aller": (b) => allerA(b.dataset.vue),
+  "constats-tout": () => { ui.tousConstats = !ui.tousConstats; rendre(); },
   "cal-precedent": () => {
     const cle = moisCalendrier(PROJECTION);
     ui.moisCalendrier = cle.slice(5) === "01"
@@ -4902,6 +5424,7 @@ const ACTIONS = {
     : PROJECTION),
   "import-json": importerJson,
   "import-releve": importerReleve,
+  "restaurer": (b) => restaurerSauvegarde(Number(b.dataset.quand)),
 };
 
 const RACCOURCIS = [
@@ -4912,6 +5435,7 @@ const RACCOURCIS = [
   ["Ctrl / ⌘ + Z", "annuler la dernière modification"],
   ["T", "changer de thème"],
   ["Échap", "fermer la fenêtre ouverte"],
+  ["Ctrl / ⌘ + K", "palette de commandes"],
   ["?", "afficher cette aide"],
 ];
 
@@ -4969,6 +5493,7 @@ function brancherEvenements() {
   });
 
   boite("btn-aide").addEventListener("click", ouvrirAide);
+  boite("btn-palette").addEventListener("click", ouvrirPalette);
 
   boite("btn-theme").addEventListener("click", () => {
     const ordre = ["auto", "light", "dark"];
@@ -4984,7 +5509,27 @@ function brancherEvenements() {
     if (ev.target === boite("voile")) fermerDialogue();
   });
   document.addEventListener("keydown", (ev) => {
+    if (PALETTE) return;   // la palette gère ses propres touches
     const dialogueOuvert = !boite("voile").classList.contains("masque");
+
+    if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "k") {
+      ev.preventDefault();
+      if (!dialogueOuvert) ouvrirPalette();
+      return;
+    }
+
+    // tant qu'un dialogue est ouvert, la tabulation y reste enfermée
+    if (dialogueOuvert && ev.key === "Tab") {
+      const cibles = focusables(boite("dialogue"));
+      if (cibles.length) {
+        const premier = cibles[0], dernier = cibles[cibles.length - 1];
+        if (ev.shiftKey && document.activeElement === premier) { ev.preventDefault(); dernier.focus(); }
+        else if (!ev.shiftKey && document.activeElement === dernier) { ev.preventDefault(); premier.focus(); }
+        else if (!boite("dialogue").contains(document.activeElement)) { ev.preventDefault(); premier.focus(); }
+      }
+      return;
+    }
+
     if (ev.key === "Escape" && dialogueOuvert) { fermerDialogue(); return; }
 
     if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "z" && !ev.shiftKey) {
@@ -5013,6 +5558,23 @@ function brancherEvenements() {
     }
   });
 
+  /* Déplacement dans la grille du calendrier : les flèches parcourent les
+     jours, la semaine se saute avec Haut et Bas. */
+  document.addEventListener("keydown", (ev) => {
+    const case_ = document.activeElement;
+    if (!case_ || !case_.classList || !case_.classList.contains("cal-case")) return;
+    const pas = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[ev.key];
+    if (!pas) return;
+    ev.preventDefault();
+    const toutes = Array.from(document.querySelectorAll(".cal-case[data-date]"));
+    const i = toutes.indexOf(case_);
+    const cible = toutes[Math.max(0, Math.min(toutes.length - 1, i + pas))];
+    if (!cible) return;
+    case_.setAttribute("tabindex", "-1");
+    cible.setAttribute("tabindex", "0");
+    cible.focus();
+  });
+
   window.addEventListener("hashchange", () => {
     const v = location.hash.slice(1);
     if (VUES.includes(v) && v !== vueActive) { vueActive = v; rendre(); }
@@ -5025,6 +5587,145 @@ function brancherEvenements() {
     clearTimeout(minuterie);
     minuterie = setTimeout(rendre, 180);
   });
+}
+
+/* ── Palette de commandes ─────────────────────────────────────────────── */
+
+/** Sans accents ni casse : « Épargne » se trouve en tapant « epargne ». */
+function pliage(texte) {
+  return String(texte || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+
+/**
+ * Toutes les commandes atteignables au clavier : les vues, les créations,
+ * les actions sur les données, et chacun de vos flux et comptes. Tout ce
+ * qui se fait à la souris doit pouvoir se faire ici.
+ */
+function commandes() {
+  const liste = [];
+  for (const v of VUES) {
+    liste.push({ groupe: "Aller à", titre: TITRES[v][1], detail: TITRES[v][0], faire: () => allerA(v) });
+  }
+  liste.push(
+    { groupe: "Créer", titre: "Nouveau flux", detail: "revenu, dépense ou virement", faire: () => ouvrirFlux(null) },
+    { groupe: "Créer", titre: "Nouveau compte", faire: () => ouvrirCompte(null) },
+    { groupe: "Créer", titre: "Nouvel objectif", faire: () => ouvrirObjectif(null) },
+    { groupe: "Créer", titre: "Nouveau scénario", faire: () => ouvrirScenario(null) },
+    { groupe: "Données", titre: "Importer un relevé bancaire", detail: "CSV", faire: importerReleve },
+    { groupe: "Données", titre: "Exporter mes données", detail: "JSON", faire: exporterJson },
+    { groupe: "Données", titre: "Exporter la projection", detail: "CSV", faire: () => exporterCsv(PROJECTION) },
+    { groupe: "Données", titre: "Importer un fichier", detail: "JSON", faire: importerJson },
+    { groupe: "Action", titre: "Annuler la dernière modification", faire: annuler },
+    { groupe: "Action", titre: "Changer de thème", faire: () => boite("btn-theme").click() },
+    { groupe: "Action", titre: "Raccourcis clavier", faire: ouvrirAide }
+  );
+  for (const c of ETAT.comptes) {
+    liste.push({ groupe: "Pointer", titre: c.nom, detail: "solde constaté le " + libelleDate(c.soldeDate, true), faire: () => ouvrirPointage(c.id) });
+  }
+  for (const f of ETAT.flux.slice(0, 300)) {
+    liste.push({
+      groupe: "Flux", titre: f.libelle,
+      detail: argent(f.type === "revenu" ? f.montant : -f.montant, { signe: true }) + " · " + (FREQ[f.frequence] || FREQ.mensuel).nom.toLowerCase(),
+      faire: () => ouvrirFlux(f.id),
+    });
+  }
+  for (const s of ETAT.scenarios) {
+    liste.push({ groupe: "Scénario", titre: s.nom, detail: "modifier", faire: () => ouvrirScenario(s.id) });
+  }
+  return liste;
+}
+
+/** Tous les mots de la recherche doivent se retrouver, dans n'importe quel ordre. */
+function filtrerCommandes(liste, recherche) {
+  const mots = pliage(recherche).split(/\s+/).filter(Boolean);
+  if (!mots.length) return liste;
+  return liste.filter((c) => {
+    const foin = pliage(c.groupe + " " + c.titre + " " + (c.detail || ""));
+    return mots.every((m) => foin.includes(m));
+  });
+}
+
+let PALETTE = null;
+
+function ouvrirPalette() {
+  if (PALETTE) return;
+  const liste = commandes();
+  let filtrees = liste;
+  let choisi = 0;
+
+  const voile = document.createElement("div");
+  voile.id = "voile-palette";
+  voile.innerHTML =
+    '<div id="palette" role="dialog" aria-modal="true" aria-label="Palette de commandes">' +
+    '<input id="palette-champ" type="text" placeholder="Chercher une vue, un flux, une action…" ' +
+    'autocomplete="off" spellcheck="false" role="combobox" aria-expanded="true" aria-controls="palette-liste" aria-autocomplete="list">' +
+    '<div id="palette-liste" role="listbox" aria-label="Résultats"></div>' +
+    '<div id="palette-pied"><span><kbd>↑</kbd> <kbd>↓</kbd> naviguer</span><span><kbd>Entrée</kbd> ouvrir</span>' +
+    "<span><kbd>Échap</kbd> fermer</span></div></div>";
+  document.body.appendChild(voile);
+
+  const champ = voile.querySelector("#palette-champ");
+  const zone = voile.querySelector("#palette-liste");
+  const rendu = () => {
+    if (!filtrees.length) {
+      zone.innerHTML = '<div class="palette-vide">Rien ne correspond.</div>';
+      return;
+    }
+    let groupe = null;
+    zone.innerHTML = filtrees.map((c, i) => {
+      const entete = c.groupe !== groupe ? '<div class="palette-groupe">' + esc(c.groupe) + "</div>" : "";
+      groupe = c.groupe;
+      return entete + '<div class="palette-item' + (i === choisi ? " on" : "") + '" role="option" id="palette-' + i +
+        '" aria-selected="' + (i === choisi ? "true" : "false") + '" data-i="' + i + '">' +
+        "<span>" + esc(c.titre) + "</span>" +
+        (c.detail ? '<span class="faible">' + esc(c.detail) + "</span>" : "") + "</div>";
+    }).join("");
+    const actif = zone.querySelector(".palette-item.on");
+    if (actif) actif.scrollIntoView({ block: "nearest" });
+    champ.setAttribute("aria-activedescendant", filtrees.length ? "palette-" + choisi : "");
+  };
+
+  const lancer = (i) => {
+    const c = filtrees[i];
+    if (!c) return;
+    fermerPalette();
+    c.faire();
+  };
+
+  champ.addEventListener("input", () => {
+    filtrees = filtrerCommandes(liste, champ.value);
+    choisi = 0;
+    rendu();
+  });
+  champ.addEventListener("keydown", (ev) => {
+    if (ev.key === "ArrowDown") { ev.preventDefault(); choisi = Math.min(filtrees.length - 1, choisi + 1); rendu(); }
+    else if (ev.key === "ArrowUp") { ev.preventDefault(); choisi = Math.max(0, choisi - 1); rendu(); }
+    else if (ev.key === "Home") { ev.preventDefault(); choisi = 0; rendu(); }
+    else if (ev.key === "End") { ev.preventDefault(); choisi = filtrees.length - 1; rendu(); }
+    else if (ev.key === "Enter") { ev.preventDefault(); lancer(choisi); }
+    else if (ev.key === "Escape") { ev.preventDefault(); fermerPalette(); }
+  });
+  zone.addEventListener("mousemove", (ev) => {
+    const item = ev.target.closest(".palette-item");
+    if (item && Number(item.dataset.i) !== choisi) { choisi = Number(item.dataset.i); rendu(); }
+  });
+  zone.addEventListener("click", (ev) => {
+    const item = ev.target.closest(".palette-item");
+    if (item) lancer(Number(item.dataset.i));
+  });
+  voile.addEventListener("mousedown", (ev) => { if (ev.target === voile) fermerPalette(); });
+
+  PALETTE = { voile, renduPrecedent: document.activeElement };
+  rendu();
+  champ.focus();
+}
+
+function fermerPalette() {
+  if (!PALETTE) return;
+  PALETTE.voile.remove();
+  const retour = PALETTE.renduPrecedent;
+  PALETTE = null;
+  if (retour && retour.focus && document.contains(retour)) retour.focus();
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -5065,12 +5766,15 @@ if (typeof globalThis !== "undefined") {
     evaluerObjectif, enveloppes, fluxDuScenario, projeterScenario, jeuDemo, montantA,
     resteAVivre, calendrier, jourSemaine, exceptionDe, poserException, normaliserExceptions,
     soldeRoule, soldeDepart, pointerSolde, derives, statistiquesDerive, bandeIncertitude, migrer,
+    observations, annuelCategorie,
+    peutEtreSauvegarder, lireSauvegardes, CLE_SAUVEGARDES, SAUVEGARDES_MAX,
+    pliage, filtrerCommandes,
     analyserCsv, operationsCsv, lireDate, lireMontant, decouperLigne, detecterSeparateur,
     normaliserLibelle, detecterRythme, detecterRecurrences, mediane, prochaineEcheancePrevue,
     ajouterMois, ajouterJours, moisEntre, joursEntre, joursDansMois, estIso, cleMois,
     finDeMois, moisSuivant, graduations, arrondi2,
     etat: () => ETAT,
-    poserEtat: (e) => { ETAT = normaliser(e); return ETAT; },
+    poserEtat: (e) => { ETAT = normaliser(e); invaliderProjections(); return ETAT; },
     FREQUENCES, VERSION_ETAT,
   };
 }
