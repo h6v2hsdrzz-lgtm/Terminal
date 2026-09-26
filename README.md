@@ -246,11 +246,15 @@ s'installe sur un écran d'accueil et s'ouvre sans réseau — manifeste, icône
 et service worker sont dans le dossier.
 
 Le dossier `budget/` contient **Prévoyant**, un budget prévisionnel : on y
-saisit revenus, dépenses et virements récurrents, et l'application en tire le
-solde jour par jour jusqu'à cinq ans, les mois qui coincent, les enveloppes par
-catégorie, les objectifs d'épargne et des scénarios comparés. Même règle que
-`joie/autonome/` : un seul fichier, aucune dépendance, données gardées dans le
-navigateur, servi tel quel à `/budget/`. Son `README.md` détaille le modèle.
+saisit revenus, dépenses et virements récurrents — ou on les fait reconnaître
+dans un relevé bancaire exporté en CSV — et l'application en tire le solde
+jour par jour jusqu'à cinq ans, les mois qui coincent, les enveloppes par
+catégorie, les objectifs d'épargne et des scénarios comparés. Elle se
+confronte ensuite aux relevés réels : l'écart entre ce qu'elle annonçait et ce
+que la banque affiche devient une marge d'erreur mesurée, portée par la
+courbe. Même règle que `joie/autonome/` : un seul fichier, aucune dépendance,
+données gardées dans le navigateur, servi tel quel à `/budget/`. Son
+`README.md` détaille le modèle et ses hypothèses.
 
 ## Avertissements
 
