@@ -149,3 +149,15 @@ test("un mois hors fenêtre garde ses jours, sans solde", () => {
 });
 
 function arrondi(v) { return Math.round(v * 100) / 100; }
+
+test("le calendrier s'ouvre sur le mois suivant quand celui-ci est fini", () => {
+  P.poserEtat({ version: 2, parametres: { debutProjection: "2026-03-28", horizon: 6 },
+    comptes: [{ id: "c1", nom: "C", solde: 0, soldeDate: "2026-03-28" }], flux: [] });
+  assert.equal(P.moisCalendrier(P.projeter({})), "2026-04");   // il ne reste que 4 jours
+});
+
+test("le calendrier s'ouvre sur le mois en cours quand il en reste assez", () => {
+  P.poserEtat({ version: 2, parametres: { debutProjection: "2026-03-10", horizon: 6 },
+    comptes: [{ id: "c1", nom: "C", solde: 0, soldeDate: "2026-03-10" }], flux: [] });
+  assert.equal(P.moisCalendrier(P.projeter({})), "2026-03");
+});

@@ -3691,10 +3691,22 @@ function rendreProjection(cible, p) {
 
 const JOURS_COURTS = ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"];
 
+/**
+ * Le mois d'ouverture du calendrier.
+ *
+ * Le mois en cours, sauf s'il ne lui reste presque rien : le 28, un
+ * calendrier aux trois quarts grisé n'apprend rien, alors que le mois
+ * suivant est précisément ce qu'on vient vérifier.
+ */
+const CALENDRIER_RESTE_MINIMUM = 8;
+
 function moisCalendrier(p) {
-  const dans = (cle) => cle >= cleMois(p.du) && cle <= cleMois(p.au);
+  const premier = cleMois(p.du), dernier = cleMois(p.au);
+  const dans = (cle) => cle >= premier && cle <= dernier;
   if (ui.moisCalendrier && dans(ui.moisCalendrier)) return ui.moisCalendrier;
-  return cleMois(p.du);
+  const restant = joursEntre(p.du, finDeMois(premier)) + 1;
+  const suivant = moisSuivant(premier);
+  return restant < CALENDRIER_RESTE_MINIMUM && dans(suivant) ? suivant : premier;
 }
 
 function rendreCalendrier(cible, p) {
@@ -4250,11 +4262,15 @@ function rendreScenarios(cible, p) {
 function rendreComptes(cible, p) {
   const lignes = ETAT.comptes.map((c) => {
     const pr = projeter({ du: p.du, au: p.au, compteId: c.id });
-    const nb = ETAT.flux.filter((f) => f.compteId === c.id).length;
+    const nb = ETAT.flux.filter((f) => f.compteId === c.id || f.compteDest === c.id).length;
+    const reporte = soldeRoule(c, p.du);
     return '<tr><td><i class="puce" style="background:' + teinte(c.teinte) + '"></i><b>' + esc(c.nom) + "</b>" +
       '<div class="faible" style="font-size:12.5px;padding-left:16px">' + (c.type === "epargne" ? "Épargne" : "Compte courant") +
       " · " + nb + (nb > 1 ? " flux rattachés" : " flux rattaché") + "</div></td>" +
-      '<td class="num">' + esc(argent(c.solde)) + "</td>" +
+      '<td class="num">' + esc(argent(reporte)) +
+      (Math.abs(reporte - c.solde) > 0.005
+        ? '<div class="faible" style="font-size:11.5px">' + esc(argent(c.solde)) + " le " + esc(libelleDate(c.soldeDate, true)) + "</div>"
+        : '<div class="faible" style="font-size:11.5px">constaté le ' + esc(libelleDate(c.soldeDate, true)) + "</div>") + "</td>" +
       '<td class="num" style="font-weight:600' + (pr.soldeFinal < 0 ? ";color:var(--depense-texte)" : "") + '">' + esc(argent(pr.soldeFinal)) + "</td>" +
       '<td class="num ' + (pr.totaux.net >= 0 ? "pos" : "neg") + '">' + esc(argent(pr.totaux.net, { signe: true })) + "</td>" +
       '<td class="actions">' +
@@ -4274,11 +4290,11 @@ function rendreComptes(cible, p) {
       "hors comptes courants") +
     kpi("Flux rattachés", nombre(ETAT.flux.length), "répartis sur vos comptes") +
     "</div>" +
-    carte('<div class="tableau-boite"><table><thead><tr><th>Compte</th><th class="num">Solde actuel</th>' +
+    carte('<div class="tableau-boite"><table><thead><tr><th>Compte</th><th class="num">Solde au départ</th>' +
     '<th class="num">Solde à l\'horizon</th><th class="num">Variation</th><th></th></tr></thead><tbody>' + lignes + "</tbody></table></div>" +
     '<div class="rangee" style="margin-top:12px"><button class="btn primaire" data-act="cpt-nouveau">+ Nouveau compte</button></div>',
     { titre: "Comptes",
-      sous: "Chaque flux est rattaché à un compte ; le solde de départ est celui que vous constatez aujourd'hui sur votre relevé." });
+      sous: "Chaque flux est rattaché à un compte. Le solde de départ est celui que vous avez constaté, reporté jusqu'à aujourd'hui en rejouant les échéances tombées depuis — « Suivi » sert à le confronter à votre relevé." });
 }
 
 /* ── Réglages ─────────────────────────────────────────────────────────── */
@@ -4611,7 +4627,10 @@ function ouvrirCompte(id) {
   const c = id ? compte(id) : null;
   const corps = '<div class="ligne-champs">' +
     '<label class="champ"><span class="ttl">Nom</span><input type="text" id="c-nom" maxlength="40" value="' + esc(c ? c.nom : "") + '" placeholder="Compte courant"></label>' +
-    '<label class="champ"><span class="ttl">Solde d\'aujourd\'hui</span><input type="number" id="c-solde" step="0.01" value="' + esc(c ? c.solde : 0) + '"></label>' +
+    '<label class="champ"><span class="ttl">Solde constaté</span><input type="number" id="c-solde" step="0.01" value="' + esc(c ? c.solde : 0) + '"></label>' +
+    '<label class="champ"><span class="ttl">Constaté le</span>' +
+    '<input type="date" id="c-date" value="' + esc(c ? c.soldeDate : aujourdhui()) + '" max="' + esc(aujourdhui()) + '">' +
+    '<span class="aide">La projection repart de ce solde en rejouant les échéances tombées depuis.</span></label>' +
     '<label class="champ"><span class="ttl">Type</span><select id="c-type">' +
     '<option value="courant"' + (c && c.type === "courant" ? " selected" : "") + ">Compte courant</option>" +
     '<option value="epargne"' + (c && c.type === "epargne" ? " selected" : "") + ">Épargne</option></select></label>" +
@@ -4629,6 +4648,8 @@ function ouvrirCompte(id) {
           const propre = normaliserCompte({
             id: c ? c.id : identifiant("cpt"), nom,
             solde: Number(boite("c-solde").value.replace(",", ".")),
+            soldeDate: boite("c-date").value,
+            releves: c ? c.releves : [],
             type: boite("c-type").value, teinte: Number(boite("c-teinte").value),
           }, ETAT.comptes.length);
           const i = ETAT.comptes.findIndex((x) => x.id === propre.id);
@@ -4774,87 +4795,104 @@ function ligneExtra(f, i) {
 
 function ouvrirScenario(id) {
   const s = id ? ETAT.scenarios.find((x) => x.id === id) : null;
-  let extras = s ? s.extras.map((f) => Object.assign({}, f)) : [];
+
+  /* Ajouter ou retirer une ligne de flux redessine le dialogue. Tout ce qui
+     est saisi vit donc dans ce brouillon, et non dans le DOM : sans cela, le
+     nom et les pourcentages déjà tapés disparaissaient au premier ajout. */
+  const brouillon = {
+    nom: s ? s.nom : "",
+    teinte: s ? s.teinte : ((ETAT.scenarios.length + 2) % TEINTES_MAX) + 1,
+    ajustRevenus: s ? s.ajustRevenus : 0,
+    ajustDepenses: s ? s.ajustDepenses : 0,
+    soldeDelta: s ? s.soldeDelta : 0,
+    exclus: s ? s.exclus.slice() : [],
+    extras: s ? s.extras.map((f) => Object.assign({}, f)) : [],
+  };
+
+  /** Relit le dialogue dans le brouillon, avant de le redessiner ou d'enregistrer. */
+  const relire = () => {
+    if (!boite("s-nom")) return brouillon;
+    brouillon.nom = boite("s-nom").value.trim();
+    brouillon.teinte = Number(boite("s-teinte").value);
+    brouillon.ajustRevenus = Number(String(boite("s-rev").value).replace(",", ".")) || 0;
+    brouillon.ajustDepenses = Number(String(boite("s-dep").value).replace(",", ".")) || 0;
+    brouillon.soldeDelta = Number(String(boite("s-solde").value).replace(",", ".")) || 0;
+    brouillon.exclus = Array.from(document.querySelectorAll(".s-exclu:checked")).map((x) => x.value);
+    brouillon.extras = Array.from(document.querySelectorAll("#s-extras .extra")).map((n) => ({
+      id: identifiant("flx"),
+      libelle: n.querySelector(".x-libelle").value.trim(),
+      montant: Number(String(n.querySelector(".x-montant").value).replace(",", ".")) || 0,
+      type: n.querySelector(".x-type").value,
+      frequence: n.querySelector(".x-frequence").value,
+      debut: n.querySelector(".x-debut").value || aujourdhui(),
+      compteId: ETAT.comptes[0].id,
+      categorieId: null, fin: null, indexation: 0, actif: true, note: "", exceptions: [],
+    }));
+    return brouillon;
+  };
 
   const dessiner = () => {
     const corps =
       '<div class="ligne-champs">' +
-      '<label class="champ"><span class="ttl">Nom du scénario</span><input type="text" id="s-nom" maxlength="50" value="' + esc(s ? s.nom : "") + '" placeholder="Et si je déménageais ?"></label>' +
+      '<label class="champ"><span class="ttl">Nom du scénario</span><input type="text" id="s-nom" maxlength="50" value="' +
+      esc(brouillon.nom) + '" placeholder="Et si je déménageais ?"></label>' +
       '<label class="champ"><span class="ttl">Couleur</span><select id="s-teinte">' +
-      Array.from({ length: TEINTES_MAX }, (_, i) => '<option value="' + (i + 1) + '"' + (s && s.teinte === i + 1 ? " selected" : "") + ">Teinte " + (i + 1) + "</option>").join("") +
+      Array.from({ length: TEINTES_MAX }, (_, i) => '<option value="' + (i + 1) + '"' +
+        (brouillon.teinte === i + 1 ? " selected" : "") + ">Teinte " + (i + 1) + "</option>").join("") +
       "</select></label></div>" +
       '<div class="ligne-champs trois">' +
-      '<label class="champ"><span class="ttl">Tous les revenus</span><input type="number" id="s-rev" step="1" value="' + esc(s ? s.ajustRevenus : 0) + '">' +
-      '<span class="aide">en % (−20 = un cinquième de moins)</span></label>' +
-      '<label class="champ"><span class="ttl">Toutes les dépenses</span><input type="number" id="s-dep" step="1" value="' + esc(s ? s.ajustDepenses : 0) + '">' +
-      '<span class="aide">en %</span></label>' +
-      '<label class="champ"><span class="ttl">Solde de départ</span><input type="number" id="s-solde" step="10" value="' + esc(s ? s.soldeDelta : 0) + '">' +
-      '<span class="aide">un apport, un imprévu</span></label></div>' +
+      '<label class="champ"><span class="ttl">Tous les revenus</span><input type="number" id="s-rev" step="1" value="' +
+      esc(brouillon.ajustRevenus) + '"><span class="aide">en % (−20 = un cinquième de moins)</span></label>' +
+      '<label class="champ"><span class="ttl">Toutes les dépenses</span><input type="number" id="s-dep" step="1" value="' +
+      esc(brouillon.ajustDepenses) + '"><span class="aide">en %</span></label>' +
+      '<label class="champ"><span class="ttl">Solde de départ</span><input type="number" id="s-solde" step="10" value="' +
+      esc(brouillon.soldeDelta) + '"><span class="aide">un apport, un imprévu</span></label></div>' +
       '<div class="sep"></div>' +
       '<div><div class="ttl" style="font-weight:600;margin-bottom:6px">Flux retirés dans ce scénario</div>' +
       '<div style="max-height:190px;overflow:auto;border:1px solid var(--bordure);border-radius:10px;padding:8px">' +
       (ETAT.flux.length ? ETAT.flux.map((f) =>
         '<label class="case" style="padding:2px 0"><input type="checkbox" class="s-exclu" value="' + esc(f.id) + '"' +
-        (s && s.exclus.includes(f.id) ? " checked" : "") + '><span>' + esc(f.libelle) +
-        ' <span class="faible">· ' + esc(argent(f.type === "revenu" ? f.montant : -f.montant, { signe: true })) + " " + esc((FREQ[f.frequence] || FREQ.mensuel).court) + "</span></span></label>").join("")
+        (brouillon.exclus.indexOf(f.id) >= 0 ? " checked" : "") + '><span>' + esc(f.libelle) +
+        ' <span class="faible">· ' + esc(argent(f.type === "revenu" ? f.montant : -f.montant, { signe: true })) + " " +
+        esc((FREQ[f.frequence] || FREQ.mensuel).court) + "</span></span></label>").join("")
         : '<span class="faible">Aucun flux à retirer.</span>') +
       "</div></div>" +
       '<div><div class="ttl" style="font-weight:600;margin:4px 0 6px">Flux ajoutés dans ce scénario</div>' +
-      '<div id="s-extras">' + extras.map(ligneExtra).join("") + "</div>" +
+      '<div id="s-extras">' + brouillon.extras.map(ligneExtra).join("") + "</div>" +
       '<button type="button" class="btn petit" data-act="scn-extra-ajouter">+ Ajouter un flux au scénario</button></div>';
-
-    const lireExtras = () => Array.from(document.querySelectorAll("#s-extras .extra")).map((n) => ({
-      id: identifiant("flx"),
-      libelle: n.querySelector(".x-libelle").value.trim() || "Flux du scénario",
-      montant: Number(n.querySelector(".x-montant").value.replace(",", ".")) || 0,
-      type: n.querySelector(".x-type").value,
-      frequence: n.querySelector(".x-frequence").value,
-      debut: n.querySelector(".x-debut").value || aujourdhui(),
-      compteId: ETAT.comptes[0].id,
-      categorieId: null, fin: null, indexation: 0, actif: true, note: "",
-    }));
-
-    const memoriser = () => { extras = lireExtras(); };
 
     ouvrirDialogue(s ? "Modifier le scénario" : "Nouveau scénario", corps, [
       { texte: "Annuler", action: fermerDialogue },
       {
         texte: s ? "Enregistrer" : "Créer", classe: "primaire", action: () => {
-          const nom = boite("s-nom").value.trim();
-          if (!nom) { message("Donnez un nom à ce scénario."); return; }
-          const brut = {
-            id: s ? s.id : identifiant("scn"), nom, actif: s ? s.actif : true,
-            teinte: Number(boite("s-teinte").value),
-            ajustRevenus: Number(boite("s-rev").value.replace(",", ".")) || 0,
-            ajustDepenses: Number(boite("s-dep").value.replace(",", ".")) || 0,
-            soldeDelta: Number(boite("s-solde").value.replace(",", ".")) || 0,
-            exclus: Array.from(document.querySelectorAll(".s-exclu:checked")).map((x) => x.value),
-            extras: lireExtras(),
-          };
+          relire();
+          if (!brouillon.nom) { message("Donnez un nom à ce scénario."); return; }
+          const brut = Object.assign({ id: s ? s.id : identifiant("scn"), actif: s ? s.actif : true }, brouillon, {
+            extras: brouillon.extras.filter((f) => f.libelle || f.montant),
+          });
           modifier(() => {
             const propre = normaliserScenario(brut, ETAT.scenarios.length, ETAT.comptes, ETAT.categories);
             const i = ETAT.scenarios.findIndex((x) => x.id === propre.id);
             if (i >= 0) ETAT.scenarios[i] = propre; else ETAT.scenarios.push(propre);
-          });
+          }, s ? "Scénario mis à jour." : "Scénario créé.");
           fermerDialogue();
         },
       },
     ], () => {
-      // ajout / retrait d'un flux de scénario : on relit ce qui est saisi avant de redessiner
       boite("dialogue-corps").addEventListener("click", (ev) => {
         const b = ev.target.closest("[data-act]");
         if (!b) return;
         if (b.dataset.act === "scn-extra-ajouter") {
-          memoriser();
-          extras.push({ libelle: "", montant: 0, type: "depense", frequence: "mensuel", debut: aujourdhui() });
+          relire();
+          brouillon.extras.push({ libelle: "", montant: 0, type: "depense", frequence: "mensuel", debut: aujourdhui() });
           dessiner();
         } else if (b.dataset.act === "scn-extra-retirer") {
-          memoriser();
-          extras.splice(Number(b.dataset.i), 1);
+          relire();
+          brouillon.extras.splice(Number(b.dataset.i), 1);
           dessiner();
         }
       });
-    });
+    }, "large");
   };
   dessiner();
 }
@@ -4869,10 +4907,9 @@ function adopterScenario(id) {
   const s = ETAT.scenarios.find((x) => x.id === id);
   if (!s) return;
   const liste = fluxDuScenario(s);
-  const retires = ETAT.flux.length - liste.length + (s.extras || []).length;
+  const retires = (s.exclus || []).length;
   confirmer("Adopter « " + s.nom + " » ?",
-    "Vos flux seront remplacés par ceux du scénario : " + liste.length +
-    (liste.length > 1 ? " flux au total" : " flux au total") +
+    "Vos flux seront remplacés par ceux du scénario : " + liste.length + " flux au total" +
     (retires > 0 ? ", " + retires + " retiré" + (retires > 1 ? "s" : "") : "") +
     (s.soldeDelta ? ", et " + argent(s.soldeDelta, { signe: true }) + " sur « " + ETAT.comptes[0].nom + " »" : "") +
     ". Le scénario disparaît une fois adopté ; « Annuler » revient en arrière.",
@@ -5769,6 +5806,7 @@ if (typeof globalThis !== "undefined") {
     observations, annuelCategorie,
     peutEtreSauvegarder, lireSauvegardes, CLE_SAUVEGARDES, SAUVEGARDES_MAX,
     pliage, filtrerCommandes,
+    moisCalendrier, CALENDRIER_RESTE_MINIMUM,
     analyserCsv, operationsCsv, lireDate, lireMontant, decouperLigne, detecterSeparateur,
     normaliserLibelle, detecterRythme, detecterRecurrences, mediane, prochaineEcheancePrevue,
     ajouterMois, ajouterJours, moisEntre, joursEntre, joursDansMois, estIso, cleMois,
