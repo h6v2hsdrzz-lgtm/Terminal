@@ -1408,7 +1408,8 @@ function normaliserScenario(brut, i, comptes, categories) {
 const MIGRATIONS = {
   // v2 : les comptes gagnent un solde daté et l'historique de leurs relevés
   1: (etat) => {
-    for (const c of etat.comptes || []) {
+    // un fichier abîmé peut contenir n'importe quoi à la place d'une liste
+    for (const c of Array.isArray(etat.comptes) ? etat.comptes : []) {
       if (!c || typeof c !== "object") continue;
       if (!c.soldeDate) c.soldeDate = aujourdhui();
       if (!Array.isArray(c.releves)) c.releves = [];
@@ -2736,7 +2737,16 @@ function chargerEtat() {
   let brut = null;
   const t = lireLocal(CLE_ETAT);
   if (t) { try { brut = JSON.parse(t); } catch (e) { brut = null; } }
-  ETAT = normaliser(brut);
+  /* Dernier filet : `normaliser` est écrit pour tout encaisser, mais un état
+     illisible ne doit en aucun cas empêcher l'application de s'ouvrir — c'est
+     précisément là qu'on a besoin d'atteindre les sauvegardes. */
+  try {
+    ETAT = normaliser(brut);
+  } catch (e) {
+    ETAT = normaliser(null);
+    setTimeout(() => message("Données illisibles : l'application est repartie à vide. Les sauvegardes sont dans les réglages."), 500);
+    brut = null;
+  }
   invaliderProjections();
   return brut !== null;
 }
