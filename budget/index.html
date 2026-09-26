@@ -815,6 +815,7 @@ kbd {
   .cal-case { min-height: 46pt; border-color: #bbb; }
   .graphe { max-height: 60mm; }
   a[href]::after { content: ""; }
+  .ecran-seul { display: none !important; }
 }
 </style>
 </head>
@@ -3340,10 +3341,16 @@ function message(texte, options) {
 function carte(contenu, options) {
   const o = options || {};
   const tete = o.titre
-    ? '<div class="carte-tete"><h2>' + esc(o.titre) + "</h2>" + (o.droite ? '<div class="droite">' + o.droite + "</div>" : "") + "</div>" +
-      (o.sous ? '<p class="sous">' + esc(o.sous) + "</p>" : "")
+    ? '<div class="carte-tete"><h2>' + esc(o.titre) + "</h2>" +
+      (o.droite ? '<div class="droite">' + o.droite + "</div>" : "") + "</div>"
     : "";
-  return '<div class="carte' + (o.classe ? " " + o.classe : "") + '"' + (o.id ? ' id="' + o.id + '"' : "") + ">" + tete + contenu + "</div>";
+  /* `sous` s'affiche même sans titre — une carte peut n'être qu'une
+     explication suivie d'un tableau. `sousHtml` sert aux phrases qui
+     portent un bouton, ou qui ne doivent pas se retrouver sur du papier. */
+  const sous = o.sousHtml ? '<p class="sous">' + o.sousHtml + "</p>"
+    : o.sous ? '<p class="sous">' + esc(o.sous) + "</p>" : "";
+  return '<div class="carte' + (o.classe ? " " + o.classe : "") + '"' + (o.id ? ' id="' + o.id + '"' : "") + ">" +
+    tete + sous + contenu + "</div>";
 }
 
 /** Le montant d'une opération, signé — sauf un virement interne, qui ne fait
@@ -3680,7 +3687,7 @@ function rendreProjection(cible, p) {
   const filtre = compte(ui.compteProjection) ? ui.compteProjection : "";
   const proj = filtre ? projeter({ du: p.du, au: p.au, compteId: filtre }) : p;
 
-  const choixCompte = '<label class="champ" style="max-width:240px"><span class="ttl">Périmètre</span>' +
+  const choixCompte = '<label class="champ ecran-seul" style="max-width:240px"><span class="ttl">Périmètre</span>' +
     '<select data-act="compte-projection"><option value="">Tous les comptes</option>' +
     ETAT.comptes.map((c) => '<option value="' + esc(c.id) + '"' + (filtre === c.id ? " selected" : "") + ">" + esc(c.nom) + "</option>").join("") +
     "</select></label>";
@@ -3745,7 +3752,8 @@ function rendreProjection(cible, p) {
     carte('<div class="tableau-boite"><table><thead><tr><th>Mois</th><th class="num">Revenus</th><th class="num">Dépenses</th>' +
       '<th class="num">Net</th><th class="num">Solde fin de mois</th><th class="num">Point bas</th></tr></thead>' +
       "<tbody>" + lignes + total + "</tbody></table></div>",
-      { titre: "Mois par mois", sous: "Cliquez une ligne pour voir le détail des opérations du mois." });
+      { titre: "Mois par mois",
+        sousHtml: '<span class="ecran-seul">Cliquez une ligne pour voir le détail des opérations du mois.</span>' });
 
   grapheCourbes(boite("g-proj"), [{ nom: "Solde", couleur: "var(--accent)", points: proj.points, remplir: true }],
     { seuil: filtre ? 0 : ETAT.parametres.seuilAlerte, hauteur: 260 });
@@ -3828,7 +3836,8 @@ function rendreCalendrier(cible, p) {
     JOURS_COURTS.map((j) => '<div class="cal-jour-nom">' + j + "</div>").join("") + "</div>" +
     '<div class="cal-grille" role="grid" aria-label="Calendrier de ' + esc(libelleMois(cle)) + '">' + cases.join("") + "</div>",
     { titre: "Le mois au jour le jour",
-      sous: "Chaque case porte les mouvements du jour et le solde au soir ; les jours en rouge passent sous zéro. Cliquez un jour — ou circulez aux flèches — pour le détail." }) +
+      sousHtml: "Chaque case porte les mouvements du jour et le solde au soir ; les jours en rouge passent sous zéro. " +
+        '<span class="ecran-seul">Cliquez un jour — ou circulez aux flèches — pour le détail.</span>' }) +
     '<div class="grille g2">' +
     carte(gros.length
       ? '<ul class="agenda">' + gros.map((j) =>
@@ -5341,10 +5350,18 @@ function importerJson() {
       let brut;
       try { brut = JSON.parse(String(lecteur.result)); }
       catch (e) { message("Ce fichier n'est pas un JSON valide."); return; }
+      /* Un fichier écrit par une version plus récente peut contenir des
+         champs que celle-ci ignore : les importer les perdrait en silence. */
+      const versionFichier = Number(brut && brut.version) || 1;
+      const plusRecent = versionFichier > VERSION_ETAT;
       const propre = normaliser(brut);
       confirmer("Remplacer vos données ?",
         "Le fichier contient " + propre.flux.length + " flux, " + propre.comptes.length + " comptes et " +
-        propre.objectifs.length + " objectifs. Vos données actuelles seront écrasées.",
+        propre.objectifs.length + " objectifs. Vos données actuelles seront écrasées." +
+        (plusRecent
+          ? " Attention : il a été écrit par une version plus récente de l'application (format " +
+            versionFichier + ", contre " + VERSION_ETAT + " ici). Ce qu'elle a ajouté depuis sera perdu."
+          : ""),
         "Importer", () => {
           memoriser();
           ETAT = propre;

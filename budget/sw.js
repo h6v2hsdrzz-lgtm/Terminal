@@ -12,7 +12,7 @@
  *    pas d'une version à l'autre.
  */
 
-const VERSION = "prevoyant-v2";
+const VERSION = "prevoyant-v3";
 const COQUILLE = [
   "./", "./index.html", "./manifest.webmanifest",
   "./icone.svg", "./icone-192.png", "./icone-512.png", "./icone-apple-180.png",
